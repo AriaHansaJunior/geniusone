@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Route;
 | Web Routes
 |--------------------------------------------------------------------------
 |
-| Frontend routes for GeniusOne enterprise operations application.
+| Frontend routes for GENIUSONE enterprise operations application.
 | All pages are integrated with the shared application shell and layout.
 |
 */
@@ -52,12 +52,3 @@ Route::get('/warehouse', function () {
 Route::get('/warehouse/bpb', function () {
     return view('app', ['page' => 'warehouse']);
 })->name('warehouse.bpb.index');
-
-// Design Foundation
-Route::get('/foundation', function () {
-    return view('app', ['page' => 'foundation']);
-})->name('foundation.index');
-
-Route::get('/design-foundation', function () {
-    return view('app', ['page' => 'foundation']);
-})->name('design-foundation.index');

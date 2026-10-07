@@ -49,6 +49,14 @@ export function Related({ text }: { text: string }) {
   return <span className="related">{text}</span>;
 }
 
+export function CodeCell({ code }: { code: string }) {
+  return <code className="code-pill">{code}</code>;
+}
+
+export function CurrencyCell({ currency }: { currency: string }) {
+  return <span className="currency-pill">{currency}</span>;
+}
+
 export function Approval({ step }: { step: number }) {
   return (
     <div className="approval">

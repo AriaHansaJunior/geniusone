@@ -1,6 +1,6 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
-import { GeniusApp } from "./components/GeniusApp";
+import { App } from "./components/App";
 import type { PageKey } from "./types";
 
 const rootElement = document.getElementById("root");
@@ -10,7 +10,7 @@ if (rootElement) {
 
   ReactDOM.createRoot(rootElement).render(
     <React.StrictMode>
-      <GeniusApp initialPage={initialPage} />
+      <App initialPage={initialPage} />
     </React.StrictMode>
   );
 }

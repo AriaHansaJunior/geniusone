@@ -22,7 +22,7 @@ export type IconName =
   | "search"
   | "settings";
 
-export type PageKey = "pr" | "po" | "report" | "warehouse" | "foundation";
+export type PageKey = "pr" | "po" | "report" | "warehouse";
 
 export type Column = {
   key: string;

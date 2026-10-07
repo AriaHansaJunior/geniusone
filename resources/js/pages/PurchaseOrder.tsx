@@ -5,16 +5,15 @@ import { SearchField } from "../components/ui/SearchField";
 import { DataTable } from "../components/ui/DataTable";
 import { FilterPanel } from "../components/common/FilterPanel";
 import { pageConfigs } from "../data/mockData";
-import type { PageKey, TableRow } from "../types";
+import type { TableRow } from "../types";
 
-interface ListingPageProps {
-  page: Exclude<PageKey, "foundation">;
+interface PurchaseOrderProps {
   onDetail: (row: TableRow) => void;
 }
 
-export function ListingPage({ page, onDetail }: ListingPageProps) {
+export function PurchaseOrder({ onDetail }: PurchaseOrderProps) {
   const [search, setSearch] = useState("");
-  const config = pageConfigs[page];
+  const config = pageConfigs.po;
 
   const filtered = useMemo(() => {
     if (!search.trim()) return config.rows;
@@ -23,18 +22,6 @@ export function ListingPage({ page, onDetail }: ListingPageProps) {
       (r._search || "").toLowerCase().includes(q)
     );
   }, [config.rows, search]);
-
-  const tableTitle =
-    page === "warehouse"
-      ? "Receive material documents"
-      : page === "report"
-      ? "PR–PO reporting records"
-      : `${page.toUpperCase()} documents`;
-
-  const actionButtonText =
-    page === "warehouse"
-      ? "Receive material"
-      : `Create ${page.toUpperCase()}`;
 
   return (
     <>
@@ -63,7 +50,7 @@ export function ListingPage({ page, onDetail }: ListingPageProps) {
           </Button>
         </div>
 
-        <FilterPanel page={page} />
+        <FilterPanel page="po" />
 
         <div className="filter-actions">
           <SearchField value={search} onChange={setSearch} />
@@ -78,16 +65,14 @@ export function ListingPage({ page, onDetail }: ListingPageProps) {
       <section className="panel table-panel">
         <div className="panel__heading table-panel__heading">
           <div>
-            <strong>{tableTitle}</strong>
-            <span>{filtered.length} records shown · Updated just now</span>
+            <strong>PO documents</strong>
+            <span>{filtered.length} records shown</span>
           </div>
           <div className="button-row">
             <Button variant="secondary" icon="download">
               Export XLSX
             </Button>
-            {page !== "report" && (
-              <Button icon="plus">{actionButtonText}</Button>
-            )}
+            <Button icon="plus">Create PO</Button>
           </div>
         </div>
 
@@ -100,3 +85,5 @@ export function ListingPage({ page, onDetail }: ListingPageProps) {
     </>
   );
 }
+
+export default PurchaseOrder;

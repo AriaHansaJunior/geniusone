@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>GeniusOne — Enterprise Operations</title>
+    <title>GENIUSONE — Enterprise Operations</title>
 
     <!-- Google Fonts: Lato & Noto Sans -->
     <link rel="preconnect" href="https://fonts.googleapis.com">

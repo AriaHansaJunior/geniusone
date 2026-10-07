@@ -1,4 +1,4 @@
 # Project Guidelines
 
-Project: Genius One
+Project: GENIUSONE
 Framework: Laravel
