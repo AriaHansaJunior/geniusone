@@ -1,4 +1,5 @@
 import { Icon } from "../ui/Icon";
+import { FluidWaveHeader } from "./FluidWaveHeader";
 
 interface HeaderProps {
   collapsed?: boolean;
@@ -8,6 +9,9 @@ interface HeaderProps {
 export function Header({ collapsed = false, onToggleCollapse }: HeaderProps) {
   return (
     <header className="topbar">
+      {/* Dynamic Fluid Wave Canvas (Seamless Infinity Loop & Wall Reflection) */}
+      <FluidWaveHeader />
+
       <div className={`brand ${collapsed ? "brand--collapsed" : ""}`}>
         <div
           className="brand__mark"
@@ -55,17 +59,10 @@ export function Header({ collapsed = false, onToggleCollapse }: HeaderProps) {
 
       <div className="topbar__context">
         <span>PT GENIUS MANUFACTURING</span>
-        <i />
-        <span>Head Office</span>
       </div>
 
       <div className="topbar__actions">
-        <button type="button" aria-label="Back">
-          <Icon name="arrowLeft" size={17} />
-        </button>
-        <button type="button" aria-label="Forward">
-          <Icon name="arrowRight" size={17} />
-        </button>
+       
         <button type="button" aria-label="Settings">
           <Icon name="settings" size={17} />
         </button>

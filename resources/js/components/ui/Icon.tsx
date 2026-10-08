@@ -28,8 +28,16 @@ export function Icon({ name, size = 18 }: { name: IconName; size?: number }) {
         <path d="M16 3v4M8 3v4M3 10h18" />
       </>
     ),
+    cart: (
+      <>
+        <circle cx="9" cy="21" r="1" fill="currentColor" />
+        <circle cx="20" cy="21" r="1" fill="currentColor" />
+        <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
+      </>
+    ),
     check: <path d="m5 12 4 4L19 6" />,
     chevron: <path d="m9 18 6-6-6-6" />,
+    chevronDown: <path d="m6 9 6 6 6-6" />,
     close: <path d="M18 6 6 18M6 6l12 12" />,
     download: (
       <>
@@ -57,10 +65,29 @@ export function Icon({ name, size = 18 }: { name: IconName; size?: number }) {
         <rect x="14" y="14" width="7" height="7" />
       </>
     ),
+    history: (
+      <>
+        <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+        <path d="M3 3v5h5M12 7v5l4 2" />
+      </>
+    ),
+    home: (
+      <>
+        <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+        <path d="M9 22V12h6v10" />
+      </>
+    ),
     layers: (
       <>
         <path d="m12 2 9 5-9 5-9-5z" />
         <path d="m3 12 9 5 9-5M3 17l9 5 9-5" />
+      </>
+    ),
+    list: (
+      <>
+        <line x1="4" y1="6" x2="20" y2="6" strokeWidth="2.4" />
+        <line x1="4" y1="12" x2="20" y2="12" strokeWidth="2.4" />
+        <line x1="4" y1="18" x2="20" y2="18" strokeWidth="2.4" />
       </>
     ),
     more: (

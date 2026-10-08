@@ -1,7 +1,8 @@
 export function Footer() {
   return (
-    <footer>
-      <span>© 2026 GENIUSONE. All rights reserved.</span>
+    <footer className="app-footer">
+      <span>2026 © GENIUSONE</span>
+      <span>PT. GENIUS MANUFACTURING</span>
     </footer>
   );
 }

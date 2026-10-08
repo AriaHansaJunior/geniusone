@@ -5,8 +5,8 @@ export function FilterPanel({ page }: { page: PageKey }) {
   if (page === "report") {
     return (
       <div className="filters filters--report">
-        <Field label="PO creation date" value="01 Mar – 31 Mar 2025" icon="calendar" />
-        <Field label="PR creation date" value="01 Mar – 31 Mar 2025" icon="calendar" />
+        <Field label="PO creation date" value="01-10-2026 – 08-10-2026" icon="calendar" />
+        <Field label="PR creation date" value="01-10-2026 – 08-10-2026" icon="calendar" />
         <Field label="Supplier" value="All suppliers" />
         <Field label="Item material" value="All materials" />
         <Field label="Overall status" value="All statuses" />
@@ -21,11 +21,11 @@ export function FilterPanel({ page }: { page: PageKey }) {
   if (page === "po") {
     return (
       <div className="filters">
-        <Field label="PO creation date" value="01 Mar – 31 Mar 2025" icon="calendar" />
+        <Field label="PO creation date" value="01-10-2026 – 08-10-2026" icon="calendar" />
         <Field label="Supplier" value="All suppliers" />
-        <Field label="Receiving status" value="All receiving" />
-        <Field label="PO status" value="All statuses" />
-        <Field label="Facility type" value="All facilities" />
+        <Field label="Status facility" value="All facilities" />
+        <Field label="Status" value="All statuses" />
+        <Field label="Dept created" value="All departments" />
       </div>
     );
   }
@@ -33,10 +33,10 @@ export function FilterPanel({ page }: { page: PageKey }) {
   if (page === "warehouse") {
     return (
       <div className="filters">
-        <Field label="Created date" value="01 Mar – 31 Mar 2025" icon="calendar" />
-        <Field label="BPB type" value="All BPB types" />
-        <Field label="Approval" value="All approval stages" />
-        <Field label="Supplier" value="All suppliers" />
+        <Field label="Receive date" value="01-10-2026 – 31-10-2026" icon="calendar" />
+        <Field label="Document type" value="All Type of Documents" />
+        <Field label="BPB type" value="Select BPB Type" />
+        <Field label="Approval" value="Choose Approval" />
       </div>
     );
   }

@@ -9,9 +9,10 @@ import type { TableRow } from "../types";
 
 interface WarehouseProps {
   onDetail: (row: TableRow) => void;
+  onCreate?: () => void;
 }
 
-export function Warehouse({ onDetail }: WarehouseProps) {
+export function Warehouse({ onDetail, onCreate }: WarehouseProps) {
   const [search, setSearch] = useState("");
   const config = pageConfigs.warehouse;
 
@@ -72,7 +73,9 @@ export function Warehouse({ onDetail }: WarehouseProps) {
             <Button variant="secondary" icon="download">
               Export XLSX
             </Button>
-            <Button icon="plus">Receive material</Button>
+            <Button icon="plus" onClick={onCreate}>
+              Receive material
+            </Button>
           </div>
         </div>
 
