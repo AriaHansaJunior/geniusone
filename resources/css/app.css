@@ -461,6 +461,7 @@ th.align-right svg { margin-left: 0; margin-right: 6px; }
 .badge--red { color: var(--red-600); background: var(--red-50); }
 .badge--gray { color: var(--muted); background: var(--canvas); }
 .badge--purple { color: var(--purple-600); background: var(--purple-50); }
+.badge--cyan { color: #0891b2; background: #ecfeff; }
 
 .approval { display: flex; align-items: center; }
 .approval > span { width: 20px; height: 20px; display: grid; place-items: center; border: 1px solid var(--line-strong); color: var(--muted-2); border-radius: 50%; background: white; }

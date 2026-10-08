@@ -17,21 +17,33 @@ Route::get('/', function () {
     return view('app', ['page' => 'report']);
 })->name('home');
 
-// Purchase Request List
+// Purchase Requisition List
 Route::get('/pr', function () {
     return view('app', ['page' => 'pr']);
 })->name('pr.index');
 
-Route::get('/purchase-requests', function () {
+Route::get('/purchase-requisitions', function () {
     return view('app', ['page' => 'pr']);
-})->name('purchase-requests.index');
+})->name('purchase-requisitions.index');
 
-// Purchase Request Details
+Route::get('/purchase-requests', function () {
+    return redirect('/pr');
+});
+
+// Purchase Requisition Details
 Route::get('/pr/detail/{code}', function ($code) {
     return view('app', ['page' => 'pr-detail', 'code' => $code]);
 })->name('pr.detail');
 
 Route::get('/pr/details/{code}', function ($code) {
+    return view('app', ['page' => 'pr-detail', 'code' => $code]);
+});
+
+Route::get('/purchase-requisition/detail/{code}', function ($code) {
+    return view('app', ['page' => 'pr-detail', 'code' => $code]);
+});
+
+Route::get('/purchase-requisitions/detail/{code}', function ($code) {
     return view('app', ['page' => 'pr-detail', 'code' => $code]);
 });
 

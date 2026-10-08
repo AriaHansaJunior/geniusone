@@ -6,10 +6,13 @@ interface ButtonProps {
   children?: ReactNode;
   variant?: "primary" | "secondary" | "ghost" | "danger" | "warning";
   icon?: IconName;
-  onClick?: () => void;
+  onClick?: (e?: any) => void;
   type?: "button" | "submit" | "reset";
   className?: string;
   disabled?: boolean;
+  style?: React.CSSProperties;
+  "aria-label"?: string;
+  title?: string;
 }
 
 export function Button({
@@ -20,6 +23,9 @@ export function Button({
   type = "button",
   className = "",
   disabled = false,
+  style,
+  "aria-label": ariaLabel,
+  title,
 }: ButtonProps) {
   return (
     <button
@@ -27,6 +33,9 @@ export function Button({
       className={`button button--${variant} ${className}`}
       onClick={onClick}
       disabled={disabled}
+      style={style}
+      aria-label={ariaLabel}
+      title={title}
     >
       {icon && <Icon name={icon} size={16} />}
       {children}

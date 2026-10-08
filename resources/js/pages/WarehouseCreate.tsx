@@ -24,8 +24,8 @@ export function WarehouseCreate({ onBack, onSaved }: WarehouseCreateProps) {
   const [regDate, setRegDate] = useState("08-10-2026");
   const [remark, setRemark] = useState("");
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = (e?: React.FormEvent | React.MouseEvent) => {
+    e?.preventDefault();
     onSaved();
   };
 

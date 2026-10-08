@@ -183,7 +183,7 @@ export function PurchaseOrderDetail({
             <Icon name="file" size={16} />
           </div>
           <div className="pipeline-node__text">
-            <span>Step 1 · Purchase Request</span>
+            <span>Step 1 · Purchase Requisition</span>
             <strong>{prNumber}</strong>
           </div>
         </div>

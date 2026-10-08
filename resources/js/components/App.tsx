@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback } from "react";
 import { AppLayout } from "./layout/AppLayout";
-import { PurchaseRequest } from "../pages/PurchaseRequest";
+import { PurchaseRequisition } from "../pages/PurchaseRequisition";
 import { PurchaseOrder } from "../pages/PurchaseOrder";
 import { PurchaseOrderReport } from "../pages/PurchaseOrderReport";
 import { Warehouse } from "../pages/Warehouse";
-import { PurchaseRequestDetail } from "../pages/PurchaseRequestDetail";
+import { PurchaseRequisitionDetail } from "../pages/PurchaseRequisitionDetail";
 import { PurchaseOrderDetail } from "../pages/PurchaseOrderDetail";
 import { PurchaseOrderReportDetail } from "../pages/PurchaseOrderReportDetail";
 import { WarehouseDetail } from "../pages/WarehouseDetail";
@@ -26,7 +26,7 @@ function resolveViewStateFromPath(pathname: string, defaultPage: PageKey = "repo
   }
 
   // Detail routes
-  const prDetailMatch = cleanPath.match(/^\/pr\/details?\/(.+)$/);
+  const prDetailMatch = cleanPath.match(/^\/(?:pr|purchase-requisition|purchase-requisitions)\/details?\/(.+)$/);
   if (prDetailMatch) {
     return { type: "pr-detail", code: decodeURIComponent(prDetailMatch[1]) };
   }
@@ -47,7 +47,7 @@ function resolveViewStateFromPath(pathname: string, defaultPage: PageKey = "repo
   }
 
   // List routes
-  if (cleanPath === "/pr" || cleanPath === "/purchase-requests") {
+  if (cleanPath === "/pr" || cleanPath === "/purchase-requisitions" || cleanPath === "/purchase-requests") {
     return { type: "list", page: "pr" };
   }
   if (cleanPath === "/po" || cleanPath === "/purchase-orders") {
@@ -178,7 +178,7 @@ export function App({ initialPage = "report", initialCode = "" }: AppProps) {
     >
       {/* List Page Views */}
       {viewState.type === "list" && viewState.page === "pr" && (
-        <PurchaseRequest
+        <PurchaseRequisition
           onDetail={(row: TableRow) =>
             handleNavigateDetail("pr", row._rawNumber || row._rawPr || row._id || "")
           }
@@ -212,7 +212,7 @@ export function App({ initialPage = "report", initialCode = "" }: AppProps) {
 
       {/* Dedicated Full Page Detail Views */}
       {viewState.type === "pr-detail" && (
-        <PurchaseRequestDetail
+        <PurchaseRequisitionDetail
           code={viewState.code}
           onBack={() => handleNavigateList("pr")}
           onNavigateDetail={handleNavigateDetail}

@@ -44,7 +44,7 @@ export type Column = {
   min?: string;
 };
 
-export type TableRow = Record<string, ReactNode> & {
+export type TableRow = Record<string, any> & {
   _search?: string;
   _id?: string;
   _type?: PageKey;
@@ -74,6 +74,7 @@ export type TableRow = Record<string, ReactNode> & {
   _totalQty?: string;
   _items?: any[];
   _otherCosts?: any[];
+  _financials?: any;
   _history?: any[];
 };
 

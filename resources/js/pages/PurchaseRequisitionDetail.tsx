@@ -6,17 +6,17 @@ import { Material } from "../components/common/CommonCells";
 import { prRows, findRowBySlug, docToSlug } from "../data/mockData";
 import type { TableRow } from "../types";
 
-interface PurchaseRequestDetailProps {
+interface PurchaseRequisitionDetailProps {
   code: string;
   onBack: () => void;
   onNavigateDetail?: (type: "pr" | "po" | "report" | "warehouse", code: string) => void;
 }
 
-export function PurchaseRequestDetail({
+export function PurchaseRequisitionDetail({
   code,
   onBack,
   onNavigateDetail,
-}: PurchaseRequestDetailProps) {
+}: PurchaseRequisitionDetailProps) {
   const row: TableRow = useMemo(() => {
     return findRowBySlug(prRows, code) || prRows[0];
   }, [code]);
@@ -44,12 +44,12 @@ export function PurchaseRequestDetail({
         <div className="detail-top-bar__left">
           <button type="button" className="btn-back-pill" onClick={onBack}>
             <Icon name="arrowLeft" size={14} />
-            <span>Back to Purchase Requests</span>
+            <span>Back to Purchase Requisitions</span>
           </button>
           <div className="detail-breadcrumb-trail">
             <a onClick={onBack}>Procurement</a>
             <span>/</span>
-            <a onClick={onBack}>Purchase Request</a>
+            <a onClick={onBack}>Purchase Requisition</a>
             <span>/</span>
             <span className="current">{docNumber}</span>
           </div>
@@ -119,7 +119,7 @@ export function PurchaseRequestDetail({
             <Icon name="file" size={16} />
           </div>
           <div className="pipeline-node__text">
-            <span>Step 1 · Purchase Request</span>
+            <span>Step 1 · Purchase Requisition</span>
             <strong>{docNumber}</strong>
           </div>
         </div>
@@ -308,7 +308,7 @@ export function PurchaseRequestDetail({
                     <strong>Arsyeila</strong>
                     <small style={{ display: "block", color: "var(--muted)", fontSize: "10px" }}>HSE Department</small>
                   </td>
-                  <td>Approve 1 Purchase Request</td>
+                  <td>Approve 1 Purchase Requisition</td>
                   <td style={{ fontFamily: "ui-monospace, monospace", fontSize: "11px" }}>
                     07-10-2026 15:08:40
                   </td>
@@ -351,4 +351,4 @@ export function PurchaseRequestDetail({
   );
 }
 
-export default PurchaseRequestDetail;
+export default PurchaseRequisitionDetail;

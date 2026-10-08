@@ -26,7 +26,7 @@ export function DetailDrawer({ row, onClose }: { row: TableRow; onClose: () => v
 
   const title =
     type === "pr"
-      ? "Purchase Request Details"
+      ? "Purchase Requisition Details"
       : type === "po"
       ? "Purchase Order Details"
       : type === "warehouse"
@@ -285,7 +285,7 @@ export function DetailDrawer({ row, onClose }: { row: TableRow; onClose: () => v
             <div className="relationship">
               <div className={type === "pr" ? "active" : ""}>
                 <Icon name="file" />
-                <span>Purchase Request</span>
+                <span>Purchase Requisition</span>
                 <strong>{String(row._rawPr || prNumber)}</strong>
               </div>
               <Icon name="arrowRight" />

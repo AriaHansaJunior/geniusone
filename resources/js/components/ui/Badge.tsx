@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-export type BadgeTone = "blue" | "green" | "orange" | "red" | "gray" | "purple";
+export type BadgeTone = "blue" | "green" | "orange" | "red" | "gray" | "purple" | "cyan";
 
 export function Badge({
   children,

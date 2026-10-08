@@ -14,7 +14,7 @@ import { Badge } from "../components/ui/Badge";
 import type { PageKey, Column, TableRow, PageMeta, IconName } from "../types";
 
 export const navigation: { key: PageKey; label: string; icon: IconName; path: string }[] = [
-  { key: "pr", label: "Purchase Request", icon: "file", path: "/pr" },
+  { key: "pr", label: "Purchase Requisition", icon: "file", path: "/pr" },
   { key: "po", label: "Purchase Order", icon: "archive", path: "/po" },
   { key: "report", label: "PR–PO Report", icon: "layers", path: "/report" },
   { key: "warehouse", label: "Warehouse / BPB", icon: "box", path: "/warehouse" },
@@ -23,7 +23,7 @@ export const navigation: { key: PageKey; label: string; icon: IconName; path: st
 export const pageMeta: Record<PageKey, PageMeta> = {
   pr: {
     eyebrow: "PROCUREMENT",
-    title: "Purchase Request",
+    title: "Purchase Requisition",
     description: "Review demand, approval progress, and purchasing fulfilment.",
   },
   po: {
@@ -34,7 +34,7 @@ export const pageMeta: Record<PageKey, PageMeta> = {
   report: {
     eyebrow: "REPORTING",
     title: "Combined PR–PO Report",
-    description: "Trace purchasing documents from request through receiving.",
+    description: "Trace purchasing documents from requisition through receiving.",
   },
   warehouse: {
     eyebrow: "WAREHOUSE",
@@ -2017,7 +2017,7 @@ export const pageConfigs: Record<
 > = {
   pr: {
     stats: [
-      ["Total requests", "128", "+12 this month"],
+      ["Total requisitions", "128", "+12 this month"],
       ["Awaiting approval", "14", "10.9% of total"],
       ["Approved", "96", "75% of total"],
       ["Outstanding", "18", "14.1% of total"],

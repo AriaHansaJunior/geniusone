@@ -1,7 +1,17 @@
 import type { ReactNode } from "react";
 import type { IconName } from "../../types";
 
-export function Icon({ name, size = 18 }: { name: IconName; size?: number }) {
+export function Icon({
+  name,
+  size = 18,
+  className,
+  style,
+}: {
+  name: IconName;
+  size?: number;
+  className?: string;
+  style?: React.CSSProperties;
+}) {
   const paths: Record<IconName, ReactNode> = {
     archive: (
       <>
@@ -128,6 +138,8 @@ export function Icon({ name, size = 18 }: { name: IconName; size?: number }) {
       strokeLinecap="round"
       strokeLinejoin="round"
       aria-hidden="true"
+      className={className}
+      style={style}
     >
       {paths[name]}
     </svg>

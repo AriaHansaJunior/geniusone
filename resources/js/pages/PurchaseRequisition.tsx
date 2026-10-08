@@ -7,11 +7,11 @@ import { FilterPanel } from "../components/common/FilterPanel";
 import { pageConfigs } from "../data/mockData";
 import type { TableRow } from "../types";
 
-interface PurchaseRequestProps {
+interface PurchaseRequisitionProps {
   onDetail: (row: TableRow) => void;
 }
 
-export function PurchaseRequest({ onDetail }: PurchaseRequestProps) {
+export function PurchaseRequisition({ onDetail }: PurchaseRequisitionProps) {
   const [search, setSearch] = useState("");
   const config = pageConfigs.pr;
 
@@ -86,4 +86,4 @@ export function PurchaseRequest({ onDetail }: PurchaseRequestProps) {
   );
 }
 
-export default PurchaseRequest;
+export default PurchaseRequisition;
