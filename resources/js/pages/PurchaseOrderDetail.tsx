@@ -244,9 +244,9 @@ export function PurchaseOrderDetail({
           </div>
         </div>
 
-        {activeTab === "material" ? (
-          <div style={{ overflowX: "auto" }}>
-            <table className="detail-data-table">
+        <div style={{ overflowX: "auto" }}>
+          {activeTab === "material" ? (
+            <table className="detail-data-table" style={{ minWidth: "1475px" }}>
               <thead>
                 <tr>
                   <th style={{ width: "45px", textAlign: "center" }}>No</th>
@@ -315,16 +315,14 @@ export function PurchaseOrderDetail({
                 ))}
               </tbody>
             </table>
-          </div>
-        ) : (
-          <div style={{ overflowX: "auto" }}>
-            <table className="detail-data-table">
+          ) : (
+            <table className="detail-data-table" style={{ minWidth: "1475px" }}>
               <thead>
                 <tr>
                   <th style={{ width: "45px", textAlign: "center" }}>No</th>
-                  <th style={{ minWidth: "260px" }}>Cost Name / Description</th>
-                  <th style={{ width: "160px", textAlign: "right" }}>Amount (IDR)</th>
-                  <th style={{ minWidth: "300px" }}>Remark / Purpose</th>
+                  <th style={{ minWidth: "450px" }}>Cost Name / Description</th>
+                  <th style={{ width: "220px", textAlign: "right" }}>Amount (IDR)</th>
+                  <th style={{ minWidth: "760px" }}>Remark / Purpose</th>
                 </tr>
               </thead>
               <tbody>
@@ -341,7 +339,7 @@ export function PurchaseOrderDetail({
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={4} style={{ textAlign: "center", padding: "32px", color: "var(--muted)" }}>
+                    <td colSpan={4} style={{ textAlign: "center", padding: "24px 20px", color: "var(--muted)" }}>
                       No additional logistics or transport costs recorded for this purchase order.
                     </td>
                   </tr>
@@ -361,8 +359,8 @@ export function PurchaseOrderDetail({
                 </tr>
               </tfoot>
             </table>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {/* Two-Column Lower Content Grid: Financial Breakdown & EMBEDDED Audit History */}
