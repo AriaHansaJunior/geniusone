@@ -244,9 +244,25 @@ export function PurchaseOrderDetail({
           </div>
         </div>
 
-        <div style={{ overflowX: "auto" }}>
-          {activeTab === "material" ? (
-            <table className="detail-data-table" style={{ minWidth: "1475px" }}>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "minmax(0, 1fr)",
+            alignItems: "start",
+          }}
+        >
+          {/* Material Items Panel */}
+          <div
+            style={{
+              gridArea: "1 / 1",
+              minWidth: 0,
+              width: "100%",
+              overflowX: "auto",
+              visibility: activeTab === "material" ? "visible" : "hidden",
+              pointerEvents: activeTab === "material" ? "auto" : "none",
+            }}
+          >
+            <table className="detail-data-table">
               <thead>
                 <tr>
                   <th style={{ width: "45px", textAlign: "center" }}>No</th>
@@ -315,14 +331,26 @@ export function PurchaseOrderDetail({
                 ))}
               </tbody>
             </table>
-          ) : (
-            <table className="detail-data-table" style={{ minWidth: "1475px" }}>
+          </div>
+
+          {/* Other Costs Panel */}
+          <div
+            style={{
+              gridArea: "1 / 1",
+              minWidth: 0,
+              width: "100%",
+              overflowX: "auto",
+              visibility: activeTab === "otherCosts" ? "visible" : "hidden",
+              pointerEvents: activeTab === "otherCosts" ? "auto" : "none",
+            }}
+          >
+            <table className="detail-data-table">
               <thead>
                 <tr>
                   <th style={{ width: "45px", textAlign: "center" }}>No</th>
-                  <th style={{ minWidth: "450px" }}>Cost Name / Description</th>
-                  <th style={{ width: "220px", textAlign: "right" }}>Amount (IDR)</th>
-                  <th style={{ minWidth: "760px" }}>Remark / Purpose</th>
+                  <th style={{ minWidth: "260px" }}>Cost Name / Description</th>
+                  <th style={{ width: "160px", textAlign: "right" }}>Amount (IDR)</th>
+                  <th style={{ minWidth: "300px" }}>Remark / Purpose</th>
                 </tr>
               </thead>
               <tbody>
@@ -359,7 +387,7 @@ export function PurchaseOrderDetail({
                 </tr>
               </tfoot>
             </table>
-          )}
+          </div>
         </div>
       </div>
 
