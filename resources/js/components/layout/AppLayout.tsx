@@ -8,7 +8,7 @@ import type { PageKey } from "../../types";
 
 interface AppLayoutProps {
   activePage: PageKey | null;
-  onNavigate: (page: PageKey) => void;
+  onNavigate: (page: PageKey, path?: string) => void;
   onNavigateProfile?: () => void;
   onRequestLogout?: () => void;
   hideDefaultHeader?: boolean;
@@ -67,6 +67,7 @@ export function AppLayout({
           activePage={activePage}
           onNavigate={onNavigate}
           collapsed={collapsed}
+          onToggleCollapse={handleToggleCollapse}
         />
 
         {/* Main Content Area */}
@@ -79,24 +80,26 @@ export function AppLayout({
                 <h1>{meta.title}</h1>
                 <p>{meta.description}</p>
               </div>
-              <div className="page-header__actions">
-                <Button variant="secondary" icon="print">
-                  Print view
-                </Button>
-                <Button variant="ghost" icon="more">
-                  Actions
-                </Button>
-              </div>
+              {(activePage === "pr" || activePage === "po" || activePage === "report" || activePage === "warehouse") && (
+                <div className="page-header__actions">
+                  <Button variant="secondary" icon="print">
+                    Print view
+                  </Button>
+                  <Button variant="ghost" icon="more">
+                    Actions
+                  </Button>
+                </div>
+              )}
             </div>
           )}
 
           {/* Module Content */}
           <div className="content">{children}</div>
-
-          {/* Shared Application Footer */}
-          <Footer />
         </main>
       </div>
+
+      {/* Fixed Viewport Application Footer */}
+      <Footer />
     </div>
   );
 }

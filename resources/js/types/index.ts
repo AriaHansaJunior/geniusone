@@ -29,14 +29,49 @@ export type IconName =
   | "more"
   | "plus"
   | "print"
+  | "refresh"
   | "search"
   | "settings"
   | "upload"
   | "user";
 
-export type PageKey = "pr" | "po" | "report" | "warehouse";
+export type PageKey =
+  | "dashboard"
+  | "pr"
+  | "po"
+  | "report"
+  | "warehouse"
+  // Purchase Master
+  | "supplier"
+  | "payment-term"
+  | "purchase-category"
+  | "delivery-terms"
+  | "additional-costs"
+  | "pph"
+  // Procurement Reports
+  | "pr-report"
+  | "po-report"
+  // Exim Master
+  | "unit"
+  | "satuan"
+  | "item"
+  | "brand"
+  | "classification"
+  | "department"
+  | "facility"
+  | "hs"
+  | "category"
+  | "style"
+  | "colour"
+  // Exim other
+  | "receive-note"
+  | "receive-note-return"
+  | "document-history"
+  // Warehouse Master
+  | "warehouse-master";
 
 export type ViewState =
+  | { type: "dashboard" }
   | { type: "list"; page: PageKey }
   | { type: "pr-detail"; code: string }
   | { type: "po-detail"; code: string }

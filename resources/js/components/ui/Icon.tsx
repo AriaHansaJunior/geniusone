@@ -146,6 +146,14 @@ export function Icon({
         <path d="M7 8V3h10v5M7 17H4V9h16v8h-3M7 14h10v7H7z" />
       </>
     ),
+    refresh: (
+      <>
+        <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+        <path d="M3 3v5h5" />
+        <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" />
+        <path d="M16 21h5v-5" />
+      </>
+    ),
     search: (
       <>
         <circle cx="11" cy="11" r="7" />

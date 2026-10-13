@@ -272,7 +272,7 @@ export function DetailDrawer({ row, onClose }: { row: TableRow; onClose: () => v
                 <small>Bandung, Indonesia</small>
               </div>
               <div>
-                <span>{type === "warehouse" ? "TOTAL RECEIVED" : "ORDER TOTAL"}</span>
+                <span>ORDER TOTAL</span>
                 <strong>{orderTotal}</strong>
                 <small>Tax included</small>
               </div>

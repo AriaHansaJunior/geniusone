@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { AppLayout } from "./layout/AppLayout";
+import { Dashboard } from "../pages/Dashboard";
 import { PurchaseRequisition } from "../pages/PurchaseRequisition";
 import { PurchaseOrder } from "../pages/PurchaseOrder";
 import { PurchaseOrderReport } from "../pages/PurchaseOrderReport";
@@ -11,8 +12,10 @@ import { WarehouseDetail } from "../pages/WarehouseDetail";
 import { WarehouseCreate } from "../pages/WarehouseCreate";
 import { EditProfile } from "../pages/EditProfile";
 import { Login } from "../pages/Login";
+import { PlaceholderPage } from "../pages/PlaceholderPage";
 import { ConfirmDialog } from "./ui/ConfirmDialog";
-import { navigation, docToSlug } from "../data/mockData";
+import { pageMeta, docToSlug } from "../data/mockData";
+import { navigationConfig } from "../config/navigation";
 import type { PageKey, ViewState, TableRow } from "../types";
 
 interface AppProps {
@@ -20,8 +23,13 @@ interface AppProps {
   initialCode?: string;
 }
 
-function resolveViewStateFromPath(pathname: string, defaultPage: PageKey = "report"): ViewState {
+function resolveViewStateFromPath(pathname: string, defaultPage: PageKey = "dashboard"): ViewState {
   const cleanPath = pathname.replace(/\/$/, "");
+
+  // Root or Dashboard
+  if (cleanPath === "" || cleanPath === "/dashboard") {
+    return { type: "dashboard" };
+  }
 
   // Authentication & User Profile routes
   if (cleanPath === "/login") {
@@ -57,28 +65,65 @@ function resolveViewStateFromPath(pathname: string, defaultPage: PageKey = "repo
     return { type: "warehouse-detail", code: decodeURIComponent(warehouseDetailMatch[1]) };
   }
 
-  // List routes
+  // Existing Core List Routes
   if (cleanPath === "/pr" || cleanPath === "/purchase-requisitions" || cleanPath === "/purchase-requests") {
     return { type: "list", page: "pr" };
   }
   if (cleanPath === "/po" || cleanPath === "/purchase-orders") {
     return { type: "list", page: "po" };
   }
-  if (cleanPath === "/report" || cleanPath === "/pr-po-report" || cleanPath === "") {
+  if (cleanPath === "/report" || cleanPath === "/pr-po-report") {
     return { type: "list", page: "report" };
   }
   if (cleanPath === "/warehouse" || cleanPath === "/warehouse/bpb") {
     return { type: "list", page: "warehouse" };
   }
 
+  // Purchase Master routes
+  if (cleanPath === "/procurement/supplier") return { type: "list", page: "supplier" };
+  if (cleanPath === "/procurement/payment-term") return { type: "list", page: "payment-term" };
+  if (cleanPath === "/procurement/purchase-category") return { type: "list", page: "purchase-category" };
+  if (cleanPath === "/procurement/delivery-terms") return { type: "list", page: "delivery-terms" };
+  if (cleanPath === "/procurement/additional-costs") return { type: "list", page: "additional-costs" };
+  if (cleanPath === "/procurement/pph") return { type: "list", page: "pph" };
+
+  // Procurement Reports routes
+  if (cleanPath === "/procurement/pr-report") return { type: "list", page: "pr-report" };
+  if (cleanPath === "/procurement/po-report") return { type: "list", page: "po-report" };
+
+  // Exim Master routes
+  if (cleanPath === "/exim/unit") return { type: "list", page: "unit" };
+  if (cleanPath === "/exim/satuan") return { type: "list", page: "satuan" };
+  if (cleanPath === "/exim/item") return { type: "list", page: "item" };
+  if (cleanPath === "/exim/brand") return { type: "list", page: "brand" };
+  if (cleanPath === "/exim/classification") return { type: "list", page: "classification" };
+  if (cleanPath === "/exim/department") return { type: "list", page: "department" };
+  if (cleanPath === "/exim/facility") return { type: "list", page: "facility" };
+  if (cleanPath === "/exim/hs") return { type: "list", page: "hs" };
+  if (cleanPath === "/exim/category") return { type: "list", page: "category" };
+  if (cleanPath === "/exim/style") return { type: "list", page: "style" };
+  if (cleanPath === "/exim/colour") return { type: "list", page: "colour" };
+
+  // Exim other routes
+  if (cleanPath === "/exim/receive-note") return { type: "list", page: "receive-note" };
+  if (cleanPath === "/exim/receive-note-return") return { type: "list", page: "receive-note-return" };
+  if (cleanPath === "/exim/document-history") return { type: "list", page: "document-history" };
+
+  // Warehouse Master route
+  if (cleanPath === "/warehouse/master") return { type: "list", page: "warehouse-master" };
+
+  if (defaultPage === "dashboard") {
+    return { type: "dashboard" };
+  }
   return { type: "list", page: defaultPage };
 }
 
-export function App({ initialPage = "report", initialCode = "" }: AppProps) {
+export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
   const [viewState, setViewState] = useState<ViewState>(() => {
     if (typeof window !== "undefined") {
-      return resolveViewStateFromPath(window.location.pathname, (initialPage as PageKey) || "report");
+      return resolveViewStateFromPath(window.location.pathname, (initialPage as PageKey) || "dashboard");
     }
+    if (initialPage === "dashboard") return { type: "dashboard" };
     if (initialPage === "login") return { type: "login" };
     if (initialPage === "edit-profile" || initialPage === "profile.edit") return { type: "edit-profile" };
     if (initialPage === "warehouse-create") return { type: "warehouse-create" };
@@ -86,14 +131,17 @@ export function App({ initialPage = "report", initialCode = "" }: AppProps) {
     if (initialPage === "po-detail") return { type: "po-detail", code: initialCode || "POL-1026-0040" };
     if (initialPage === "report-detail") return { type: "report-detail", code: initialCode || "POL-1026-0040" };
     if (initialPage === "warehouse-detail") return { type: "warehouse-detail", code: initialCode || "0138-WHIN-IMLI-G-X-2026" };
-    return { type: "list", page: (initialPage as PageKey) || "report" };
+    if (initialPage in pageMeta) return { type: "list", page: initialPage as PageKey };
+    return { type: "dashboard" };
   });
 
   const [showLogoutDialog, setShowLogoutDialog] = useState(false);
 
   // Calculate corresponding active sidebar section
   const activeSidebarPage: PageKey | null =
-    viewState.type === "list"
+    viewState.type === "dashboard"
+      ? "dashboard"
+      : viewState.type === "list"
       ? viewState.page
       : viewState.type === "pr-detail"
       ? "pr"
@@ -105,7 +153,8 @@ export function App({ initialPage = "report", initialCode = "" }: AppProps) {
       ? "warehouse"
       : null;
 
-  const isDetailPage = viewState.type !== "list";
+  const isDetailPage = viewState.type !== "list" && viewState.type !== "dashboard";
+  const hideDefaultHeader = isDetailPage || viewState.type === "dashboard";
 
   // Reset scroll position on route transition
   useEffect(() => {
@@ -118,15 +167,49 @@ export function App({ initialPage = "report", initialCode = "" }: AppProps) {
     }
   }, [viewState]);
 
-  // Navigate to list view
-  const handleNavigateList = useCallback((targetPage: PageKey) => {
-    setViewState({ type: "list", page: targetPage });
+  // Navigate to list or dashboard view
+  const handleNavigateList = useCallback((targetPage: PageKey, targetPath?: string) => {
+    let nextState: ViewState;
+    let path = targetPath;
+
+    if (targetPage === "dashboard") {
+      nextState = { type: "dashboard" };
+      path = path || "/dashboard";
+    } else {
+      nextState = { type: "list", page: targetPage };
+      if (!path) {
+        // Find path from navigation config if available
+        for (const section of navigationConfig) {
+          if (section.id === targetPage && section.path) {
+            path = section.path;
+            break;
+          }
+          if (section.directItems) {
+            const found = section.directItems.find((item) => item.id === targetPage);
+            if (found) {
+              path = found.path;
+              break;
+            }
+          }
+          if (section.groups) {
+            for (const group of section.groups) {
+              const found = group.items.find((item) => item.id === targetPage);
+              if (found) {
+                path = found.path;
+                break;
+              }
+            }
+          }
+        }
+        path = path || `/${targetPage}`;
+      }
+    }
+
+    setViewState(nextState);
 
     if (typeof window !== "undefined") {
       window.scrollTo(0, 0);
-      const targetNav = navigation.find((item) => item.key === targetPage);
-      const path = targetNav ? targetNav.path : `/${targetPage}`;
-      window.history.pushState({ type: "list", page: targetPage }, "", path);
+      window.history.pushState(nextState, "", path);
     }
   }, []);
 
@@ -204,17 +287,17 @@ export function App({ initialPage = "report", initialCode = "" }: AppProps) {
     setShowLogoutDialog(false);
   }, []);
 
-  // Confirm save profile -> navigate to homepage (report)
+  // Confirm save profile -> navigate to dashboard
   const handleProfileSaveConfirmed = useCallback(() => {
-    handleNavigateList("report");
+    handleNavigateList("dashboard", "/dashboard");
   }, [handleNavigateList]);
 
-  // Cancel profile -> return to previous page or homepage
+  // Cancel profile -> return to previous page or dashboard
   const handleProfileCancel = useCallback(() => {
     if (typeof window !== "undefined" && window.history.length > 1) {
       window.history.back();
     } else {
-      handleNavigateList("report");
+      handleNavigateList("dashboard", "/dashboard");
     }
   }, [handleNavigateList]);
 
@@ -222,7 +305,7 @@ export function App({ initialPage = "report", initialCode = "" }: AppProps) {
   useEffect(() => {
     const handlePopState = () => {
       if (typeof window !== "undefined") {
-        const detected = resolveViewStateFromPath(window.location.pathname, "report");
+        const detected = resolveViewStateFromPath(window.location.pathname, "dashboard");
         setViewState(detected);
         window.scrollTo(0, 0);
       }
@@ -235,9 +318,14 @@ export function App({ initialPage = "report", initialCode = "" }: AppProps) {
   // Standalone Login page view
   if (viewState.type === "login") {
     return (
-      <Login onNavigateHome={() => handleNavigateList("report")} />
+      <Login onNavigateHome={() => handleNavigateList("dashboard", "/dashboard")} />
     );
   }
+
+  const currentMeta =
+    viewState.type === "list"
+      ? pageMeta[viewState.page] || pageMeta.dashboard
+      : pageMeta.dashboard;
 
   return (
     <>
@@ -246,9 +334,12 @@ export function App({ initialPage = "report", initialCode = "" }: AppProps) {
         onNavigate={handleNavigateList}
         onNavigateProfile={handleNavigateProfile}
         onRequestLogout={handleRequestLogout}
-        hideDefaultHeader={isDetailPage}
+        hideDefaultHeader={hideDefaultHeader}
       >
-        {/* List Page Views */}
+        {/* Dashboard Landing Page */}
+        {viewState.type === "dashboard" && <Dashboard />}
+
+        {/* Existing Core List Page Views */}
         {viewState.type === "list" && viewState.page === "pr" && (
           <PurchaseRequisition
             onDetail={(row: TableRow) =>
@@ -282,11 +373,24 @@ export function App({ initialPage = "report", initialCode = "" }: AppProps) {
           />
         )}
 
+        {/* New Lightweight Placeholder Pages */}
+        {viewState.type === "list" &&
+          viewState.page !== "pr" &&
+          viewState.page !== "po" &&
+          viewState.page !== "report" &&
+          viewState.page !== "warehouse" &&
+          viewState.page !== "dashboard" && (
+            <PlaceholderPage
+              eyebrow={currentMeta.eyebrow}
+              title={currentMeta.title}
+            />
+          )}
+
         {/* Dedicated Full Page Detail Views */}
         {viewState.type === "pr-detail" && (
           <PurchaseRequisitionDetail
             code={viewState.code}
-            onBack={() => handleNavigateList("pr")}
+            onBack={() => handleNavigateList("pr", "/pr")}
             onNavigateDetail={handleNavigateDetail}
           />
         )}
@@ -294,7 +398,7 @@ export function App({ initialPage = "report", initialCode = "" }: AppProps) {
         {viewState.type === "po-detail" && (
           <PurchaseOrderDetail
             code={viewState.code}
-            onBack={() => handleNavigateList("po")}
+            onBack={() => handleNavigateList("po", "/po")}
             onNavigateDetail={handleNavigateDetail}
           />
         )}
@@ -302,7 +406,7 @@ export function App({ initialPage = "report", initialCode = "" }: AppProps) {
         {viewState.type === "report-detail" && (
           <PurchaseOrderReportDetail
             code={viewState.code}
-            onBack={() => handleNavigateList("report")}
+            onBack={() => handleNavigateList("report", "/report")}
             onNavigateDetail={handleNavigateDetail}
           />
         )}
@@ -310,7 +414,7 @@ export function App({ initialPage = "report", initialCode = "" }: AppProps) {
         {viewState.type === "warehouse-detail" && (
           <WarehouseDetail
             code={viewState.code}
-            onBack={() => handleNavigateList("warehouse")}
+            onBack={() => handleNavigateList("warehouse", "/warehouse")}
             onNavigateDetail={handleNavigateDetail}
           />
         )}
@@ -318,8 +422,8 @@ export function App({ initialPage = "report", initialCode = "" }: AppProps) {
         {/* Dedicated Full Page Create View */}
         {viewState.type === "warehouse-create" && (
           <WarehouseCreate
-            onBack={() => handleNavigateList("warehouse")}
-            onSaved={() => handleNavigateList("warehouse")}
+            onBack={() => handleNavigateList("warehouse", "/warehouse")}
+            onSaved={() => handleNavigateList("warehouse", "/warehouse")}
           />
         )}
 

@@ -14,6 +14,6 @@
     @vite(['resources/css/app.css', 'resources/js/app.tsx'])
 </head>
 <body>
-    <div id="root" data-initial-page="{{ $page ?? 'report' }}" data-initial-code="{{ $code ?? '' }}"></div>
+    <div id="root" data-initial-page="{{ $page ?? 'dashboard' }}" data-initial-code="{{ $code ?? '' }}"></div>
 </body>
 </html>

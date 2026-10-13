@@ -21,6 +21,11 @@ export const navigation: { key: PageKey; label: string; icon: IconName; path: st
 ];
 
 export const pageMeta: Record<PageKey, PageMeta> = {
+  dashboard: {
+    eyebrow: "OVERVIEW",
+    title: "Dashboard",
+    description: "Enterprise operations summary and real-time exchange rates.",
+  },
   pr: {
     eyebrow: "PROCUREMENT",
     title: "Purchase Requisition",
@@ -38,8 +43,128 @@ export const pageMeta: Record<PageKey, PageMeta> = {
   },
   warehouse: {
     eyebrow: "WAREHOUSE",
-    title: "Receive Material",
+    title: "Receive Material (BPB)",
     description: "Manage BPB receiving documents and approval.",
+  },
+  // Purchase Master
+  supplier: {
+    eyebrow: "PURCHASE MASTER",
+    title: "Supplier",
+    description: "Manage registered vendor profiles, contacts, and performance ratings.",
+  },
+  "payment-term": {
+    eyebrow: "PURCHASE MASTER",
+    title: "Payment Term",
+    description: "Configure commercial payment conditions and settlement cycles.",
+  },
+  "purchase-category": {
+    eyebrow: "PURCHASE MASTER",
+    title: "Purchase Category",
+    description: "Classify procurement expenditures and requisition buckets.",
+  },
+  "delivery-terms": {
+    eyebrow: "PURCHASE MASTER",
+    title: "Delivery Terms",
+    description: "Define Incoterms and supplier shipping obligations.",
+  },
+  "additional-costs": {
+    eyebrow: "PURCHASE MASTER",
+    title: "Additional Costs",
+    description: "Manage freight, insurance, handling, and incidental fee categories.",
+  },
+  pph: {
+    eyebrow: "PURCHASE MASTER",
+    title: "PPH (Income Tax)",
+    description: "Configure withholding tax schedules and corporate deduction rates.",
+  },
+  // Procurement Reports
+  "pr-report": {
+    eyebrow: "PROCUREMENT REPORTS",
+    title: "Purchase Requisition Report",
+    description: "Track requisition volume, departmental request velocity, and approval lead times.",
+  },
+  "po-report": {
+    eyebrow: "PROCUREMENT REPORTS",
+    title: "Purchase Order Report",
+    description: "Comprehensive reporting on issued purchase orders, suppliers, and fulfilment status.",
+  },
+  // Exim Master
+  unit: {
+    eyebrow: "EXIM MASTER",
+    title: "Unit",
+    description: "Manage operational and facility unit definitions for customs clearance.",
+  },
+  satuan: {
+    eyebrow: "EXIM MASTER",
+    title: "Satuan (UOM)",
+    description: "Standardized units of measure for export-import declarations.",
+  },
+  item: {
+    eyebrow: "EXIM MASTER",
+    title: "Item",
+    description: "Customs item master index and international trade material catalog.",
+  },
+  brand: {
+    eyebrow: "EXIM MASTER",
+    title: "Brand",
+    description: "Registered trade names and product trademark identities.",
+  },
+  classification: {
+    eyebrow: "EXIM MASTER",
+    title: "Classification",
+    description: "Commodity trade classification and customs regulatory tiers.",
+  },
+  department: {
+    eyebrow: "EXIM MASTER",
+    title: "Department",
+    description: "Organizational departments associated with trade documentation.",
+  },
+  facility: {
+    eyebrow: "EXIM MASTER",
+    title: "Facility",
+    description: "Bonded zone, KITE, and customs facility permit profiles.",
+  },
+  hs: {
+    eyebrow: "EXIM MASTER",
+    title: "Harmonized System (HS)",
+    description: "Harmonized tariff schedule codes and duty assessment parameters.",
+  },
+  category: {
+    eyebrow: "EXIM MASTER",
+    title: "Category",
+    description: "Material and product groupings for customs reporting.",
+  },
+  style: {
+    eyebrow: "EXIM MASTER",
+    title: "Style",
+    description: "Product design specifications and manufacturing style numbers.",
+  },
+  colour: {
+    eyebrow: "EXIM MASTER",
+    title: "Colour",
+    description: "Standardized color references for material tracking.",
+  },
+  // Exim Other
+  "receive-note": {
+    eyebrow: "EXIM TRANSACTIONS",
+    title: "Receive Note",
+    description: "Verify inward shipment documentation and customs gate clearances.",
+  },
+  "receive-note-return": {
+    eyebrow: "EXIM TRANSACTIONS",
+    title: "Receive Note Return",
+    description: "Manage import shipment returns, re-exports, and discrepancy adjustments.",
+  },
+  "document-history": {
+    eyebrow: "EXIM AUDIT",
+    title: "Document History",
+    description: "Trace customs declaration milestones, status logs, and inspection records.",
+  },
+  // Warehouse Master
+  "warehouse-master": {
+    eyebrow: "WAREHOUSE MASTER",
+    title: "Warehouse",
+    description: "Storage facility records, zones, bin allocations, and supervisor assignments.",
   },
 };
 
@@ -2008,7 +2133,7 @@ export const reportRows: TableRow[] = [
 ];
 
 export const pageConfigs: Record<
-  PageKey,
+  "pr" | "po" | "report" | "warehouse",
   {
     stats: [string, string, string][];
     columns: Column[];

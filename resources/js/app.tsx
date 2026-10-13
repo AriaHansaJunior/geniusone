@@ -6,7 +6,7 @@ import type { PageKey } from "./types";
 const rootElement = document.getElementById("root");
 
 if (rootElement) {
-  const initialPage = rootElement.dataset.initialPage || "report";
+  const initialPage = rootElement.dataset.initialPage || "dashboard";
   const initialCode = rootElement.dataset.initialCode || "";
 
   ReactDOM.createRoot(rootElement).render(
