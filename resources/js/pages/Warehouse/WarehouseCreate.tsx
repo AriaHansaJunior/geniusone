@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { Icon } from "../components/ui/Icon";
-import { Button } from "../components/ui/Button";
-import { Material } from "../components/common/CommonCells";
-import { createWarehouseBpb } from "../data/api";
+import { Icon } from "../../components/ui/Icon";
+import { Button } from "../../components/ui/Button";
+import { Material } from "../../components/common/CommonCells";
+import { createWarehouseBpb } from "../../data/api";
 
 interface WarehouseCreateProps {
   onBack: () => void;

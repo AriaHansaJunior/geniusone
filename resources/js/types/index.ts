@@ -108,6 +108,12 @@ export type ViewState =
   | { type: "report-detail"; code: string }
   | { type: "warehouse-detail"; code: string }
   | { type: "warehouse-create" }
+  | { type: "supplier-create" }
+  | { type: "payment-term-create" }
+  | { type: "purchase-category-create" }
+  | { type: "delivery-terms-create" }
+  | { type: "additional-costs-create" }
+  | { type: "pph-create" }
   | { type: "edit-profile" }
   | { type: "login" };
 

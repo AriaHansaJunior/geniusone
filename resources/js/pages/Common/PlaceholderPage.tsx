@@ -1,6 +1,6 @@
 import React from "react";
-import { Icon } from "../components/ui/Icon";
-import type { IconName } from "../types";
+import { Icon } from "../../components/ui/Icon";
+import type { IconName } from "../../types";
 
 interface PlaceholderPageProps {
   eyebrow?: string;

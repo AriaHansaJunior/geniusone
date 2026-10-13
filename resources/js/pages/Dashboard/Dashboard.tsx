@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { Icon } from "../components/ui/Icon";
-import { Button } from "../components/ui/Button";
+import { Icon } from "../../components/ui/Icon";
+import { Button } from "../../components/ui/Button";
 
 interface ExchangeRateState {
   currency: string;

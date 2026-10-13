@@ -1,21 +1,36 @@
 import { useState, useEffect, useCallback } from "react";
 import { AppLayout } from "./layout/AppLayout";
-import { Dashboard } from "../pages/Dashboard";
-import { PurchaseRequisition } from "../pages/PurchaseRequisition";
-import { PurchaseOrder } from "../pages/PurchaseOrder";
-import { PurchaseOrderReport } from "../pages/PurchaseOrderReport";
-import { Warehouse } from "../pages/Warehouse";
-import { PurchaseRequisitionDetail } from "../pages/PurchaseRequisitionDetail";
-import { PurchaseOrderDetail } from "../pages/PurchaseOrderDetail";
-import { PurchaseOrderReportDetail } from "../pages/PurchaseOrderReportDetail";
-import { WarehouseDetail } from "../pages/WarehouseDetail";
-import { WarehouseCreate } from "../pages/WarehouseCreate";
-import { EditProfile } from "../pages/EditProfile";
-import { Login } from "../pages/Login";
-import { PlaceholderPage } from "../pages/PlaceholderPage";
+import {
+  Dashboard,
+  PurchaseRequisition,
+  PurchaseOrder,
+  PurchaseOrderReport,
+  SupplierIndex,
+  SupplierForm,
+  PaymentTermIndex,
+  PaymentTermForm,
+  PurchaseCategoryIndex,
+  PurchaseCategoryForm,
+  DeliveryTermsIndex,
+  DeliveryTermsForm,
+  AdditionalCostsIndex,
+  AdditionalCostsForm,
+  PphIndex,
+  PphForm,
+  Warehouse,
+  PurchaseRequisitionDetail,
+  PurchaseOrderDetail,
+  PurchaseOrderReportDetail,
+  WarehouseDetail,
+  WarehouseCreate,
+  EditProfile,
+  Login,
+  PlaceholderPage,
+} from "../pages";
 import { ConfirmDialog } from "./ui/ConfirmDialog";
 import { pageMeta, docToSlug } from "../data/mockData";
 import { navigationConfig } from "../config/navigation";
+import { initialPphRecords, type PphRecord } from "../pages/Procurement/PurchaseMaster/Pph/pph-types";
 import type { PageKey, ViewState, TableRow } from "../types";
 
 interface AppProps {
@@ -47,6 +62,60 @@ function resolveViewStateFromPath(pathname: string, defaultPage: PageKey = "dash
     cleanPath === "/warehouse/incoming/receive-material-bpb/add"
   ) {
     return { type: "warehouse-create" };
+  }
+
+  if (
+    cleanPath === "/procurement/purchase-master/supplier/create" ||
+    cleanPath === "/procurement/purchase-master/supplier/add" ||
+    cleanPath === "/procurement/supplier/create" ||
+    cleanPath === "/procurement/supplier/add"
+  ) {
+    return { type: "supplier-create" };
+  }
+
+  if (
+    cleanPath === "/procurement/purchase-master/payment-term/create" ||
+    cleanPath === "/procurement/purchase-master/payment-term/add" ||
+    cleanPath === "/procurement/payment-term/create" ||
+    cleanPath === "/procurement/payment-term/add"
+  ) {
+    return { type: "payment-term-create" };
+  }
+
+  if (
+    cleanPath === "/procurement/purchase-master/purchase-category/create" ||
+    cleanPath === "/procurement/purchase-master/purchase-category/add" ||
+    cleanPath === "/procurement/purchase-category/create" ||
+    cleanPath === "/procurement/purchase-category/add"
+  ) {
+    return { type: "purchase-category-create" };
+  }
+
+  if (
+    cleanPath === "/procurement/purchase-master/delivery-terms/create" ||
+    cleanPath === "/procurement/purchase-master/delivery-terms/add" ||
+    cleanPath === "/procurement/delivery-terms/create" ||
+    cleanPath === "/procurement/delivery-terms/add"
+  ) {
+    return { type: "delivery-terms-create" };
+  }
+
+  if (
+    cleanPath === "/procurement/purchase-master/additional-costs/create" ||
+    cleanPath === "/procurement/purchase-master/additional-costs/add" ||
+    cleanPath === "/procurement/additional-costs/create" ||
+    cleanPath === "/procurement/additional-costs/add"
+  ) {
+    return { type: "additional-costs-create" };
+  }
+
+  if (
+    cleanPath === "/procurement/purchase-master/pph/create" ||
+    cleanPath === "/procurement/purchase-master/pph/add" ||
+    cleanPath === "/procurement/pph/create" ||
+    cleanPath === "/procurement/pph/add"
+  ) {
+    return { type: "pph-create" };
   }
 
   // Detail routes (hierarchical & legacy short aliases)
@@ -174,6 +243,12 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
     if (initialPage === "login") return { type: "login" };
     if (initialPage === "edit-profile" || initialPage === "profile.edit") return { type: "edit-profile" };
     if (initialPage === "warehouse-create") return { type: "warehouse-create" };
+    if (initialPage === "supplier-create") return { type: "supplier-create" };
+    if (initialPage === "payment-term-create") return { type: "payment-term-create" };
+    if (initialPage === "purchase-category-create") return { type: "purchase-category-create" };
+    if (initialPage === "delivery-terms-create") return { type: "delivery-terms-create" };
+    if (initialPage === "additional-costs-create") return { type: "additional-costs-create" };
+    if (initialPage === "pph-create") return { type: "pph-create" };
     if (initialPage === "pr-detail") return { type: "pr-detail", code: initialCode || "0026-PR-IMLI-X-2026" };
     if (initialPage === "po-detail") return { type: "po-detail", code: initialCode || "POL-1026-0040" };
     if (initialPage === "report-detail") return { type: "report-detail", code: initialCode || "POL-1026-0040" };
@@ -198,6 +273,18 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
       ? "report"
       : viewState.type === "warehouse-detail" || viewState.type === "warehouse-create"
       ? "warehouse"
+      : viewState.type === "supplier-create"
+      ? "supplier"
+      : viewState.type === "payment-term-create"
+      ? "payment-term"
+      : viewState.type === "purchase-category-create"
+      ? "purchase-category"
+      : viewState.type === "delivery-terms-create"
+      ? "delivery-terms"
+      : viewState.type === "additional-costs-create"
+      ? "additional-costs"
+      : viewState.type === "pph-create"
+      ? "pph"
       : null;
 
   const isDetailPage = viewState.type !== "list" && viewState.type !== "dashboard";
@@ -296,8 +383,77 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
     []
   );
 
+  // In-memory PPH dataset state to support temporary runtime additions
+  const [pphRecords, setPphRecords] = useState<PphRecord[]>(initialPphRecords);
+
   // Navigate to create new record view
-  const handleNavigateCreate = useCallback((module: "warehouse") => {
+  const handleNavigateCreate = useCallback((module: "warehouse" | "supplier" | "payment-term" | "purchase-category" | "delivery-terms" | "additional-costs" | "pph") => {
+    if (module === "pph") {
+      const nextState: ViewState = { type: "pph-create" };
+      setViewState(nextState);
+
+      if (typeof window !== "undefined") {
+        window.scrollTo(0, 0);
+        window.history.pushState(nextState, "", "/procurement/purchase-master/pph/create");
+      }
+      return;
+    }
+
+    if (module === "additional-costs") {
+      const nextState: ViewState = { type: "additional-costs-create" };
+      setViewState(nextState);
+
+      if (typeof window !== "undefined") {
+        window.scrollTo(0, 0);
+        window.history.pushState(nextState, "", "/procurement/purchase-master/additional-costs/create");
+      }
+      return;
+    }
+
+    if (module === "delivery-terms") {
+      const nextState: ViewState = { type: "delivery-terms-create" };
+      setViewState(nextState);
+
+      if (typeof window !== "undefined") {
+        window.scrollTo(0, 0);
+        window.history.pushState(nextState, "", "/procurement/purchase-master/delivery-terms/create");
+      }
+      return;
+    }
+
+    if (module === "purchase-category") {
+      const nextState: ViewState = { type: "purchase-category-create" };
+      setViewState(nextState);
+
+      if (typeof window !== "undefined") {
+        window.scrollTo(0, 0);
+        window.history.pushState(nextState, "", "/procurement/purchase-master/purchase-category/create");
+      }
+      return;
+    }
+
+    if (module === "payment-term") {
+      const nextState: ViewState = { type: "payment-term-create" };
+      setViewState(nextState);
+
+      if (typeof window !== "undefined") {
+        window.scrollTo(0, 0);
+        window.history.pushState(nextState, "", "/procurement/purchase-master/payment-term/create");
+      }
+      return;
+    }
+
+    if (module === "supplier") {
+      const nextState: ViewState = { type: "supplier-create" };
+      setViewState(nextState);
+
+      if (typeof window !== "undefined") {
+        window.scrollTo(0, 0);
+        window.history.pushState(nextState, "", "/procurement/purchase-master/supplier/create");
+      }
+      return;
+    }
+
     const nextState: ViewState = { type: "warehouse-create" };
     setViewState(nextState);
 
@@ -445,12 +601,61 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
           />
         )}
 
+        {/* Supplier Master Listing */}
+        {viewState.type === "list" && viewState.page === "supplier" && (
+          <SupplierIndex
+            onAddNew={() => handleNavigateCreate("supplier")}
+          />
+        )}
+
+        {/* Payment Term Listing */}
+        {viewState.type === "list" && viewState.page === "payment-term" && (
+          <PaymentTermIndex
+            onAddNew={() => handleNavigateCreate("payment-term")}
+          />
+        )}
+
+        {/* Purchase Category Listing */}
+        {viewState.type === "list" && viewState.page === "purchase-category" && (
+          <PurchaseCategoryIndex
+            onAddNew={() => handleNavigateCreate("purchase-category")}
+          />
+        )}
+
+        {/* Delivery Terms Listing */}
+        {viewState.type === "list" && viewState.page === "delivery-terms" && (
+          <DeliveryTermsIndex
+            onAddNew={() => handleNavigateCreate("delivery-terms")}
+          />
+        )}
+
+        {/* Additional Costs Listing */}
+        {viewState.type === "list" && viewState.page === "additional-costs" && (
+          <AdditionalCostsIndex
+            onAddNew={() => handleNavigateCreate("additional-costs")}
+          />
+        )}
+
+        {/* PPH Listing */}
+        {viewState.type === "list" && viewState.page === "pph" && (
+          <PphIndex
+            records={pphRecords}
+            onAddNew={() => handleNavigateCreate("pph")}
+          />
+        )}
+
         {/* New Lightweight Placeholder Pages */}
         {viewState.type === "list" &&
           viewState.page !== "pr" &&
           viewState.page !== "po" &&
           viewState.page !== "report" &&
           viewState.page !== "warehouse" &&
+          viewState.page !== "supplier" &&
+          viewState.page !== "payment-term" &&
+          viewState.page !== "purchase-category" &&
+          viewState.page !== "delivery-terms" &&
+          viewState.page !== "additional-costs" &&
+          viewState.page !== "pph" &&
           viewState.page !== "dashboard" && (
             <PlaceholderPage
               eyebrow={currentMeta.eyebrow}
@@ -491,11 +696,51 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
           />
         )}
 
-        {/* Dedicated Full Page Create View */}
+        {/* Dedicated Full Page Create Views */}
         {viewState.type === "warehouse-create" && (
           <WarehouseCreate
             onBack={() => handleNavigateList("warehouse", "/warehouse/incoming/receive-material-bpb")}
             onSaved={() => handleNavigateList("warehouse", "/warehouse/incoming/receive-material-bpb")}
+          />
+        )}
+
+        {viewState.type === "supplier-create" && (
+          <SupplierForm
+            onBack={() => handleNavigateList("supplier", "/procurement/purchase-master/supplier")}
+          />
+        )}
+
+        {viewState.type === "payment-term-create" && (
+          <PaymentTermForm
+            onBack={() => handleNavigateList("payment-term", "/procurement/purchase-master/payment-term")}
+          />
+        )}
+
+        {viewState.type === "purchase-category-create" && (
+          <PurchaseCategoryForm
+            onBack={() => handleNavigateList("purchase-category", "/procurement/purchase-master/purchase-category")}
+          />
+        )}
+
+        {viewState.type === "delivery-terms-create" && (
+          <DeliveryTermsForm
+            onBack={() => handleNavigateList("delivery-terms", "/procurement/purchase-master/delivery-terms")}
+          />
+        )}
+
+        {viewState.type === "additional-costs-create" && (
+          <AdditionalCostsForm
+            onBack={() => handleNavigateList("additional-costs", "/procurement/purchase-master/additional-costs")}
+          />
+        )}
+
+        {viewState.type === "pph-create" && (
+          <PphForm
+            onBack={() => handleNavigateList("pph", "/procurement/purchase-master/pph")}
+            onSave={(newRec) => {
+              setPphRecords((prev) => [newRec, ...prev]);
+              handleNavigateList("pph", "/procurement/purchase-master/pph");
+            }}
           />
         )}
 

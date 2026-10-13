@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
-import { Icon } from "../components/ui/Icon";
-import { Button } from "../components/ui/Button";
-import { Badge } from "../components/ui/Badge";
-import { Material } from "../components/common/CommonCells";
-import { reportRows, findRowBySlug, docToSlug } from "../data/mockData";
-import { fetchDetail } from "../data/api";
-import type { TableRow } from "../types";
+import { Icon } from "../../../components/ui/Icon";
+import { Button } from "../../../components/ui/Button";
+import { Badge } from "../../../components/ui/Badge";
+import { Material } from "../../../components/common/CommonCells";
+import { reportRows, findRowBySlug, docToSlug } from "../../../data/mockData";
+import { fetchDetail } from "../../../data/api";
+import type { TableRow } from "../../../types";
 
 interface PurchaseOrderReportDetailProps {
   code: string;

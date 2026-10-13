@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
-import { Button } from "../components/ui/Button";
-import { SummaryCard } from "../components/ui/SummaryCard";
-import { SearchField } from "../components/ui/SearchField";
-import { DataTable } from "../components/ui/DataTable";
-import { FilterPanel } from "../components/common/FilterPanel";
-import { pageConfigs } from "../data/mockData";
-import { fetchList } from "../data/api";
-import type { TableRow } from "../types";
+import { Button } from "../../components/ui/Button";
+import { SummaryCard } from "../../components/ui/SummaryCard";
+import { SearchField } from "../../components/ui/SearchField";
+import { DataTable } from "../../components/ui/DataTable";
+import { FilterPanel } from "../../components/common/FilterPanel";
+import { pageConfigs } from "../../data/mockData";
+import { fetchList } from "../../data/api";
+import type { TableRow } from "../../types";
 
 interface WarehouseProps {
   onDetail: (row: TableRow) => void;

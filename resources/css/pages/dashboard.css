@@ -1,0 +1,181 @@
+/* Dashboard Page Styles */
+/* ==========================================================================
+   Dashboard View & Exchange Rates Card
+   ========================================================================== */
+.dashboard-view {
+  padding: 24px 36px 36px;
+  max-width: 1400px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.dashboard-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.dashboard-header__title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.dashboard-header__title h1 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--ink);
+  letter-spacing: -0.3px;
+}
+
+.dashboard-header__icon {
+  color: var(--blue-600);
+}
+
+.dashboard-rate-card {
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  max-width: 640px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.dashboard-rate-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  background: #f8fafc;
+  border-bottom: 1px solid var(--line);
+}
+
+.dashboard-rate-card__title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13.5px;
+  font-weight: 800;
+  color: var(--ink);
+}
+
+.dashboard-rate-card__title svg {
+  color: var(--blue-600);
+}
+
+.dashboard-rate-card__header .button {
+  min-height: 30px;
+  padding: 0 12px;
+  font-size: 11.5px;
+}
+
+.dashboard-rate-table-wrapper {
+  padding: 0;
+  overflow-x: auto;
+}
+
+.dashboard-rate-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.dashboard-rate-table thead th {
+  background: #505054;
+  color: #ffffff;
+  padding: 10px 20px;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
+
+.dashboard-rate-table thead th:last-child {
+  text-align: right;
+}
+
+.dashboard-rate-table thead th:nth-child(2) {
+  text-align: right;
+}
+
+.dashboard-rate-table tbody td {
+  padding: 14px 20px;
+  font-size: 13px;
+  border-bottom: 1px solid var(--line);
+  color: var(--ink);
+}
+
+.dashboard-rate-table tbody td:nth-child(2),
+.dashboard-rate-table tbody td:last-child {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+.rate-value {
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.rate-unavailable {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  background: var(--canvas);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.rate-loading-pulse {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11.5px;
+  color: var(--blue-600);
+  font-weight: 600;
+  animation: ratePulse 1.2s infinite ease-in-out;
+}
+
+@keyframes ratePulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
+.dashboard-rate-card__footer {
+  padding: 12px 20px;
+  background: #fafafc;
+  border-top: 1px solid var(--line);
+}
+
+.dashboard-rate-source-info {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.dashboard-rate-source-info svg {
+  color: var(--orange-500);
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.dashboard-rate-source-info strong {
+  color: var(--ink-soft);
+  display: block;
+  margin-bottom: 2px;
+}
+
+.dashboard-rate-source-info p {
+  margin: 0;
+}
+

@@ -1,0 +1,4 @@
+/* Base Typography & Font Utilities */
+body, button, input, select, textarea {
+  font-family: "Lato", "Noto Sans", sans-serif;
+}

@@ -1,0 +1,48 @@
+/* Application Master Shell Layout */
+.app-shell {
+  height: 100vh;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--canvas);
+}
+
+
+/* Workspace Layout */
+.workspace {
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  position: relative;
+  overflow: hidden;
+}
+
+
+/* Main Content Area */
+main {
+  flex: 1 1 0;
+  min-height: 0;
+  height: 100%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  overflow-x: hidden;
+  transition: all 0.22s ease;
+}
+.page-header {
+  min-height: 112px;
+  background: var(--white);
+  border-bottom: 1px solid var(--line);
+  padding: 22px 36px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.eyebrow { color: var(--blue-600); font-size: 10px; font-weight: 900; letter-spacing: 1.2px; text-transform: uppercase; }
+.page-header h1 { margin: 4px 0 3px; font-size: 22px; line-height: 1.25; font-weight: 800; letter-spacing: -.35px; color: var(--ink); }
+.page-header p { margin: 0; color: var(--muted); font-size: 12.5px; }
+.page-header__actions, .button-row { display: flex; align-items: center; gap: 8px; }
+.content { flex: 1; padding: 24px 36px 36px; max-width: 2400px; margin: 0; width: 100%; }
+

@@ -1,8 +1,8 @@
 import React, { useState, useRef } from "react";
-import { Icon } from "../components/ui/Icon";
-import { Button } from "../components/ui/Button";
-import { Badge } from "../components/ui/Badge";
-import { ConfirmDialog } from "../components/ui/ConfirmDialog";
+import { Icon } from "../../components/ui/Icon";
+import { Button } from "../../components/ui/Button";
+import { Badge } from "../../components/ui/Badge";
+import { ConfirmDialog } from "../../components/ui/ConfirmDialog";
 
 interface EditProfileProps {
   onBack: () => void;

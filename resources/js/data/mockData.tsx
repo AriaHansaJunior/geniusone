@@ -74,7 +74,7 @@ export const pageMeta: Record<PageKey, PageMeta> = {
   },
   pph: {
     eyebrow: "PURCHASE MASTER",
-    title: "PPH (Income Tax)",
+    title: "PPH",
     description: "Configure withholding tax schedules and corporate deduction rates.",
   },
   // Procurement Reports

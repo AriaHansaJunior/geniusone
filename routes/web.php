@@ -87,21 +87,45 @@ Route::get('/warehouse/incoming/receive-material-bpb/details/{code}', [Warehouse
 // Procurement - Purchase Master Routes
 Route::get('/procurement/supplier', fn() => view('app', ['page' => 'supplier']))->name('procurement.supplier');
 Route::get('/procurement/purchase-master/supplier', fn() => view('app', ['page' => 'supplier']));
+Route::get('/procurement/supplier/create', fn() => view('app', ['page' => 'supplier-create']))->name('procurement.supplier.create');
+Route::get('/procurement/supplier/add', fn() => view('app', ['page' => 'supplier-create']));
+Route::get('/procurement/purchase-master/supplier/create', fn() => view('app', ['page' => 'supplier-create']));
+Route::get('/procurement/purchase-master/supplier/add', fn() => view('app', ['page' => 'supplier-create']));
 
 Route::get('/procurement/payment-term', fn() => view('app', ['page' => 'payment-term']))->name('procurement.payment-term');
 Route::get('/procurement/purchase-master/payment-term', fn() => view('app', ['page' => 'payment-term']));
+Route::get('/procurement/payment-term/create', fn() => view('app', ['page' => 'payment-term-create']))->name('procurement.payment-term.create');
+Route::get('/procurement/payment-term/add', fn() => view('app', ['page' => 'payment-term-create']));
+Route::get('/procurement/purchase-master/payment-term/create', fn() => view('app', ['page' => 'payment-term-create']));
+Route::get('/procurement/purchase-master/payment-term/add', fn() => view('app', ['page' => 'payment-term-create']));
 
 Route::get('/procurement/purchase-category', fn() => view('app', ['page' => 'purchase-category']))->name('procurement.purchase-category');
 Route::get('/procurement/purchase-master/purchase-category', fn() => view('app', ['page' => 'purchase-category']));
+Route::get('/procurement/purchase-category/create', fn() => view('app', ['page' => 'purchase-category-create']))->name('procurement.purchase-category.create');
+Route::get('/procurement/purchase-category/add', fn() => view('app', ['page' => 'purchase-category-create']));
+Route::get('/procurement/purchase-master/purchase-category/create', fn() => view('app', ['page' => 'purchase-category-create']));
+Route::get('/procurement/purchase-master/purchase-category/add', fn() => view('app', ['page' => 'purchase-category-create']));
 
 Route::get('/procurement/delivery-terms', fn() => view('app', ['page' => 'delivery-terms']))->name('procurement.delivery-terms');
 Route::get('/procurement/purchase-master/delivery-terms', fn() => view('app', ['page' => 'delivery-terms']));
+Route::get('/procurement/delivery-terms/create', fn() => view('app', ['page' => 'delivery-terms-create']))->name('procurement.delivery-terms.create');
+Route::get('/procurement/delivery-terms/add', fn() => view('app', ['page' => 'delivery-terms-create']));
+Route::get('/procurement/purchase-master/delivery-terms/create', fn() => view('app', ['page' => 'delivery-terms-create']));
+Route::get('/procurement/purchase-master/delivery-terms/add', fn() => view('app', ['page' => 'delivery-terms-create']));
 
 Route::get('/procurement/additional-costs', fn() => view('app', ['page' => 'additional-costs']))->name('procurement.additional-costs');
 Route::get('/procurement/purchase-master/additional-costs', fn() => view('app', ['page' => 'additional-costs']));
+Route::get('/procurement/additional-costs/create', fn() => view('app', ['page' => 'additional-costs-create']))->name('procurement.additional-costs.create');
+Route::get('/procurement/additional-costs/add', fn() => view('app', ['page' => 'additional-costs-create']));
+Route::get('/procurement/purchase-master/additional-costs/create', fn() => view('app', ['page' => 'additional-costs-create']));
+Route::get('/procurement/purchase-master/additional-costs/add', fn() => view('app', ['page' => 'additional-costs-create']));
 
 Route::get('/procurement/pph', fn() => view('app', ['page' => 'pph']))->name('procurement.pph');
 Route::get('/procurement/purchase-master/pph', fn() => view('app', ['page' => 'pph']));
+Route::get('/procurement/pph/create', fn() => view('app', ['page' => 'pph-create']))->name('procurement.pph.create');
+Route::get('/procurement/pph/add', fn() => view('app', ['page' => 'pph-create']));
+Route::get('/procurement/purchase-master/pph/create', fn() => view('app', ['page' => 'pph-create']));
+Route::get('/procurement/purchase-master/pph/add', fn() => view('app', ['page' => 'pph-create']));
 
 // Procurement - Reports Routes
 Route::get('/procurement/pr-report', fn() => view('app', ['page' => 'pr-report']))->name('procurement.pr-report');
