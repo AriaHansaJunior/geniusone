@@ -1,7 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Icon } from "../ui/Icon";
 import { navigationConfig, type NavSection, type NavGroupItem, type NavLeafItem } from "../../config/navigation";
 import type { PageKey } from "../../types";
+
+const STORAGE_KEY_SECTIONS = "geniusone_sidebar_sections";
+const STORAGE_KEY_GROUPS = "geniusone_sidebar_groups";
 
 interface SidebarProps {
   activePage: PageKey | null;
@@ -17,47 +20,138 @@ export function Sidebar({
   onToggleCollapse,
 }: SidebarProps) {
   // Track open state of top-level sections (e.g. procurement, exim, warehouse)
-  const [openSections, setOpenSections] = useState<Record<string, boolean>>({
-    procurement: true,
-    exim: false,
-    warehouse: false,
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = sessionStorage.getItem(STORAGE_KEY_SECTIONS);
+        if (saved) return JSON.parse(saved);
+      } catch {
+        // ignore parse error
+      }
+    }
+    // Default on login / dashboard: all sections closed
+    const defaults: Record<string, boolean> = {
+      procurement: false,
+      exim: false,
+      warehouse: false,
+    };
+    if (activePage && activePage !== "dashboard") {
+      for (const section of navigationConfig) {
+        if (
+          section.directItems?.some((i) => i.id === activePage) ||
+          section.groups?.some((g) => g.id === activePage || g.items.some((i) => i.id === activePage))
+        ) {
+          defaults[section.id] = true;
+          break;
+        }
+      }
+    }
+    return defaults;
   });
 
   // Track open state of subgroups (e.g. purchase-master, transactions, reports, exim-master, incoming)
-  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
-    "purchase-master": false,
-    transactions: true,
-    "procurement-reports": false,
-    "exim-master": true,
-    "warehouse-master": true,
-    "warehouse-incoming": true,
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = sessionStorage.getItem(STORAGE_KEY_GROUPS);
+        if (saved) return JSON.parse(saved);
+      } catch {
+        // ignore parse error
+      }
+    }
+    // Default on login / dashboard: all subgroups closed
+    const defaults: Record<string, boolean> = {
+      "purchase-master": false,
+      transactions: false,
+      "procurement-reports": false,
+      "exim-master": false,
+      "warehouse-master": false,
+      "warehouse-incoming": false,
+      "warehouse-adjustment": false,
+      "warehouse-outcoming": false,
+      "warehouse-request": false,
+      "warehouse-report": false,
+    };
+    if (activePage && activePage !== "dashboard") {
+      for (const section of navigationConfig) {
+        if (section.groups) {
+          for (const group of section.groups) {
+            if (group.id === activePage || group.items.some((i) => i.id === activePage)) {
+              if (!group.isDirectLeaf) {
+                defaults[group.id] = true;
+              }
+              break;
+            }
+          }
+        }
+      }
+    }
+    return defaults;
   });
+
+  // Persist top-level section state in sessionStorage
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      try {
+        sessionStorage.setItem(STORAGE_KEY_SECTIONS, JSON.stringify(openSections));
+      } catch {
+        // ignore
+      }
+    }
+  }, [openSections]);
+
+  // Persist subgroup state in sessionStorage
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      try {
+        sessionStorage.setItem(STORAGE_KEY_GROUPS, JSON.stringify(openGroups));
+      } catch {
+        // ignore
+      }
+    }
+  }, [openGroups]);
 
   // Floating tooltip for collapsed mode
   const [hoveredNav, setHoveredNav] = useState<{ label: string; top: number } | null>(null);
 
-  // Automatically expand parent section and subgroup when activePage changes
-  useEffect(() => {
-    if (!activePage) return;
+  // Preserve user's saved session state on initial mount/refresh.
+  // Only auto-expand parent section and subgroup when user navigates between pages.
+  const isFirstMountRef = useRef(true);
+  const prevActivePageRef = useRef<PageKey | null>(activePage);
 
-    for (const section of navigationConfig) {
-      // Check direct items
-      if (section.path && activePage === section.id) {
-        return;
-      }
-      if (section.directItems?.some((item) => item.id === activePage)) {
-        setOpenSections((prev) => ({ ...prev, [section.id]: true }));
-        return;
-      }
-      // Check nested groups
-      if (section.groups) {
-        for (const group of section.groups) {
-          if (group.id === activePage || group.items.some((item) => item.id === activePage)) {
-            setOpenSections((prev) => ({ ...prev, [section.id]: true }));
-            if (!group.isDirectLeaf) {
-              setOpenGroups((prev) => ({ ...prev, [group.id]: true }));
+  useEffect(() => {
+    if (isFirstMountRef.current) {
+      isFirstMountRef.current = false;
+      return;
+    }
+
+    if (!activePage || activePage === "dashboard") {
+      prevActivePageRef.current = activePage;
+      return;
+    }
+
+    if (prevActivePageRef.current !== activePage) {
+      prevActivePageRef.current = activePage;
+
+      for (const section of navigationConfig) {
+        // Check direct items
+        if (section.path && activePage === section.id) {
+          return;
+        }
+        if (section.directItems?.some((item) => item.id === activePage)) {
+          setOpenSections((prev) => ({ ...prev, [section.id]: true }));
+          return;
+        }
+        // Check nested groups
+        if (section.groups) {
+          for (const group of section.groups) {
+            if (group.id === activePage || group.items.some((item) => item.id === activePage)) {
+              setOpenSections((prev) => ({ ...prev, [section.id]: true }));
+              if (!group.isDirectLeaf) {
+                setOpenGroups((prev) => ({ ...prev, [group.id]: true }));
+              }
+              return;
             }
-            return;
           }
         }
       }

@@ -322,16 +322,34 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
     setShowLogoutDialog(true);
   }, []);
 
-  // Confirm logout -> navigate to /login
+  // Confirm logout -> navigate to /login and reset session storage
   const handleConfirmLogout = useCallback(() => {
     setShowLogoutDialog(false);
-    setViewState({ type: "login" });
-
     if (typeof window !== "undefined") {
+      try {
+        sessionStorage.removeItem("geniusone_sidebar_sections");
+        sessionStorage.removeItem("geniusone_sidebar_groups");
+      } catch {
+        // ignore
+      }
       window.scrollTo(0, 0);
       window.history.pushState({ type: "login" }, "", "/login");
     }
+    setViewState({ type: "login" });
   }, []);
+
+  // Login handler -> clears old session state and routes to dashboard with all menus collapsed
+  const handleLoginSuccess = useCallback(() => {
+    if (typeof window !== "undefined") {
+      try {
+        sessionStorage.removeItem("geniusone_sidebar_sections");
+        sessionStorage.removeItem("geniusone_sidebar_groups");
+      } catch {
+        // ignore
+      }
+    }
+    handleNavigateList("dashboard", "/dashboard");
+  }, [handleNavigateList]);
 
   // Cancel logout -> dismiss dialog, stay on current page
   const handleCancelLogout = useCallback(() => {
@@ -369,7 +387,10 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
   // Standalone Login page view
   if (viewState.type === "login") {
     return (
-      <Login onNavigateHome={() => handleNavigateList("dashboard", "/dashboard")} />
+      <Login
+        onNavigateHome={handleLoginSuccess}
+        onLoginSuccess={handleLoginSuccess}
+      />
     );
   }
 

@@ -4,9 +4,10 @@ import { Button } from "../components/ui/Button";
 
 interface LoginProps {
   onNavigateHome?: () => void;
+  onLoginSuccess?: () => void;
 }
 
-export function Login({ onNavigateHome }: LoginProps) {
+export function Login({ onNavigateHome, onLoginSuccess }: LoginProps) {
   const [username, setUsername] = useState("rizky.aditya");
   const [password, setPassword] = useState("••••••••••••");
   const [showPassword, setShowPassword] = useState(false);
@@ -18,10 +19,20 @@ export function Login({ onNavigateHome }: LoginProps) {
       setStatusMessage("Please enter your username and password.");
       return;
     }
-    // Per specification: frontend UI only. Do not fabricate successful login or fake authenticated session.
-    setStatusMessage(
-      "Frontend preview: Authentication service will be connected in a future backend session. Credentials are not processed in this version."
-    );
+    // Clear sidebar session state to ensure fresh login starts with all menus closed
+    if (typeof window !== "undefined") {
+      try {
+        sessionStorage.removeItem("geniusone_sidebar_sections");
+        sessionStorage.removeItem("geniusone_sidebar_groups");
+      } catch {
+        // ignore
+      }
+    }
+    if (onLoginSuccess) {
+      onLoginSuccess();
+    } else if (onNavigateHome) {
+      onNavigateHome();
+    }
   };
 
   return (
@@ -144,12 +155,26 @@ export function Login({ onNavigateHome }: LoginProps) {
               </Button>
             </form>
 
-            {onNavigateHome && (
+            {(onLoginSuccess || onNavigateHome) && (
               <div className="login-card__nav-helper">
                 <button
                   type="button"
                   className="login-back-link"
-                  onClick={onNavigateHome}
+                  onClick={() => {
+                    if (typeof window !== "undefined") {
+                      try {
+                        sessionStorage.removeItem("geniusone_sidebar_sections");
+                        sessionStorage.removeItem("geniusone_sidebar_groups");
+                      } catch {
+                        // ignore
+                      }
+                    }
+                    if (onLoginSuccess) {
+                      onLoginSuccess();
+                    } else if (onNavigateHome) {
+                      onNavigateHome();
+                    }
+                  }}
                 >
                   <Icon name="arrowLeft" size={13} />
                   <span>Return to Workspace (Preview Navigation)</span>
