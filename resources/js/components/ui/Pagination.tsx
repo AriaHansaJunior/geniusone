@@ -1,30 +1,79 @@
 import { Icon } from "./Icon";
 
-export function Pagination({ count }: { count: number }) {
+interface PaginationProps {
+  count?: number;
+  totalRecords?: number;
+  currentPage?: number;
+  pageSize?: number;
+  onPageChange?: (page: number) => void;
+  onPageSizeChange?: (size: number) => void;
+}
+
+export function Pagination({
+  count,
+  totalRecords,
+  currentPage = 1,
+  pageSize = 25,
+  onPageChange,
+  onPageSizeChange,
+}: PaginationProps) {
+  const total = totalRecords ?? count ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const safeCurrentPage = Math.min(Math.max(1, currentPage), totalPages);
+  const start = total === 0 ? 0 : (safeCurrentPage - 1) * pageSize + 1;
+  const end = Math.min(safeCurrentPage * pageSize, total);
+
+  const pages: number[] = [];
+  for (let i = 1; i <= totalPages; i++) {
+    pages.push(i);
+  }
+
   return (
     <div className="pagination">
       <span>
-        Showing <strong>1–{count}</strong> of <strong>{Math.max(count, 24)}</strong> records
+        Showing <strong>{start}–{end}</strong> of <strong>{total}</strong> records
       </span>
       <div className="pagination__pages">
-        <button type="button" aria-label="Previous page">
+        <button
+          type="button"
+          aria-label="Previous page"
+          disabled={safeCurrentPage <= 1}
+          onClick={() => onPageChange && onPageChange(safeCurrentPage - 1)}
+        >
           <Icon name="arrowLeft" size={15} />
         </button>
-        <button type="button" className="active">1</button>
-        <button type="button">2</button>
-        <button type="button">3</button>
-        <span>…</span>
-        <button type="button">8</button>
-        <button type="button" aria-label="Next page">
+        {pages.map((p) => (
+          <button
+            key={p}
+            type="button"
+            className={p === safeCurrentPage ? "active" : ""}
+            onClick={() => onPageChange && onPageChange(p)}
+          >
+            {p}
+          </button>
+        ))}
+        <button
+          type="button"
+          aria-label="Next page"
+          disabled={safeCurrentPage >= totalPages}
+          onClick={() => onPageChange && onPageChange(safeCurrentPage + 1)}
+        >
           <Icon name="arrowRight" size={15} />
         </button>
       </div>
       <label>
         Rows{" "}
-        <select defaultValue="25">
-          <option value="25">25</option>
-          <option value="50">50</option>
-          <option value="100">100</option>
+        <select
+          value={pageSize}
+          onChange={(e) => {
+            const nextSize = Number(e.target.value);
+            if (onPageSizeChange) onPageSizeChange(nextSize);
+          }}
+        >
+          <option value={10}>10</option>
+          <option value={25}>25</option>
+          <option value={50}>50</option>
+          <option value={100}>100</option>
         </select>
       </label>
     </div>

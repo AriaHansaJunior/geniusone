@@ -527,8 +527,10 @@ th.align-right svg { margin-left: 0; margin-right: 6px; }
 .pagination { min-height: 54px; border-top: 1px solid var(--line); display: flex; align-items: center; padding: 0 18px; color: var(--muted); font-size: 11px; }
 .pagination > span { width: 33%; font-weight: 600; }
 .pagination__pages { margin: auto; display: flex; align-items: center; gap: 3px; }
-.pagination__pages button { min-width: 28px; height: 28px; border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--muted); display: grid; place-items: center; font-size: 11px; font-weight: 700; }
-.pagination__pages button.active { background: var(--blue-600); color: white; }
+.pagination__pages button { min-width: 28px; height: 28px; border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--muted); display: grid; place-items: center; font-size: 11px; font-weight: 700; cursor: pointer; transition: 0.15s ease; }
+.pagination__pages button:hover:not(:disabled):not(.active) { background: var(--canvas-alt); color: var(--ink); }
+.pagination__pages button:disabled { opacity: 0.35; cursor: not-allowed; }
+.pagination__pages button.active { background: var(--blue-600); color: white; cursor: default; }
 .pagination > label { width: 33%; text-align: right; font-weight: 600; }
 .pagination select { margin-left: 6px; border: 1px solid var(--line-strong); border-radius: var(--radius-sm); padding: 4px 8px; font-size: 11px; background: white; }
 

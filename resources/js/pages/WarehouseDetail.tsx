@@ -1,9 +1,10 @@
-import { useMemo } from "react";
+import { useEffect, useState } from "react";
 import { Icon } from "../components/ui/Icon";
 import { Button } from "../components/ui/Button";
 import { Badge } from "../components/ui/Badge";
 import { Material } from "../components/common/CommonCells";
 import { warehouseRows, findRowBySlug, docToSlug } from "../data/mockData";
+import { fetchDetail } from "../data/api";
 import type { TableRow } from "../types";
 
 interface WarehouseDetailProps {
@@ -17,8 +18,20 @@ export function WarehouseDetail({
   onBack,
   onNavigateDetail,
 }: WarehouseDetailProps) {
-  const row: TableRow = useMemo(() => {
+  const [row, setRow] = useState<TableRow>(() => {
     return findRowBySlug(warehouseRows, code) || warehouseRows[0];
+  });
+
+  useEffect(() => {
+    let isMounted = true;
+    fetchDetail("warehouse", code).then((item) => {
+      if (isMounted && item) {
+        setRow(item);
+      }
+    });
+    return () => {
+      isMounted = false;
+    };
   }, [code]);
 
   const docNumber = String(row._rawNumber || "0138/WHIN-IMLI/G/X/2026");

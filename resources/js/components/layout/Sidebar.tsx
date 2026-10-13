@@ -52,10 +52,7 @@ export function Sidebar({
               >
                 <Icon name={item.icon} size={18} />
                 {!collapsed && (
-                  <>
-                    <span>{item.label}</span>
-                    {item.key === "report" && <small>1,284</small>}
-                  </>
+                  <span>{item.label}</span>
                 )}
               </button>
             ))}

@@ -1,9 +1,10 @@
-import { useMemo } from "react";
+import { useEffect, useState } from "react";
 import { Icon } from "../components/ui/Icon";
 import { Button } from "../components/ui/Button";
 import { Badge } from "../components/ui/Badge";
 import { Material } from "../components/common/CommonCells";
 import { prRows, findRowBySlug, docToSlug } from "../data/mockData";
+import { fetchDetail } from "../data/api";
 import type { TableRow } from "../types";
 
 interface PurchaseRequisitionDetailProps {
@@ -17,8 +18,20 @@ export function PurchaseRequisitionDetail({
   onBack,
   onNavigateDetail,
 }: PurchaseRequisitionDetailProps) {
-  const row: TableRow = useMemo(() => {
+  const [row, setRow] = useState<TableRow>(() => {
     return findRowBySlug(prRows, code) || prRows[0];
+  });
+
+  useEffect(() => {
+    let isMounted = true;
+    fetchDetail("pr", code).then((item) => {
+      if (isMounted && item) {
+        setRow(item);
+      }
+    });
+    return () => {
+      isMounted = false;
+    };
   }, [code]);
 
   const docNumber = row._rawNumber || "0026/PR-IMLI/X/2026";
