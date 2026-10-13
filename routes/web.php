@@ -1,14 +1,22 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\PurchaseRequisitionController;
+use App\Http\Controllers\PurchaseOrderController;
+use App\Http\Controllers\ReportController;
+use App\Http\Controllers\WarehouseController;
 
 /*
 |--------------------------------------------------------------------------
 | Web Routes
 |--------------------------------------------------------------------------
 |
-| Frontend routes for GENIUSONE enterprise operations application.
-| All pages are integrated with the shared application shell and layout.
+| Controllers serve both the Web Page views and dual-mode JSON API responses.
+| The 4 connected modules:
+| 1. Purchase Requisition (PR)
+| 2. Purchase Order (PO)
+| 3. Combined PR-PO Traceability Report
+| 4. Warehouse Receive Material (BPB)
 |
 */
 
@@ -21,71 +29,41 @@ Route::get('/dashboard', function () {
     return view('app', ['page' => 'dashboard']);
 })->name('dashboard');
 
-// Purchase Requisition List
-Route::get('/pr', function () {
-    return view('app', ['page' => 'pr']);
-})->name('pr.index');
+// Purchase Requisition (PR)
+Route::get('/pr', [PurchaseRequisitionController::class, 'index'])->name('pr.index');
+Route::get('/purchase-requisitions', [PurchaseRequisitionController::class, 'index'])->name('purchase-requisitions.index');
+Route::get('/purchase-requests', fn() => redirect('/pr'));
 
-Route::get('/purchase-requisitions', function () {
-    return view('app', ['page' => 'pr']);
-})->name('purchase-requisitions.index');
+Route::get('/pr/detail/{code}', [PurchaseRequisitionController::class, 'show'])->name('pr.detail');
+Route::get('/pr/details/{code}', [PurchaseRequisitionController::class, 'show']);
+Route::get('/purchase-requisition/detail/{code}', [PurchaseRequisitionController::class, 'show']);
+Route::get('/purchase-requisitions/detail/{code}', [PurchaseRequisitionController::class, 'show']);
 
-Route::get('/purchase-requests', function () {
-    return redirect('/pr');
-});
+// Purchase Order (PO)
+Route::get('/po', [PurchaseOrderController::class, 'index'])->name('po.index');
+Route::get('/purchase-orders', [PurchaseOrderController::class, 'index'])->name('purchase-orders.index');
 
-// Purchase Requisition Details
-Route::get('/pr/detail/{code}', function ($code) {
-    return view('app', ['page' => 'pr-detail', 'code' => $code]);
-})->name('pr.detail');
+Route::get('/po/detail/{code}', [PurchaseOrderController::class, 'show'])->name('po.detail');
+Route::get('/po/details/{code}', [PurchaseOrderController::class, 'show']);
 
-Route::get('/pr/details/{code}', function ($code) {
-    return view('app', ['page' => 'pr-detail', 'code' => $code]);
-});
+// Combined PR-PO Report
+Route::get('/report', [ReportController::class, 'index'])->name('report.index');
+Route::get('/pr-po-report', [ReportController::class, 'index'])->name('pr-po-report.index');
 
-Route::get('/purchase-requisition/detail/{code}', function ($code) {
-    return view('app', ['page' => 'pr-detail', 'code' => $code]);
-});
+Route::get('/report/detail/{code}', [ReportController::class, 'show'])->name('report.detail');
+Route::get('/report/details/{code}', [ReportController::class, 'show']);
 
-Route::get('/purchase-requisitions/detail/{code}', function ($code) {
-    return view('app', ['page' => 'pr-detail', 'code' => $code]);
-});
+// Warehouse / BPB
+Route::get('/warehouse', [WarehouseController::class, 'index'])->name('warehouse.index');
+Route::get('/warehouse/bpb', [WarehouseController::class, 'index'])->name('warehouse.bpb.index');
 
-// Purchase Order List
-Route::get('/po', function () {
-    return view('app', ['page' => 'po']);
-})->name('po.index');
+Route::get('/warehouse/create', fn() => view('app', ['page' => 'warehouse-create']))->name('warehouse.create');
+Route::get('/warehouse/add', fn() => view('app', ['page' => 'warehouse-create']));
+Route::post('/warehouse/create', [WarehouseController::class, 'store']);
+Route::post('/warehouse/store', [WarehouseController::class, 'store']);
 
-Route::get('/purchase-orders', function () {
-    return view('app', ['page' => 'po']);
-})->name('purchase-orders.index');
-
-// Purchase Order Details
-Route::get('/po/detail/{code}', function ($code) {
-    return view('app', ['page' => 'po-detail', 'code' => $code]);
-})->name('po.detail');
-
-Route::get('/po/details/{code}', function ($code) {
-    return view('app', ['page' => 'po-detail', 'code' => $code]);
-});
-
-// Combined PR-PO Report List
-Route::get('/report', function () {
-    return view('app', ['page' => 'report']);
-})->name('report.index');
-
-Route::get('/pr-po-report', function () {
-    return view('app', ['page' => 'report']);
-})->name('pr-po-report.index');
-
-// Combined PR-PO Report Details
-Route::get('/report/detail/{code}', function ($code) {
-    return view('app', ['page' => 'report-detail', 'code' => $code]);
-})->name('report.detail');
-
-Route::get('/report/details/{code}', function ($code) {
-    return view('app', ['page' => 'report-detail', 'code' => $code]);
-});
+Route::get('/warehouse/detail/{code}', [WarehouseController::class, 'show'])->name('warehouse.detail');
+Route::get('/warehouse/details/{code}', [WarehouseController::class, 'show']);
 
 // Procurement - Purchase Master Routes
 Route::get('/procurement/supplier', function () {
@@ -179,37 +157,10 @@ Route::get('/exim/document-history', function () {
     return view('app', ['page' => 'document-history']);
 })->name('exim.document-history');
 
-// Warehouse / BPB List
-Route::get('/warehouse', function () {
-    return view('app', ['page' => 'warehouse']);
-})->name('warehouse.index');
-
-Route::get('/warehouse/bpb', function () {
-    return view('app', ['page' => 'warehouse']);
-})->name('warehouse.bpb.index');
-
 // Warehouse Master Route
 Route::get('/warehouse/master', function () {
     return view('app', ['page' => 'warehouse-master']);
 })->name('warehouse.master');
-
-// Warehouse Receive Material Create (Add New Data)
-Route::get('/warehouse/create', function () {
-    return view('app', ['page' => 'warehouse-create']);
-})->name('warehouse.create');
-
-Route::get('/warehouse/add', function () {
-    return view('app', ['page' => 'warehouse-create']);
-});
-
-// Warehouse Receive Material Details
-Route::get('/warehouse/detail/{code}', function ($code) {
-    return view('app', ['page' => 'warehouse-detail', 'code' => $code]);
-})->name('warehouse.detail');
-
-Route::get('/warehouse/details/{code}', function ($code) {
-    return view('app', ['page' => 'warehouse-detail', 'code' => $code]);
-});
 
 // User Authentication (Frontend UI)
 Route::get('/login', function () {

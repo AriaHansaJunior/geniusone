@@ -1,9 +1,10 @@
-import { useMemo } from "react";
+import { useEffect, useState } from "react";
 import { Icon } from "../components/ui/Icon";
 import { Button } from "../components/ui/Button";
 import { Badge } from "../components/ui/Badge";
 import { Material } from "../components/common/CommonCells";
 import { reportRows, findRowBySlug, docToSlug } from "../data/mockData";
+import { fetchDetail } from "../data/api";
 import type { TableRow } from "../types";
 
 interface PurchaseOrderReportDetailProps {
@@ -17,8 +18,20 @@ export function PurchaseOrderReportDetail({
   onBack,
   onNavigateDetail,
 }: PurchaseOrderReportDetailProps) {
-  const row: TableRow = useMemo(() => {
+  const [row, setRow] = useState<TableRow>(() => {
     return findRowBySlug(reportRows, code) || reportRows[0];
+  });
+
+  useEffect(() => {
+    let isMounted = true;
+    fetchDetail("report", code).then((item) => {
+      if (isMounted && item) {
+        setRow(item);
+      }
+    });
+    return () => {
+      isMounted = false;
+    };
   }, [code]);
 
   const prNumber = String(row._rawPr || "0008/PR-IMLI/X/2026");

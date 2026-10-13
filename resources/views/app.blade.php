@@ -14,6 +14,9 @@
     @vite(['resources/css/app.css', 'resources/js/app.tsx'])
 </head>
 <body>
-    <div id="root" data-initial-page="{{ $page ?? 'dashboard' }}" data-initial-code="{{ $code ?? '' }}"></div>
+    <div id="root"
+         data-initial-page="{{ $page ?? 'dashboard' }}"
+         data-initial-code="{{ $code ?? '' }}"
+         data-initial-json="{{ isset($initialData) ? json_encode($initialData) : '' }}"></div>
 </body>
 </html>
