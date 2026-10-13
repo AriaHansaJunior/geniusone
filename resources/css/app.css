@@ -445,6 +445,20 @@ button { cursor: pointer; }
 .sidebar-subgroup-header.subgroup-placeholder {
   opacity: 0.65;
 }
+.sidebar-subgroup-header--direct.subgroup-placeholder {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.sidebar-group-divider-label {
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--muted-2);
+  padding: 8px 8px 3px;
+  margin-top: 4px;
+  border-top: 1px dashed var(--line);
+}
 .sidebar-chevron-sm {
   transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   color: var(--muted);

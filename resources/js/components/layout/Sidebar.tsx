@@ -212,64 +212,93 @@ export function Sidebar({
 
                         return (
                           <div key={group.id} className="sidebar-subgroup-container">
-                            <button
-                              type="button"
-                              className={`sidebar-subgroup-header ${
-                                isGroupOpen ? "subgroup-open" : ""
-                              } ${isPlaceholder ? "subgroup-placeholder" : ""}`}
-                              onClick={(e) => toggleGroup(group.id, e)}
-                            >
-                              <span className="sidebar-subgroup-title">
-                                {group.label}
-                              </span>
-                              <Icon
-                                name="chevronDown"
-                                size={12}
-                                className={`sidebar-chevron-sm ${
-                                  isGroupOpen ? "sidebar-chevron--open" : ""
-                                }`}
-                              />
-                            </button>
-
-                            {isGroupOpen && (
-                              <div className="sidebar-subgroup-items">
-                                {group.items.length === 0 ? (
-                                  <div className="sidebar-placeholder-hint">
-                                    No items configured
-                                  </div>
-                                ) : (
-                                  group.items.map((leaf) => {
-                                    const isLeafActive = activePage === leaf.id;
-                                    return (
-                                      <button
-                                        type="button"
-                                        key={leaf.id}
-                                        className={`sidebar-leaf-item ${
-                                          isLeafActive ? "active" : ""
-                                        } ${leaf.isPlaceholder ? "leaf-placeholder" : ""}`}
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          if (!leaf.isPlaceholder) {
-                                            onNavigate(leaf.id as PageKey, leaf.path);
-                                          }
-                                        }}
-                                        disabled={leaf.isPlaceholder}
-                                        title={leaf.label}
-                                      >
-                                        <span className="sidebar-leaf-dot" />
-                                        <span className="sidebar-leaf-text">
-                                          {leaf.label}
-                                        </span>
-                                        {leaf.badge && (
-                                          <small className="sidebar-leaf-badge">
-                                            {leaf.badge}
-                                          </small>
-                                        )}
-                                      </button>
-                                    );
-                                  })
-                                )}
+                            {group.sectionHeader && (
+                              <div className="sidebar-group-divider-label">
+                                {group.sectionHeader}
                               </div>
+                            )}
+
+                            {group.isDirectLeaf ? (
+                              <button
+                                type="button"
+                                className={`sidebar-subgroup-header sidebar-subgroup-header--direct ${
+                                  group.isPlaceholder ? "subgroup-placeholder" : ""
+                                }`}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (!group.isPlaceholder && group.path) {
+                                    onNavigate(group.id as PageKey, group.path);
+                                  }
+                                }}
+                                disabled={group.isPlaceholder}
+                                title={group.label}
+                              >
+                                <span className="sidebar-subgroup-title">
+                                  {group.label}
+                                </span>
+                              </button>
+                            ) : (
+                              <>
+                                <button
+                                  type="button"
+                                  className={`sidebar-subgroup-header ${
+                                    isGroupOpen ? "subgroup-open" : ""
+                                  } ${isPlaceholder ? "subgroup-placeholder" : ""}`}
+                                  onClick={(e) => toggleGroup(group.id, e)}
+                                >
+                                  <span className="sidebar-subgroup-title">
+                                    {group.label}
+                                  </span>
+                                  <Icon
+                                    name="chevronDown"
+                                    size={12}
+                                    className={`sidebar-chevron-sm ${
+                                      isGroupOpen ? "sidebar-chevron--open" : ""
+                                    }`}
+                                  />
+                                </button>
+
+                                {isGroupOpen && (
+                                  <div className="sidebar-subgroup-items">
+                                    {group.items.length === 0 ? (
+                                      <div className="sidebar-placeholder-hint">
+                                        No items configured
+                                      </div>
+                                    ) : (
+                                      group.items.map((leaf) => {
+                                        const isLeafActive = activePage === leaf.id;
+                                        return (
+                                          <button
+                                            type="button"
+                                            key={leaf.id}
+                                            className={`sidebar-leaf-item ${
+                                              isLeafActive ? "active" : ""
+                                            } ${leaf.isPlaceholder ? "leaf-placeholder" : ""}`}
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              if (!leaf.isPlaceholder) {
+                                                onNavigate(leaf.id as PageKey, leaf.path);
+                                              }
+                                            }}
+                                            disabled={leaf.isPlaceholder}
+                                            title={leaf.label}
+                                          >
+                                            <span className="sidebar-leaf-dot" />
+                                            <span className="sidebar-leaf-text">
+                                              {leaf.label}
+                                            </span>
+                                            {leaf.badge && (
+                                              <small className="sidebar-leaf-badge">
+                                                {leaf.badge}
+                                              </small>
+                                            )}
+                                          </button>
+                                        );
+                                      })
+                                    )}
+                                  </div>
+                                )}
+                              </>
                             )}
                           </div>
                         );

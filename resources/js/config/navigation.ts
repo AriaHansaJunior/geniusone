@@ -11,8 +11,12 @@ export interface NavLeafItem {
 export interface NavGroupItem {
   id: string;
   label: string;
+  sectionHeader?: string;
   items: NavLeafItem[];
-  isExpandablePlaceholder?: boolean; // For placeholders like Adjustment, Outgoing, Request, Report
+  isExpandablePlaceholder?: boolean;
+  isDirectLeaf?: boolean;
+  path?: string;
+  isPlaceholder?: boolean;
 }
 
 export interface NavSection {
@@ -112,8 +116,13 @@ export const navigationConfig: NavSection[] = [
       {
         id: "warehouse-adjustment",
         label: "Adjustment",
-        items: [],
-        isExpandablePlaceholder: true,
+        sectionHeader: "Type of Mutation",
+        items: [
+          { id: "wh-adj-prod", label: "Adjustment Production", path: "#", isPlaceholder: true },
+          { id: "wh-adj-bc", label: "Adjustment Stock BC", path: "#", isPlaceholder: true },
+          { id: "wh-opname-material", label: "Opname Material", path: "#", isPlaceholder: true },
+          { id: "wh-adj-stock", label: "Adjustment Stock", path: "#", isPlaceholder: true },
+        ],
       },
       {
         id: "warehouse-incoming",
@@ -128,26 +137,45 @@ export const navigationConfig: NavSection[] = [
         ],
       },
       {
-        id: "warehouse-outgoing",
-        label: "Outgoing",
-        items: [],
-        isExpandablePlaceholder: true,
+        id: "warehouse-outcoming",
+        label: "Outcoming",
+        items: [
+          { id: "wh-out-do", label: "Delivery Order (Surat Jalan)", path: "#", isPlaceholder: true },
+          { id: "wh-out-issue", label: "Issue Material", path: "#", isPlaceholder: true },
+          { id: "wh-out-disposal", label: "Disposal", path: "#", isPlaceholder: true },
+        ],
       },
       {
         id: "warehouse-request",
         label: "Request",
+        items: [
+          { id: "wh-req-weight-note", label: "Weight Note", path: "#", isPlaceholder: true },
+          { id: "wh-req-material", label: "Request Material", path: "#", isPlaceholder: true },
+          { id: "wh-req-weight-note-fg", label: "Weight Note Multiple FG", path: "#", isPlaceholder: true },
+          { id: "wh-req-shipping", label: "Shipping Instruction", path: "#", isPlaceholder: true },
+        ],
+      },
+      {
+        id: "warehouse-move-location",
+        label: "Move Location",
+        isDirectLeaf: true,
+        isPlaceholder: true,
+        path: "#",
         items: [],
-        isExpandablePlaceholder: true,
       },
       {
         id: "warehouse-report",
         label: "Report",
-        items: [],
-        isExpandablePlaceholder: true,
+        items: [
+          { id: "wh-rep-receive-material", label: "Receive Material", path: "#", isPlaceholder: true },
+          { id: "wh-rep-stock-item", label: "Stock Item", path: "#", isPlaceholder: true },
+          { id: "wh-rep-stock-card", label: "Stock Card", path: "#", isPlaceholder: true },
+          { id: "wh-rep-stock-transfer", label: "Stock Transfer Report", path: "#", isPlaceholder: true },
+          { id: "wh-rep-delivery-order", label: "Delivery Order Report", path: "#", isPlaceholder: true },
+          { id: "wh-rep-stock-mutation", label: "Stock Mutation Report", path: "#", isPlaceholder: true },
+          { id: "wh-rep-outstanding-request", label: "Outstanding Request", path: "#", isPlaceholder: true },
+        ],
       },
-    ],
-    directItems: [
-      { id: "move-location", label: "Move Location", path: "#", isPlaceholder: true },
     ],
   },
   {
