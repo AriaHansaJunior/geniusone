@@ -110,7 +110,7 @@ export const navigationConfig: NavSection[] = [
         id: "warehouse-master",
         label: "Warehouse Master",
         items: [
-          { id: "warehouse-master-item", label: "Warehouse", path: "/warehouse/master" },
+          { id: "warehouse-master", label: "Warehouse", path: "/warehouse/master" },
           { id: "type-of-mutation", label: "Type of Mutation", path: "#", isPlaceholder: true },
         ],
       },
@@ -131,7 +131,7 @@ export const navigationConfig: NavSection[] = [
           { id: "transfer-stock-return", label: "Transfer Stock Return", path: "#", isPlaceholder: true },
           { id: "transfer-stock-result", label: "Transfer Stock Result", path: "#", isPlaceholder: true },
           { id: "receive-material-non-fasilitas", label: "Receive Material (Non-Fasilitas)", path: "#", isPlaceholder: true },
-          { id: "receive-material-bpb", label: "Receive Material (BPB)", path: "/warehouse" },
+          { id: "warehouse", label: "Receive Material (BPB)", path: "/warehouse" },
           { id: "purchase-return", label: "Purchase Return", path: "#", isPlaceholder: true },
           { id: "sales-return", label: "Sales Return", path: "#", isPlaceholder: true },
         ],
