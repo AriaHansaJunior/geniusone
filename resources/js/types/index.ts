@@ -68,7 +68,37 @@ export type PageKey =
   | "receive-note-return"
   | "document-history"
   // Warehouse Master
-  | "warehouse-master";
+  | "warehouse-master"
+  | "type-of-mutation"
+  // Warehouse Adjustment
+  | "wh-adj-prod"
+  | "wh-adj-bc"
+  | "wh-opname-material"
+  | "wh-adj-stock"
+  // Warehouse Incoming
+  | "transfer-stock-return"
+  | "transfer-stock-result"
+  | "receive-material-non-fasilitas"
+  | "purchase-return"
+  | "sales-return"
+  // Warehouse Outcoming
+  | "wh-out-do"
+  | "wh-out-issue"
+  | "wh-out-disposal"
+  // Warehouse Request
+  | "wh-req-weight-note"
+  | "wh-req-material"
+  | "wh-req-weight-note-fg"
+  | "wh-req-shipping"
+  | "warehouse-move-location"
+  // Warehouse Report
+  | "wh-rep-receive-material"
+  | "wh-rep-stock-item"
+  | "wh-rep-stock-card"
+  | "wh-rep-stock-transfer"
+  | "wh-rep-delivery-order"
+  | "wh-rep-stock-mutation"
+  | "wh-rep-outstanding-request";
 
 export type ViewState =
   | { type: "dashboard" }

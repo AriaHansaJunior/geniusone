@@ -52,9 +52,11 @@ export function Sidebar({
       // Check nested groups
       if (section.groups) {
         for (const group of section.groups) {
-          if (group.items.some((item) => item.id === activePage)) {
+          if (group.id === activePage || group.items.some((item) => item.id === activePage)) {
             setOpenSections((prev) => ({ ...prev, [section.id]: true }));
-            setOpenGroups((prev) => ({ ...prev, [group.id]: true }));
+            if (!group.isDirectLeaf) {
+              setOpenGroups((prev) => ({ ...prev, [group.id]: true }));
+            }
             return;
           }
         }
@@ -99,7 +101,7 @@ export function Sidebar({
   const isSectionActive = (section: NavSection): boolean => {
     if (section.path && activePage === section.id) return true;
     if (section.directItems?.some((item) => item.id === activePage)) return true;
-    if (section.groups?.some((group) => group.items.some((item) => item.id === activePage))) return true;
+    if (section.groups?.some((group) => group.id === activePage || group.items.some((item) => item.id === activePage))) return true;
     return false;
   };
 
@@ -222,6 +224,8 @@ export function Sidebar({
                               <button
                                 type="button"
                                 className={`sidebar-subgroup-header sidebar-subgroup-header--direct ${
+                                  activePage === group.id ? "active" : ""
+                                } ${
                                   group.isPlaceholder ? "subgroup-placeholder" : ""
                                 }`}
                                 onClick={(e) => {

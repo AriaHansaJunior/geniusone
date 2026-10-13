@@ -24,7 +24,7 @@ interface AppProps {
 }
 
 function resolveViewStateFromPath(pathname: string, defaultPage: PageKey = "dashboard"): ViewState {
-  const cleanPath = pathname.replace(/\/$/, "");
+  const cleanPath = decodeURIComponent(pathname).replace(/\/$/, "");
 
   // Root or Dashboard
   if (cleanPath === "" || cleanPath === "/dashboard") {
@@ -40,33 +40,79 @@ function resolveViewStateFromPath(pathname: string, defaultPage: PageKey = "dash
   }
 
   // Create routes
-  if (cleanPath === "/warehouse/create" || cleanPath === "/warehouse/add") {
+  if (
+    cleanPath === "/warehouse/create" ||
+    cleanPath === "/warehouse/add" ||
+    cleanPath === "/warehouse/incoming/receive-material-bpb/create" ||
+    cleanPath === "/warehouse/incoming/receive-material-bpb/add"
+  ) {
     return { type: "warehouse-create" };
   }
 
-  // Detail routes
-  const prDetailMatch = cleanPath.match(/^\/(?:pr|purchase-requisition|purchase-requisitions)\/details?\/(.+)$/);
+  // Detail routes (hierarchical & legacy short aliases)
+  const prDetailMatch = cleanPath.match(
+    /^\/(?:procurement\/transactions\/purchase-requisition|pr|purchase-requisition|purchase-requisitions)\/details?\/(.+)$/
+  );
   if (prDetailMatch) {
     return { type: "pr-detail", code: decodeURIComponent(prDetailMatch[1]) };
   }
 
-  const poDetailMatch = cleanPath.match(/^\/po\/details?\/(.+)$/);
+  const poDetailMatch = cleanPath.match(
+    /^\/(?:procurement\/transactions\/purchase-order|po|purchase-order|purchase-orders)\/details?\/(.+)$/
+  );
   if (poDetailMatch) {
     return { type: "po-detail", code: decodeURIComponent(poDetailMatch[1]) };
   }
 
-  const reportDetailMatch = cleanPath.match(/^\/report\/details?\/(.+)$/);
+  const reportDetailMatch = cleanPath.match(
+    /^\/(?:procurement\/reports\/report-pr-po|report|pr-po-report)\/details?\/(.+)$/
+  );
   if (reportDetailMatch) {
     return { type: "report-detail", code: decodeURIComponent(reportDetailMatch[1]) };
   }
 
-  const warehouseDetailMatch = cleanPath.match(/^\/warehouse\/details?\/(.+)$/);
+  const warehouseDetailMatch = cleanPath.match(
+    /^\/(?:warehouse\/incoming\/receive-material-bpb|warehouse\/incoming\/receiving-material-bpb|warehouse\/incoming\/receiving material \(bpb\)|warehouse\/incoming\/receive material \(bpb\)|warehouse\/incoming\/receive-material|warehouse\/bpb|warehouse)\/details?\/(.+)$/
+  );
   if (warehouseDetailMatch) {
     return { type: "warehouse-detail", code: decodeURIComponent(warehouseDetailMatch[1]) };
   }
 
-  // Existing Core List Routes
-  if (cleanPath === "/pr" || cleanPath === "/purchase-requisitions" || cleanPath === "/purchase-requests") {
+  // Check navigationConfig items (matches all hierarchical paths configured)
+  for (const section of navigationConfig) {
+    if (section.path && cleanPath === section.path) {
+      if (section.id === "dashboard") {
+        return { type: "dashboard" };
+      }
+      return { type: "list", page: section.id as PageKey };
+    }
+    if (section.directItems) {
+      for (const item of section.directItems) {
+        if (cleanPath === item.path) {
+          return { type: "list", page: item.id as PageKey };
+        }
+      }
+    }
+    if (section.groups) {
+      for (const group of section.groups) {
+        if (group.isDirectLeaf && group.path && cleanPath === group.path) {
+          return { type: "list", page: group.id as PageKey };
+        }
+        for (const item of group.items) {
+          if (cleanPath === item.path) {
+            return { type: "list", page: item.id as PageKey };
+          }
+        }
+      }
+    }
+  }
+
+  // Existing Core List Routes & legacy aliases
+  if (
+    cleanPath === "/pr" ||
+    cleanPath === "/purchase-requisitions" ||
+    cleanPath === "/purchase-requests"
+  ) {
     return { type: "list", page: "pr" };
   }
   if (cleanPath === "/po" || cleanPath === "/purchase-orders") {
@@ -75,23 +121,27 @@ function resolveViewStateFromPath(pathname: string, defaultPage: PageKey = "dash
   if (cleanPath === "/report" || cleanPath === "/pr-po-report") {
     return { type: "list", page: "report" };
   }
-  if (cleanPath === "/warehouse" || cleanPath === "/warehouse/bpb") {
+  if (
+    cleanPath === "/warehouse" ||
+    cleanPath === "/warehouse/bpb" ||
+    cleanPath === "/warehouse/incoming/receiving-material-bpb" ||
+    cleanPath === "/warehouse/incoming/receiving material (bpb)" ||
+    cleanPath === "/warehouse/incoming/receive material (bpb)" ||
+    cleanPath === "/warehouse/incoming/receive-material"
+  ) {
     return { type: "list", page: "warehouse" };
   }
 
-  // Purchase Master routes
+  // Master & other aliases
   if (cleanPath === "/procurement/supplier") return { type: "list", page: "supplier" };
   if (cleanPath === "/procurement/payment-term") return { type: "list", page: "payment-term" };
   if (cleanPath === "/procurement/purchase-category") return { type: "list", page: "purchase-category" };
   if (cleanPath === "/procurement/delivery-terms") return { type: "list", page: "delivery-terms" };
   if (cleanPath === "/procurement/additional-costs") return { type: "list", page: "additional-costs" };
   if (cleanPath === "/procurement/pph") return { type: "list", page: "pph" };
-
-  // Procurement Reports routes
   if (cleanPath === "/procurement/pr-report") return { type: "list", page: "pr-report" };
   if (cleanPath === "/procurement/po-report") return { type: "list", page: "po-report" };
 
-  // Exim Master routes
   if (cleanPath === "/exim/unit") return { type: "list", page: "unit" };
   if (cleanPath === "/exim/satuan") return { type: "list", page: "satuan" };
   if (cleanPath === "/exim/item") return { type: "list", page: "item" };
@@ -103,13 +153,10 @@ function resolveViewStateFromPath(pathname: string, defaultPage: PageKey = "dash
   if (cleanPath === "/exim/category") return { type: "list", page: "category" };
   if (cleanPath === "/exim/style") return { type: "list", page: "style" };
   if (cleanPath === "/exim/colour") return { type: "list", page: "colour" };
-
-  // Exim other routes
   if (cleanPath === "/exim/receive-note") return { type: "list", page: "receive-note" };
   if (cleanPath === "/exim/receive-note-return") return { type: "list", page: "receive-note-return" };
   if (cleanPath === "/exim/document-history") return { type: "list", page: "document-history" };
 
-  // Warehouse Master route
   if (cleanPath === "/warehouse/master") return { type: "list", page: "warehouse-master" };
 
   if (defaultPage === "dashboard") {
@@ -223,15 +270,19 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
       switch (module) {
         case "pr":
           nextState = { type: "pr-detail", code: slug };
+          targetPath = `/procurement/transactions/purchase-requisition/detail/${slug}`;
           break;
         case "po":
           nextState = { type: "po-detail", code: slug };
+          targetPath = `/procurement/transactions/purchase-order/detail/${slug}`;
           break;
         case "report":
           nextState = { type: "report-detail", code: slug };
+          targetPath = `/procurement/reports/report-pr-po/detail/${slug}`;
           break;
         case "warehouse":
           nextState = { type: "warehouse-detail", code: slug };
+          targetPath = `/warehouse/incoming/receive-material-bpb/detail/${slug}`;
           break;
       }
 
@@ -252,7 +303,7 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
 
     if (typeof window !== "undefined") {
       window.scrollTo(0, 0);
-      window.history.pushState(nextState, "", "/warehouse/create");
+      window.history.pushState(nextState, "", "/warehouse/incoming/receive-material-bpb/create");
     }
   }, []);
 
@@ -390,7 +441,7 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
         {viewState.type === "pr-detail" && (
           <PurchaseRequisitionDetail
             code={viewState.code}
-            onBack={() => handleNavigateList("pr", "/pr")}
+            onBack={() => handleNavigateList("pr", "/procurement/transactions/purchase-requisition")}
             onNavigateDetail={handleNavigateDetail}
           />
         )}
@@ -398,7 +449,7 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
         {viewState.type === "po-detail" && (
           <PurchaseOrderDetail
             code={viewState.code}
-            onBack={() => handleNavigateList("po", "/po")}
+            onBack={() => handleNavigateList("po", "/procurement/transactions/purchase-order")}
             onNavigateDetail={handleNavigateDetail}
           />
         )}
@@ -406,7 +457,7 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
         {viewState.type === "report-detail" && (
           <PurchaseOrderReportDetail
             code={viewState.code}
-            onBack={() => handleNavigateList("report", "/report")}
+            onBack={() => handleNavigateList("report", "/procurement/reports/report-pr-po")}
             onNavigateDetail={handleNavigateDetail}
           />
         )}
@@ -414,7 +465,7 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
         {viewState.type === "warehouse-detail" && (
           <WarehouseDetail
             code={viewState.code}
-            onBack={() => handleNavigateList("warehouse", "/warehouse")}
+            onBack={() => handleNavigateList("warehouse", "/warehouse/incoming/receive-material-bpb")}
             onNavigateDetail={handleNavigateDetail}
           />
         )}
@@ -422,8 +473,8 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
         {/* Dedicated Full Page Create View */}
         {viewState.type === "warehouse-create" && (
           <WarehouseCreate
-            onBack={() => handleNavigateList("warehouse", "/warehouse")}
-            onSaved={() => handleNavigateList("warehouse", "/warehouse")}
+            onBack={() => handleNavigateList("warehouse", "/warehouse/incoming/receive-material-bpb")}
+            onSaved={() => handleNavigateList("warehouse", "/warehouse/incoming/receive-material-bpb")}
           />
         )}
 

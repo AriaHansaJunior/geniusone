@@ -166,6 +166,136 @@ export const pageMeta: Record<PageKey, PageMeta> = {
     title: "Warehouse",
     description: "Storage facility records, zones, bin allocations, and supervisor assignments.",
   },
+  "type-of-mutation": {
+    eyebrow: "WAREHOUSE MASTER",
+    title: "Type of Mutation",
+    description: "Classification of inventory stock movement and mutation categories.",
+  },
+  // Warehouse Adjustment
+  "wh-adj-prod": {
+    eyebrow: "WAREHOUSE ADJUSTMENT",
+    title: "Adjustment Production",
+    description: "Reconcile manufacturing material usage and production batch variations.",
+  },
+  "wh-adj-bc": {
+    eyebrow: "WAREHOUSE ADJUSTMENT",
+    title: "Adjustment Stock BC",
+    description: "Customs declaration inventory adjustment and Bea Cukai balance alignment.",
+  },
+  "wh-opname-material": {
+    eyebrow: "WAREHOUSE ADJUSTMENT",
+    title: "Opname Material",
+    description: "Periodic physical stock counting and inventory variance recording.",
+  },
+  "wh-adj-stock": {
+    eyebrow: "WAREHOUSE ADJUSTMENT",
+    title: "Adjustment Stock",
+    description: "General warehouse stock corrections and quantity balance adjustments.",
+  },
+  // Warehouse Incoming
+  "transfer-stock-return": {
+    eyebrow: "WAREHOUSE INCOMING",
+    title: "Transfer Stock Return",
+    description: "Receiving returned material transfers from internal production sections.",
+  },
+  "transfer-stock-result": {
+    eyebrow: "WAREHOUSE INCOMING",
+    title: "Transfer Stock Result",
+    description: "Recording output transfers and finished product receipts.",
+  },
+  "receive-material-non-fasilitas": {
+    eyebrow: "WAREHOUSE INCOMING",
+    title: "Receive Material (Non-Fasilitas)",
+    description: "Non-facility domestic receiving documents and non-bonded warehouse intake.",
+  },
+  "purchase-return": {
+    eyebrow: "WAREHOUSE INCOMING",
+    title: "Purchase Return",
+    description: "Inbound records for returned supplier purchase shipments.",
+  },
+  "sales-return": {
+    eyebrow: "WAREHOUSE INCOMING",
+    title: "Sales Return",
+    description: "Customer goods return receipts and commercial inspection logs.",
+  },
+  // Warehouse Outcoming
+  "wh-out-do": {
+    eyebrow: "WAREHOUSE OUTCOMING",
+    title: "Delivery Order (Surat Jalan)",
+    description: "Outbound delivery dispatch notes and transport carrier manifests.",
+  },
+  "wh-out-issue": {
+    eyebrow: "WAREHOUSE OUTCOMING",
+    title: "Issue Material",
+    description: "Material issuance to shop floor and manufacturing work orders.",
+  },
+  "wh-out-disposal": {
+    eyebrow: "WAREHOUSE OUTCOMING",
+    title: "Disposal",
+    description: "Scrap, obsolete material write-offs, and authorized disposal logs.",
+  },
+  // Warehouse Request
+  "wh-req-weight-note": {
+    eyebrow: "WAREHOUSE REQUEST",
+    title: "Weight Note",
+    description: "Scale tickets and certified gross/tare weight documentation.",
+  },
+  "wh-req-material": {
+    eyebrow: "WAREHOUSE REQUEST",
+    title: "Request Material",
+    description: "Internal departmental requisitions for stock issue.",
+  },
+  "wh-req-weight-note-fg": {
+    eyebrow: "WAREHOUSE REQUEST",
+    title: "Weight Note Multiple FG",
+    description: "Combined scale tickets for multi-pallet finished goods.",
+  },
+  "wh-req-shipping": {
+    eyebrow: "WAREHOUSE REQUEST",
+    title: "Shipping Instruction",
+    description: "Outbound freight forwarding directives and container loading orders.",
+  },
+  "warehouse-move-location": {
+    eyebrow: "WAREHOUSE OPERATIONS",
+    title: "Move Location",
+    description: "Internal bin-to-bin and rack transfer movements within facilities.",
+  },
+  // Warehouse Report
+  "wh-rep-receive-material": {
+    eyebrow: "WAREHOUSE REPORTS",
+    title: "Receive Material Report",
+    description: "Summary and detailed analytics for inward receiving receipts.",
+  },
+  "wh-rep-stock-item": {
+    eyebrow: "WAREHOUSE REPORTS",
+    title: "Stock Item Report",
+    description: "Itemized warehouse stock balances and valuation summary.",
+  },
+  "wh-rep-stock-card": {
+    eyebrow: "WAREHOUSE REPORTS",
+    title: "Stock Card",
+    description: "Continuous ledger of receipts, issues, and running balances per item.",
+  },
+  "wh-rep-stock-transfer": {
+    eyebrow: "WAREHOUSE REPORTS",
+    title: "Stock Transfer Report",
+    description: "Cross-departmental and inter-warehouse movement audit logs.",
+  },
+  "wh-rep-delivery-order": {
+    eyebrow: "WAREHOUSE REPORTS",
+    title: "Delivery Order Report",
+    description: "Comprehensive reporting on issued delivery orders and shipping manifests.",
+  },
+  "wh-rep-stock-mutation": {
+    eyebrow: "WAREHOUSE REPORTS",
+    title: "Stock Mutation Report",
+    description: "Period-over-period mutation summary of opening, in, out, and closing stock.",
+  },
+  "wh-rep-outstanding-request": {
+    eyebrow: "WAREHOUSE REPORTS",
+    title: "Outstanding Request Report",
+    description: "Tracking unfulfilled and in-progress material issue requests.",
+  },
 };
 
 export const prRows: TableRow[] = [
