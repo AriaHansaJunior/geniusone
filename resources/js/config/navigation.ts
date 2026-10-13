@@ -111,12 +111,12 @@ export const navigationConfig: NavSection[] = [
         label: "Warehouse Master",
         items: [
           { id: "warehouse-master-item", label: "Warehouse", path: "/warehouse/master" },
+          { id: "type-of-mutation", label: "Type of Mutation", path: "#", isPlaceholder: true },
         ],
       },
       {
         id: "warehouse-adjustment",
         label: "Adjustment",
-        sectionHeader: "Type of Mutation",
         items: [
           { id: "wh-adj-prod", label: "Adjustment Production", path: "#", isPlaceholder: true },
           { id: "wh-adj-bc", label: "Adjustment Stock BC", path: "#", isPlaceholder: true },
