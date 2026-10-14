@@ -136,16 +136,16 @@ export function DocumentHistoryDetail({
           rows.push([]);
           rows.push([`ITEM HISTORY FOR: ${it.itemProduct} (${it.itemCode})`]);
           rows.push([
-            "Nama Barang",
+            "Item Name",
             "Item Code",
             "Production Number",
             "SPK Number",
-            "Nomor Aju",
-            "Nomor Aju Date",
-            "Nomor Daftar",
-            "Nomor Daftar Date",
-            "Jenis Dokumen",
-            "Seri Barang",
+            "Submission No.",
+            "Submission Date",
+            "Registration No.",
+            "Registration Date",
+            "Document Type",
+            "Item Series",
             "Qty",
             "Netto",
           ]);

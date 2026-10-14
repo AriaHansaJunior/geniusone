@@ -2,6 +2,7 @@ import React, { useState, useMemo, useRef, useEffect } from "react";
 import * as XLSX from "xlsx";
 import { Icon } from "../../../components/ui/Icon";
 import { SearchField } from "../../../components/ui/SearchField";
+import { Pagination } from "../../../components/ui/Pagination";
 import { initialDocumentHistoryRecords } from "./document-history-data";
 import type {
   DocumentHistoryRecord,
@@ -413,65 +414,18 @@ export function DocumentHistoryIndex({
           </table>
         </div>
 
-        {/* Footer Area with Pagination & Page-Size Selection */}
-        <div className="dh-table-footer">
-          <div className="dh-footer-info">
-            Showing {startEntry} to {endEntry} of {totalRecords} entries
-          </div>
-
-          <div className="dh-footer-controls">
-            <div className="dh-page-size-selector">
-              <span>Show</span>
-              <select
-                className="dh-page-size-select"
-                value={pageSize}
-                onChange={(e) => {
-                  setPageSize(Number(e.target.value));
-                  setCurrentPage(1);
-                }}
-              >
-                <option value={10}>10</option>
-                <option value={25}>25</option>
-                <option value={50}>50</option>
-                <option value={100}>100</option>
-              </select>
-              <span>entries</span>
-            </div>
-
-            <div className="dh-pagination">
-              <button
-                type="button"
-                className="dh-pagination-btn"
-                disabled={safeCurrentPage <= 1}
-                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-              >
-                Previous
-              </button>
-
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-                <button
-                  key={p}
-                  type="button"
-                  className={`dh-pagination-btn ${
-                    p === safeCurrentPage ? "dh-pagination-btn--active" : ""
-                  }`}
-                  onClick={() => setCurrentPage(p)}
-                >
-                  {p}
-                </button>
-              ))}
-
-              <button
-                type="button"
-                className="dh-pagination-btn"
-                disabled={safeCurrentPage >= totalPages}
-                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-              >
-                Next
-              </button>
-            </div>
-          </div>
-        </div>
+        {/* Unified Standardized Pagination */}
+        <Pagination
+          totalRecords={totalRecords}
+          currentPage={safeCurrentPage}
+          pageSize={pageSize}
+          showPageSize={true}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={(newSize) => {
+            setPageSize(newSize);
+            setCurrentPage(1);
+          }}
+        />
       </div>
     </div>
   );

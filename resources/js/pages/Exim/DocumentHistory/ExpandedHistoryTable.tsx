@@ -22,13 +22,13 @@ export function ExpandedHistoryTable({ history }: ExpandedHistoryTableProps) {
           <thead>
             <tr>
               <th className="dh-expanded-th-lead"></th>
-              <th>Nama Barang</th>
+              <th>Item Name</th>
               <th>Production Number</th>
               <th>SPK Number</th>
-              <th>Nomor Aju</th>
-              <th>Nomor Daftar</th>
-              <th className="text-center">Jenis Dokumen</th>
-              <th className="text-center">Seri Barang</th>
+              <th>Submission No. (Aju)</th>
+              <th>Registration No. (Daftar)</th>
+              <th className="text-center">Document Type</th>
+              <th className="text-center">Item Series</th>
               <th className="text-right">Qty</th>
               <th className="text-right">Netto</th>
             </tr>

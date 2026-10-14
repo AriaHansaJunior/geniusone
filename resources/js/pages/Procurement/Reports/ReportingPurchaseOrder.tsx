@@ -1,6 +1,7 @@
 import { useState, useMemo, useCallback } from "react";
 import { Icon } from "../../../components/ui/Icon";
 import { Badge } from "../../../components/ui/Badge";
+import { Pagination } from "../../../components/ui/Pagination";
 import {
   initialPoReportRecords,
   poReportSuppliersList,
@@ -890,81 +891,18 @@ export function ReportingPurchaseOrder({
           </table>
         </div>
 
-        {/* ------------------------------------------------------------------- */}
-        {/* Table Footer: Sequential Entry Summary & Bottom-Right Pagination    */}
-        {/* ------------------------------------------------------------------- */}
-        <div className="po-report-footer">
-          <div className="po-report-footer__info">
-            Showing {startEntryNumber} to {endEntryNumber} of{" "}
-            {totalEntries.toLocaleString()} entries
-          </div>
-
-          <div className="po-report-footer__controls">
-            <div className="po-report-pages">
-              {/* Previous Page Button */}
-              <button
-                type="button"
-                className="po-page-btn"
-                disabled={safeCurrentPage <= 1}
-                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                aria-label="Previous page"
-              >
-                &lt;
-              </button>
-
-              {/* Numbered Page Buttons with Ellipsis */}
-              {pageNumbers.map((p, pIndex) =>
-                p === "..." ? (
-                  <span
-                    key={`ellipsis-${pIndex}`}
-                    className="po-page-ellipsis"
-                  >
-                    …
-                  </span>
-                ) : (
-                  <button
-                    key={`page-${p}`}
-                    type="button"
-                    className={`po-page-btn ${
-                      p === safeCurrentPage ? "po-page-btn--active" : ""
-                    }`}
-                    onClick={() => setCurrentPage(p)}
-                  >
-                    {p}
-                  </button>
-                )
-              )}
-
-              {/* Next Page Button */}
-              <button
-                type="button"
-                className="po-page-btn"
-                disabled={safeCurrentPage >= totalPages}
-                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                aria-label="Next page"
-              >
-                &gt;
-              </button>
-            </div>
-
-            {/* Rows / Page Size Selector */}
-            <div className="po-page-size-selector">
-              <span>Rows</span>
-              <select
-                value={pageSize}
-                onChange={(e) => {
-                  setPageSize(Number(e.target.value));
-                  setCurrentPage(1);
-                }}
-              >
-                <option value={10}>10</option>
-                <option value={25}>25</option>
-                <option value={50}>50</option>
-                <option value={100}>100</option>
-              </select>
-            </div>
-          </div>
-        </div>
+        {/* Table Footer: Standardized Shared Pagination */}
+        <Pagination
+          totalRecords={totalEntries}
+          currentPage={safeCurrentPage}
+          pageSize={pageSize}
+          showPageSize={true}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={(newSize) => {
+            setPageSize(newSize);
+            setCurrentPage(1);
+          }}
+        />
       </section>
     </div>
   );

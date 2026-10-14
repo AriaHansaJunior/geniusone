@@ -223,7 +223,7 @@ export function ItemForm({ initialRecord, onBack, onSave }: ItemFormProps) {
 
             <div className="item-form-group">
               <label htmlFor="kodeEksternal" className="item-form-label">
-                Kode Eksternal
+                External Code
               </label>
               <input
                 id="kodeEksternal"
@@ -347,7 +347,7 @@ export function ItemForm({ initialRecord, onBack, onSave }: ItemFormProps) {
 
             <div className="item-form-group">
               <label htmlFor="jenisItem" className="item-form-label">
-                Jenis Item
+                Item Type
               </label>
               <select
                 id="jenisItem"

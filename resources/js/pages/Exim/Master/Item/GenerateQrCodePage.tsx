@@ -109,8 +109,8 @@ export function GenerateQrCodePage({
             <thead>
               <tr>
                 <th style={{ width: "60px", textAlign: "center" }}>No</th>
-                <th style={{ width: "180px" }}>Kode Barang</th>
-                <th>Nama Barang</th>
+                <th style={{ width: "180px" }}>Item Code</th>
+                <th>Item Name</th>
                 <th style={{ width: "160px" }}>Classification</th>
                 <th style={{ width: "100px", textAlign: "center" }}>Unit</th>
                 <th style={{ width: "80px", textAlign: "center" }}>Action</th>
