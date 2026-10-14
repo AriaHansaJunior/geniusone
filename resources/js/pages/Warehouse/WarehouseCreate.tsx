@@ -285,14 +285,14 @@ export function WarehouseCreate({ onBack, onSaved }: WarehouseCreateProps) {
             <table className="detail-data-table">
               <thead>
                 <tr>
-                  <th style={{ width: "45px", textAlign: "center" }}>No</th>
-                  <th style={{ minWidth: "220px" }}>Material Item</th>
-                  <th style={{ width: "100px" }}>Job Number</th>
-                  <th style={{ width: "150px" }}>PO Number</th>
-                  <th style={{ minWidth: "160px" }}>Delivery Note (SJ)</th>
-                  <th style={{ width: "140px", textAlign: "right" }}>Receive Quantity</th>
-                  <th style={{ width: "150px" }}>Warehouse Location</th>
-                  <th style={{ minWidth: "240px" }}>Description / Purpose</th>
+                  <th style={{ width: "36px", textAlign: "center" }}>No</th>
+                  <th style={{ minWidth: "140px" }}>Material Item</th>
+                  <th style={{ width: "75px" }}>Job Number</th>
+                  <th style={{ width: "110px" }}>PO Number</th>
+                  <th style={{ minWidth: "110px" }}>Delivery Note (SJ)</th>
+                  <th style={{ width: "90px", textAlign: "right" }}>Receive Quantity</th>
+                  <th style={{ width: "100px" }}>Warehouse Location</th>
+                  <th style={{ minWidth: "120px" }}>Description / Purpose</th>
                 </tr>
               </thead>
               <tbody>

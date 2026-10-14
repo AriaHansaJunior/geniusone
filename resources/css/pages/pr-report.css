@@ -1,0 +1,633 @@
+/* ========================================================================= */
+/* GENIUSONE: REPORT PURCHASE REQUISITION PAGE STYLES                         */
+/* Aligned with GeniusOne Enterprise Light Theme Reference                   */
+/* ========================================================================= */
+
+.pr-report-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+}
+
+/* ------------------------------------------------------------------------- */
+/* Filter Panel & Controls (Matching GeniusOne Restrained Style)             */
+/* ------------------------------------------------------------------------- */
+
+.pr-report-filters {
+  background: #ffffff;
+  border: 1px solid var(--line, #e2e8f0);
+  border-radius: var(--radius-sm, 6px);
+  padding: 16px 20px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.pr-report-filters-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.pr-report-filters-row--second {
+  padding-top: 12px;
+  border-top: 1px solid var(--line, #f1f5f9);
+  align-items: center;
+}
+
+.pr-filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pr-filter-group--inline {
+  flex-direction: row;
+  align-items: center;
+  gap: 16px;
+}
+
+.pr-filter-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted, #64748b);
+  letter-spacing: 0.3px;
+  margin: 0;
+  user-select: none;
+}
+
+/* Search input with leading icon */
+.pr-search-box {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 250px;
+}
+
+.pr-search-box svg {
+  position: absolute;
+  left: 10px;
+  color: #94a3b8;
+  pointer-events: none;
+}
+
+.pr-search-input {
+  width: 100%;
+  padding: 6.5px 28px 6.5px 32px;
+  border: 1px solid var(--line-strong, #cbd5e1);
+  border-radius: var(--radius-sm, 4px);
+  font-size: 12px;
+  color: var(--ink, #1e293b);
+  background: #ffffff;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.pr-search-input:focus {
+  border-color: var(--blue-600, #0071e3);
+  box-shadow: 0 0 0 2px rgba(0, 113, 227, 0.12);
+}
+
+.pr-search-clear {
+  position: absolute;
+  right: 8px;
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 2px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+}
+
+.pr-search-clear:hover {
+  color: var(--ink, #1e293b);
+  background: #f1f5f9;
+}
+
+/* Date Range Inputs */
+.pr-date-range {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pr-date-input {
+  width: 120px;
+  padding: 6.5px 10px;
+  border: 1px solid var(--line-strong, #cbd5e1);
+  border-radius: var(--radius-sm, 4px);
+  font-size: 12px;
+  color: var(--ink, #1e293b);
+  background: #ffffff;
+  text-align: center;
+  outline: none;
+  font-family: inherit;
+  transition: border-color 0.15s ease;
+}
+
+.pr-date-input:focus {
+  border-color: var(--blue-600, #0071e3);
+  box-shadow: 0 0 0 2px rgba(0, 113, 227, 0.12);
+}
+
+.pr-date-separator {
+  color: #94a3b8;
+  font-weight: 700;
+  font-size: 13px;
+  user-select: none;
+}
+
+/* Select Dropdowns */
+.pr-select-input {
+  min-width: 155px;
+  padding: 6.5px 28px 6.5px 10px;
+  border: 1px solid var(--line-strong, #cbd5e1);
+  border-radius: var(--radius-sm, 4px);
+  font-size: 12px;
+  color: var(--ink, #1e293b);
+  background-color: #ffffff;
+  background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%2394a3b8%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
+  background-repeat: no-repeat;
+  background-position: right 9px top 50%;
+  background-size: 9px auto;
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.pr-select-input:focus {
+  border-color: var(--blue-600, #0071e3);
+  box-shadow: 0 0 0 2px rgba(0, 113, 227, 0.12);
+}
+
+/* Radio Option Groups */
+.pr-radio-group {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.pr-radio-group--two-tier {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.pr-radio-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.pr-radio-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--ink-soft, #334155);
+  user-select: none;
+  white-space: nowrap;
+}
+
+.pr-radio-item input[type="radio"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 15px;
+  height: 15px;
+  border: 1.5px solid #94a3b8;
+  border-radius: 50%;
+  margin: 0;
+  display: grid;
+  place-content: center;
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+}
+
+.pr-radio-item input[type="radio"]:checked {
+  border-color: var(--blue-600, #0071e3);
+}
+
+.pr-radio-item input[type="radio"]::before {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  transform: scale(0);
+  transition: 0.12s transform ease-in-out;
+  background-color: var(--blue-600, #0071e3);
+}
+
+.pr-radio-item input[type="radio"]:checked::before {
+  transform: scale(1);
+}
+
+/* Export To Excel Button: Restrained Secondary Button */
+.btn-export-excel {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6.5px 12px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--ink-soft, #334155);
+  background: #ffffff;
+  border: 1px solid var(--line-strong, #cbd5e1);
+  border-radius: var(--radius-sm, 4px);
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.btn-export-excel:hover:not(:disabled) {
+  background: var(--canvas-alt, #f8fafc);
+  border-color: var(--blue-400, #60a5fa);
+  color: var(--blue-700, #0071e3);
+}
+
+.btn-export-excel:active:not(:disabled) {
+  background: #f1f5f9;
+  transform: translateY(1px);
+}
+
+.btn-export-excel svg {
+  color: var(--muted, #64748b);
+}
+
+/* ------------------------------------------------------------------------- */
+/* Main Data Table Container & Layout: Restrained Enterprise Theme           */
+/* ------------------------------------------------------------------------- */
+
+.pr-report-table-card {
+  background: #ffffff;
+  border: 1px solid var(--line, #e2e8f0);
+  border-radius: var(--radius-sm, 6px);
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.pr-report-table-scroll {
+  overflow-x: auto;
+  width: 100%;
+  scrollbar-color: var(--line-strong, #cbd5e1) transparent;
+  scrollbar-width: thin;
+}
+
+.pr-report-table {
+  width: 100%;
+  min-width: 1680px;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 12px;
+}
+
+/* Light Table Headings: Matching GeniusOne Reference Standards */
+.pr-report-table th {
+  background: #fafafa;
+  color: var(--muted, #8e8e93);
+  font-size: 10px;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  font-weight: 900;
+  padding: 10px 12px;
+  text-align: left;
+  border-right: 1px solid var(--line, #e5e5ea);
+  border-bottom: 1px solid var(--line, #e5e5ea);
+  white-space: nowrap;
+  user-select: none;
+  vertical-align: middle;
+  line-height: 1.25;
+}
+
+.pr-report-table th:last-child {
+  border-right: none;
+}
+
+.pr-report-table th.th--center {
+  text-align: center;
+}
+
+.pr-report-table th.th--right {
+  text-align: right;
+}
+
+.pr-report-table th.th--sortable {
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.pr-report-table th.th--sortable:hover {
+  background: #f1f5f9;
+  color: var(--ink, #1e293b);
+}
+
+.pr-sort-header {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.pr-sort-icon {
+  display: inline-flex;
+  flex-direction: column;
+  font-size: 10px;
+  line-height: 0.8;
+  color: #b0b0b5;
+}
+
+.pr-sort-icon--active {
+  color: var(--blue-600, #0071e3);
+}
+
+/* Table Body Rows */
+.pr-report-table tbody tr {
+  transition: background-color 0.1s ease;
+}
+
+.pr-report-table tbody tr:hover td {
+  background: #f8fbff;
+}
+
+.pr-report-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--line, #e5e5ea);
+  border-right: 1px solid var(--line, #e5e5ea);
+  color: var(--ink-soft, #334155);
+  font-size: 12px;
+  vertical-align: middle;
+  white-space: nowrap;
+  background: #ffffff;
+}
+
+.pr-report-table td:last-child {
+  border-right: none;
+}
+
+.pr-report-table td.td--center {
+  text-align: center;
+}
+
+.pr-report-table td.td--right {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Specific Cell Visuals */
+.pr-link {
+  color: var(--blue-700, #0071e3);
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.pr-link:hover {
+  color: var(--blue-800, #005bb5);
+}
+
+.pr-updater {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5px;
+  line-height: 1.2;
+}
+
+.pr-updater strong {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--ink, #1e293b);
+}
+
+.pr-updater span {
+  font-size: 10.5px;
+  color: var(--muted-2, #8e8e93);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Detail Expansion Toggle Buttons: Restrained Secondary Action */
+.btn-detail-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: var(--radius-sm, 4px);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.btn-detail-toggle:active {
+  transform: scale(0.98);
+}
+
+.btn-detail-toggle--show {
+  background: #ffffff;
+  color: var(--blue-700, #0071e3);
+  border: 1px solid var(--line-strong, #cbd5e1);
+}
+
+.btn-detail-toggle--show:hover {
+  background: var(--blue-50, #eff6ff);
+  border-color: var(--blue-400, #60a5fa);
+}
+
+.btn-detail-toggle--close {
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+}
+
+.btn-detail-toggle--close:hover {
+  background: #fee2e2;
+  border-color: #fca5a5;
+}
+
+/* ------------------------------------------------------------------------- */
+/* Nested Purchase Order Detail Table: Light & Harmonious                    */
+/* ------------------------------------------------------------------------- */
+
+.pr-nested-row > td {
+  padding: 0 !important;
+  background: #f8fafc !important;
+  border-bottom: 2px solid var(--line-strong, #cbd5e1) !important;
+}
+
+.nested-po-wrapper {
+  padding: 10px 14px;
+  background: #f8fafc;
+  overflow-x: auto;
+}
+
+.nested-po-card {
+  background: #ffffff;
+  border: 1px solid var(--line, #e2e8f0);
+  border-radius: var(--radius-sm, 4px);
+  overflow: hidden;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.nested-po-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11.5px;
+}
+
+.nested-po-table th {
+  background: #f1f5f9;
+  color: var(--muted, #64748b);
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  padding: 8px 12px;
+  text-align: left;
+  border-right: 1px solid var(--line, #e2e8f0);
+  border-bottom: 1px solid var(--line, #e2e8f0);
+  white-space: nowrap;
+  user-select: none;
+}
+
+.nested-po-table th:last-child {
+  border-right: none;
+}
+
+.nested-po-table th.th--right {
+  text-align: right;
+}
+
+.nested-po-table td {
+  background: #ffffff;
+  color: var(--ink-soft, #334155);
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--line, #f1f5f9);
+  border-right: 1px solid var(--line, #f1f5f9);
+  font-size: 11.5px;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.nested-po-table td:last-child {
+  border-right: none;
+}
+
+.nested-po-table td.td--right {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.nested-po-table tbody tr:hover td {
+  background: #f8fbff;
+}
+
+.nested-po-empty {
+  padding: 12px 18px;
+  font-size: 11.5px;
+  color: var(--muted, #64748b);
+  font-style: italic;
+  background: #ffffff;
+}
+
+/* Table Footer / Summary & Pagination */
+.pr-report-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 18px;
+  border-top: 1px solid var(--line, #e2e8f0);
+  background: #ffffff;
+  font-size: 11.5px;
+  color: var(--muted, #64748b);
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.pr-report-footer__info {
+  font-weight: 600;
+  color: var(--muted, #64748b);
+}
+
+.pr-report-footer__controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.pr-report-pages {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.pr-page-btn {
+  min-width: 28px;
+  height: 28px;
+  border: 1px solid var(--line, #cbd5e1);
+  border-radius: var(--radius-sm, 4px);
+  background: #ffffff;
+  color: var(--muted, #475569);
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  padding: 0 4px;
+}
+
+.pr-page-btn:hover:not(:disabled):not(.pr-page-btn--active) {
+  background: var(--canvas-alt, #f1f5f9);
+  color: var(--ink, #0f172a);
+}
+
+.pr-page-btn--active {
+  background: var(--blue-600, #0071e3);
+  border-color: var(--blue-600, #0071e3);
+  color: #ffffff;
+  cursor: default;
+}
+
+.pr-page-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.pr-page-ellipsis {
+  padding: 0 4px;
+  color: var(--muted, #94a3b8);
+  user-select: none;
+}
+
+.pr-page-size-selector {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  color: var(--muted, #475569);
+}
+
+.pr-page-size-selector select {
+  padding: 4px 8px;
+  border: 1px solid var(--line-strong, #cbd5e1);
+  border-radius: var(--radius-sm, 4px);
+  background: #ffffff;
+  font-size: 11.5px;
+  color: var(--ink, #1e293b);
+  outline: none;
+}

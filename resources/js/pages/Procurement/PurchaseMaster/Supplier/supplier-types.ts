@@ -9,6 +9,7 @@ export interface SupplierRecord {
   nitku: string;
   createdBy: string;
   createdAt: string;
+  hidden?: boolean;
 }
 
 export interface SupplierFormData {

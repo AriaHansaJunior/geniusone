@@ -208,15 +208,15 @@ export function WarehouseDetail({
           <table className="detail-data-table">
             <thead>
               <tr>
-                <th style={{ width: "45px", textAlign: "center" }}>No</th>
-                <th style={{ minWidth: "220px" }}>Material Item</th>
-                <th style={{ width: "100px" }}>Job Number</th>
-                <th style={{ minWidth: "150px" }}>PO Reference</th>
-                <th style={{ minWidth: "160px" }}>PR Reference</th>
-                <th style={{ minWidth: "160px" }}>Delivery Note (SJ)</th>
-                <th style={{ width: "130px", textAlign: "right" }}>Received Qty</th>
-                <th style={{ width: "135px" }}>Warehouse Loc</th>
-                <th style={{ minWidth: "240px" }}>Description / Purpose</th>
+                <th style={{ width: "36px", textAlign: "center" }}>No</th>
+                <th style={{ minWidth: "140px" }}>Material Item</th>
+                <th style={{ width: "75px" }}>Job Number</th>
+                <th style={{ minWidth: "110px" }}>PO Reference</th>
+                <th style={{ minWidth: "115px" }}>PR Reference</th>
+                <th style={{ minWidth: "110px" }}>Delivery Note (SJ)</th>
+                <th style={{ width: "85px", textAlign: "right" }}>Received Qty</th>
+                <th style={{ width: "90px" }}>Warehouse Loc</th>
+                <th style={{ minWidth: "120px" }}>Description / Purpose</th>
               </tr>
             </thead>
             <tbody>

@@ -5,6 +5,8 @@ import {
   PurchaseRequisition,
   PurchaseOrder,
   PurchaseOrderReport,
+  PurchaseRequisitionReport,
+  ReportingPurchaseOrder,
   SupplierIndex,
   SupplierForm,
   PaymentTermIndex,
@@ -31,6 +33,11 @@ import { ConfirmDialog } from "./ui/ConfirmDialog";
 import { pageMeta, docToSlug } from "../data/mockData";
 import { navigationConfig } from "../config/navigation";
 import { initialPphRecords, type PphRecord } from "../pages/Procurement/PurchaseMaster/Pph/pph-types";
+import { initialSupplierRecords, type SupplierRecord } from "../pages/Procurement/PurchaseMaster/Supplier/supplier-types";
+import { initialPaymentTermRecords, type PaymentTermRecord } from "../pages/Procurement/PurchaseMaster/PaymentTerm/payment-term-types";
+import { initialPurchaseCategoryRecords, type PurchaseCategoryRecord } from "../pages/Procurement/PurchaseMaster/PurchaseCategory/purchase-category-types";
+import { initialDeliveryTermRecords, type DeliveryTermRecord } from "../pages/Procurement/PurchaseMaster/DeliveryTerms/delivery-terms-types";
+import { initialAdditionalCostRecords, type AdditionalCostRecord } from "../pages/Procurement/PurchaseMaster/AdditionalCosts/additional-costs-types";
 import type { PageKey, ViewState, TableRow } from "../types";
 
 interface AppProps {
@@ -208,8 +215,18 @@ function resolveViewStateFromPath(pathname: string, defaultPage: PageKey = "dash
   if (cleanPath === "/procurement/delivery-terms") return { type: "list", page: "delivery-terms" };
   if (cleanPath === "/procurement/additional-costs") return { type: "list", page: "additional-costs" };
   if (cleanPath === "/procurement/pph") return { type: "list", page: "pph" };
-  if (cleanPath === "/procurement/pr-report") return { type: "list", page: "pr-report" };
-  if (cleanPath === "/procurement/po-report") return { type: "list", page: "po-report" };
+  if (
+    cleanPath === "/procurement/pr-report" ||
+    cleanPath === "/procurement/reports/purchase-requisition-report"
+  ) {
+    return { type: "list", page: "pr-report" };
+  }
+  if (
+    cleanPath === "/procurement/po-report" ||
+    cleanPath === "/procurement/reports/purchase-order-report"
+  ) {
+    return { type: "list", page: "po-report" };
+  }
 
   if (cleanPath === "/exim/unit") return { type: "list", page: "unit" };
   if (cleanPath === "/exim/satuan") return { type: "list", page: "satuan" };
@@ -383,8 +400,49 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
     []
   );
 
-  // In-memory PPH dataset state to support temporary runtime additions
+  // In-memory Master datasets state to support runtime additions and hide toggles
   const [pphRecords, setPphRecords] = useState<PphRecord[]>(initialPphRecords);
+  const [supplierRecords, setSupplierRecords] = useState<SupplierRecord[]>(initialSupplierRecords);
+  const [paymentTermRecords, setPaymentTermRecords] = useState<PaymentTermRecord[]>(initialPaymentTermRecords);
+  const [purchaseCategoryRecords, setPurchaseCategoryRecords] = useState<PurchaseCategoryRecord[]>(initialPurchaseCategoryRecords);
+  const [deliveryTermRecords, setDeliveryTermRecords] = useState<DeliveryTermRecord[]>(initialDeliveryTermRecords);
+  const [additionalCostRecords, setAdditionalCostRecords] = useState<AdditionalCostRecord[]>(initialAdditionalCostRecords);
+
+  const handleTogglePphHide = useCallback((id: string) => {
+    setPphRecords((prev) =>
+      prev.map((r) => (r.id === id ? { ...r, hidden: !r.hidden } : r))
+    );
+  }, []);
+
+  const handleToggleSupplierHide = useCallback((id: string) => {
+    setSupplierRecords((prev) =>
+      prev.map((r) => (r.id === id ? { ...r, hidden: !r.hidden } : r))
+    );
+  }, []);
+
+  const handleTogglePaymentTermHide = useCallback((id: string) => {
+    setPaymentTermRecords((prev) =>
+      prev.map((r) => (r.id === id ? { ...r, hidden: !r.hidden } : r))
+    );
+  }, []);
+
+  const handleTogglePurchaseCategoryHide = useCallback((id: string) => {
+    setPurchaseCategoryRecords((prev) =>
+      prev.map((r) => (r.id === id ? { ...r, hidden: !r.hidden } : r))
+    );
+  }, []);
+
+  const handleToggleDeliveryTermHide = useCallback((id: string) => {
+    setDeliveryTermRecords((prev) =>
+      prev.map((r) => (r.id === id ? { ...r, hidden: !r.hidden } : r))
+    );
+  }, []);
+
+  const handleToggleAdditionalCostHide = useCallback((id: string) => {
+    setAdditionalCostRecords((prev) =>
+      prev.map((r) => (r.id === id ? { ...r, hidden: !r.hidden } : r))
+    );
+  }, []);
 
   // Navigate to create new record view
   const handleNavigateCreate = useCallback((module: "warehouse" | "supplier" | "payment-term" | "purchase-category" | "delivery-terms" | "additional-costs" | "pph") => {
@@ -592,6 +650,24 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
           />
         )}
 
+        {/* Purchase Requisition Report */}
+        {viewState.type === "list" && viewState.page === "pr-report" && (
+          <PurchaseRequisitionReport
+            onDetail={(prNumber: string) =>
+              handleNavigateDetail("pr", prNumber)
+            }
+          />
+        )}
+
+        {/* Reporting Purchase Order */}
+        {viewState.type === "list" && viewState.page === "po-report" && (
+          <ReportingPurchaseOrder
+            onDetail={(poNumber: string) =>
+              handleNavigateDetail("po", poNumber)
+            }
+          />
+        )}
+
         {viewState.type === "list" && viewState.page === "warehouse" && (
           <Warehouse
             onDetail={(row: TableRow) =>
@@ -604,6 +680,8 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
         {/* Supplier Master Listing */}
         {viewState.type === "list" && viewState.page === "supplier" && (
           <SupplierIndex
+            records={supplierRecords}
+            onToggleHide={handleToggleSupplierHide}
             onAddNew={() => handleNavigateCreate("supplier")}
           />
         )}
@@ -611,6 +689,8 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
         {/* Payment Term Listing */}
         {viewState.type === "list" && viewState.page === "payment-term" && (
           <PaymentTermIndex
+            records={paymentTermRecords}
+            onToggleHide={handleTogglePaymentTermHide}
             onAddNew={() => handleNavigateCreate("payment-term")}
           />
         )}
@@ -618,6 +698,8 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
         {/* Purchase Category Listing */}
         {viewState.type === "list" && viewState.page === "purchase-category" && (
           <PurchaseCategoryIndex
+            records={purchaseCategoryRecords}
+            onToggleHide={handleTogglePurchaseCategoryHide}
             onAddNew={() => handleNavigateCreate("purchase-category")}
           />
         )}
@@ -625,6 +707,8 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
         {/* Delivery Terms Listing */}
         {viewState.type === "list" && viewState.page === "delivery-terms" && (
           <DeliveryTermsIndex
+            records={deliveryTermRecords}
+            onToggleHide={handleToggleDeliveryTermHide}
             onAddNew={() => handleNavigateCreate("delivery-terms")}
           />
         )}
@@ -632,6 +716,8 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
         {/* Additional Costs Listing */}
         {viewState.type === "list" && viewState.page === "additional-costs" && (
           <AdditionalCostsIndex
+            records={additionalCostRecords}
+            onToggleHide={handleToggleAdditionalCostHide}
             onAddNew={() => handleNavigateCreate("additional-costs")}
           />
         )}
@@ -640,6 +726,7 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
         {viewState.type === "list" && viewState.page === "pph" && (
           <PphIndex
             records={pphRecords}
+            onToggleHide={handleTogglePphHide}
             onAddNew={() => handleNavigateCreate("pph")}
           />
         )}
@@ -649,6 +736,8 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
           viewState.page !== "pr" &&
           viewState.page !== "po" &&
           viewState.page !== "report" &&
+          viewState.page !== "pr-report" &&
+          viewState.page !== "po-report" &&
           viewState.page !== "warehouse" &&
           viewState.page !== "supplier" &&
           viewState.page !== "payment-term" &&

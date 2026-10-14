@@ -186,15 +186,15 @@ export function PurchaseRequisitionDetail({
           <table className="detail-data-table">
             <thead>
               <tr>
-                <th style={{ width: "45px", textAlign: "center" }}>No</th>
-                <th style={{ minWidth: "260px" }}>Material Item</th>
-                <th style={{ width: "130px" }}>Facility Type</th>
-                <th style={{ width: "120px", textAlign: "right" }}>Quantity</th>
-                <th style={{ width: "80px" }}>Unit</th>
-                <th style={{ width: "120px" }}>Due Date</th>
-                <th style={{ width: "110px" }}>Job Number</th>
-                <th style={{ width: "120px" }}>Department</th>
-                <th style={{ minWidth: "240px" }}>Purpose / Remark</th>
+                <th style={{ width: "36px", textAlign: "center" }}>No</th>
+                <th style={{ minWidth: "150px" }}>Material Item</th>
+                <th style={{ width: "95px" }}>Facility Type</th>
+                <th style={{ width: "75px", textAlign: "right" }}>Quantity</th>
+                <th style={{ width: "45px" }}>Unit</th>
+                <th style={{ width: "85px" }}>Due Date</th>
+                <th style={{ width: "75px" }}>Job Number</th>
+                <th style={{ width: "85px" }}>Department</th>
+                <th style={{ minWidth: "120px" }}>Purpose / Remark</th>
               </tr>
             </thead>
             <tbody>
@@ -213,21 +213,21 @@ export function PurchaseRequisitionDetail({
                 <td>{dueDate}</td>
                 <td>—</td>
                 <td><strong style={{ color: "var(--ink)" }}>{dept}</strong> (Sec 2)</td>
-                <td style={{ fontSize: "11.5px", color: "var(--ink-soft)" }}>
+                <td style={{ fontSize: "11px", color: "var(--ink-soft)" }}>
                   U/APD Kry MTC dan Furnace
                 </td>
               </tr>
             </tbody>
             <tfoot>
               <tr style={{ background: "#f8fafc", fontWeight: 700 }}>
-                <td colSpan={3} style={{ textAlign: "right", padding: "12px 14px" }}>
+                <td colSpan={3} style={{ textAlign: "right", padding: "8px 10px" }}>
                   Total Requested Quantity:
                 </td>
-                <td style={{ textAlign: "right", padding: "12px 14px", fontFamily: "ui-monospace, monospace" }}>
+                <td style={{ textAlign: "right", padding: "8px 10px", fontFamily: "ui-monospace, monospace" }}>
                   15.0000
                 </td>
-                <td style={{ padding: "12px 14px" }}>PCE</td>
-                <td colSpan={4} style={{ padding: "12px 14px", color: "var(--muted)", fontSize: "11px" }}>
+                <td style={{ padding: "8px 10px" }}>PCE</td>
+                <td colSpan={4} style={{ padding: "8px 10px", color: "var(--muted)", fontSize: "11px" }}>
                   Complete single requisition item line
                 </td>
               </tr>

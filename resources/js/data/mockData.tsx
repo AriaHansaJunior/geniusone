@@ -80,12 +80,12 @@ export const pageMeta: Record<PageKey, PageMeta> = {
   // Procurement Reports
   "pr-report": {
     eyebrow: "PROCUREMENT REPORTS",
-    title: "Purchase Requisition Report",
+    title: "Report Purchase Requisition",
     description: "Track requisition volume, departmental request velocity, and approval lead times.",
   },
   "po-report": {
     eyebrow: "PROCUREMENT REPORTS",
-    title: "Purchase Order Report",
+    title: "Reporting Purchase Order",
     description: "Comprehensive reporting on issued purchase orders, suppliers, and fulfilment status.",
   },
   // Exim Master

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Button } from "../../../../components/ui/Button";
 import { SearchField } from "../../../../components/ui/SearchField";
 import { Pagination } from "../../../../components/ui/Pagination";
@@ -9,30 +9,51 @@ import {
 } from "./additional-costs-types";
 
 interface AdditionalCostsIndexProps {
+  records?: AdditionalCostRecord[];
   onAddNew: () => void;
+  onToggleHide?: (id: string) => void;
 }
 
 type SortField = "costCode" | "costName";
 type SortDirection = "asc" | "desc";
 
-export function AdditionalCostsIndex({ onAddNew }: AdditionalCostsIndexProps) {
+export function AdditionalCostsIndex({
+  records = initialAdditionalCostRecords,
+  onAddNew,
+  onToggleHide,
+}: AdditionalCostsIndexProps) {
+  const [localRecords, setLocalRecords] = useState<AdditionalCostRecord[]>(records);
+
+  useEffect(() => {
+    setLocalRecords(records);
+  }, [records]);
+
   const [search, setSearch] = useState("");
   const [pageSize, setPageSize] = useState<number>(25);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [sortField, setSortField] = useState<SortField | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
 
+  const handleToggleHide = (id: string) => {
+    setLocalRecords((prev) =>
+      prev.map((r) => (r.id === id ? { ...r, hidden: !r.hidden } : r))
+    );
+    if (onToggleHide) {
+      onToggleHide(id);
+    }
+  };
+
   // Filter records based on search query (Cost Code and Cost Name)
   const filteredRecords = useMemo(() => {
-    if (!search.trim()) return initialAdditionalCostRecords;
+    if (!search.trim()) return localRecords;
     const query = search.toLowerCase().trim();
-    return initialAdditionalCostRecords.filter((rec) => {
+    return localRecords.filter((rec) => {
       return (
         rec.costCode.toLowerCase().includes(query) ||
         rec.costName.toLowerCase().includes(query)
       );
     });
-  }, [search]);
+  }, [localRecords, search]);
 
   // Sort records by Cost Code or Cost Name
   const sortedRecords = useMemo(() => {
@@ -147,8 +168,8 @@ export function AdditionalCostsIndex({ onAddNew }: AdditionalCostsIndexProps) {
                     <span>Cost Name</span>
                     {renderSortArrow("costName")}
                   </th>
-                  <th style={{ width: "100px", textAlign: "center" }}>
-                    <span>Option</span>
+                  <th style={{ width: "95px", textAlign: "center" }}>
+                    <span>Status</span>
                   </th>
                 </tr>
               </thead>
@@ -157,7 +178,7 @@ export function AdditionalCostsIndex({ onAddNew }: AdditionalCostsIndexProps) {
                   paginatedRecords.map((item, index) => {
                     const rowNumber = (safeCurrentPage - 1) * pageSize + index + 1;
                     return (
-                      <tr key={item.id}>
+                      <tr key={item.id} className={item.hidden ? "row--hidden" : ""}>
                         <td style={{ textAlign: "center", color: "var(--muted)", fontWeight: 600 }}>
                           {rowNumber}
                         </td>
@@ -168,7 +189,19 @@ export function AdditionalCostsIndex({ onAddNew }: AdditionalCostsIndexProps) {
                           {item.costName}
                         </td>
                         <td style={{ textAlign: "center" }}>
-                          {/* Option column preserved; cells left empty per scope instructions */}
+                          <label
+                            className="status-hide-checklist"
+                            title={item.hidden ? "Checked: Hidden from PO, transactions, and reports" : "Unchecked: Active and selectable"}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={!!item.hidden}
+                              onChange={() => handleToggleHide(item.id)}
+                            />
+                            <span className={item.hidden ? "status-text status-text--hidden" : "status-text status-text--active"}>
+                              {item.hidden ? "Hidden" : "Active"}
+                            </span>
+                          </label>
                         </td>
                       </tr>
                     );

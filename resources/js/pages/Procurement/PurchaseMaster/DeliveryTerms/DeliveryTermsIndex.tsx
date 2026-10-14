@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Button } from "../../../../components/ui/Button";
 import { SearchField } from "../../../../components/ui/SearchField";
 import { Pagination } from "../../../../components/ui/Pagination";
@@ -9,25 +9,46 @@ import {
 } from "./delivery-terms-types";
 
 interface DeliveryTermsIndexProps {
+  records?: DeliveryTermRecord[];
   onAddNew: () => void;
+  onToggleHide?: (id: string) => void;
 }
 
 type SortDirection = "none" | "asc" | "desc";
 
-export function DeliveryTermsIndex({ onAddNew }: DeliveryTermsIndexProps) {
+export function DeliveryTermsIndex({
+  records = initialDeliveryTermRecords,
+  onAddNew,
+  onToggleHide,
+}: DeliveryTermsIndexProps) {
+  const [localRecords, setLocalRecords] = useState<DeliveryTermRecord[]>(records);
+
+  useEffect(() => {
+    setLocalRecords(records);
+  }, [records]);
+
   const [search, setSearch] = useState("");
   const [pageSize, setPageSize] = useState<number>(25);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [sortDirection, setSortDirection] = useState<SortDirection>("none");
 
+  const handleToggleHide = (id: string) => {
+    setLocalRecords((prev) =>
+      prev.map((r) => (r.id === id ? { ...r, hidden: !r.hidden } : r))
+    );
+    if (onToggleHide) {
+      onToggleHide(id);
+    }
+  };
+
   // Filter records based on search query
   const filteredRecords = useMemo(() => {
-    if (!search.trim()) return initialDeliveryTermRecords;
+    if (!search.trim()) return localRecords;
     const query = search.toLowerCase().trim();
-    return initialDeliveryTermRecords.filter((rec) => {
+    return localRecords.filter((rec) => {
       return rec.name.toLowerCase().includes(query);
     });
-  }, [search]);
+  }, [localRecords, search]);
 
   // Sort records by Delivery Term
   const sortedRecords = useMemo(() => {
@@ -122,8 +143,8 @@ export function DeliveryTermsIndex({ onAddNew }: DeliveryTermsIndexProps) {
                       {sortDirection === "asc" ? "▲" : sortDirection === "desc" ? "▼" : "⇅"}
                     </span>
                   </th>
-                  <th style={{ width: "100px", textAlign: "center" }}>
-                    <span>Options</span>
+                  <th style={{ width: "95px", textAlign: "center" }}>
+                    <span>Status</span>
                   </th>
                 </tr>
               </thead>
@@ -132,7 +153,7 @@ export function DeliveryTermsIndex({ onAddNew }: DeliveryTermsIndexProps) {
                   paginatedRecords.map((item, index) => {
                     const rowNumber = (safeCurrentPage - 1) * pageSize + index + 1;
                     return (
-                      <tr key={item.id}>
+                      <tr key={item.id} className={item.hidden ? "row--hidden" : ""}>
                         <td style={{ textAlign: "center", color: "var(--muted)", fontWeight: 600 }}>
                           {rowNumber}
                         </td>
@@ -140,7 +161,19 @@ export function DeliveryTermsIndex({ onAddNew }: DeliveryTermsIndexProps) {
                           {item.name}
                         </td>
                         <td style={{ textAlign: "center" }}>
-                          {/* Options column preserved; cells left empty per scope instructions */}
+                          <label
+                            className="status-hide-checklist"
+                            title={item.hidden ? "Checked: Hidden from PO, transactions, and reports" : "Unchecked: Active and selectable"}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={!!item.hidden}
+                              onChange={() => handleToggleHide(item.id)}
+                            />
+                            <span className={item.hidden ? "status-text status-text--hidden" : "status-text status-text--active"}>
+                              {item.hidden ? "Hidden" : "Active"}
+                            </span>
+                          </label>
                         </td>
                       </tr>
                     );

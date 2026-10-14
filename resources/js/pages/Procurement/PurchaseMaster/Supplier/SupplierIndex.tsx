@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Button } from "../../../../components/ui/Button";
 import { Icon } from "../../../../components/ui/Icon";
 import { SearchField } from "../../../../components/ui/SearchField";
@@ -9,7 +9,9 @@ import {
 } from "./supplier-types";
 
 interface SupplierIndexProps {
+  records?: SupplierRecord[];
   onAddNew: () => void;
+  onToggleHide?: (id: string) => void;
 }
 
 type SortField =
@@ -24,7 +26,17 @@ type SortField =
 
 type SortDirection = "asc" | "desc";
 
-export function SupplierIndex({ onAddNew }: SupplierIndexProps) {
+export function SupplierIndex({
+  records = initialSupplierRecords,
+  onAddNew,
+  onToggleHide,
+}: SupplierIndexProps) {
+  const [localRecords, setLocalRecords] = useState<SupplierRecord[]>(records);
+
+  useEffect(() => {
+    setLocalRecords(records);
+  }, [records]);
+
   const [search, setSearch] = useState("");
   const [pageSize, setPageSize] = useState<number>(25);
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -32,11 +44,20 @@ export function SupplierIndex({ onAddNew }: SupplierIndexProps) {
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   const [exportNotice, setExportNotice] = useState<string | null>(null);
 
+  const handleToggleHide = (id: string) => {
+    setLocalRecords((prev) =>
+      prev.map((r) => (r.id === id ? { ...r, hidden: !r.hidden } : r))
+    );
+    if (onToggleHide) {
+      onToggleHide(id);
+    }
+  };
+
   // Filter records based on search query
   const filteredRecords = useMemo(() => {
-    if (!search.trim()) return initialSupplierRecords;
+    if (!search.trim()) return localRecords;
     const query = search.toLowerCase().trim();
-    return initialSupplierRecords.filter((rec) => {
+    return localRecords.filter((rec) => {
       return (
         String(rec.no).includes(query) ||
         rec.supplierCode.toLowerCase().includes(query) ||
@@ -252,7 +273,7 @@ export function SupplierIndex({ onAddNew }: SupplierIndexProps) {
                     {renderSortIndicator("address")}
                   </th>
                   <th
-                    style={{ width: "120px", textAlign: "center" }}
+                    style={{ width: "95px", textAlign: "center" }}
                     onClick={() => handleSort("country")}
                     className="sortable-th"
                   >
@@ -260,7 +281,7 @@ export function SupplierIndex({ onAddNew }: SupplierIndexProps) {
                     {renderSortIndicator("country")}
                   </th>
                   <th
-                    style={{ width: "160px" }}
+                    style={{ width: "135px" }}
                     onClick={() => handleSort("npwp")}
                     className="sortable-th"
                   >
@@ -268,7 +289,7 @@ export function SupplierIndex({ onAddNew }: SupplierIndexProps) {
                     {renderSortIndicator("npwp")}
                   </th>
                   <th
-                    style={{ width: "210px" }}
+                    style={{ width: "145px" }}
                     onClick={() => handleSort("nitku")}
                     className="sortable-th"
                   >
@@ -276,15 +297,15 @@ export function SupplierIndex({ onAddNew }: SupplierIndexProps) {
                     {renderSortIndicator("nitku")}
                   </th>
                   <th
-                    style={{ width: "150px" }}
+                    style={{ width: "135px" }}
                     onClick={() => handleSort("created")}
                     className="sortable-th"
                   >
                     <span>Created</span>
                     {renderSortIndicator("created")}
                   </th>
-                  <th style={{ width: "80px", textAlign: "center" }}>
-                    <span>Option</span>
+                  <th style={{ width: "95px", textAlign: "center" }}>
+                    <span>Status</span>
                   </th>
                 </tr>
               </thead>
@@ -293,7 +314,7 @@ export function SupplierIndex({ onAddNew }: SupplierIndexProps) {
                   paginatedRecords.map((item, index) => {
                     const rowNumber = (safeCurrentPage - 1) * pageSize + index + 1;
                     return (
-                      <tr key={item.id}>
+                      <tr key={item.id} className={item.hidden ? "row--hidden" : ""}>
                         <td style={{ textAlign: "center", color: "var(--muted)", fontWeight: 600 }}>
                           {rowNumber}
                         </td>
@@ -328,7 +349,19 @@ export function SupplierIndex({ onAddNew }: SupplierIndexProps) {
                         <span className="supplier-timestamp">{item.createdAt}</span>
                       </td>
                       <td style={{ textAlign: "center" }}>
-                        {/* Option column preserved per SMARTONE reference; empty cells as per scope instructions */}
+                        <label
+                          className="status-hide-checklist"
+                          title={item.hidden ? "Checked: Hidden from PO, transactions, and reports" : "Unchecked: Active and selectable"}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={!!item.hidden}
+                            onChange={() => handleToggleHide(item.id)}
+                          />
+                          <span className={item.hidden ? "status-text status-text--hidden" : "status-text status-text--active"}>
+                            {item.hidden ? "Hidden" : "Active"}
+                          </span>
+                        </label>
                       </td>
                     </tr>
                     );

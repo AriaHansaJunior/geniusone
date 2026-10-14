@@ -4,6 +4,7 @@ export interface PphRecord {
   rate: number;
   deduction: string;
   type?: string;
+  hidden?: boolean;
 }
 
 export const initialPphRecords: PphRecord[] = [

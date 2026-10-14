@@ -213,19 +213,19 @@ export function PurchaseOrderReportDetail({
           <table className="detail-data-table">
             <thead>
               <tr>
-                <th style={{ width: "45px", textAlign: "center" }}>No</th>
-                <th style={{ minWidth: "220px" }}>Material Name & Code</th>
-                <th style={{ width: "120px" }}>Dept / Section</th>
-                <th style={{ width: "95px", textAlign: "right" }}>Qty PR</th>
-                <th style={{ width: "95px", textAlign: "right" }}>Qty PO</th>
-                <th style={{ width: "95px", textAlign: "right" }}>Qty BPB</th>
-                <th style={{ width: "105px", textAlign: "right" }}>Outst. PP</th>
-                <th style={{ width: "120px", textAlign: "right" }}>Unit Price</th>
-                <th style={{ width: "120px", textAlign: "right" }}>Total PPn</th>
-                <th style={{ width: "110px", textAlign: "right" }}>Total PPh</th>
-                <th style={{ width: "135px", textAlign: "right" }}>Sub Total</th>
-                <th style={{ width: "100px" }}>Customs</th>
-                <th style={{ minWidth: "150px" }}>Delivery Note (SJ)</th>
+                <th style={{ width: "36px", textAlign: "center" }}>No</th>
+                <th style={{ minWidth: "150px" }}>Material Name & Code</th>
+                <th style={{ width: "85px" }}>Dept / Section</th>
+                <th style={{ width: "65px", textAlign: "right" }}>Qty PR</th>
+                <th style={{ width: "65px", textAlign: "right" }}>Qty PO</th>
+                <th style={{ width: "65px", textAlign: "right" }}>Qty BPB</th>
+                <th style={{ width: "70px", textAlign: "right" }}>Outst. PP</th>
+                <th style={{ width: "80px", textAlign: "right" }}>Unit Price</th>
+                <th style={{ width: "80px", textAlign: "right" }}>Total PPn</th>
+                <th style={{ width: "75px", textAlign: "right" }}>Total PPh</th>
+                <th style={{ width: "90px", textAlign: "right" }}>Sub Total</th>
+                <th style={{ width: "70px" }}>Customs</th>
+                <th style={{ minWidth: "100px" }}>Delivery Note (SJ)</th>
               </tr>
             </thead>
             <tbody>

@@ -1,8 +1,8 @@
 /* Collapsible Navigation Sidebar */
 /* Collapsible Sidebar with Independent Vertical Scrolling */
 .sidebar {
-  width: 264px;
-  flex: 0 0 264px;
+  width: 238px;
+  flex: 0 0 238px;
   background: var(--white);
   border-right: 1px solid var(--line);
   padding: 16px 10px 12px;

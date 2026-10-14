@@ -8,6 +8,8 @@ export { PurchaseOrder } from "./Procurement/PurchaseOrder/PurchaseOrder";
 export { PurchaseOrderDetail } from "./Procurement/PurchaseOrder/PurchaseOrderDetail";
 export { PurchaseOrderReport } from "./Procurement/Reports/PurchaseOrderReport";
 export { PurchaseOrderReportDetail } from "./Procurement/Reports/PurchaseOrderReportDetail";
+export { PurchaseRequisitionReport } from "./Procurement/Reports/PurchaseRequisitionReport";
+export { ReportingPurchaseOrder } from "./Procurement/Reports/ReportingPurchaseOrder";
 export { SupplierIndex } from "./Procurement/PurchaseMaster/Supplier/SupplierIndex";
 export { SupplierForm } from "./Procurement/PurchaseMaster/Supplier/SupplierForm";
 export { PaymentTermIndex } from "./Procurement/PurchaseMaster/PaymentTerm/PaymentTermIndex";

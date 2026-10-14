@@ -278,19 +278,19 @@ export function PurchaseOrderDetail({
             <table className="detail-data-table">
               <thead>
                 <tr>
-                  <th style={{ width: "45px", textAlign: "center" }}>No</th>
-                  <th style={{ minWidth: "220px" }}>Material Item</th>
-                  <th style={{ minWidth: "160px" }}>PR Reference</th>
-                  <th style={{ width: "115px" }}>Facility</th>
-                  <th style={{ width: "140px", textAlign: "right" }}>Quantity & Unit</th>
-                  <th style={{ width: "125px", textAlign: "right" }}>Unit Price (@)</th>
-                  <th style={{ width: "95px", textAlign: "right" }}>Discount</th>
-                  <th style={{ width: "145px", textAlign: "right" }}>Subtotal (IDR)</th>
-                  <th style={{ width: "80px", textAlign: "right" }}>LME</th>
-                  <th style={{ width: "100px", textAlign: "right" }}>Opt Rate</th>
-                  <th style={{ width: "80px", textAlign: "right" }}>% LME</th>
-                  <th style={{ width: "110px", textAlign: "right" }}>Subtotal PPh</th>
-                  <th style={{ minWidth: "160px" }}>Remark</th>
+                  <th style={{ width: "36px", textAlign: "center" }}>No</th>
+                  <th style={{ minWidth: "150px" }}>Material Item</th>
+                  <th style={{ minWidth: "115px" }}>PR Reference</th>
+                  <th style={{ width: "80px" }}>Facility</th>
+                  <th style={{ width: "95px", textAlign: "right" }}>Quantity & Unit</th>
+                  <th style={{ width: "95px", textAlign: "right" }}>Unit Price (@)</th>
+                  <th style={{ width: "65px", textAlign: "right" }}>Discount</th>
+                  <th style={{ width: "105px", textAlign: "right" }}>Subtotal (IDR)</th>
+                  <th style={{ width: "55px", textAlign: "right" }}>LME</th>
+                  <th style={{ width: "65px", textAlign: "right" }}>Opt Rate</th>
+                  <th style={{ width: "55px", textAlign: "right" }}>% LME</th>
+                  <th style={{ width: "85px", textAlign: "right" }}>Subtotal PPh</th>
+                  <th style={{ minWidth: "100px" }}>Remark</th>
                 </tr>
               </thead>
               <tbody>
@@ -360,10 +360,10 @@ export function PurchaseOrderDetail({
             <table className="detail-data-table">
               <thead>
                 <tr>
-                  <th style={{ width: "45px", textAlign: "center" }}>No</th>
-                  <th style={{ minWidth: "260px" }}>Cost Name / Description</th>
-                  <th style={{ width: "160px", textAlign: "right" }}>Amount (IDR)</th>
-                  <th style={{ minWidth: "300px" }}>Remark / Purpose</th>
+                  <th style={{ width: "36px", textAlign: "center" }}>No</th>
+                  <th style={{ minWidth: "160px" }}>Cost Name / Description</th>
+                  <th style={{ width: "120px", textAlign: "right" }}>Amount (IDR)</th>
+                  <th style={{ minWidth: "160px" }}>Remark / Purpose</th>
                 </tr>
               </thead>
               <tbody>

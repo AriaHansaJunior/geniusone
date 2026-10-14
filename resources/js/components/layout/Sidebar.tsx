@@ -114,6 +114,24 @@ export function Sidebar({
   // Floating tooltip for collapsed mode
   const [hoveredNav, setHoveredNav] = useState<{ label: string; top: number } | null>(null);
 
+  // Automatically dismiss tooltip on navigation or collapse transition
+  useEffect(() => {
+    setHoveredNav(null);
+  }, [activePage, collapsed]);
+
+  // Global dismissal on scroll, window blur, or document-level escape
+  useEffect(() => {
+    const dismissTooltip = () => setHoveredNav(null);
+    window.addEventListener("scroll", dismissTooltip, { passive: true });
+    window.addEventListener("blur", dismissTooltip);
+    window.addEventListener("resize", dismissTooltip, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", dismissTooltip);
+      window.removeEventListener("blur", dismissTooltip);
+      window.removeEventListener("resize", dismissTooltip);
+    };
+  }, []);
+
   // Preserve user's saved session state on initial mount/refresh.
   // Only auto-expand parent section and subgroup when user navigates between pages.
   const isFirstMountRef = useRef(true);
@@ -160,6 +178,7 @@ export function Sidebar({
 
   const toggleSection = (sectionId: string, e?: React.MouseEvent) => {
     e?.stopPropagation();
+    setHoveredNav(null);
     if (collapsed) {
       onToggleCollapse?.();
       setOpenSections((prev) => ({ ...prev, [sectionId]: true }));
@@ -173,6 +192,7 @@ export function Sidebar({
 
   const toggleGroup = (groupId: string, e?: React.MouseEvent) => {
     e?.stopPropagation();
+    setHoveredNav(null);
     setOpenGroups((prev) => ({
       ...prev,
       [groupId]: !prev[groupId],
@@ -189,7 +209,7 @@ export function Sidebar({
   };
 
   const handleMouseLeave = () => {
-    if (collapsed) setHoveredNav(null);
+    setHoveredNav(null);
   };
 
   const isSectionActive = (section: NavSection): boolean => {
@@ -204,6 +224,7 @@ export function Sidebar({
       <aside
         className={`sidebar ${collapsed ? "sidebar--collapsed" : ""}`}
         aria-label="Main Navigation"
+        onMouseLeave={handleMouseLeave}
       >
         <div className="sidebar__top">
           {!collapsed && (
@@ -230,9 +251,14 @@ export function Sidebar({
                     <button
                       type="button"
                       className={`sidebar-nav-item ${isActive ? "active" : ""}`}
-                      onClick={() => onNavigate(section.id as PageKey, section.path)}
+                      onClick={() => {
+                        setHoveredNav(null);
+                        onNavigate(section.id as PageKey, section.path);
+                      }}
                       onMouseEnter={(e) => handleMouseEnter(section.label, e)}
                       onMouseLeave={handleMouseLeave}
+                      onPointerLeave={handleMouseLeave}
+                      onBlur={handleMouseLeave}
                       aria-label={section.label}
                     >
                       <Icon name={section.icon} size={18} className="sidebar-nav-icon" />
@@ -254,6 +280,8 @@ export function Sidebar({
                       onClick={(e) => toggleSection(section.id, e)}
                       onMouseEnter={(e) => handleMouseEnter(section.label, e)}
                       onMouseLeave={handleMouseLeave}
+                      onPointerLeave={handleMouseLeave}
+                      onBlur={handleMouseLeave}
                       aria-label={`${section.label} (Pending Specifications)`}
                       title={collapsed ? section.label : undefined}
                     >
@@ -280,6 +308,8 @@ export function Sidebar({
                     onClick={(e) => toggleSection(section.id, e)}
                     onMouseEnter={(e) => handleMouseEnter(section.label, e)}
                     onMouseLeave={handleMouseLeave}
+                    onPointerLeave={handleMouseLeave}
+                    onBlur={handleMouseLeave}
                     aria-expanded={isSectionOpen}
                     aria-label={section.label}
                   >
