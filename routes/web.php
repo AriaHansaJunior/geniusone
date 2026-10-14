@@ -137,21 +137,47 @@ Route::get('/procurement/reports/purchase-order-report', fn() => view('app', ['p
 // Exim - Master Routes (Hierarchical & Aliases)
 Route::get('/exim/unit', fn() => view('app', ['page' => 'unit']))->name('exim.unit');
 Route::get('/exim/master/unit', fn() => view('app', ['page' => 'unit']));
+Route::get('/exim/unit/create', fn() => view('app', ['page' => 'unit-create']))->name('exim.unit.create');
+Route::get('/exim/unit/add', fn() => view('app', ['page' => 'unit-create']));
+Route::get('/exim/master/unit/create', fn() => view('app', ['page' => 'unit-create']));
+Route::get('/exim/master/unit/add', fn() => view('app', ['page' => 'unit-create']));
 
 Route::get('/exim/satuan', fn() => view('app', ['page' => 'satuan']))->name('exim.satuan');
 Route::get('/exim/master/satuan', fn() => view('app', ['page' => 'satuan']));
+Route::get('/exim/unit-reference', fn() => view('app', ['page' => 'satuan']))->name('exim.unit-reference');
+Route::get('/exim/master/unit-reference', fn() => view('app', ['page' => 'satuan']));
 
 Route::get('/exim/item', fn() => view('app', ['page' => 'item']))->name('exim.item');
 Route::get('/exim/master/item', fn() => view('app', ['page' => 'item']));
+Route::get('/exim/item/create', fn() => view('app', ['page' => 'item-create']))->name('exim.item.create');
+Route::get('/exim/item/add', fn() => view('app', ['page' => 'item-create']));
+Route::get('/exim/master/item/create', fn() => view('app', ['page' => 'item-create']));
+Route::get('/exim/master/item/add', fn() => view('app', ['page' => 'item-create']));
+Route::get('/exim/item/qr', fn() => view('app', ['page' => 'item-qr']))->name('exim.item.qr');
+Route::get('/exim/master/item/qr', fn() => view('app', ['page' => 'item-qr']));
+Route::get('/exim/item/generate-qr', fn() => view('app', ['page' => 'item-qr']));
+Route::get('/exim/master/item/generate-qr', fn() => view('app', ['page' => 'item-qr']));
 
 Route::get('/exim/brand', fn() => view('app', ['page' => 'brand']))->name('exim.brand');
 Route::get('/exim/master/brand', fn() => view('app', ['page' => 'brand']));
+Route::get('/exim/brand/create', fn() => view('app', ['page' => 'brand-create']))->name('exim.brand.create');
+Route::get('/exim/brand/add', fn() => view('app', ['page' => 'brand-create']));
+Route::get('/exim/master/brand/create', fn() => view('app', ['page' => 'brand-create']));
+Route::get('/exim/master/brand/add', fn() => view('app', ['page' => 'brand-create']));
 
 Route::get('/exim/classification', fn() => view('app', ['page' => 'classification']))->name('exim.classification');
 Route::get('/exim/master/classification', fn() => view('app', ['page' => 'classification']));
+Route::get('/exim/classification/create', fn() => view('app', ['page' => 'classification-create']))->name('exim.classification.create');
+Route::get('/exim/classification/add', fn() => view('app', ['page' => 'classification-create']));
+Route::get('/exim/master/classification/create', fn() => view('app', ['page' => 'classification-create']));
+Route::get('/exim/master/classification/add', fn() => view('app', ['page' => 'classification-create']));
 
 Route::get('/exim/department', fn() => view('app', ['page' => 'department']))->name('exim.department');
 Route::get('/exim/master/department', fn() => view('app', ['page' => 'department']));
+Route::get('/exim/department/create', fn() => view('app', ['page' => 'department-create']))->name('exim.department.create');
+Route::get('/exim/department/add', fn() => view('app', ['page' => 'department-create']));
+Route::get('/exim/master/department/create', fn() => view('app', ['page' => 'department-create']));
+Route::get('/exim/master/department/add', fn() => view('app', ['page' => 'department-create']));
 
 Route::get('/exim/facility', fn() => view('app', ['page' => 'facility']))->name('exim.facility');
 Route::get('/exim/master/facility', fn() => view('app', ['page' => 'facility']));

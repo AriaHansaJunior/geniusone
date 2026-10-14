@@ -19,6 +19,18 @@ import {
   AdditionalCostsForm,
   PphIndex,
   PphForm,
+  UnitIndex,
+  UnitForm,
+  UnitReferenceIndex,
+  ClassificationIndex,
+  ClassificationForm,
+  DepartmentIndex,
+  DepartmentForm,
+  BrandIndex,
+  BrandForm,
+  ItemIndex,
+  ItemForm,
+  GenerateQrCodePage,
   Warehouse,
   PurchaseRequisitionDetail,
   PurchaseOrderDetail,
@@ -38,6 +50,16 @@ import { initialPaymentTermRecords, type PaymentTermRecord } from "../pages/Proc
 import { initialPurchaseCategoryRecords, type PurchaseCategoryRecord } from "../pages/Procurement/PurchaseMaster/PurchaseCategory/purchase-category-types";
 import { initialDeliveryTermRecords, type DeliveryTermRecord } from "../pages/Procurement/PurchaseMaster/DeliveryTerms/delivery-terms-types";
 import { initialAdditionalCostRecords, type AdditionalCostRecord } from "../pages/Procurement/PurchaseMaster/AdditionalCosts/additional-costs-types";
+import { initialUnitRecords } from "../pages/Exim/Master/Unit/unit-data";
+import type { UnitRecord } from "../pages/Exim/Master/Unit/unit-types";
+import { initialClassificationRecords } from "../pages/Exim/Master/Classification/classification-data";
+import type { ClassificationRecord } from "../pages/Exim/Master/Classification/classification-types";
+import { initialDepartmentRecords } from "../pages/Exim/Master/Department/department-data";
+import type { DepartmentRecord } from "../pages/Exim/Master/Department/department-types";
+import { initialBrandRecords } from "../pages/Exim/Master/Brand/brand-data";
+import type { BrandRecord } from "../pages/Exim/Master/Brand/brand-types";
+import { initialItemRecords } from "../pages/Exim/Master/Item/item-data";
+import type { ItemRecord } from "../pages/Exim/Master/Item/item-types";
 import type { PageKey, ViewState, TableRow } from "../types";
 
 interface AppProps {
@@ -123,6 +145,60 @@ function resolveViewStateFromPath(pathname: string, defaultPage: PageKey = "dash
     cleanPath === "/procurement/pph/add"
   ) {
     return { type: "pph-create" };
+  }
+
+  if (
+    cleanPath === "/exim/master/unit/create" ||
+    cleanPath === "/exim/master/unit/add" ||
+    cleanPath === "/exim/unit/create" ||
+    cleanPath === "/exim/unit/add"
+  ) {
+    return { type: "unit-create" };
+  }
+
+  if (
+    cleanPath === "/exim/master/classification/create" ||
+    cleanPath === "/exim/master/classification/add" ||
+    cleanPath === "/exim/classification/create" ||
+    cleanPath === "/exim/classification/add"
+  ) {
+    return { type: "classification-create" };
+  }
+
+  if (
+    cleanPath === "/exim/master/department/create" ||
+    cleanPath === "/exim/master/department/add" ||
+    cleanPath === "/exim/department/create" ||
+    cleanPath === "/exim/department/add"
+  ) {
+    return { type: "department-create" };
+  }
+
+  if (
+    cleanPath === "/exim/master/brand/create" ||
+    cleanPath === "/exim/master/brand/add" ||
+    cleanPath === "/exim/brand/create" ||
+    cleanPath === "/exim/brand/add"
+  ) {
+    return { type: "brand-create" };
+  }
+
+  if (
+    cleanPath === "/exim/master/item/create" ||
+    cleanPath === "/exim/master/item/add" ||
+    cleanPath === "/exim/item/create" ||
+    cleanPath === "/exim/item/add"
+  ) {
+    return { type: "item-create" };
+  }
+
+  if (
+    cleanPath === "/exim/master/item/qr" ||
+    cleanPath === "/exim/item/qr" ||
+    cleanPath === "/exim/master/item/generate-qr" ||
+    cleanPath === "/exim/item/generate-qr"
+  ) {
+    return { type: "item-qr" };
   }
 
   // Detail routes (hierarchical & legacy short aliases)
@@ -229,11 +305,18 @@ function resolveViewStateFromPath(pathname: string, defaultPage: PageKey = "dash
   }
 
   if (cleanPath === "/exim/unit") return { type: "list", page: "unit" };
-  if (cleanPath === "/exim/satuan") return { type: "list", page: "satuan" };
-  if (cleanPath === "/exim/item") return { type: "list", page: "item" };
-  if (cleanPath === "/exim/brand") return { type: "list", page: "brand" };
-  if (cleanPath === "/exim/classification") return { type: "list", page: "classification" };
-  if (cleanPath === "/exim/department") return { type: "list", page: "department" };
+  if (
+    cleanPath === "/exim/satuan" ||
+    cleanPath === "/exim/master/satuan" ||
+    cleanPath === "/exim/unit-reference" ||
+    cleanPath === "/exim/master/unit-reference"
+  ) {
+    return { type: "list", page: "satuan" };
+  }
+  if (cleanPath === "/exim/item" || cleanPath === "/exim/master/item") return { type: "list", page: "item" };
+  if (cleanPath === "/exim/brand" || cleanPath === "/exim/master/brand") return { type: "list", page: "brand" };
+  if (cleanPath === "/exim/classification" || cleanPath === "/exim/master/classification") return { type: "list", page: "classification" };
+  if (cleanPath === "/exim/department" || cleanPath === "/exim/master/department") return { type: "list", page: "department" };
   if (cleanPath === "/exim/facility") return { type: "list", page: "facility" };
   if (cleanPath === "/exim/hs") return { type: "list", page: "hs" };
   if (cleanPath === "/exim/category") return { type: "list", page: "category" };
@@ -266,6 +349,12 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
     if (initialPage === "delivery-terms-create") return { type: "delivery-terms-create" };
     if (initialPage === "additional-costs-create") return { type: "additional-costs-create" };
     if (initialPage === "pph-create") return { type: "pph-create" };
+    if (initialPage === "unit-create") return { type: "unit-create" };
+    if (initialPage === "classification-create") return { type: "classification-create" };
+    if (initialPage === "department-create") return { type: "department-create" };
+    if (initialPage === "brand-create") return { type: "brand-create" };
+    if (initialPage === "item-create") return { type: "item-create" };
+    if (initialPage === "item-qr") return { type: "item-qr" };
     if (initialPage === "pr-detail") return { type: "pr-detail", code: initialCode || "0026-PR-IMLI-X-2026" };
     if (initialPage === "po-detail") return { type: "po-detail", code: initialCode || "POL-1026-0040" };
     if (initialPage === "report-detail") return { type: "report-detail", code: initialCode || "POL-1026-0040" };
@@ -302,6 +391,16 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
       ? "additional-costs"
       : viewState.type === "pph-create"
       ? "pph"
+      : viewState.type === "unit-create" || viewState.type === "unit-edit"
+      ? "unit"
+      : viewState.type === "classification-create" || viewState.type === "classification-edit"
+      ? "classification"
+      : viewState.type === "department-create" || viewState.type === "department-edit"
+      ? "department"
+      : viewState.type === "brand-create" || viewState.type === "brand-edit"
+      ? "brand"
+      : viewState.type === "item-create" || viewState.type === "item-edit" || viewState.type === "item-qr"
+      ? "item"
       : null;
 
   const isDetailPage = viewState.type !== "list" && viewState.type !== "dashboard";
@@ -407,6 +506,16 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
   const [purchaseCategoryRecords, setPurchaseCategoryRecords] = useState<PurchaseCategoryRecord[]>(initialPurchaseCategoryRecords);
   const [deliveryTermRecords, setDeliveryTermRecords] = useState<DeliveryTermRecord[]>(initialDeliveryTermRecords);
   const [additionalCostRecords, setAdditionalCostRecords] = useState<AdditionalCostRecord[]>(initialAdditionalCostRecords);
+  const [unitRecords, setUnitRecords] = useState<UnitRecord[]>(initialUnitRecords);
+  const [editingUnit, setEditingUnit] = useState<UnitRecord | null>(null);
+  const [classificationRecords, setClassificationRecords] = useState<ClassificationRecord[]>(initialClassificationRecords);
+  const [editingClassification, setEditingClassification] = useState<ClassificationRecord | null>(null);
+  const [departmentRecords, setDepartmentRecords] = useState<DepartmentRecord[]>(initialDepartmentRecords);
+  const [editingDepartment, setEditingDepartment] = useState<DepartmentRecord | null>(null);
+  const [brandRecords, setBrandRecords] = useState<BrandRecord[]>(initialBrandRecords);
+  const [editingBrand, setEditingBrand] = useState<BrandRecord | null>(null);
+  const [itemRecords, setItemRecords] = useState<ItemRecord[]>(initialItemRecords);
+  const [editingItem, setEditingItem] = useState<ItemRecord | null>(null);
 
   const handleTogglePphHide = useCallback((id: string) => {
     setPphRecords((prev) =>
@@ -445,7 +554,67 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
   }, []);
 
   // Navigate to create new record view
-  const handleNavigateCreate = useCallback((module: "warehouse" | "supplier" | "payment-term" | "purchase-category" | "delivery-terms" | "additional-costs" | "pph") => {
+  const handleNavigateCreate = useCallback((module: "warehouse" | "supplier" | "payment-term" | "purchase-category" | "delivery-terms" | "additional-costs" | "pph" | "unit" | "classification" | "department" | "brand" | "item") => {
+    if (module === "item") {
+      setEditingItem(null);
+      const nextState: ViewState = { type: "item-create" };
+      setViewState(nextState);
+
+      if (typeof window !== "undefined") {
+        window.scrollTo(0, 0);
+        window.history.pushState(nextState, "", "/exim/master/item/create");
+      }
+      return;
+    }
+
+    if (module === "brand") {
+      setEditingBrand(null);
+      const nextState: ViewState = { type: "brand-create" };
+      setViewState(nextState);
+
+      if (typeof window !== "undefined") {
+        window.scrollTo(0, 0);
+        window.history.pushState(nextState, "", "/exim/master/brand/create");
+      }
+      return;
+    }
+
+    if (module === "department") {
+      setEditingDepartment(null);
+      const nextState: ViewState = { type: "department-create" };
+      setViewState(nextState);
+
+      if (typeof window !== "undefined") {
+        window.scrollTo(0, 0);
+        window.history.pushState(nextState, "", "/exim/master/department/create");
+      }
+      return;
+    }
+
+    if (module === "classification") {
+      setEditingClassification(null);
+      const nextState: ViewState = { type: "classification-create" };
+      setViewState(nextState);
+
+      if (typeof window !== "undefined") {
+        window.scrollTo(0, 0);
+        window.history.pushState(nextState, "", "/exim/master/classification/create");
+      }
+      return;
+    }
+
+    if (module === "unit") {
+      setEditingUnit(null);
+      const nextState: ViewState = { type: "unit-create" };
+      setViewState(nextState);
+
+      if (typeof window !== "undefined") {
+        window.scrollTo(0, 0);
+        window.history.pushState(nextState, "", "/exim/master/unit/create");
+      }
+      return;
+    }
+
     if (module === "pph") {
       const nextState: ViewState = { type: "pph-create" };
       setViewState(nextState);
@@ -519,6 +688,169 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
       window.scrollTo(0, 0);
       window.history.pushState(nextState, "", "/warehouse/incoming/receive-material-bpb/create");
     }
+  }, []);
+
+  const handleNavigateUnitEdit = useCallback((unit: UnitRecord) => {
+    setEditingUnit(unit);
+    const nextState: ViewState = { type: "unit-edit", record: unit };
+    setViewState(nextState);
+
+    if (typeof window !== "undefined") {
+      window.scrollTo(0, 0);
+      window.history.pushState(nextState, "", "/exim/master/unit/create");
+    }
+  }, []);
+
+  const handleSaveUnit = useCallback((record: UnitRecord, isEdit: boolean) => {
+    if (isEdit) {
+      setUnitRecords((prev) =>
+        prev.map((u) => (u.id === record.id ? record : u))
+      );
+    } else {
+      setUnitRecords((prev) => [record, ...prev]);
+    }
+    setEditingUnit(null);
+    handleNavigateList("unit", "/exim/master/unit");
+  }, [handleNavigateList]);
+
+  const handleDeleteUnit = useCallback((id: string) => {
+    setUnitRecords((prev) => prev.filter((u) => u.id !== id));
+  }, []);
+
+  const handleNavigateClassificationEdit = useCallback((cls: ClassificationRecord) => {
+    setEditingClassification(cls);
+    const nextState: ViewState = { type: "classification-edit", record: cls };
+    setViewState(nextState);
+
+    if (typeof window !== "undefined") {
+      window.scrollTo(0, 0);
+      window.history.pushState(nextState, "", "/exim/master/classification/create");
+    }
+  }, []);
+
+  const handleSaveClassification = useCallback((record: ClassificationRecord, isEdit: boolean) => {
+    if (isEdit) {
+      setClassificationRecords((prev) =>
+        prev.map((c) => (c.id === record.id ? record : c))
+      );
+    } else {
+      setClassificationRecords((prev) => [record, ...prev]);
+    }
+    setEditingClassification(null);
+    handleNavigateList("classification", "/exim/master/classification");
+  }, [handleNavigateList]);
+
+  const handleDeleteClassification = useCallback((id: string) => {
+    setClassificationRecords((prev) => prev.filter((c) => c.id !== id));
+  }, []);
+
+  const handleToggleClassificationStatus = useCallback((id: string) => {
+    setClassificationRecords((prev) =>
+      prev.map((c) => (c.id === id ? { ...c, status: !c.status } : c))
+    );
+  }, []);
+
+  const handleNavigateDepartmentEdit = useCallback((dept: DepartmentRecord) => {
+    setEditingDepartment(dept);
+    const nextState: ViewState = { type: "department-edit", record: dept };
+    setViewState(nextState);
+
+    if (typeof window !== "undefined") {
+      window.scrollTo(0, 0);
+      window.history.pushState(nextState, "", "/exim/master/department/create");
+    }
+  }, []);
+
+  const handleSaveDepartment = useCallback((record: DepartmentRecord, isEdit: boolean) => {
+    if (isEdit) {
+      setDepartmentRecords((prev) =>
+        prev.map((d) => (d.id === record.id ? record : d))
+      );
+    } else {
+      setDepartmentRecords((prev) => [record, ...prev]);
+    }
+    setEditingDepartment(null);
+    handleNavigateList("department", "/exim/master/department");
+  }, [handleNavigateList]);
+
+  const handleDeleteDepartment = useCallback((id: string) => {
+    setDepartmentRecords((prev) => prev.filter((d) => d.id !== id));
+  }, []);
+
+  const handleToggleDepartmentStatus = useCallback((id: string) => {
+    setDepartmentRecords((prev) =>
+      prev.map((d) => (d.id === id ? { ...d, status: !d.status } : d))
+    );
+  }, []);
+
+  const handleNavigateBrandEdit = useCallback((brand: BrandRecord) => {
+    setEditingBrand(brand);
+    const nextState: ViewState = { type: "brand-edit", record: brand };
+    setViewState(nextState);
+
+    if (typeof window !== "undefined") {
+      window.scrollTo(0, 0);
+      window.history.pushState(nextState, "", "/exim/master/brand/create");
+    }
+  }, []);
+
+  const handleSaveBrand = useCallback((record: BrandRecord, isEdit: boolean) => {
+    if (isEdit) {
+      setBrandRecords((prev) =>
+        prev.map((b) => (b.id === record.id ? record : b))
+      );
+    } else {
+      setBrandRecords((prev) => [record, ...prev]);
+    }
+    setEditingBrand(null);
+    handleNavigateList("brand", "/exim/master/brand");
+  }, [handleNavigateList]);
+
+  const handleDeleteBrand = useCallback((id: string) => {
+    setBrandRecords((prev) => prev.filter((b) => b.id !== id));
+  }, []);
+
+  const handleToggleBrandStatus = useCallback((id: string) => {
+    setBrandRecords((prev) =>
+      prev.map((b) => (b.id === id ? { ...b, status: !b.status } : b))
+    );
+  }, []);
+
+  const handleNavigateGenerateQr = useCallback(() => {
+    const nextState: ViewState = { type: "item-qr" };
+    setViewState(nextState);
+
+    if (typeof window !== "undefined") {
+      window.scrollTo(0, 0);
+      window.history.pushState(nextState, "", "/exim/master/item/qr");
+    }
+  }, []);
+
+  const handleNavigateItemEdit = useCallback((item: ItemRecord) => {
+    setEditingItem(item);
+    const nextState: ViewState = { type: "item-edit", record: item };
+    setViewState(nextState);
+
+    if (typeof window !== "undefined") {
+      window.scrollTo(0, 0);
+      window.history.pushState(nextState, "", "/exim/master/item/create");
+    }
+  }, []);
+
+  const handleSaveItem = useCallback((record: ItemRecord, isEdit: boolean) => {
+    if (isEdit) {
+      setItemRecords((prev) =>
+        prev.map((i) => (i.id === record.id ? record : i))
+      );
+    } else {
+      setItemRecords((prev) => [record, ...prev]);
+    }
+    setEditingItem(null);
+    handleNavigateList("item", "/exim/master/item");
+  }, [handleNavigateList]);
+
+  const handleDeleteItem = useCallback((id: string) => {
+    setItemRecords((prev) => prev.filter((i) => i.id !== id));
   }, []);
 
   // Navigate to edit profile view
@@ -731,6 +1063,65 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
           />
         )}
 
+        {/* Exim Unit Master Listing */}
+        {viewState.type === "list" && viewState.page === "unit" && (
+          <UnitIndex
+            records={unitRecords}
+            onAddNew={() => handleNavigateCreate("unit")}
+            onEdit={handleNavigateUnitEdit}
+            onDelete={handleDeleteUnit}
+          />
+        )}
+
+        {/* Exim Unit Reference (Satuan) Listing */}
+        {viewState.type === "list" && (viewState.page === "satuan" || (viewState.page as string) === "unit-reference") && (
+          <UnitReferenceIndex />
+        )}
+
+        {/* Exim Master Classification Listing */}
+        {viewState.type === "list" && viewState.page === "classification" && (
+          <ClassificationIndex
+            records={classificationRecords}
+            onAddNew={() => handleNavigateCreate("classification")}
+            onEdit={handleNavigateClassificationEdit}
+            onDelete={handleDeleteClassification}
+            onToggleStatus={handleToggleClassificationStatus}
+          />
+        )}
+
+        {/* Exim Master Department Listing */}
+        {viewState.type === "list" && viewState.page === "department" && (
+          <DepartmentIndex
+            records={departmentRecords}
+            onAddNew={() => handleNavigateCreate("department")}
+            onEdit={handleNavigateDepartmentEdit}
+            onDelete={handleDeleteDepartment}
+            onToggleStatus={handleToggleDepartmentStatus}
+          />
+        )}
+
+        {/* Exim Master Brand Listing */}
+        {viewState.type === "list" && viewState.page === "brand" && (
+          <BrandIndex
+            records={brandRecords}
+            onAddNew={() => handleNavigateCreate("brand")}
+            onEdit={handleNavigateBrandEdit}
+            onDelete={handleDeleteBrand}
+            onToggleStatus={handleToggleBrandStatus}
+          />
+        )}
+
+        {/* Exim Master Item Listing */}
+        {viewState.type === "list" && viewState.page === "item" && (
+          <ItemIndex
+            records={itemRecords}
+            onAddNew={() => handleNavigateCreate("item")}
+            onGenerateQr={handleNavigateGenerateQr}
+            onEdit={handleNavigateItemEdit}
+            onDelete={handleDeleteItem}
+          />
+        )}
+
         {/* New Lightweight Placeholder Pages */}
         {viewState.type === "list" &&
           viewState.page !== "pr" &&
@@ -745,6 +1136,13 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
           viewState.page !== "delivery-terms" &&
           viewState.page !== "additional-costs" &&
           viewState.page !== "pph" &&
+          viewState.page !== "unit" &&
+          viewState.page !== "satuan" &&
+          viewState.page !== "unit-reference" &&
+          viewState.page !== "classification" &&
+          viewState.page !== "department" &&
+          viewState.page !== "brand" &&
+          viewState.page !== "item" &&
           viewState.page !== "dashboard" && (
             <PlaceholderPage
               eyebrow={currentMeta.eyebrow}
@@ -830,6 +1228,94 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
               setPphRecords((prev) => [newRec, ...prev]);
               handleNavigateList("pph", "/procurement/purchase-master/pph");
             }}
+          />
+        )}
+
+        {/* Dedicated Exim Unit Form (Add / Edit) */}
+        {(viewState.type === "unit-create" || viewState.type === "unit-edit") && (
+          <UnitForm
+            initialRecord={
+              viewState.type === "unit-edit" && viewState.record
+                ? viewState.record
+                : editingUnit
+            }
+            onBack={() => {
+              setEditingUnit(null);
+              handleNavigateList("unit", "/exim/master/unit");
+            }}
+            onSave={handleSaveUnit}
+          />
+        )}
+
+        {/* Dedicated Exim Classification Form (Add / Edit) */}
+        {(viewState.type === "classification-create" || viewState.type === "classification-edit") && (
+          <ClassificationForm
+            initialRecord={
+              viewState.type === "classification-edit" && viewState.record
+                ? viewState.record
+                : editingClassification
+            }
+            onBack={() => {
+              setEditingClassification(null);
+              handleNavigateList("classification", "/exim/master/classification");
+            }}
+            onSave={handleSaveClassification}
+          />
+        )}
+
+        {/* Dedicated Exim Department Form (Add / Edit) */}
+        {(viewState.type === "department-create" || viewState.type === "department-edit") && (
+          <DepartmentForm
+            initialRecord={
+              viewState.type === "department-edit" && viewState.record
+                ? viewState.record
+                : editingDepartment
+            }
+            onBack={() => {
+              setEditingDepartment(null);
+              handleNavigateList("department", "/exim/master/department");
+            }}
+            onSave={handleSaveDepartment}
+          />
+        )}
+
+        {/* Dedicated Exim Brand Form (Add / Edit) */}
+        {(viewState.type === "brand-create" || viewState.type === "brand-edit") && (
+          <BrandForm
+            initialRecord={
+              viewState.type === "brand-edit" && viewState.record
+                ? viewState.record
+                : editingBrand
+            }
+            onBack={() => {
+              setEditingBrand(null);
+              handleNavigateList("brand", "/exim/master/brand");
+            }}
+            onSave={handleSaveBrand}
+          />
+        )}
+
+        {/* Dedicated Exim Item Form (Add / Edit) */}
+        {(viewState.type === "item-create" || viewState.type === "item-edit") && (
+          <ItemForm
+            initialRecord={
+              viewState.type === "item-edit" && viewState.record
+                ? viewState.record
+                : editingItem
+            }
+            onBack={() => {
+              setEditingItem(null);
+              handleNavigateList("item", "/exim/master/item");
+            }}
+            onSave={handleSaveItem}
+          />
+        )}
+
+        {/* Dedicated Generate QR Code Page */}
+        {viewState.type === "item-qr" && (
+          <GenerateQrCodePage
+            allItems={itemRecords}
+            onCancel={() => handleNavigateList("item", "/exim/master/item")}
           />
         )}
 

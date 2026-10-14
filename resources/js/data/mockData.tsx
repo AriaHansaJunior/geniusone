@@ -96,27 +96,32 @@ export const pageMeta: Record<PageKey, PageMeta> = {
   },
   satuan: {
     eyebrow: "EXIM MASTER",
-    title: "Satuan (UOM)",
-    description: "Standardized units of measure for export-import declarations.",
+    title: "Unit Reference",
+    description: "Standardized customs unit of measure reference definitions.",
+  },
+  "unit-reference": {
+    eyebrow: "EXIM MASTER",
+    title: "Unit Reference",
+    description: "Standardized customs unit of measure reference definitions.",
   },
   item: {
     eyebrow: "EXIM MASTER",
-    title: "Item",
+    title: "Master Item",
     description: "Customs item master index and international trade material catalog.",
   },
   brand: {
     eyebrow: "EXIM MASTER",
-    title: "Brand",
+    title: "Master Brand",
     description: "Registered trade names and product trademark identities.",
   },
   classification: {
     eyebrow: "EXIM MASTER",
-    title: "Classification",
+    title: "Master Classification",
     description: "Commodity trade classification and customs regulatory tiers.",
   },
   department: {
     eyebrow: "EXIM MASTER",
-    title: "Department",
+    title: "Master Department",
     description: "Organizational departments associated with trade documentation.",
   },
   facility: {

@@ -1,0 +1,130 @@
+/* ========================================================================= */
+/* EXIM MASTER: UNIT REFERENCE STYLES                                        */
+/* ========================================================================= */
+
+.unit-reference-page {
+  width: 100%;
+  animation: fadeIn 0.15s ease-in-out;
+}
+
+.unit-reference-panel {
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+.unit-reference-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--line);
+  background: var(--white);
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.unit-reference-toolbar .search-field {
+  width: 320px;
+  max-width: 100%;
+}
+
+.unit-reference-page-size {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 600;
+  user-select: none;
+}
+
+.unit-reference-page-size select {
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: var(--white);
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 700;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.unit-reference-page-size select:focus {
+  border-color: var(--blue-600);
+  box-shadow: 0 0 0 2px rgba(0, 113, 227, 0.12);
+}
+
+.unit-reference-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.unit-reference-table th {
+  height: 40px;
+  padding: 0 18px;
+  text-align: left;
+  color: var(--muted);
+  background: #fafafa;
+  border-bottom: 1px solid var(--line);
+  font-size: 10.5px;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  font-weight: 800;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.unit-reference-table th.sortable-th {
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.unit-reference-table th.sortable-th:hover {
+  color: var(--blue-600);
+}
+
+.unit-reference-table td {
+  height: 48px;
+  padding: 8px 18px;
+  border-bottom: 1px solid var(--line);
+  color: var(--ink-soft);
+  font-size: 12px;
+  vertical-align: middle;
+}
+
+.unit-reference-table tbody tr:hover {
+  background: #f8fbff;
+}
+
+.unit-reference-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.unit-reference-num {
+  text-align: center;
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 12px;
+}
+
+.unit-reference-code {
+  display: inline-block;
+  font-family: var(--font-mono, monospace);
+  font-weight: 700;
+  color: var(--ink);
+  font-size: 12px;
+  letter-spacing: 0.5px;
+}
+
+.unit-reference-desc {
+  font-weight: 600;
+  color: var(--ink);
+  font-size: 12.5px;
+  letter-spacing: 0.1px;
+}

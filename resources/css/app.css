@@ -32,3 +32,9 @@
 @import "./pages/supplier.css";
 @import "./pages/pr-report.css";
 @import "./pages/po-report.css";
+@import "./pages/unit.css";
+@import "./pages/unit-reference.css";
+@import "./pages/classification.css";
+@import "./pages/department.css";
+@import "./pages/item.css";
+@import "./pages/brand.css";

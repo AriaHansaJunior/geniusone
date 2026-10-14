@@ -5,6 +5,7 @@ interface PaginationProps {
   totalRecords?: number;
   currentPage?: number;
   pageSize?: number;
+  showPageSize?: boolean;
   onPageChange?: (page: number) => void;
   onPageSizeChange?: (size: number) => void;
 }
@@ -14,6 +15,7 @@ export function Pagination({
   totalRecords,
   currentPage = 1,
   pageSize = 25,
+  showPageSize = true,
   onPageChange,
   onPageSizeChange,
 }: PaginationProps) {
@@ -61,21 +63,23 @@ export function Pagination({
           <Icon name="arrowRight" size={15} />
         </button>
       </div>
-      <label>
-        Rows{" "}
-        <select
-          value={pageSize}
-          onChange={(e) => {
-            const nextSize = Number(e.target.value);
-            if (onPageSizeChange) onPageSizeChange(nextSize);
-          }}
-        >
-          <option value={10}>10</option>
-          <option value={25}>25</option>
-          <option value={50}>50</option>
-          <option value={100}>100</option>
-        </select>
-      </label>
+      {showPageSize && (
+        <label>
+          Rows{" "}
+          <select
+            value={pageSize}
+            onChange={(e) => {
+              const nextSize = Number(e.target.value);
+              if (onPageSizeChange) onPageSizeChange(nextSize);
+            }}
+          >
+            <option value={10}>10</option>
+            <option value={25}>25</option>
+            <option value={50}>50</option>
+            <option value={100}>100</option>
+          </select>
+        </label>
+      )}
     </div>
   );
 }

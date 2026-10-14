@@ -14,6 +14,7 @@ export type IconName =
   | "chevronDown"
   | "close"
   | "download"
+  | "edit"
   | "eye"
   | "eyeOff"
   | "file"
@@ -32,6 +33,7 @@ export type IconName =
   | "refresh"
   | "search"
   | "settings"
+  | "trash"
   | "upload"
   | "user";
 
@@ -54,6 +56,7 @@ export type PageKey =
   // Exim Master
   | "unit"
   | "satuan"
+  | "unit-reference"
   | "item"
   | "brand"
   | "classification"
@@ -114,6 +117,17 @@ export type ViewState =
   | { type: "delivery-terms-create" }
   | { type: "additional-costs-create" }
   | { type: "pph-create" }
+  | { type: "unit-create" }
+  | { type: "unit-edit"; record?: any }
+  | { type: "classification-create" }
+  | { type: "classification-edit"; record?: any }
+  | { type: "department-create" }
+  | { type: "department-edit"; record?: any }
+  | { type: "brand-create" }
+  | { type: "brand-edit"; record?: any }
+  | { type: "item-create" }
+  | { type: "item-edit"; record?: any }
+  | { type: "item-qr" }
   | { type: "edit-profile" }
   | { type: "login" };
 
