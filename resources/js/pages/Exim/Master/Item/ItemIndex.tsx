@@ -3,6 +3,7 @@ import { Button } from "../../../../components/ui/Button";
 import { SearchField } from "../../../../components/ui/SearchField";
 import { Icon } from "../../../../components/ui/Icon";
 import { ConfirmDialog } from "../../../../components/ui/ConfirmDialog";
+import { Pagination } from "../../../../components/ui/Pagination";
 import { ColumnSettingsPanel } from "./ColumnSettingsPanel";
 import {
   initialItemRecords,
@@ -45,6 +46,7 @@ export function ItemIndex({
   const [sortDirection, setSortDirection] = useState<SortDirection>("none");
   const [selectedCodes, setSelectedCodes] = useState<Set<string>>(new Set());
   const [itemToDelete, setItemToDelete] = useState<ItemRecord | null>(null);
+  const [itemToEdit, setItemToEdit] = useState<ItemRecord | null>(null);
   const [exportNotice, setExportNotice] = useState<string | null>(null);
 
   useEffect(() => {
@@ -369,25 +371,6 @@ export function ItemIndex({
               onResetDefault={handleResetDefaultColumns}
               onClose={() => setIsColumnSettingsOpen(false)}
             />
-
-            {/* Entries Selector */}
-            <label className="item-entries-selector">
-              <span>Show</span>
-              <select
-                className="item-entries-select"
-                value={pageSize}
-                onChange={(e) => {
-                  setPageSize(Number(e.target.value));
-                  setCurrentPage(1);
-                }}
-              >
-                <option value={10}>10</option>
-                <option value={25}>25</option>
-                <option value={50}>50</option>
-                <option value={100}>100</option>
-              </select>
-              <span>entries</span>
-            </label>
           </div>
         </div>
 
@@ -733,7 +716,7 @@ export function ItemIndex({
                                 type="button"
                                 className="item-action-btn item-action-btn--edit"
                                 title={`Edit ${item.itemName}`}
-                                onClick={() => onEdit(item)}
+                                onClick={() => setItemToEdit(item)}
                               >
                                 <Icon name="edit" size={12} />
                               </button>
@@ -774,56 +757,44 @@ export function ItemIndex({
           </table>
         </div>
 
-        {/* Table Footer */}
-        <div className="department-footer">
-          <div className="department-footer-summary">
-            Showing {startEntry} to {endEntry} of {totalRecords} entries
-            {selectedCodes.size > 0 && ` (${selectedCodes.size} item(s) selected)`}
-          </div>
-
-          <div className="department-pagination-controls">
-            <button
-              type="button"
-              className="department-page-btn"
-              aria-label="Previous page"
-              disabled={safeCurrentPage <= 1}
-              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-            >
-              ‹
-            </button>
-
-            {pageNumbers.map((p) => (
-              <button
-                key={p}
-                type="button"
-                className={`department-page-btn ${
-                  p === safeCurrentPage ? "active" : ""
-                }`}
-                onClick={() => setCurrentPage(p)}
-              >
-                {p}
-              </button>
-            ))}
-
-            <button
-              type="button"
-              className="department-page-btn"
-              aria-label="Next page"
-              disabled={safeCurrentPage >= totalPages}
-              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-            >
-              ›
-            </button>
-          </div>
-        </div>
+        {/* Unified Bottom Pagination */}
+        <Pagination
+          totalRecords={totalRecords}
+          currentPage={safeCurrentPage}
+          pageSize={pageSize}
+          showPageSize={true}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={(newSize) => {
+            setPageSize(newSize);
+            setCurrentPage(1);
+          }}
+        />
       </div>
 
-      {/* Delete Confirmation Modal */}
+      {/* Edit Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={!!itemToEdit}
+        title="Edit Record?"
+        message={`Do you want to edit item "${itemToEdit?.itemName}"?`}
+        confirmLabel="Continue"
+        cancelLabel="Cancel"
+        confirmVariant="primary"
+        icon="edit"
+        onConfirm={() => {
+          if (itemToEdit && onEdit) {
+            onEdit(itemToEdit);
+          }
+          setItemToEdit(null);
+        }}
+        onCancel={() => setItemToEdit(null)}
+      />
+
+      {/* Delete Confirmation Dialog */}
       <ConfirmDialog
         isOpen={!!itemToDelete}
-        title="Confirm Delete Item"
-        message={`Are you sure you want to delete item "${itemToDelete?.itemCode} - ${itemToDelete?.itemName}"?`}
-        confirmLabel="Delete Item"
+        title="Delete Record?"
+        message={`Are you sure you want to delete item "${itemToDelete?.itemName}"? This action cannot be undone.`}
+        confirmLabel="Delete"
         cancelLabel="Cancel"
         confirmVariant="danger"
         icon="alertTriangle"

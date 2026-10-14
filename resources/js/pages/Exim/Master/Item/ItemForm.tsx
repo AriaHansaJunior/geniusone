@@ -370,7 +370,7 @@ export function ItemForm({ initialRecord, onBack, onSave }: ItemFormProps) {
           <div className="item-form-grid">
             <div className="item-form-group">
               <label htmlFor="smallestUnitCode" className="item-form-label">
-                Satuan Pemakaian (Smallest Unit)
+                Usage Unit (Smallest Unit)
               </label>
               <select
                 id="smallestUnitCode"
@@ -398,7 +398,7 @@ export function ItemForm({ initialRecord, onBack, onSave }: ItemFormProps) {
 
             <div className="item-form-group">
               <label htmlFor="greatestUnitCode" className="item-form-label">
-                Satuan Pembelian (Greatest Unit)
+                Purchase Unit (Greatest Unit)
               </label>
               <select
                 id="greatestUnitCode"
@@ -426,7 +426,7 @@ export function ItemForm({ initialRecord, onBack, onSave }: ItemFormProps) {
 
             <div className="item-form-group">
               <label htmlFor="conversionRate" className="item-form-label">
-                Konversi Satuan
+                Unit Conversion
               </label>
               <input
                 id="conversionRate"

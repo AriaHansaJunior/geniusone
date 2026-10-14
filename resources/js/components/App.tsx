@@ -28,6 +28,29 @@ import {
   DepartmentForm,
   BrandIndex,
   BrandForm,
+  FacilityIndex,
+  FacilityForm,
+  HsIndex,
+  HsForm,
+  CategoryIndex,
+  CategoryForm,
+  StyleIndex,
+  StyleForm,
+  StyleImport,
+  ColorIndex,
+  ColorForm,
+  ReceiveNoteIndex,
+  ReceiveNoteDetail,
+  ReceiveNoteForm,
+  ReceiveNoteReturnIndex,
+  ReceiveNoteReturnDetail,
+  ReceiveNoteReturnForm,
+  DocumentHistoryIndex,
+  DocumentHistoryDetail,
+  MasterWarehouseIndex,
+  WarehouseCoordinateIndex,
+  WarehouseMasterForm,
+  WarehouseCoordinateForm,
   ItemIndex,
   ItemForm,
   GenerateQrCodePage,
@@ -40,6 +63,7 @@ import {
   EditProfile,
   Login,
   PlaceholderPage,
+  NotFoundPage,
 } from "../pages";
 import { ConfirmDialog } from "./ui/ConfirmDialog";
 import { pageMeta, docToSlug } from "../data/mockData";
@@ -58,6 +82,27 @@ import { initialDepartmentRecords } from "../pages/Exim/Master/Department/depart
 import type { DepartmentRecord } from "../pages/Exim/Master/Department/department-types";
 import { initialBrandRecords } from "../pages/Exim/Master/Brand/brand-data";
 import type { BrandRecord } from "../pages/Exim/Master/Brand/brand-types";
+import { initialFacilityRecords } from "../pages/Exim/Master/Facility/facility-data";
+import type { FacilityRecord } from "../pages/Exim/Master/Facility/facility-types";
+import { initialHsRecords } from "../pages/Exim/Master/Hs/hs-data";
+import type { HsRecord } from "../pages/Exim/Master/Hs/hs-types";
+import { initialCategoryRecords } from "../pages/Exim/Master/Category/category-data";
+import type { CategoryRecord } from "../pages/Exim/Master/Category/category-types";
+import { initialStyleRecords } from "../pages/Exim/Master/Style/style-data";
+import type { StyleRecord } from "../pages/Exim/Master/Style/style-types";
+import { initialColorRecords } from "../pages/Exim/Master/Color/color-data";
+import type { ColorRecord } from "../pages/Exim/Master/Color/color-types";
+import { initialReceiveNoteRecords } from "../pages/Exim/ReceiveNote/receive-note-data";
+import type { ReceiveNoteRecord } from "../pages/Exim/ReceiveNote/receive-note-types";
+import { initialReceiveNoteReturnRecords } from "../pages/Exim/ReceiveNoteReturn/receive-note-return-data";
+import type { ReceiveNoteReturnRecord } from "../pages/Exim/ReceiveNoteReturn/receive-note-return-types";
+import { initialDocumentHistoryRecords } from "../pages/Exim/DocumentHistory/document-history-data";
+import type { DocumentHistoryRecord } from "../pages/Exim/DocumentHistory/document-history-types";
+import { initialWarehouseMasterRecords } from "../pages/Warehouse/MasterWarehouse/warehouse-master-data";
+import type {
+  WarehouseMasterRecord,
+  WarehouseCoordinateRecord,
+} from "../pages/Warehouse/MasterWarehouse/warehouse-master-types";
 import { initialItemRecords } from "../pages/Exim/Master/Item/item-data";
 import type { ItemRecord } from "../pages/Exim/Master/Item/item-types";
 import type { PageKey, ViewState, TableRow } from "../types";
@@ -91,6 +136,13 @@ function resolveViewStateFromPath(pathname: string, defaultPage: PageKey = "dash
     cleanPath === "/warehouse/incoming/receive-material-bpb/add"
   ) {
     return { type: "warehouse-create" };
+  }
+
+  if (
+    cleanPath === "/warehouse/master/warehouse/create" ||
+    cleanPath === "/warehouse/master/warehouse/add"
+  ) {
+    return { type: "warehouse-master-create" };
   }
 
   if (
@@ -184,12 +236,86 @@ function resolveViewStateFromPath(pathname: string, defaultPage: PageKey = "dash
   }
 
   if (
+    cleanPath === "/exim/master/facility/create" ||
+    cleanPath === "/exim/master/facility/add" ||
+    cleanPath === "/exim/facility/create" ||
+    cleanPath === "/exim/facility/add"
+  ) {
+    return { type: "facility-create" };
+  }
+
+  if (
+    cleanPath === "/exim/master/hs/create" ||
+    cleanPath === "/exim/master/hs/add" ||
+    cleanPath === "/exim/hs/create" ||
+    cleanPath === "/exim/hs/add"
+  ) {
+    return { type: "hs-create" };
+  }
+
+  if (
+    cleanPath === "/exim/master/category/create" ||
+    cleanPath === "/exim/master/category/add" ||
+    cleanPath === "/exim/category/create" ||
+    cleanPath === "/exim/category/add"
+  ) {
+    return { type: "category-create" };
+  }
+
+  if (
+    cleanPath === "/exim/master/style/create" ||
+    cleanPath === "/exim/master/style/add" ||
+    cleanPath === "/exim/style/create" ||
+    cleanPath === "/exim/style/add"
+  ) {
+    return { type: "style-create" };
+  }
+
+  if (
+    cleanPath === "/exim/master/style/import" ||
+    cleanPath === "/exim/style/import"
+  ) {
+    return { type: "style-import" };
+  }
+
+  if (
+    cleanPath === "/exim/master/colour/create" ||
+    cleanPath === "/exim/master/colour/add" ||
+    cleanPath === "/exim/colour/create" ||
+    cleanPath === "/exim/colour/add" ||
+    cleanPath === "/exim/master/color/create" ||
+    cleanPath === "/exim/master/color/add" ||
+    cleanPath === "/exim/color/create" ||
+    cleanPath === "/exim/color/add"
+  ) {
+    return { type: "colour-create" };
+  }
+
+  if (
     cleanPath === "/exim/master/item/create" ||
     cleanPath === "/exim/master/item/add" ||
     cleanPath === "/exim/item/create" ||
     cleanPath === "/exim/item/add"
   ) {
     return { type: "item-create" };
+  }
+
+  if (
+    cleanPath === "/exim/receive-note/create" ||
+    cleanPath === "/exim/receive-note/add" ||
+    cleanPath === "/receive-note/create" ||
+    cleanPath === "/receive-note/add"
+  ) {
+    return { type: "receive-note-create" };
+  }
+
+  if (
+    cleanPath === "/exim/receive-note-return/create" ||
+    cleanPath === "/exim/receive-note-return/add" ||
+    cleanPath === "/receive-note-return/create" ||
+    cleanPath === "/receive-note-return/add"
+  ) {
+    return { type: "receive-note-return-create" };
   }
 
   if (
@@ -202,6 +328,46 @@ function resolveViewStateFromPath(pathname: string, defaultPage: PageKey = "dash
   }
 
   // Detail routes (hierarchical & legacy short aliases)
+  const receiveNoteDetailMatch = cleanPath.match(
+    /^\/(?:exim\/receive-note|receive-note)\/details?\/(.+)$/
+  );
+  if (receiveNoteDetailMatch) {
+    return { type: "receive-note-detail", code: decodeURIComponent(receiveNoteDetailMatch[1]) };
+  }
+
+  const receiveNoteReturnDetailMatch = cleanPath.match(
+    /^\/(?:exim\/receive-note-return|receive-note-return)\/details?\/(.+)$/
+  );
+  if (receiveNoteReturnDetailMatch) {
+    return { type: "receive-note-return-detail", code: decodeURIComponent(receiveNoteReturnDetailMatch[1]) };
+  }
+
+  const documentHistoryDetailMatch = cleanPath.match(
+    /^\/(?:exim\/document-history|document-history)\/details?\/(.+)$/
+  );
+  if (documentHistoryDetailMatch) {
+    return { type: "document-history-detail", code: decodeURIComponent(documentHistoryDetailMatch[1]) };
+  }
+
+  const warehouseCoordCreateMatch = cleanPath.match(
+    /^\/warehouse\/master\/warehouse\/(?:([^/]+)\/coordinate\/create|coordinate\/([^/]+)\/create)$/
+  );
+  if (warehouseCoordCreateMatch) {
+    return {
+      type: "warehouse-coordinate-create",
+      warehouseId: decodeURIComponent(warehouseCoordCreateMatch[1] || warehouseCoordCreateMatch[2]),
+    };
+  }
+
+  const warehouseCoordMatch = cleanPath.match(
+    /^\/warehouse\/master\/warehouse\/(?:([^/]+)\/coordinate|coordinate\/([^/]+))$/
+  );
+  if (warehouseCoordMatch) {
+    return {
+      type: "warehouse-coordinate",
+      warehouseId: decodeURIComponent(warehouseCoordMatch[1] || warehouseCoordMatch[2]),
+    };
+  }
   const prDetailMatch = cleanPath.match(
     /^\/(?:procurement\/transactions\/purchase-requisition|pr|purchase-requisition|purchase-requisitions)\/details?\/(.+)$/
   );
@@ -317,21 +483,28 @@ function resolveViewStateFromPath(pathname: string, defaultPage: PageKey = "dash
   if (cleanPath === "/exim/brand" || cleanPath === "/exim/master/brand") return { type: "list", page: "brand" };
   if (cleanPath === "/exim/classification" || cleanPath === "/exim/master/classification") return { type: "list", page: "classification" };
   if (cleanPath === "/exim/department" || cleanPath === "/exim/master/department") return { type: "list", page: "department" };
-  if (cleanPath === "/exim/facility") return { type: "list", page: "facility" };
-  if (cleanPath === "/exim/hs") return { type: "list", page: "hs" };
-  if (cleanPath === "/exim/category") return { type: "list", page: "category" };
-  if (cleanPath === "/exim/style") return { type: "list", page: "style" };
-  if (cleanPath === "/exim/colour") return { type: "list", page: "colour" };
+  if (cleanPath === "/exim/facility" || cleanPath === "/exim/master/facility") return { type: "list", page: "facility" };
+  if (cleanPath === "/exim/hs" || cleanPath === "/exim/master/hs") return { type: "list", page: "hs" };
+  if (cleanPath === "/exim/category" || cleanPath === "/exim/master/category") return { type: "list", page: "category" };
+  if (cleanPath === "/exim/style" || cleanPath === "/exim/master/style") return { type: "list", page: "style" };
+  if (
+    cleanPath === "/exim/colour" ||
+    cleanPath === "/exim/master/colour" ||
+    cleanPath === "/exim/color" ||
+    cleanPath === "/exim/master/color"
+  ) {
+    return { type: "list", page: "colour" };
+  }
   if (cleanPath === "/exim/receive-note") return { type: "list", page: "receive-note" };
   if (cleanPath === "/exim/receive-note-return") return { type: "list", page: "receive-note-return" };
   if (cleanPath === "/exim/document-history") return { type: "list", page: "document-history" };
 
-  if (cleanPath === "/warehouse/master") return { type: "list", page: "warehouse-master" };
+  if (cleanPath === "/warehouse/master" || cleanPath === "/warehouse/master/warehouse") return { type: "list", page: "warehouse-master" };
 
-  if (defaultPage === "dashboard") {
-    return { type: "dashboard" };
+  if (defaultPage === ("not-found" as any) || (cleanPath !== "" && cleanPath !== "/dashboard")) {
+    return { type: "not-found", path: cleanPath };
   }
-  return { type: "list", page: defaultPage };
+  return { type: "dashboard" };
 }
 
 export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
@@ -339,6 +512,7 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
     if (typeof window !== "undefined") {
       return resolveViewStateFromPath(window.location.pathname, (initialPage as PageKey) || "dashboard");
     }
+    if (initialPage === "not-found") return { type: "not-found" };
     if (initialPage === "dashboard") return { type: "dashboard" };
     if (initialPage === "login") return { type: "login" };
     if (initialPage === "edit-profile" || initialPage === "profile.edit") return { type: "edit-profile" };
@@ -353,6 +527,20 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
     if (initialPage === "classification-create") return { type: "classification-create" };
     if (initialPage === "department-create") return { type: "department-create" };
     if (initialPage === "brand-create") return { type: "brand-create" };
+    if (initialPage === "facility-create") return { type: "facility-create" };
+    if (initialPage === "hs-create") return { type: "hs-create" };
+    if (initialPage === "category-create") return { type: "category-create" };
+    if (initialPage === "style-create") return { type: "style-create" };
+    if (initialPage === "style-import") return { type: "style-import" };
+    if (initialPage === "colour-create" || initialPage === "color-create") return { type: "colour-create" };
+    if (initialPage === "receive-note-create") return { type: "receive-note-create" };
+    if (initialPage === "receive-note-detail") return { type: "receive-note-detail", code: initialCode || "0273-RN-IMLI-X-2026" };
+    if (initialPage === "receive-note-return-create") return { type: "receive-note-return-create" };
+    if (initialPage === "receive-note-return-detail") return { type: "receive-note-return-detail", code: initialCode || "0029-RN-IMLI-IV-2025" };
+    if (initialPage === "document-history-detail") return { type: "document-history-detail", code: initialCode || "IMLI-677-FUCL.00001-26" };
+    if (initialPage === "warehouse-master-create") return { type: "warehouse-master-create" };
+    if (initialPage === "warehouse-coordinate") return { type: "warehouse-coordinate", warehouseId: initialCode || "wh-1" };
+    if (initialPage === "warehouse-coordinate-create") return { type: "warehouse-coordinate-create", warehouseId: initialCode || "wh-1" };
     if (initialPage === "item-create") return { type: "item-create" };
     if (initialPage === "item-qr") return { type: "item-qr" };
     if (initialPage === "pr-detail") return { type: "pr-detail", code: initialCode || "0026-PR-IMLI-X-2026" };
@@ -399,6 +587,24 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
       ? "department"
       : viewState.type === "brand-create" || viewState.type === "brand-edit"
       ? "brand"
+      : viewState.type === "facility-create" || viewState.type === "facility-edit"
+      ? "facility"
+      : viewState.type === "hs-create" || viewState.type === "hs-edit"
+      ? "hs"
+      : viewState.type === "category-create" || viewState.type === "category-edit"
+      ? "category"
+      : viewState.type === "style-create" || viewState.type === "style-edit" || viewState.type === "style-import"
+      ? "style"
+      : viewState.type === "colour-create"
+      ? "colour"
+      : viewState.type === "receive-note-create" || viewState.type === "receive-note-detail"
+      ? "receive-note"
+      : viewState.type === "receive-note-return-create" || viewState.type === "receive-note-return-detail"
+      ? "receive-note-return"
+      : viewState.type === "document-history-detail"
+      ? "document-history"
+      : viewState.type === "warehouse-master-create" || viewState.type === "warehouse-coordinate" || viewState.type === "warehouse-coordinate-create"
+      ? "warehouse-master"
       : viewState.type === "item-create" || viewState.type === "item-edit" || viewState.type === "item-qr"
       ? "item"
       : null;
@@ -514,6 +720,19 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
   const [editingDepartment, setEditingDepartment] = useState<DepartmentRecord | null>(null);
   const [brandRecords, setBrandRecords] = useState<BrandRecord[]>(initialBrandRecords);
   const [editingBrand, setEditingBrand] = useState<BrandRecord | null>(null);
+  const [facilityRecords, setFacilityRecords] = useState<FacilityRecord[]>(initialFacilityRecords);
+  const [editingFacility, setEditingFacility] = useState<FacilityRecord | null>(null);
+  const [hsRecords, setHsRecords] = useState<HsRecord[]>(initialHsRecords);
+  const [editingHs, setEditingHs] = useState<HsRecord | null>(null);
+  const [categoryRecords, setCategoryRecords] = useState<CategoryRecord[]>(initialCategoryRecords);
+  const [editingCategory, setEditingCategory] = useState<CategoryRecord | null>(null);
+  const [styleRecords, setStyleRecords] = useState<StyleRecord[]>(initialStyleRecords);
+  const [editingStyle, setEditingStyle] = useState<StyleRecord | null>(null);
+  const [colorRecords, setColorRecords] = useState<ColorRecord[]>(initialColorRecords);
+  const [receiveNoteRecords, setReceiveNoteRecords] = useState<ReceiveNoteRecord[]>(initialReceiveNoteRecords);
+  const [receiveNoteReturnRecords, setReceiveNoteReturnRecords] = useState<ReceiveNoteReturnRecord[]>(initialReceiveNoteReturnRecords);
+  const [documentHistoryRecords, setDocumentHistoryRecords] = useState<DocumentHistoryRecord[]>(initialDocumentHistoryRecords);
+  const [warehouseMasterRecords, setWarehouseMasterRecords] = useState<WarehouseMasterRecord[]>(initialWarehouseMasterRecords);
   const [itemRecords, setItemRecords] = useState<ItemRecord[]>(initialItemRecords);
   const [editingItem, setEditingItem] = useState<ItemRecord | null>(null);
 
@@ -554,7 +773,29 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
   }, []);
 
   // Navigate to create new record view
-  const handleNavigateCreate = useCallback((module: "warehouse" | "supplier" | "payment-term" | "purchase-category" | "delivery-terms" | "additional-costs" | "pph" | "unit" | "classification" | "department" | "brand" | "item") => {
+  const handleNavigateCreate = useCallback((module: "warehouse" | "supplier" | "payment-term" | "purchase-category" | "delivery-terms" | "additional-costs" | "pph" | "unit" | "classification" | "department" | "brand" | "facility" | "hs" | "category" | "style" | "colour" | "color" | "item" | "receive-note" | "receive-note-return") => {
+    if (module === "receive-note-return") {
+      const nextState: ViewState = { type: "receive-note-return-create" };
+      setViewState(nextState);
+
+      if (typeof window !== "undefined") {
+        window.scrollTo(0, 0);
+        window.history.pushState(nextState, "", "/exim/receive-note-return/create");
+      }
+      return;
+    }
+
+    if (module === "receive-note") {
+      const nextState: ViewState = { type: "receive-note-create" };
+      setViewState(nextState);
+
+      if (typeof window !== "undefined") {
+        window.scrollTo(0, 0);
+        window.history.pushState(nextState, "", "/exim/receive-note/create");
+      }
+      return;
+    }
+
     if (module === "item") {
       setEditingItem(null);
       const nextState: ViewState = { type: "item-create" };
@@ -563,6 +804,65 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
       if (typeof window !== "undefined") {
         window.scrollTo(0, 0);
         window.history.pushState(nextState, "", "/exim/master/item/create");
+      }
+      return;
+    }
+
+    if (module === "colour" || module === "color") {
+      const nextState: ViewState = { type: "colour-create" };
+      setViewState(nextState);
+
+      if (typeof window !== "undefined") {
+        window.scrollTo(0, 0);
+        window.history.pushState(nextState, "", "/exim/master/colour/create");
+      }
+      return;
+    }
+
+    if (module === "style") {
+      setEditingStyle(null);
+      const nextState: ViewState = { type: "style-create" };
+      setViewState(nextState);
+
+      if (typeof window !== "undefined") {
+        window.scrollTo(0, 0);
+        window.history.pushState(nextState, "", "/exim/master/style/create");
+      }
+      return;
+    }
+
+    if (module === "category") {
+      setEditingCategory(null);
+      const nextState: ViewState = { type: "category-create" };
+      setViewState(nextState);
+
+      if (typeof window !== "undefined") {
+        window.scrollTo(0, 0);
+        window.history.pushState(nextState, "", "/exim/master/category/create");
+      }
+      return;
+    }
+
+    if (module === "hs") {
+      setEditingHs(null);
+      const nextState: ViewState = { type: "hs-create" };
+      setViewState(nextState);
+
+      if (typeof window !== "undefined") {
+        window.scrollTo(0, 0);
+        window.history.pushState(nextState, "", "/exim/master/hs/create");
+      }
+      return;
+    }
+
+    if (module === "facility") {
+      setEditingFacility(null);
+      const nextState: ViewState = { type: "facility-create" };
+      setViewState(nextState);
+
+      if (typeof window !== "undefined") {
+        window.scrollTo(0, 0);
+        window.history.pushState(nextState, "", "/exim/master/facility/create");
       }
       return;
     }
@@ -814,6 +1114,296 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
     setBrandRecords((prev) =>
       prev.map((b) => (b.id === id ? { ...b, status: !b.status } : b))
     );
+  }, []);
+
+  const handleNavigateFacilityEdit = useCallback((facility: FacilityRecord) => {
+    setEditingFacility(facility);
+    const nextState: ViewState = { type: "facility-edit", record: facility };
+    setViewState(nextState);
+
+    if (typeof window !== "undefined") {
+      window.scrollTo(0, 0);
+      window.history.pushState(nextState, "", "/exim/master/facility/create");
+    }
+  }, []);
+
+  const handleSaveFacility = useCallback((record: FacilityRecord, isEdit: boolean) => {
+    if (isEdit) {
+      setFacilityRecords((prev) =>
+        prev.map((f) => (f.id === record.id ? record : f))
+      );
+    } else {
+      setFacilityRecords((prev) => [record, ...prev]);
+    }
+    setEditingFacility(null);
+    handleNavigateList("facility", "/exim/master/facility");
+  }, [handleNavigateList]);
+
+  const handleDeleteFacility = useCallback((id: string) => {
+    setFacilityRecords((prev) => prev.filter((f) => f.id !== id));
+  }, []);
+
+  const handleToggleFacilityStatus = useCallback((id: string) => {
+    setFacilityRecords((prev) =>
+      prev.map((f) => (f.id === id ? { ...f, status: !f.status } : f))
+    );
+  }, []);
+
+  const handleNavigateHsEdit = useCallback((hs: HsRecord) => {
+    setEditingHs(hs);
+    const nextState: ViewState = { type: "hs-edit", record: hs };
+    setViewState(nextState);
+
+    if (typeof window !== "undefined") {
+      window.scrollTo(0, 0);
+      window.history.pushState(nextState, "", "/exim/master/hs/create");
+    }
+  }, []);
+
+  const handleSaveHs = useCallback((record: HsRecord, isEdit: boolean) => {
+    if (isEdit) {
+      setHsRecords((prev) =>
+        prev.map((h) => (h.id === record.id ? record : h))
+      );
+    } else {
+      setHsRecords((prev) => [record, ...prev]);
+    }
+    setEditingHs(null);
+    handleNavigateList("hs", "/exim/master/hs");
+  }, [handleNavigateList]);
+
+  const handleDeleteHs = useCallback((id: string) => {
+    setHsRecords((prev) => prev.filter((h) => h.id !== id));
+  }, []);
+
+  const handleNavigateCategoryEdit = useCallback((category: CategoryRecord) => {
+    setEditingCategory(category);
+    const nextState: ViewState = { type: "category-edit", record: category };
+    setViewState(nextState);
+
+    if (typeof window !== "undefined") {
+      window.scrollTo(0, 0);
+      window.history.pushState(nextState, "", "/exim/master/category/create");
+    }
+  }, []);
+
+  const handleSaveCategory = useCallback((record: CategoryRecord, isEdit: boolean) => {
+    if (isEdit) {
+      setCategoryRecords((prev) =>
+        prev.map((c) => (c.id === record.id ? record : c))
+      );
+    } else {
+      setCategoryRecords((prev) => [record, ...prev]);
+    }
+    setEditingCategory(null);
+    handleNavigateList("category", "/exim/master/category");
+  }, [handleNavigateList]);
+
+  const handleDeleteCategory = useCallback((id: string) => {
+    setCategoryRecords((prev) => prev.filter((c) => c.id !== id));
+  }, []);
+
+  const handleToggleCategoryStatus = useCallback((id: string) => {
+    setCategoryRecords((prev) =>
+      prev.map((c) => (c.id === id ? { ...c, status: !c.status } : c))
+    );
+  }, []);
+
+  const handleNavigateStyleEdit = useCallback((style: StyleRecord) => {
+    setEditingStyle(style);
+    const nextState: ViewState = { type: "style-edit", record: style };
+    setViewState(nextState);
+
+    if (typeof window !== "undefined") {
+      window.scrollTo(0, 0);
+      window.history.pushState(nextState, "", "/exim/master/style/create");
+    }
+  }, []);
+
+  const handleNavigateStyleImport = useCallback(() => {
+    const nextState: ViewState = { type: "style-import" };
+    setViewState(nextState);
+
+    if (typeof window !== "undefined") {
+      window.scrollTo(0, 0);
+      window.history.pushState(nextState, "", "/exim/master/style/import");
+    }
+  }, []);
+
+  const handleSaveStyle = useCallback((record: StyleRecord, isEdit: boolean) => {
+    if (isEdit) {
+      setStyleRecords((prev) =>
+        prev.map((s) => (s.id === record.id ? record : s))
+      );
+    } else {
+      setStyleRecords((prev) => [record, ...prev]);
+    }
+    setEditingStyle(null);
+    handleNavigateList("style", "/exim/master/style");
+  }, [handleNavigateList]);
+
+  const handleDeleteStyle = useCallback((id: string) => {
+    setStyleRecords((prev) => prev.filter((s) => s.id !== id));
+  }, []);
+
+  const handleToggleStyleStatus = useCallback((id: string) => {
+    setStyleRecords((prev) =>
+      prev.map((s) => (s.id === id ? { ...s, status: !s.status } : s))
+    );
+  }, []);
+
+  const handleSaveColor = useCallback((record: ColorRecord) => {
+    setColorRecords((prev) => [record, ...prev]);
+    handleNavigateList("colour", "/exim/master/colour");
+  }, [handleNavigateList]);
+
+  const handleNavigateReceiveNoteDetail = useCallback((rnNumber: string) => {
+    const slug = rnNumber.replace(/[\/\\]/g, "-");
+    const nextState: ViewState = { type: "receive-note-detail", code: slug };
+    setViewState(nextState);
+
+    if (typeof window !== "undefined") {
+      window.scrollTo(0, 0);
+      window.history.pushState(nextState, "", `/exim/receive-note/detail/${slug}`);
+    }
+  }, []);
+
+  const handleSaveReceiveNote = useCallback((newRecord: ReceiveNoteRecord) => {
+    setReceiveNoteRecords((prev) => [
+      { ...newRecord, no: 1 },
+      ...prev.map((r) => ({ ...r, no: r.no + 1 })),
+    ]);
+    const nextState: ViewState = { type: "list", page: "receive-note" };
+    setViewState(nextState);
+
+    if (typeof window !== "undefined") {
+      window.scrollTo(0, 0);
+      window.history.pushState(nextState, "", "/exim/receive-note");
+    }
+  }, []);
+
+  const handleNavigateReceiveNoteReturnDetail = useCallback((rnNumber: string) => {
+    const slug = rnNumber.replace(/[\/\\]/g, "-");
+    const nextState: ViewState = { type: "receive-note-return-detail", code: slug };
+    setViewState(nextState);
+
+    if (typeof window !== "undefined") {
+      window.scrollTo(0, 0);
+      window.history.pushState(nextState, "", `/exim/receive-note-return/detail/${slug}`);
+    }
+  }, []);
+
+  const handleNavigateDocumentHistoryDetail = useCallback((invoiceNumber: string) => {
+    const slug = invoiceNumber.replace(/[\/\\]/g, "-");
+    const nextState: ViewState = { type: "document-history-detail", code: slug };
+    setViewState(nextState);
+
+    if (typeof window !== "undefined") {
+      window.scrollTo(0, 0);
+      window.history.pushState(nextState, "", `/exim/document-history/detail/${slug}`);
+    }
+  }, []);
+
+  const handleNavigateMasterWarehouseCreate = useCallback(() => {
+    const nextState: ViewState = { type: "warehouse-master-create" };
+    setViewState(nextState);
+
+    if (typeof window !== "undefined") {
+      window.scrollTo(0, 0);
+      window.history.pushState(nextState, "", "/warehouse/master/warehouse/create");
+    }
+  }, []);
+
+  const handleNavigateWarehouseCoordinates = useCallback((warehouse: WarehouseMasterRecord) => {
+    const nextState: ViewState = { type: "warehouse-coordinate", warehouseId: warehouse.id };
+    setViewState(nextState);
+
+    if (typeof window !== "undefined") {
+      window.scrollTo(0, 0);
+      window.history.pushState(nextState, "", `/warehouse/master/warehouse/${warehouse.id}/coordinate`);
+    }
+  }, []);
+
+  const handleNavigateWarehouseCoordinateCreate = useCallback((warehouseId: string) => {
+    const nextState: ViewState = { type: "warehouse-coordinate-create", warehouseId };
+    setViewState(nextState);
+
+    if (typeof window !== "undefined") {
+      window.scrollTo(0, 0);
+      window.history.pushState(nextState, "", `/warehouse/master/warehouse/${warehouseId}/coordinate/create`);
+    }
+  }, []);
+
+  const handleSaveWarehouseMaster = useCallback((newRecord: WarehouseMasterRecord) => {
+    setWarehouseMasterRecords((prev) => [
+      { ...newRecord, no: 1 },
+      ...prev.map((w) => ({ ...w, no: w.no + 1 })),
+    ]);
+    const nextState: ViewState = { type: "list", page: "warehouse-master" };
+    setViewState(nextState);
+
+    if (typeof window !== "undefined") {
+      window.scrollTo(0, 0);
+      window.history.pushState(nextState, "", "/warehouse/master/warehouse");
+    }
+  }, []);
+
+  const handleSaveWarehouseCoordinate = useCallback((newCoordinate: WarehouseCoordinateRecord) => {
+    setWarehouseMasterRecords((prev) =>
+      prev.map((w) => {
+        if (w.id === newCoordinate.warehouseId) {
+          const currentCoords = w.coordinates || [];
+          return {
+            ...w,
+            coordinates: [...currentCoords, newCoordinate],
+          };
+        }
+        return w;
+      })
+    );
+
+    const nextState: ViewState = {
+      type: "warehouse-coordinate",
+      warehouseId: newCoordinate.warehouseId,
+    };
+    setViewState(nextState);
+
+    if (typeof window !== "undefined") {
+      window.scrollTo(0, 0);
+      window.history.pushState(
+        nextState,
+        "",
+        `/warehouse/master/warehouse/${newCoordinate.warehouseId}/coordinate`
+      );
+    }
+  }, []);
+
+  const handleDeleteWarehouseCoordinate = useCallback((warehouseId: string, coordinateId: string) => {
+    setWarehouseMasterRecords((prev) =>
+      prev.map((w) => {
+        if (w.id === warehouseId) {
+          return {
+            ...w,
+            coordinates: (w.coordinates || []).filter((c) => c.id !== coordinateId),
+          };
+        }
+        return w;
+      })
+    );
+  }, []);
+
+  const handleSaveReceiveNoteReturn = useCallback((newRecord: ReceiveNoteReturnRecord) => {
+    setReceiveNoteReturnRecords((prev) => [
+      { ...newRecord, no: 1 },
+      ...prev.map((r) => ({ ...r, no: r.no + 1 })),
+    ]);
+    const nextState: ViewState = { type: "list", page: "receive-note-return" };
+    setViewState(nextState);
+
+    if (typeof window !== "undefined") {
+      window.scrollTo(0, 0);
+      window.history.pushState(nextState, "", "/exim/receive-note-return");
+    }
   }, []);
 
   const handleNavigateGenerateQr = useCallback(() => {
@@ -1111,6 +1701,58 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
           />
         )}
 
+        {/* Exim Master Facility Listing */}
+        {viewState.type === "list" && viewState.page === "facility" && (
+          <FacilityIndex
+            records={facilityRecords}
+            onAddNew={() => handleNavigateCreate("facility")}
+            onEdit={handleNavigateFacilityEdit}
+            onDelete={handleDeleteFacility}
+            onToggleStatus={handleToggleFacilityStatus}
+          />
+        )}
+
+        {/* Exim Master HS Listing */}
+        {viewState.type === "list" && viewState.page === "hs" && (
+          <HsIndex
+            records={hsRecords}
+            onAddNew={() => handleNavigateCreate("hs")}
+            onEdit={handleNavigateHsEdit}
+            onDelete={handleDeleteHs}
+          />
+        )}
+
+        {/* Exim Master Category Listing */}
+        {viewState.type === "list" && viewState.page === "category" && (
+          <CategoryIndex
+            records={categoryRecords}
+            onAddNew={() => handleNavigateCreate("category")}
+            onEdit={handleNavigateCategoryEdit}
+            onDelete={handleDeleteCategory}
+            onToggleStatus={handleToggleCategoryStatus}
+          />
+        )}
+
+        {/* Exim Master Specification/Model (Style) Listing */}
+        {viewState.type === "list" && viewState.page === "style" && (
+          <StyleIndex
+            records={styleRecords}
+            onAddNew={() => handleNavigateCreate("style")}
+            onImportExcel={handleNavigateStyleImport}
+            onEdit={handleNavigateStyleEdit}
+            onDelete={handleDeleteStyle}
+            onToggleStatus={handleToggleStyleStatus}
+          />
+        )}
+
+        {/* Exim Master Warna (Color) Listing */}
+        {viewState.type === "list" && viewState.page === "colour" && (
+          <ColorIndex
+            records={colorRecords}
+            onAddNew={() => handleNavigateCreate("colour")}
+          />
+        )}
+
         {/* Exim Master Item Listing */}
         {viewState.type === "list" && viewState.page === "item" && (
           <ItemIndex
@@ -1119,6 +1761,41 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
             onGenerateQr={handleNavigateGenerateQr}
             onEdit={handleNavigateItemEdit}
             onDelete={handleDeleteItem}
+          />
+        )}
+
+        {/* Exim Receive Note Listing */}
+        {viewState.type === "list" && viewState.page === "receive-note" && (
+          <ReceiveNoteIndex
+            records={receiveNoteRecords}
+            onAddNew={() => handleNavigateCreate("receive-note")}
+            onViewDetail={handleNavigateReceiveNoteDetail}
+          />
+        )}
+
+        {/* Exim Receive Note Return Listing */}
+        {viewState.type === "list" && viewState.page === "receive-note-return" && (
+          <ReceiveNoteReturnIndex
+            records={receiveNoteReturnRecords}
+            onAddNew={() => handleNavigateCreate("receive-note-return")}
+            onViewDetail={handleNavigateReceiveNoteReturnDetail}
+          />
+        )}
+
+        {/* Exim Document History Listing */}
+        {viewState.type === "list" && viewState.page === "document-history" && (
+          <DocumentHistoryIndex
+            records={documentHistoryRecords}
+            onViewDetail={handleNavigateDocumentHistoryDetail}
+          />
+        )}
+
+        {/* Warehouse Master Listing */}
+        {viewState.type === "list" && viewState.page === "warehouse-master" && (
+          <MasterWarehouseIndex
+            records={warehouseMasterRecords}
+            onAddNew={handleNavigateMasterWarehouseCreate}
+            onViewCoordinates={handleNavigateWarehouseCoordinates}
           />
         )}
 
@@ -1142,7 +1819,16 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
           viewState.page !== "classification" &&
           viewState.page !== "department" &&
           viewState.page !== "brand" &&
+          viewState.page !== "facility" &&
+          viewState.page !== "hs" &&
+          viewState.page !== "category" &&
+          viewState.page !== "style" &&
+          viewState.page !== "colour" &&
           viewState.page !== "item" &&
+          viewState.page !== "receive-note" &&
+          viewState.page !== "receive-note-return" &&
+          viewState.page !== "document-history" &&
+          viewState.page !== "warehouse-master" &&
           viewState.page !== "dashboard" && (
             <PlaceholderPage
               eyebrow={currentMeta.eyebrow}
@@ -1180,6 +1866,68 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
             code={viewState.code}
             onBack={() => handleNavigateList("warehouse", "/warehouse/incoming/receive-material-bpb")}
             onNavigateDetail={handleNavigateDetail}
+          />
+        )}
+
+        {/* Dedicated Exim Receive Note Detail */}
+        {viewState.type === "receive-note-detail" && (
+          <ReceiveNoteDetail
+            code={viewState.code}
+            onBack={() => handleNavigateList("receive-note", "/exim/receive-note")}
+          />
+        )}
+
+        {/* Dedicated Exim Receive Note Return Detail */}
+        {viewState.type === "receive-note-return-detail" && (
+          <ReceiveNoteReturnDetail
+            code={viewState.code}
+            onBack={() => handleNavigateList("receive-note-return", "/exim/receive-note-return")}
+          />
+        )}
+
+        {/* Dedicated Exim Document History Detail */}
+        {viewState.type === "document-history-detail" && (
+          <DocumentHistoryDetail
+            code={viewState.code}
+            onBack={() => handleNavigateList("document-history", "/exim/document-history")}
+          />
+        )}
+
+        {/* Master Warehouse - Warehouse Coordinate Listing */}
+        {viewState.type === "warehouse-coordinate" && (
+          <WarehouseCoordinateIndex
+            warehouse={
+              warehouseMasterRecords.find((w) => w.id === viewState.warehouseId) ||
+              warehouseMasterRecords[0]
+            }
+            onAddNew={() => handleNavigateWarehouseCoordinateCreate(viewState.warehouseId)}
+            onBack={() => handleNavigateList("warehouse-master", "/warehouse/master/warehouse")}
+            onDeleteCoordinate={(coordId) => handleDeleteWarehouseCoordinate(viewState.warehouseId, coordId)}
+          />
+        )}
+
+        {/* Master Warehouse - Add New Warehouse Form */}
+        {viewState.type === "warehouse-master-create" && (
+          <WarehouseMasterForm
+            onBack={() => handleNavigateList("warehouse-master", "/warehouse/master/warehouse")}
+            onSave={handleSaveWarehouseMaster}
+          />
+        )}
+
+        {/* Master Warehouse - Add New Coordinate Form */}
+        {viewState.type === "warehouse-coordinate-create" && (
+          <WarehouseCoordinateForm
+            warehouse={
+              warehouseMasterRecords.find((w) => w.id === viewState.warehouseId) ||
+              warehouseMasterRecords[0]
+            }
+            onBack={() => {
+              const wh =
+                warehouseMasterRecords.find((w) => w.id === viewState.warehouseId) ||
+                warehouseMasterRecords[0];
+              handleNavigateWarehouseCoordinates(wh);
+            }}
+            onSave={handleSaveWarehouseCoordinate}
           />
         )}
 
@@ -1295,6 +2043,105 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
           />
         )}
 
+        {/* Dedicated Exim Facility Form (Add / Edit) */}
+        {(viewState.type === "facility-create" || viewState.type === "facility-edit") && (
+          <FacilityForm
+            initialRecord={
+              viewState.type === "facility-edit" && viewState.record
+                ? viewState.record
+                : editingFacility
+            }
+            onBack={() => {
+              setEditingFacility(null);
+              handleNavigateList("facility", "/exim/master/facility");
+            }}
+            onSave={handleSaveFacility}
+          />
+        )}
+
+        {/* Dedicated Exim HS Form (Add / Edit) */}
+        {(viewState.type === "hs-create" || viewState.type === "hs-edit") && (
+          <HsForm
+            initialRecord={
+              viewState.type === "hs-edit" && viewState.record
+                ? viewState.record
+                : editingHs
+            }
+            onBack={() => {
+              setEditingHs(null);
+              handleNavigateList("hs", "/exim/master/hs");
+            }}
+            onSave={handleSaveHs}
+          />
+        )}
+
+        {/* Dedicated Exim Category Form (Add / Edit) */}
+        {(viewState.type === "category-create" || viewState.type === "category-edit") && (
+          <CategoryForm
+            initialRecord={
+              viewState.type === "category-edit" && viewState.record
+                ? viewState.record
+                : editingCategory
+            }
+            onBack={() => {
+              setEditingCategory(null);
+              handleNavigateList("category", "/exim/master/category");
+            }}
+            onSave={handleSaveCategory}
+          />
+        )}
+
+        {/* Dedicated Exim Style Form (Add / Edit) */}
+        {(viewState.type === "style-create" || viewState.type === "style-edit") && (
+          <StyleForm
+            initialRecord={
+              viewState.type === "style-edit" && viewState.record
+                ? viewState.record
+                : editingStyle
+            }
+            onBack={() => {
+              setEditingStyle(null);
+              handleNavigateList("style", "/exim/master/style");
+            }}
+            onSave={handleSaveStyle}
+          />
+        )}
+
+        {/* Dedicated Exim Style Import Excel Page */}
+        {viewState.type === "style-import" && (
+          <StyleImport
+            onBack={() => {
+              handleNavigateList("style", "/exim/master/style");
+            }}
+          />
+        )}
+
+        {/* Dedicated Exim Color Form (Add Color) */}
+        {viewState.type === "colour-create" && (
+          <ColorForm
+            onBack={() => {
+              handleNavigateList("colour", "/exim/master/colour");
+            }}
+            onSave={handleSaveColor}
+          />
+        )}
+
+        {/* Dedicated Exim Receive Note Create Form */}
+        {viewState.type === "receive-note-create" && (
+          <ReceiveNoteForm
+            onBack={() => handleNavigateList("receive-note", "/exim/receive-note")}
+            onSave={handleSaveReceiveNote}
+          />
+        )}
+
+        {/* Dedicated Exim Receive Note Return Create Form */}
+        {viewState.type === "receive-note-return-create" && (
+          <ReceiveNoteReturnForm
+            onBack={() => handleNavigateList("receive-note-return", "/exim/receive-note-return")}
+            onSave={handleSaveReceiveNoteReturn}
+          />
+        )}
+
         {/* Dedicated Exim Item Form (Add / Edit) */}
         {(viewState.type === "item-create" || viewState.type === "item-edit") && (
           <ItemForm
@@ -1324,6 +2171,14 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
           <EditProfile
             onBack={handleProfileCancel}
             onSaveConfirmed={handleProfileSaveConfirmed}
+          />
+        )}
+
+        {/* 404 Not Found Page */}
+        {viewState.type === "not-found" && (
+          <NotFoundPage
+            path={viewState.path}
+            onGoHome={() => handleNavigateList("dashboard", "/dashboard")}
           />
         )}
       </AppLayout>

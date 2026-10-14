@@ -126,27 +126,27 @@ export const pageMeta: Record<PageKey, PageMeta> = {
   },
   facility: {
     eyebrow: "EXIM MASTER",
-    title: "Facility",
+    title: "Master Facility",
     description: "Bonded zone, KITE, and customs facility permit profiles.",
   },
   hs: {
     eyebrow: "EXIM MASTER",
-    title: "Harmonized System (HS)",
+    title: "Master HS",
     description: "Harmonized tariff schedule codes and duty assessment parameters.",
   },
   category: {
     eyebrow: "EXIM MASTER",
-    title: "Category",
+    title: "Master Category",
     description: "Material and product groupings for customs reporting.",
   },
   style: {
     eyebrow: "EXIM MASTER",
-    title: "Style",
+    title: "Master Specification/Model",
     description: "Product design specifications and manufacturing style numbers.",
   },
   colour: {
     eyebrow: "EXIM MASTER",
-    title: "Colour",
+    title: "Master Color",
     description: "Standardized color references for material tracking.",
   },
   // Exim Other
@@ -168,7 +168,7 @@ export const pageMeta: Record<PageKey, PageMeta> = {
   // Warehouse Master
   "warehouse-master": {
     eyebrow: "WAREHOUSE MASTER",
-    title: "Warehouse",
+    title: "Master Warehouse",
     description: "Storage facility records, zones, bin allocations, and supervisor assignments.",
   },
   "type-of-mutation": {

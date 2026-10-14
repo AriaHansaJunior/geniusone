@@ -159,3 +159,46 @@
   color: var(--blue-600);
 }
 
+/* Persistent Semantic Colors for Action Buttons */
+[class*="-action-btn--edit"],
+.btn-action-edit {
+  border-color: #0284c7 !important;
+  color: #0284c7 !important;
+  background-color: #ffffff;
+}
+[class*="-action-btn--edit"] svg,
+.btn-action-edit svg {
+  color: #0284c7 !important;
+}
+[class*="-action-btn--edit"]:hover,
+.btn-action-edit:hover {
+  border-color: #0369a1 !important;
+  background-color: #f0f9ff !important;
+  color: #0369a1 !important;
+}
+[class*="-action-btn--edit"]:hover svg,
+.btn-action-edit:hover svg {
+  color: #0369a1 !important;
+}
+
+[class*="-action-btn--delete"],
+.btn-action-delete {
+  border-color: #dc2626 !important;
+  color: #dc2626 !important;
+  background-color: #ffffff;
+}
+[class*="-action-btn--delete"] svg,
+.btn-action-delete svg {
+  color: #dc2626 !important;
+}
+[class*="-action-btn--delete"]:hover,
+.btn-action-delete:hover {
+  border-color: #b91c1c !important;
+  background-color: #fef2f2 !important;
+  color: #b91c1c !important;
+}
+[class*="-action-btn--delete"]:hover svg,
+.btn-action-delete:hover svg {
+  color: #b91c1c !important;
+}
+

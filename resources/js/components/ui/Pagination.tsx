@@ -32,54 +32,57 @@ export function Pagination({
 
   return (
     <div className="pagination">
-      <span>
+      <span className="pagination__summary">
         Showing <strong>{start}–{end}</strong> of <strong>{total}</strong> records
       </span>
-      <div className="pagination__pages">
-        <button
-          type="button"
-          aria-label="Previous page"
-          disabled={safeCurrentPage <= 1}
-          onClick={() => onPageChange && onPageChange(safeCurrentPage - 1)}
-        >
-          <Icon name="arrowLeft" size={15} />
-        </button>
-        {pages.map((p) => (
+      <div className="pagination__right">
+        <div className="pagination__pages">
           <button
-            key={p}
             type="button"
-            className={p === safeCurrentPage ? "active" : ""}
-            onClick={() => onPageChange && onPageChange(p)}
+            aria-label="Previous page"
+            disabled={safeCurrentPage <= 1}
+            onClick={() => onPageChange && onPageChange(safeCurrentPage - 1)}
           >
-            {p}
+            <Icon name="arrowLeft" size={15} />
           </button>
-        ))}
-        <button
-          type="button"
-          aria-label="Next page"
-          disabled={safeCurrentPage >= totalPages}
-          onClick={() => onPageChange && onPageChange(safeCurrentPage + 1)}
-        >
-          <Icon name="arrowRight" size={15} />
-        </button>
-      </div>
-      {showPageSize && (
-        <label>
-          Rows{" "}
-          <select
-            value={pageSize}
-            onChange={(e) => {
-              const nextSize = Number(e.target.value);
-              if (onPageSizeChange) onPageSizeChange(nextSize);
-            }}
+          {pages.map((p) => (
+            <button
+              key={p}
+              type="button"
+              className={p === safeCurrentPage ? "active" : ""}
+              onClick={() => onPageChange && onPageChange(p)}
+            >
+              {p}
+            </button>
+          ))}
+          <button
+            type="button"
+            aria-label="Next page"
+            disabled={safeCurrentPage >= totalPages}
+            onClick={() => onPageChange && onPageChange(safeCurrentPage + 1)}
           >
-            <option value={10}>10</option>
-            <option value={25}>25</option>
-            <option value={50}>50</option>
-            <option value={100}>100</option>
-          </select>
-        </label>
-      )}
+            <Icon name="arrowRight" size={15} />
+          </button>
+        </div>
+        {showPageSize && (
+          <label className="pagination__rows">
+            Rows{" "}
+            <select
+              value={pageSize}
+              aria-label="Rows per page"
+              onChange={(e) => {
+                const nextSize = Number(e.target.value);
+                if (onPageSizeChange) onPageSizeChange(nextSize);
+              }}
+            >
+              <option value={10}>10</option>
+              <option value={25}>25</option>
+              <option value={50}>50</option>
+              <option value={100}>100</option>
+            </select>
+          </label>
+        )}
+      </div>
     </div>
   );
 }

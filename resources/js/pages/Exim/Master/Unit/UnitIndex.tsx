@@ -28,6 +28,7 @@ export function UnitIndex({
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [sortDirection, setSortDirection] = useState<SortDirection>("none");
   const [unitToDelete, setUnitToDelete] = useState<UnitRecord | null>(null);
+  const [unitToEdit, setUnitToEdit] = useState<UnitRecord | null>(null);
 
   useEffect(() => {
     setLocalRecords(records);
@@ -172,7 +173,7 @@ export function UnitIndex({
                                 type="button"
                                 className="unit-action-btn unit-action-btn--edit"
                                 title={`Edit ${item.name}`}
-                                onClick={() => onEdit(item)}
+                                onClick={() => setUnitToEdit(item)}
                               >
                                 <Icon name="edit" size={13} />
                                 <span>Edit</span>
@@ -214,6 +215,7 @@ export function UnitIndex({
             totalRecords={totalRecords}
             currentPage={safeCurrentPage}
             pageSize={pageSize}
+            showPageSize={true}
             onPageChange={setCurrentPage}
             onPageSizeChange={(newSize) => {
               setPageSize(newSize);
@@ -223,12 +225,30 @@ export function UnitIndex({
         </div>
       </div>
 
+      {/* Edit Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={!!unitToEdit}
+        title="Edit Record?"
+        message={`Do you want to edit unit "${unitToEdit?.name}"?`}
+        confirmLabel="Continue"
+        cancelLabel="Cancel"
+        confirmVariant="primary"
+        icon="edit"
+        onConfirm={() => {
+          if (unitToEdit && onEdit) {
+            onEdit(unitToEdit);
+          }
+          setUnitToEdit(null);
+        }}
+        onCancel={() => setUnitToEdit(null)}
+      />
+
       {/* Delete Confirmation Dialog */}
       <ConfirmDialog
         isOpen={!!unitToDelete}
-        title="Confirm Delete Unit"
-        message={`Are you sure you want to delete unit "${unitToDelete?.name}"?`}
-        confirmLabel="Delete Unit"
+        title="Delete Record?"
+        message={`Are you sure you want to delete unit "${unitToDelete?.name}"? This action cannot be undone.`}
+        confirmLabel="Delete"
         cancelLabel="Cancel"
         confirmVariant="danger"
         icon="alertTriangle"

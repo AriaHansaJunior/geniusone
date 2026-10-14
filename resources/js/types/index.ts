@@ -125,11 +125,31 @@ export type ViewState =
   | { type: "department-edit"; record?: any }
   | { type: "brand-create" }
   | { type: "brand-edit"; record?: any }
+  | { type: "facility-create" }
+  | { type: "facility-edit"; record?: any }
+  | { type: "hs-create" }
+  | { type: "hs-edit"; record?: any }
+  | { type: "category-create" }
+  | { type: "category-edit"; record?: any }
+  | { type: "style-create" }
+  | { type: "style-edit"; record?: any }
+  | { type: "style-import" }
+  | { type: "colour-create" }
+  | { type: "receive-note-create" }
+  | { type: "receive-note-detail"; code: string }
+  | { type: "receive-note-return-create" }
+  | { type: "receive-note-return-detail"; code: string }
+  | { type: "document-history-detail"; code: string }
+  | { type: "warehouse-master-create" }
+  | { type: "warehouse-coordinate"; warehouseId: string }
+  | { type: "warehouse-coordinate-create"; warehouseId: string }
   | { type: "item-create" }
+
   | { type: "item-edit"; record?: any }
   | { type: "item-qr" }
   | { type: "edit-profile" }
-  | { type: "login" };
+  | { type: "login" }
+  | { type: "not-found"; path?: string };
 
 export type Column = {
   key: string;

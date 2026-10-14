@@ -181,27 +181,71 @@ Route::get('/exim/master/department/add', fn() => view('app', ['page' => 'depart
 
 Route::get('/exim/facility', fn() => view('app', ['page' => 'facility']))->name('exim.facility');
 Route::get('/exim/master/facility', fn() => view('app', ['page' => 'facility']));
+Route::get('/exim/facility/create', fn() => view('app', ['page' => 'facility-create']))->name('exim.facility.create');
+Route::get('/exim/facility/add', fn() => view('app', ['page' => 'facility-create']));
+Route::get('/exim/master/facility/create', fn() => view('app', ['page' => 'facility-create']));
+Route::get('/exim/master/facility/add', fn() => view('app', ['page' => 'facility-create']));
+
 
 Route::get('/exim/hs', fn() => view('app', ['page' => 'hs']))->name('exim.hs');
 Route::get('/exim/master/hs', fn() => view('app', ['page' => 'hs']));
+Route::get('/exim/hs/create', fn() => view('app', ['page' => 'hs-create']))->name('exim.hs.create');
+Route::get('/exim/hs/add', fn() => view('app', ['page' => 'hs-create']));
+Route::get('/exim/master/hs/create', fn() => view('app', ['page' => 'hs-create']));
+Route::get('/exim/master/hs/add', fn() => view('app', ['page' => 'hs-create']));
+
 
 Route::get('/exim/category', fn() => view('app', ['page' => 'category']))->name('exim.category');
 Route::get('/exim/master/category', fn() => view('app', ['page' => 'category']));
+Route::get('/exim/category/create', fn() => view('app', ['page' => 'category-create']))->name('exim.category.create');
+Route::get('/exim/category/add', fn() => view('app', ['page' => 'category-create']));
+Route::get('/exim/master/category/create', fn() => view('app', ['page' => 'category-create']));
+Route::get('/exim/master/category/add', fn() => view('app', ['page' => 'category-create']));
 
 Route::get('/exim/style', fn() => view('app', ['page' => 'style']))->name('exim.style');
 Route::get('/exim/master/style', fn() => view('app', ['page' => 'style']));
+Route::get('/exim/style/create', fn() => view('app', ['page' => 'style-create']))->name('exim.style.create');
+Route::get('/exim/style/add', fn() => view('app', ['page' => 'style-create']));
+Route::get('/exim/master/style/create', fn() => view('app', ['page' => 'style-create']));
+Route::get('/exim/master/style/add', fn() => view('app', ['page' => 'style-create']));
+Route::get('/exim/style/import', fn() => view('app', ['page' => 'style-import']))->name('exim.style.import');
+Route::get('/exim/master/style/import', fn() => view('app', ['page' => 'style-import']));
 
 Route::get('/exim/colour', fn() => view('app', ['page' => 'colour']))->name('exim.colour');
 Route::get('/exim/master/colour', fn() => view('app', ['page' => 'colour']));
+Route::get('/exim/color', fn() => view('app', ['page' => 'colour']))->name('exim.color');
+Route::get('/exim/master/color', fn() => view('app', ['page' => 'colour']));
+Route::get('/exim/colour/create', fn() => view('app', ['page' => 'colour-create']))->name('exim.colour.create');
+Route::get('/exim/colour/add', fn() => view('app', ['page' => 'colour-create']));
+Route::get('/exim/master/colour/create', fn() => view('app', ['page' => 'colour-create']));
+Route::get('/exim/master/colour/add', fn() => view('app', ['page' => 'colour-create']));
+Route::get('/exim/color/create', fn() => view('app', ['page' => 'colour-create']))->name('exim.color.create');
+Route::get('/exim/color/add', fn() => view('app', ['page' => 'colour-create']));
+Route::get('/exim/master/color/create', fn() => view('app', ['page' => 'colour-create']));
+Route::get('/exim/master/color/add', fn() => view('app', ['page' => 'colour-create']));
 
 // Exim - Other Routes
 Route::get('/exim/receive-note', fn() => view('app', ['page' => 'receive-note']))->name('exim.receive-note');
+Route::get('/exim/receive-note/create', fn() => view('app', ['page' => 'receive-note-create']))->name('exim.receive-note.create');
+Route::get('/exim/receive-note/add', fn() => view('app', ['page' => 'receive-note-create']));
+Route::get('/exim/receive-note/detail/{code}', fn($code) => view('app', ['page' => 'receive-note-detail', 'code' => $code]))->name('exim.receive-note.detail');
 Route::get('/exim/receive-note-return', fn() => view('app', ['page' => 'receive-note-return']))->name('exim.receive-note-return');
+Route::get('/exim/receive-note-return/create', fn() => view('app', ['page' => 'receive-note-return-create']))->name('exim.receive-note-return.create');
+Route::get('/exim/receive-note-return/add', fn() => view('app', ['page' => 'receive-note-return-create']));
+Route::get('/exim/receive-note-return/detail/{code}', fn($code) => view('app', ['page' => 'receive-note-return-detail', 'code' => $code]))->name('exim.receive-note-return.detail');
 Route::get('/exim/document-history', fn() => view('app', ['page' => 'document-history']))->name('exim.document-history');
+Route::get('/exim/document-history/detail/{code}', fn($code) => view('app', ['page' => 'document-history-detail', 'code' => $code]))->name('exim.document-history.detail');
+Route::get('/exim/document-history/details/{code}', fn($code) => view('app', ['page' => 'document-history-detail', 'code' => $code]));
 
 // Warehouse Master Routes
 Route::get('/warehouse/master', fn() => view('app', ['page' => 'warehouse-master']))->name('warehouse.master');
 Route::get('/warehouse/master/warehouse', fn() => view('app', ['page' => 'warehouse-master']));
+Route::get('/warehouse/master/warehouse/create', fn() => view('app', ['page' => 'warehouse-master-create']))->name('warehouse.master.warehouse.create');
+Route::get('/warehouse/master/warehouse/add', fn() => view('app', ['page' => 'warehouse-master-create']));
+Route::get('/warehouse/master/warehouse/{id}/coordinate', fn($id) => view('app', ['page' => 'warehouse-coordinate', 'code' => $id]))->name('warehouse.master.warehouse.coordinate');
+Route::get('/warehouse/master/warehouse/coordinate/{id}', fn($id) => view('app', ['page' => 'warehouse-coordinate', 'code' => $id]));
+Route::get('/warehouse/master/warehouse/{id}/coordinate/create', fn($id) => view('app', ['page' => 'warehouse-coordinate-create', 'code' => $id]))->name('warehouse.master.warehouse.coordinate.create');
+Route::get('/warehouse/master/warehouse/coordinate/{id}/create', fn($id) => view('app', ['page' => 'warehouse-coordinate-create', 'code' => $id]));
 Route::get('/warehouse/master/type-of-mutation', fn() => view('app', ['page' => 'type-of-mutation']));
 
 // Warehouse Adjustment Routes
@@ -246,3 +290,9 @@ Route::get('/login', fn() => view('app', ['page' => 'login']))->name('login');
 // Edit Profile Page
 Route::get('/profile/edit', fn() => view('app', ['page' => 'edit-profile']))->name('profile.edit');
 Route::get('/edit-profile', fn() => view('app', ['page' => 'edit-profile']));
+
+// Fallback Route for Unknown URLs (Requirement 5.3)
+Route::fallback(function () {
+    return response()->view('app', ['page' => 'not-found'], 404);
+});
+

@@ -110,24 +110,6 @@ export function UnitReferenceIndex({
             }}
             placeholder="Search code or description..."
           />
-
-          <div className="unit-reference-page-size">
-            <span>Show</span>
-            <select
-              value={pageSize}
-              onChange={(e) => {
-                setPageSize(Number(e.target.value));
-                setCurrentPage(1);
-              }}
-              aria-label="Select entries per page"
-            >
-              <option value={10}>10</option>
-              <option value={25}>25</option>
-              <option value={50}>50</option>
-              <option value={100}>100</option>
-            </select>
-            <span>entries</span>
-          </div>
         </div>
 
         {/* Responsive Table Frame */}
@@ -201,7 +183,7 @@ export function UnitReferenceIndex({
             totalRecords={totalRecords}
             currentPage={safeCurrentPage}
             pageSize={pageSize}
-            showPageSize={false}
+            showPageSize={true}
             onPageChange={setCurrentPage}
             onPageSizeChange={(newSize) => {
               setPageSize(newSize);

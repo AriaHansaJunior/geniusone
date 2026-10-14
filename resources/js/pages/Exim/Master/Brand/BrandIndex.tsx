@@ -3,6 +3,7 @@ import { Button } from "../../../../components/ui/Button";
 import { SearchField } from "../../../../components/ui/SearchField";
 import { Icon } from "../../../../components/ui/Icon";
 import { ConfirmDialog } from "../../../../components/ui/ConfirmDialog";
+import { Pagination } from "../../../../components/ui/Pagination";
 import { initialBrandRecords } from "./brand-data";
 import type {
   BrandRecord,
@@ -32,6 +33,7 @@ export function BrandIndex({
   const [sortField, setSortField] = useState<BrandSortField>("code");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   const [brandToDelete, setBrandToDelete] = useState<BrandRecord | null>(null);
+  const [brandToEdit, setBrandToEdit] = useState<BrandRecord | null>(null);
   const [exportNotice, setExportNotice] = useState<string | null>(null);
 
   useEffect(() => {
@@ -238,7 +240,7 @@ export function BrandIndex({
 
       {/* Main Table Panel */}
       <div className="brand-table-panel panel">
-        {/* Table Toolbar: Search on Left, Entries Selector on Right */}
+        {/* Table Toolbar: Search on Left */}
         <div className="brand-toolbar">
           <SearchField
             value={search}
@@ -248,24 +250,6 @@ export function BrandIndex({
             }}
             placeholder="Search..."
           />
-
-          <label className="brand-entries-selector">
-            <span>Show</span>
-            <select
-              className="brand-entries-select"
-              value={pageSize}
-              onChange={(e) => {
-                setPageSize(Number(e.target.value));
-                setCurrentPage(1);
-              }}
-            >
-              <option value={10}>10</option>
-              <option value={25}>25</option>
-              <option value={50}>50</option>
-              <option value={100}>100</option>
-            </select>
-            <span>entries</span>
-          </label>
         </div>
 
         {/* Responsive Table Frame */}
@@ -376,7 +360,7 @@ export function BrandIndex({
                                 type="button"
                                 className="brand-action-btn brand-action-btn--edit"
                                 title={`Edit ${item.name}`}
-                                onClick={() => onEdit(item)}
+                                onClick={() => setBrandToEdit(item)}
                               >
                                 <Icon name="edit" size={13} />
                                 <span>Edit</span>
@@ -413,56 +397,45 @@ export function BrandIndex({
             </table>
           </div>
 
-          {/* Table Footer: Summary on left, pagination on right */}
-          <div className="brand-footer">
-            <div className="brand-footer-summary">
-              Showing {startEntry} to {endEntry} of {totalRecords} entries
-            </div>
-
-            <div className="brand-pagination-controls">
-              <button
-                type="button"
-                className="brand-page-btn"
-                aria-label="Previous page"
-                disabled={safeCurrentPage <= 1}
-                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-              >
-                ‹
-              </button>
-
-              {pageNumbers.map((p) => (
-                <button
-                  key={p}
-                  type="button"
-                  className={`brand-page-btn ${
-                    p === safeCurrentPage ? "active" : ""
-                  }`}
-                  onClick={() => setCurrentPage(p)}
-                >
-                  {p}
-                </button>
-              ))}
-
-              <button
-                type="button"
-                className="brand-page-btn"
-                aria-label="Next page"
-                disabled={safeCurrentPage >= totalPages}
-                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-              >
-                ›
-              </button>
-            </div>
-          </div>
+          {/* Unified Bottom Pagination */}
+          <Pagination
+            totalRecords={totalRecords}
+            currentPage={safeCurrentPage}
+            pageSize={pageSize}
+            showPageSize={true}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={(newSize) => {
+              setPageSize(newSize);
+              setCurrentPage(1);
+            }}
+          />
         </div>
       </div>
+
+      {/* Edit Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={!!brandToEdit}
+        title="Edit Record?"
+        message={`Do you want to edit brand "${brandToEdit?.name}"?`}
+        confirmLabel="Continue"
+        cancelLabel="Cancel"
+        confirmVariant="primary"
+        icon="edit"
+        onConfirm={() => {
+          if (brandToEdit && onEdit) {
+            onEdit(brandToEdit);
+          }
+          setBrandToEdit(null);
+        }}
+        onCancel={() => setBrandToEdit(null)}
+      />
 
       {/* Delete Confirmation Dialog */}
       <ConfirmDialog
         isOpen={!!brandToDelete}
-        title="Confirm Delete Brand"
-        message={`Are you sure you want to delete brand "${brandToDelete?.code} - ${brandToDelete?.name}"?`}
-        confirmLabel="Delete Brand"
+        title="Delete Record?"
+        message={`Are you sure you want to delete brand "${brandToDelete?.name}"? This action cannot be undone.`}
+        confirmLabel="Delete"
         cancelLabel="Cancel"
         confirmVariant="danger"
         icon="alertTriangle"

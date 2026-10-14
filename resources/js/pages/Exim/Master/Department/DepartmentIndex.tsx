@@ -3,6 +3,7 @@ import { Button } from "../../../../components/ui/Button";
 import { SearchField } from "../../../../components/ui/SearchField";
 import { Icon } from "../../../../components/ui/Icon";
 import { ConfirmDialog } from "../../../../components/ui/ConfirmDialog";
+import { Pagination } from "../../../../components/ui/Pagination";
 import { initialDepartmentRecords } from "./department-data";
 import type {
   DepartmentRecord,
@@ -32,6 +33,8 @@ export function DepartmentIndex({
   const [sortField, setSortField] = useState<DepartmentSortField>("sectionName");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   const [departmentToDelete, setDepartmentToDelete] =
+    useState<DepartmentRecord | null>(null);
+  const [departmentToEdit, setDepartmentToEdit] =
     useState<DepartmentRecord | null>(null);
   const [exportNotice, setExportNotice] = useState<string | null>(null);
 
@@ -234,7 +237,7 @@ export function DepartmentIndex({
 
       {/* Main Table Panel */}
       <div className="department-table-panel panel">
-        {/* Table Toolbar: Search on Left, Entries Selector on Right */}
+        {/* Table Toolbar: Search on Left */}
         <div className="department-toolbar">
           <SearchField
             value={search}
@@ -244,24 +247,6 @@ export function DepartmentIndex({
             }}
             placeholder="Search..."
           />
-
-          <label className="department-entries-selector">
-            <span>Show</span>
-            <select
-              className="department-entries-select"
-              value={pageSize}
-              onChange={(e) => {
-                setPageSize(Number(e.target.value));
-                setCurrentPage(1);
-              }}
-            >
-              <option value={10}>10</option>
-              <option value={25}>25</option>
-              <option value={50}>50</option>
-              <option value={100}>100</option>
-            </select>
-            <span>entries</span>
-          </label>
         </div>
 
         {/* Responsive Table Frame */}
@@ -359,7 +344,7 @@ export function DepartmentIndex({
                                 type="button"
                                 className="department-action-btn department-action-btn--edit"
                                 title={`Edit ${item.sectionName}`}
-                                onClick={() => onEdit(item)}
+                                onClick={() => setDepartmentToEdit(item)}
                               >
                                 <Icon name="edit" size={13} />
                                 <span>Edit</span>
@@ -396,56 +381,45 @@ export function DepartmentIndex({
             </table>
           </div>
 
-          {/* Table Footer: Summary on left, pagination on right */}
-          <div className="department-footer">
-            <div className="department-footer-summary">
-              Showing {startEntry} to {endEntry} of {totalRecords} entries
-            </div>
-
-            <div className="department-pagination-controls">
-              <button
-                type="button"
-                className="department-page-btn"
-                aria-label="Previous page"
-                disabled={safeCurrentPage <= 1}
-                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-              >
-                ‹
-              </button>
-
-              {pageNumbers.map((p) => (
-                <button
-                  key={p}
-                  type="button"
-                  className={`department-page-btn ${
-                    p === safeCurrentPage ? "active" : ""
-                  }`}
-                  onClick={() => setCurrentPage(p)}
-                >
-                  {p}
-                </button>
-              ))}
-
-              <button
-                type="button"
-                className="department-page-btn"
-                aria-label="Next page"
-                disabled={safeCurrentPage >= totalPages}
-                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-              >
-                ›
-              </button>
-            </div>
-          </div>
+          {/* Unified Bottom Pagination */}
+          <Pagination
+            totalRecords={totalRecords}
+            currentPage={safeCurrentPage}
+            pageSize={pageSize}
+            showPageSize={true}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={(newSize) => {
+              setPageSize(newSize);
+              setCurrentPage(1);
+            }}
+          />
         </div>
       </div>
+
+      {/* Edit Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={!!departmentToEdit}
+        title="Edit Record?"
+        message={`Do you want to edit department "${departmentToEdit?.sectionName}"?`}
+        confirmLabel="Continue"
+        cancelLabel="Cancel"
+        confirmVariant="primary"
+        icon="edit"
+        onConfirm={() => {
+          if (departmentToEdit && onEdit) {
+            onEdit(departmentToEdit);
+          }
+          setDepartmentToEdit(null);
+        }}
+        onCancel={() => setDepartmentToEdit(null)}
+      />
 
       {/* Delete Confirmation Dialog */}
       <ConfirmDialog
         isOpen={!!departmentToDelete}
-        title="Confirm Delete Department"
-        message={`Are you sure you want to delete department "${departmentToDelete?.sectionName}"?`}
-        confirmLabel="Delete Department"
+        title="Delete Record?"
+        message={`Are you sure you want to delete department "${departmentToDelete?.sectionName}"? This action cannot be undone.`}
+        confirmLabel="Delete"
         cancelLabel="Cancel"
         confirmVariant="danger"
         icon="alertTriangle"

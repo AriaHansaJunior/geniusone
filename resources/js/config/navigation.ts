@@ -82,7 +82,7 @@ export const navigationConfig: NavSection[] = [
         label: "Exim Master",
         items: [
           { id: "unit", label: "Unit", path: "/exim/master/unit" },
-          { id: "satuan", label: "Satuan", path: "/exim/master/satuan" },
+          { id: "satuan", label: "Unit Reference", path: "/exim/master/satuan" },
           { id: "item", label: "Item", path: "/exim/master/item" },
           { id: "brand", label: "Brand", path: "/exim/master/brand" },
           { id: "classification", label: "Classification", path: "/exim/master/classification" },
