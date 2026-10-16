@@ -50,6 +50,8 @@ export type PageKey =
   | "delivery-terms"
   | "additional-costs"
   | "pph"
+  | "rafaksi-type"
+  | "job-number"
   // Procurement Reports
   | "pr-report"
   | "po-report"
@@ -66,6 +68,12 @@ export type PageKey =
   | "category"
   | "style"
   | "colour"
+  | "country"
+  | "currency"
+  | "account"
+  // Transaction create keys
+  | "pr-create"
+  | "po-create"
   // Exim other
   | "receive-note"
   | "receive-note-return"
@@ -108,6 +116,8 @@ export type ViewState =
   | { type: "list"; page: PageKey }
   | { type: "pr-detail"; code: string }
   | { type: "po-detail"; code: string }
+  | { type: "pr-create" }
+  | { type: "po-create" }
   | { type: "report-detail"; code: string }
   | { type: "warehouse-detail"; code: string }
   | { type: "warehouse-create" }

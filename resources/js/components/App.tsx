@@ -64,6 +64,13 @@ import {
   Login,
   PlaceholderPage,
   NotFoundPage,
+  CountryIndex,
+  AccountIndex,
+  JobNumberIndex,
+  RafaksiTypeIndex,
+  CurrencyIndex,
+  PurchaseRequisitionCreate,
+  PurchaseOrderCreate,
 } from "../pages";
 import { ConfirmDialog } from "./ui/ConfirmDialog";
 import { pageMeta, docToSlug } from "../data/mockData";
@@ -106,6 +113,11 @@ import type {
 import { initialItemRecords } from "../pages/Exim/Master/Item/item-data";
 import type { ItemRecord } from "../pages/Exim/Master/Item/item-types";
 import type { SupplierFormData } from "../pages/Procurement/PurchaseMaster/Supplier/supplier-types";
+import { initialCountryRecords, type CountryRecord } from "../pages/Exim/Master/Country/country-types";
+import { initialAccountRecords, type AccountRecord } from "../pages/Exim/Master/Account/account-types";
+import { initialJobNumberRecords, type JobNumberRecord } from "../pages/Procurement/PurchaseMaster/JobNumber/job-number-types";
+import { initialRafaksiTypeRecords, type RafaksiTypeRecord } from "../pages/Procurement/PurchaseMaster/RafaksiType/rafaksi-type-types";
+import { initialCurrencyRecords, type CurrencyRecord } from "../pages/Exim/Master/Currency/currency-types";
 import type { PageKey, ViewState, TableRow } from "../types";
 import {
   fetchMasterSuppliers,
@@ -153,6 +165,11 @@ import {
   saveWarehouseMasterApi,
   saveWarehouseCoordinateApi,
   deleteWarehouseCoordinateApi,
+  fetchMasterCountries,
+  fetchMasterRafaksiTypes,
+  fetchMasterCurrencies,
+  fetchMasterAccounts,
+  fetchMasterJobNumbers,
 } from "../data/masterApi";
 
 interface AppProps {
@@ -245,6 +262,36 @@ function resolveViewStateFromPath(pathname: string, defaultPage: PageKey = "dash
     cleanPath === "/procurement/pph/add"
   ) {
     return { type: "pph-create" };
+  }
+
+  // PR Create
+  if (
+    cleanPath === "/procurement/transactions/purchase-requisition/create" ||
+    cleanPath === "/procurement/transactions/purchase-requisition/add" ||
+    cleanPath === "/procurement/purchase-requisition/create" ||
+    cleanPath === "/procurement/purchase-requisition/add" ||
+    cleanPath === "/purchase-requisitions/create" ||
+    cleanPath === "/purchase-requisition/create" ||
+    cleanPath === "/purchase-requisition/add" ||
+    cleanPath === "/pr/create" ||
+    cleanPath === "/pr/add"
+  ) {
+    return { type: "pr-create" };
+  }
+
+  // PO Create
+  if (
+    cleanPath === "/procurement/transactions/purchase-order/create" ||
+    cleanPath === "/procurement/transactions/purchase-order/add" ||
+    cleanPath === "/procurement/purchase-order/create" ||
+    cleanPath === "/procurement/purchase-order/add" ||
+    cleanPath === "/purchase-orders/create" ||
+    cleanPath === "/purchase-order/create" ||
+    cleanPath === "/purchase-order/add" ||
+    cleanPath === "/po/create" ||
+    cleanPath === "/po/add"
+  ) {
+    return { type: "po-create" };
   }
 
   if (
@@ -547,6 +594,12 @@ function resolveViewStateFromPath(pathname: string, defaultPage: PageKey = "dash
   if (cleanPath === "/exim/receive-note-return") return { type: "list", page: "receive-note-return" };
   if (cleanPath === "/exim/document-history") return { type: "list", page: "document-history" };
 
+  if (cleanPath === "/exim/country" || cleanPath === "/exim/master/country") return { type: "list", page: "country" };
+  if (cleanPath === "/exim/account" || cleanPath === "/exim/master/account" || cleanPath === "/procurement/purchase-master/account") return { type: "list", page: "account" };
+  if (cleanPath === "/procurement/job-number" || cleanPath === "/procurement/purchase-master/job-number" || cleanPath === "/exim/master/job-number") return { type: "list", page: "job-number" };
+  if (cleanPath === "/procurement/rafaksi-type" || cleanPath === "/procurement/purchase-master/rafaksi-type") return { type: "list", page: "rafaksi-type" };
+  if (cleanPath === "/exim/currency" || cleanPath === "/exim/master/currency" || cleanPath === "/procurement/purchase-master/currency") return { type: "list", page: "currency" };
+
   if (cleanPath === "/warehouse/master" || cleanPath === "/warehouse/master/warehouse") return { type: "list", page: "warehouse-master" };
 
   if (defaultPage === ("not-found" as any) || (cleanPath !== "" && cleanPath !== "/dashboard")) {
@@ -592,7 +645,9 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
     if (initialPage === "item-create") return { type: "item-create" };
     if (initialPage === "item-qr") return { type: "item-qr" };
     if (initialPage === "pr-detail") return { type: "pr-detail", code: initialCode || "0026-PR-IMLI-X-2026" };
+    if (initialPage === "pr-create") return { type: "pr-create" };
     if (initialPage === "po-detail") return { type: "po-detail", code: initialCode || "POL-1026-0040" };
+    if (initialPage === "po-create") return { type: "po-create" };
     if (initialPage === "report-detail") return { type: "report-detail", code: initialCode || "POL-1026-0040" };
     if (initialPage === "warehouse-detail") return { type: "warehouse-detail", code: initialCode || "0138-WHIN-IMLI-G-X-2026" };
     if (initialPage in pageMeta) return { type: "list", page: initialPage as PageKey };
@@ -607,9 +662,9 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
       ? "dashboard"
       : viewState.type === "list"
       ? viewState.page
-      : viewState.type === "pr-detail"
+      : viewState.type === "pr-detail" || viewState.type === "pr-create"
       ? "pr"
-      : viewState.type === "po-detail"
+      : viewState.type === "po-detail" || viewState.type === "po-create"
       ? "po"
       : viewState.type === "report-detail"
       ? "report"
@@ -783,6 +838,11 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
   const [warehouseMasterRecords, setWarehouseMasterRecords] = useState<WarehouseMasterRecord[]>(initialWarehouseMasterRecords);
   const [itemRecords, setItemRecords] = useState<ItemRecord[]>(initialItemRecords);
   const [editingItem, setEditingItem] = useState<ItemRecord | null>(null);
+  const [countryRecords, setCountryRecords] = useState<CountryRecord[]>(initialCountryRecords);
+  const [accountRecords, setAccountRecords] = useState<AccountRecord[]>(initialAccountRecords);
+  const [jobNumberRecords, setJobNumberRecords] = useState<JobNumberRecord[]>(initialJobNumberRecords);
+  const [rafaksiTypeRecords, setRafaksiTypeRecords] = useState<RafaksiTypeRecord[]>(initialRafaksiTypeRecords);
+  const [currencyRecords, setCurrencyRecords] = useState<CurrencyRecord[]>(initialCurrencyRecords);
 
   // Live database synchronization on mount
   useEffect(() => {
@@ -838,6 +898,21 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
     });
     fetchMasterWarehouses().then((data) => {
       if (isMounted && data && data.length > 0) setWarehouseMasterRecords(data);
+    });
+    fetchMasterCountries().then((data) => {
+      if (isMounted && data && data.length > 0) setCountryRecords(data);
+    });
+    fetchMasterRafaksiTypes().then((data) => {
+      if (isMounted && data && data.length > 0) setRafaksiTypeRecords(data);
+    });
+    fetchMasterCurrencies().then((data) => {
+      if (isMounted && data && data.length > 0) setCurrencyRecords(data);
+    });
+    fetchMasterAccounts().then((data) => {
+      if (isMounted && data && data.length > 0) setAccountRecords(data);
+    });
+    fetchMasterJobNumbers().then((data) => {
+      if (isMounted && data && data.length > 0) setJobNumberRecords(data);
     });
 
     return () => {
@@ -973,6 +1048,24 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
     },
     [handleNavigateList]
   );
+
+  const handleNavigatePrCreate = useCallback(() => {
+    const nextState: ViewState = { type: "pr-create" };
+    setViewState(nextState);
+    if (typeof window !== "undefined") {
+      window.scrollTo(0, 0);
+      window.history.pushState(nextState, "", "/procurement/transactions/purchase-requisition/create");
+    }
+  }, []);
+
+  const handleNavigatePoCreate = useCallback(() => {
+    const nextState: ViewState = { type: "po-create" };
+    setViewState(nextState);
+    if (typeof window !== "undefined") {
+      window.scrollTo(0, 0);
+      window.history.pushState(nextState, "", "/procurement/transactions/purchase-order/create");
+    }
+  }, []);
 
   // Navigate to create new record view
   const handleNavigateCreate = useCallback((module: "warehouse" | "supplier" | "payment-term" | "purchase-category" | "delivery-terms" | "additional-costs" | "pph" | "unit" | "classification" | "department" | "brand" | "facility" | "hs" | "category" | "style" | "colour" | "color" | "item" | "receive-note" | "receive-note-return") => {
@@ -1947,6 +2040,7 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
         {/* Existing Core List Page Views */}
         {viewState.type === "list" && viewState.page === "pr" && (
           <PurchaseRequisition
+            onCreate={handleNavigatePrCreate}
             onDetail={(row: TableRow) =>
               handleNavigateDetail("pr", row._rawNumber || row._rawPr || row._id || "")
             }
@@ -1955,6 +2049,7 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
 
         {viewState.type === "list" && viewState.page === "po" && (
           <PurchaseOrder
+            onCreate={handleNavigatePoCreate}
             onDetail={(row: TableRow) =>
               handleNavigateDetail("po", row._rawNumber || row._rawPo || row._id || "")
             }
@@ -2196,6 +2291,41 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
           />
         )}
 
+        {/* Country Master Listing */}
+        {viewState.type === "list" && viewState.page === "country" && (
+          <CountryIndex
+            records={countryRecords}
+          />
+        )}
+
+        {/* Account Master Listing */}
+        {viewState.type === "list" && viewState.page === "account" && (
+          <AccountIndex
+            records={accountRecords}
+          />
+        )}
+
+        {/* Job Number Master Listing */}
+        {viewState.type === "list" && viewState.page === "job-number" && (
+          <JobNumberIndex
+            records={jobNumberRecords}
+          />
+        )}
+
+        {/* Rafaksi Type Master Listing */}
+        {viewState.type === "list" && viewState.page === "rafaksi-type" && (
+          <RafaksiTypeIndex
+            records={rafaksiTypeRecords}
+          />
+        )}
+
+        {/* Currency Master Listing */}
+        {viewState.type === "list" && viewState.page === "currency" && (
+          <CurrencyIndex
+            records={currencyRecords}
+          />
+        )}
+
         {/* New Lightweight Placeholder Pages */}
         {viewState.type === "list" &&
           viewState.page !== "pr" &&
@@ -2226,6 +2356,11 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
           viewState.page !== "receive-note-return" &&
           viewState.page !== "document-history" &&
           viewState.page !== "warehouse-master" &&
+          viewState.page !== "country" &&
+          viewState.page !== "account" &&
+          viewState.page !== "job-number" &&
+          viewState.page !== "rafaksi-type" &&
+          viewState.page !== "currency" &&
           viewState.page !== "dashboard" && (
             <PlaceholderPage
               eyebrow={currentMeta.eyebrow}
@@ -2329,6 +2464,21 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
         )}
 
         {/* Dedicated Full Page Create Views */}
+        {viewState.type === "pr-create" && (
+          <PurchaseRequisitionCreate
+            availableJobNumbers={jobNumberRecords.map((j) => j.jobNumber)}
+            onBack={() => handleNavigateList("pr", "/procurement/transactions/purchase-requisition")}
+            onSaveSuccess={() => handleNavigateList("pr", "/procurement/transactions/purchase-requisition")}
+          />
+        )}
+
+        {viewState.type === "po-create" && (
+          <PurchaseOrderCreate
+            onBack={() => handleNavigateList("po", "/procurement/transactions/purchase-order")}
+            onSaveSuccess={() => handleNavigateList("po", "/procurement/transactions/purchase-order")}
+          />
+        )}
+
         {viewState.type === "warehouse-create" && (
           <WarehouseCreate
             onBack={() => handleNavigateList("warehouse", "/warehouse/incoming/receive-material-bpb")}

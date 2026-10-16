@@ -77,6 +77,26 @@ export const pageMeta: Record<PageKey, PageMeta> = {
     title: "PPH",
     description: "Configure withholding tax schedules and corporate deduction rates.",
   },
+  "rafaksi-type": {
+    eyebrow: "PURCHASE MASTER",
+    title: "Master Rafaksi Type",
+    description: "Manage reference types for supplier deduction and quality adjustments.",
+  },
+  "job-number": {
+    eyebrow: "PURCHASE MASTER",
+    title: "Master Job Number",
+    description: "Reference job numbers for procurement requisitions and tracking.",
+  },
+  "pr-create": {
+    eyebrow: "PROCUREMENT",
+    title: "Add Purchase Requisition",
+    description: "Create new purchase requisition with line items and specifications.",
+  },
+  "po-create": {
+    eyebrow: "PROCUREMENT",
+    title: "Add Purchase Order",
+    description: "Create new purchase order with financial breakdown and delivery terms.",
+  },
   // Procurement Reports
   "pr-report": {
     eyebrow: "PROCUREMENT REPORTS",
@@ -148,6 +168,21 @@ export const pageMeta: Record<PageKey, PageMeta> = {
     eyebrow: "EXIM MASTER",
     title: "Master Color",
     description: "Standardized color references for material tracking.",
+  },
+  country: {
+    eyebrow: "EXIM MASTER",
+    title: "Master Country",
+    description: "Origin and destination country reference definitions for international trade.",
+  },
+  currency: {
+    eyebrow: "EXIM MASTER",
+    title: "Master Currency",
+    description: "Foreign exchange currencies and system exchange rate reference.",
+  },
+  account: {
+    eyebrow: "EXIM MASTER",
+    title: "Master Account",
+    description: "Account classifications for procurement and customs transactions.",
   },
   // Exim Other
   "receive-note": {

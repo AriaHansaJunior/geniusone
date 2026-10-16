@@ -4,7 +4,7 @@ import type { IconName } from "../../types";
 
 interface ButtonProps {
   children?: ReactNode;
-  variant?: "primary" | "secondary" | "ghost" | "danger" | "warning";
+  variant?: "primary" | "secondary" | "ghost" | "danger" | "warning" | "success";
   icon?: IconName;
   onClick?: (e?: any) => void;
   type?: "button" | "submit" | "reset";

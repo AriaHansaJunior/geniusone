@@ -51,6 +51,8 @@ export const navigationConfig: NavSection[] = [
           { id: "delivery-terms", label: "Delivery Terms", path: "/procurement/purchase-master/delivery-terms" },
           { id: "additional-costs", label: "Additional Costs", path: "/procurement/purchase-master/additional-costs" },
           { id: "pph", label: "PPH", path: "/procurement/purchase-master/pph" },
+          { id: "rafaksi-type", label: "Rafaksi Type", path: "/procurement/purchase-master/rafaksi-type" },
+          { id: "job-number", label: "Job Number", path: "/procurement/purchase-master/job-number" },
         ],
       },
       {
@@ -92,6 +94,9 @@ export const navigationConfig: NavSection[] = [
           { id: "category", label: "Category", path: "/exim/master/category" },
           { id: "style", label: "Style", path: "/exim/master/style" },
           { id: "colour", label: "Colour", path: "/exim/master/colour" },
+          { id: "country", label: "Country", path: "/exim/master/country" },
+          { id: "currency", label: "Currency", path: "/exim/master/currency" },
+          { id: "account", label: "Account", path: "/exim/master/account" },
         ],
       },
     ],

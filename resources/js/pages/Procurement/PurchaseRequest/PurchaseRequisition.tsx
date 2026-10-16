@@ -10,9 +10,10 @@ import type { TableRow } from "../../../types";
 
 interface PurchaseRequisitionProps {
   onDetail: (row: TableRow) => void;
+  onCreate?: () => void;
 }
 
-export function PurchaseRequisition({ onDetail }: PurchaseRequisitionProps) {
+export function PurchaseRequisition({ onDetail, onCreate }: PurchaseRequisitionProps) {
   const [search, setSearch] = useState("");
   const config = pageConfigs.pr;
   const [stats, setStats] = useState(config.stats);
@@ -88,7 +89,7 @@ export function PurchaseRequisition({ onDetail }: PurchaseRequisitionProps) {
             <Button variant="secondary" icon="download">
               Export XLSX
             </Button>
-            <Button icon="plus">Create PR</Button>
+            <Button icon="plus" onClick={onCreate}>Create PR</Button>
           </div>
         </div>
 

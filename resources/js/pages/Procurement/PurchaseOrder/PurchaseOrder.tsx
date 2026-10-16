@@ -10,9 +10,10 @@ import type { TableRow } from "../../../types";
 
 interface PurchaseOrderProps {
   onDetail: (row: TableRow) => void;
+  onCreate?: () => void;
 }
 
-export function PurchaseOrder({ onDetail }: PurchaseOrderProps) {
+export function PurchaseOrder({ onDetail, onCreate }: PurchaseOrderProps) {
   const [search, setSearch] = useState("");
   const config = pageConfigs.po;
   const [stats, setStats] = useState(config.stats);
@@ -88,7 +89,7 @@ export function PurchaseOrder({ onDetail }: PurchaseOrderProps) {
             <Button variant="secondary" icon="download">
               Export XLSX
             </Button>
-            <Button icon="plus">Create PO</Button>
+            <Button icon="plus" onClick={onCreate}>Create PO</Button>
           </div>
         </div>
 

@@ -35,6 +35,13 @@ Route::get('/purchase-requisitions', [PurchaseRequisitionController::class, 'ind
 Route::get('/purchase-requests', fn() => redirect('/pr'));
 Route::get('/procurement/transactions/purchase-requisition', [PurchaseRequisitionController::class, 'index'])->name('procurement.transactions.pr');
 
+Route::get('/pr/create', fn() => view('app', ['page' => 'pr-create']))->name('pr.create');
+Route::get('/pr/add', fn() => view('app', ['page' => 'pr-create']));
+Route::get('/purchase-requisition/create', fn() => view('app', ['page' => 'pr-create']));
+Route::get('/purchase-requisitions/create', fn() => view('app', ['page' => 'pr-create']));
+Route::get('/procurement/transactions/purchase-requisition/create', fn() => view('app', ['page' => 'pr-create']))->name('procurement.transactions.pr.create');
+Route::get('/procurement/transactions/purchase-requisition/add', fn() => view('app', ['page' => 'pr-create']));
+
 Route::get('/pr/detail/{code}', [PurchaseRequisitionController::class, 'show'])->name('pr.detail');
 Route::get('/pr/details/{code}', [PurchaseRequisitionController::class, 'show']);
 Route::get('/purchase-requisition/detail/{code}', [PurchaseRequisitionController::class, 'show']);
@@ -46,6 +53,13 @@ Route::get('/procurement/transactions/purchase-requisition/details/{code}', [Pur
 Route::get('/po', [PurchaseOrderController::class, 'index'])->name('po.index');
 Route::get('/purchase-orders', [PurchaseOrderController::class, 'index'])->name('purchase-orders.index');
 Route::get('/procurement/transactions/purchase-order', [PurchaseOrderController::class, 'index'])->name('procurement.transactions.po');
+
+Route::get('/po/create', fn() => view('app', ['page' => 'po-create']))->name('po.create');
+Route::get('/po/add', fn() => view('app', ['page' => 'po-create']));
+Route::get('/purchase-order/create', fn() => view('app', ['page' => 'po-create']));
+Route::get('/purchase-orders/create', fn() => view('app', ['page' => 'po-create']));
+Route::get('/procurement/transactions/purchase-order/create', fn() => view('app', ['page' => 'po-create']))->name('procurement.transactions.po.create');
+Route::get('/procurement/transactions/purchase-order/add', fn() => view('app', ['page' => 'po-create']));
 
 Route::get('/po/detail/{code}', [PurchaseOrderController::class, 'show'])->name('po.detail');
 Route::get('/po/details/{code}', [PurchaseOrderController::class, 'show']);
@@ -126,6 +140,13 @@ Route::get('/procurement/pph/create', fn() => view('app', ['page' => 'pph-create
 Route::get('/procurement/pph/add', fn() => view('app', ['page' => 'pph-create']));
 Route::get('/procurement/purchase-master/pph/create', fn() => view('app', ['page' => 'pph-create']));
 Route::get('/procurement/purchase-master/pph/add', fn() => view('app', ['page' => 'pph-create']));
+
+Route::get('/procurement/rafaksi-type', fn() => view('app', ['page' => 'rafaksi-type']))->name('procurement.rafaksi-type');
+Route::get('/procurement/purchase-master/rafaksi-type', fn() => view('app', ['page' => 'rafaksi-type']));
+
+Route::get('/procurement/job-number', fn() => view('app', ['page' => 'job-number']))->name('procurement.job-number');
+Route::get('/procurement/purchase-master/job-number', fn() => view('app', ['page' => 'job-number']));
+Route::get('/exim/master/job-number', fn() => view('app', ['page' => 'job-number']));
 
 // Procurement - Reports Routes
 Route::get('/procurement/pr-report', fn() => view('app', ['page' => 'pr-report']))->name('procurement.pr-report');
@@ -223,6 +244,17 @@ Route::get('/exim/color/create', fn() => view('app', ['page' => 'colour-create']
 Route::get('/exim/color/add', fn() => view('app', ['page' => 'colour-create']));
 Route::get('/exim/master/color/create', fn() => view('app', ['page' => 'colour-create']));
 Route::get('/exim/master/color/add', fn() => view('app', ['page' => 'colour-create']));
+
+Route::get('/exim/country', fn() => view('app', ['page' => 'country']))->name('exim.country');
+Route::get('/exim/master/country', fn() => view('app', ['page' => 'country']));
+
+Route::get('/exim/currency', fn() => view('app', ['page' => 'currency']))->name('exim.currency');
+Route::get('/exim/master/currency', fn() => view('app', ['page' => 'currency']));
+Route::get('/procurement/purchase-master/currency', fn() => view('app', ['page' => 'currency']));
+
+Route::get('/exim/account', fn() => view('app', ['page' => 'account']))->name('exim.account');
+Route::get('/exim/master/account', fn() => view('app', ['page' => 'account']));
+Route::get('/procurement/purchase-master/account', fn() => view('app', ['page' => 'account']));
 
 // Exim - Other Routes
 Route::get('/exim/receive-note', fn() => view('app', ['page' => 'receive-note']))->name('exim.receive-note');

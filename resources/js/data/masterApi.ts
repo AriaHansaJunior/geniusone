@@ -20,6 +20,11 @@ import type {
   WarehouseCoordinateRecord,
   WarehouseType,
 } from "../pages/Warehouse/MasterWarehouse/warehouse-master-types";
+import type { CountryRecord } from "../pages/Exim/Master/Country/country-types";
+import type { RafaksiTypeRecord } from "../pages/Procurement/PurchaseMaster/RafaksiType/rafaksi-type-types";
+import type { CurrencyRecord } from "../pages/Exim/Master/Currency/currency-types";
+import type { AccountRecord } from "../pages/Exim/Master/Account/account-types";
+import type { JobNumberRecord } from "../pages/Procurement/PurchaseMaster/JobNumber/job-number-types";
 
 // ============================================================================
 // 1. PROCUREMENT MASTER FETCH & MUTATION HELPERS
@@ -613,4 +618,87 @@ export async function saveWarehouseCoordinateApi(coord: WarehouseCoordinateRecor
 
 export async function deleteWarehouseCoordinateApi(coordId: string): Promise<boolean> {
   return apiDelete(`/api/warehouse/master/coordinates/${coordId}`);
+}
+
+export async function fetchMasterCountries(): Promise<CountryRecord[] | null> {
+  const res = await apiGet<{ data: any[] }>("/api/procurement/master/countries");
+  if (!res || !Array.isArray(res.data)) return null;
+
+  return res.data.map((item: any, idx: number): CountryRecord => ({
+    id: String(item.id),
+    no: idx + 1,
+    code: item.code || `CTR-${String(item.id).padStart(3, "0")}`,
+    name: item.name || "",
+    status: item.status !== 0,
+    createdAt: item.created_at ? new Date(item.created_at).toISOString().replace("T", " ").substring(0, 19) : "",
+    createdBy: item.created_by || "ADMINISTRATOR",
+  }));
+}
+
+export async function fetchMasterRafaksiTypes(): Promise<RafaksiTypeRecord[] | null> {
+  const res = await apiGet<{ data: any[] }>("/api/procurement/master/rafaksi-types");
+  if (!res || !Array.isArray(res.data)) return null;
+
+  return res.data.map((item: any, idx: number): RafaksiTypeRecord => ({
+    id: String(item.id),
+    no: idx + 1,
+    code: item.code || `RAF-${String(item.id).padStart(3, "0")}`,
+    name: item.name || "",
+    description: item.description || "",
+    status: item.status !== 0,
+    createdAt: item.created_at ? new Date(item.created_at).toISOString().replace("T", " ").substring(0, 19) : "",
+    createdBy: item.created_by || "ADMINISTRATOR",
+  }));
+}
+
+export async function fetchMasterCurrencies(): Promise<CurrencyRecord[] | null> {
+  const res = await apiGet<{ data: any[] }>("/api/procurement/master/currencies");
+  if (!res || !Array.isArray(res.data)) return null;
+
+  return res.data.map((item: any, idx: number): CurrencyRecord => ({
+    id: String(item.id),
+    no: idx + 1,
+    currencyCode: item.code || item.currency_code || "",
+    currencyName: item.name || item.currency_name || "",
+    symbol: item.symbol || "",
+    exchangeRate: Number(item.exchange_rate) || 1.0,
+    syncStatus: item.sync_status || "Synced",
+    lastSyncTime: item.last_sync_time || new Date().toISOString().replace("T", " ").substring(0, 19),
+    status: item.status !== 0,
+    createdAt: item.created_at ? new Date(item.created_at).toISOString().replace("T", " ").substring(0, 19) : "",
+    createdBy: item.created_by || "ADMINISTRATOR",
+  }));
+}
+
+export async function fetchMasterAccounts(): Promise<AccountRecord[] | null> {
+  const res = await apiGet<{ data: any[] }>("/api/exim/master/accounts");
+  if (!res || !Array.isArray(res.data)) return null;
+
+  return res.data.map((item: any, idx: number): AccountRecord => ({
+    id: String(item.id),
+    no: idx + 1,
+    accountCode: item.code || item.account_code || "",
+    accountName: item.name || item.account_name || "",
+    accountType: item.type || "Asset",
+    description: item.description || "",
+    status: item.status !== 0,
+    createdAt: item.created_at ? new Date(item.created_at).toISOString().replace("T", " ").substring(0, 19) : "",
+    createdBy: item.created_by || "ADMINISTRATOR",
+  }));
+}
+
+export async function fetchMasterJobNumbers(): Promise<JobNumberRecord[] | null> {
+  const res = await apiGet<{ data: any[] }>("/api/exim/master/job-numbers");
+  if (!res || !Array.isArray(res.data)) return null;
+
+  return res.data.map((item: any, idx: number): JobNumberRecord => ({
+    id: String(item.id),
+    no: idx + 1,
+    jobNumber: item.code || item.job_number || item.name || "",
+    jobName: item.name || item.job_name || "",
+    department: item.department || "Production",
+    status: item.status !== 0,
+    createdAt: item.created_at ? new Date(item.created_at).toISOString().replace("T", " ").substring(0, 19) : "",
+    createdBy: item.created_by || "ADMINISTRATOR",
+  }));
 }

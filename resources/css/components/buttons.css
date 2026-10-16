@@ -22,6 +22,8 @@
 .button--ghost { background: transparent; color: var(--muted); }
 .button--danger { background: var(--red-600); color: white; }
 .button--warning { background: var(--orange-500); color: white; }
+.button--success { background: #16a34a; border-color: #15803d; color: white; }
+.button--success:hover { background: #15803d; color: white; }
 
 
 /* SmartOne Orange Option Button */
