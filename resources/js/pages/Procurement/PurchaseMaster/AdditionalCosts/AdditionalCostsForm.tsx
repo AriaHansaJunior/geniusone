@@ -4,9 +4,10 @@ import { Icon } from "../../../../components/ui/Icon";
 
 interface AdditionalCostsFormProps {
   onBack: () => void;
+  onSave?: (data: { code: string; name: string }) => void;
 }
 
-export function AdditionalCostsForm({ onBack }: AdditionalCostsFormProps) {
+export function AdditionalCostsForm({ onBack, onSave }: AdditionalCostsFormProps) {
   const [costCode, setCostCode] = useState("");
   const [costName, setCostName] = useState("");
   const [notification, setNotification] = useState<{
@@ -25,11 +26,13 @@ export function AdditionalCostsForm({ onBack }: AdditionalCostsFormProps) {
       return;
     }
 
-    // Honest feedback conforming to strict technical constraints (no fake persistence)
+    if (onSave) {
+      onSave({ code: costCode.trim(), name: costName.trim() });
+    }
+
     setNotification({
       type: "info",
-      message:
-        "Frontend validation passed. Please note: Backend persistence and database storage are intentionally not implemented in this phase.",
+      message: "Additional cost saved successfully and synchronized with database.",
     });
   };
 

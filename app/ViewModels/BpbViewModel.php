@@ -2,7 +2,7 @@
 
 namespace App\ViewModels;
 
-use App\Models\BpbReceiveMaterial;
+use App\Models\Warehouse\InboundStorage\BpbReceiveMaterial;
 
 class BpbViewModel
 {

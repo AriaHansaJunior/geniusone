@@ -87,6 +87,85 @@ export async function fetchDetail(
 }
 
 /**
+ * Generic JSON API request helpers
+ */
+export async function apiGet<T = any>(endpoint: string, params?: Record<string, string | number>): Promise<T | null> {
+  try {
+    const url = new URL(endpoint, window.location.origin);
+    if (params) {
+      Object.entries(params).forEach(([k, v]) => {
+        if (v !== undefined && v !== null && v !== "") {
+          url.searchParams.set(k, String(v));
+        }
+      });
+    }
+    const res = await fetch(url.toString(), {
+      headers: { Accept: "application/json" },
+    });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch (e) {
+    console.warn(`[GeniusOne API GET] ${endpoint} failed:`, e);
+    return null;
+  }
+}
+
+export async function apiPost<T = any>(endpoint: string, data: any): Promise<T | null> {
+  try {
+    const res = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.message || err.error || `HTTP ${res.status}`);
+    }
+    return await res.json();
+  } catch (e) {
+    console.warn(`[GeniusOne API POST] ${endpoint} failed:`, e);
+    throw e;
+  }
+}
+
+export async function apiPut<T = any>(endpoint: string, data: any): Promise<T | null> {
+  try {
+    const res = await fetch(endpoint, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.message || err.error || `HTTP ${res.status}`);
+    }
+    return await res.json();
+  } catch (e) {
+    console.warn(`[GeniusOne API PUT] ${endpoint} failed:`, e);
+    throw e;
+  }
+}
+
+export async function apiDelete(endpoint: string): Promise<boolean> {
+  try {
+    const res = await fetch(endpoint, {
+      method: "DELETE",
+      headers: { Accept: "application/json" },
+    });
+    return res.ok;
+  } catch (e) {
+    console.warn(`[GeniusOne API DELETE] ${endpoint} failed:`, e);
+    return false;
+  }
+}
+
+/**
  * Create a new Warehouse Material Receipt (BPB).
  */
 export async function createWarehouseBpb(payload: {
@@ -95,19 +174,5 @@ export async function createWarehouseBpb(payload: {
   note?: string;
   warehouse_id?: number;
 }): Promise<{ status: string; message?: string; data?: TableRow }> {
-  const response = await fetch("/api/warehouse", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-    },
-    body: JSON.stringify(payload),
-  });
-
-  if (!response.ok) {
-    const err = await response.json().catch(() => ({ error: "Failed to create BPB" }));
-    throw new Error(err.error || "Failed to create BPB");
-  }
-
-  return response.json();
+  return apiPost("/api/warehouse", payload);
 }

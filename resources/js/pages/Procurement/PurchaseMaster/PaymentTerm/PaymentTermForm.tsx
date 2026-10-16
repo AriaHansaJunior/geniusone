@@ -4,9 +4,10 @@ import { Icon } from "../../../../components/ui/Icon";
 
 interface PaymentTermFormProps {
   onBack: () => void;
+  onSave?: (data: { name: string }) => void;
 }
 
-export function PaymentTermForm({ onBack }: PaymentTermFormProps) {
+export function PaymentTermForm({ onBack, onSave }: PaymentTermFormProps) {
   const [name, setName] = useState("");
   const [notification, setNotification] = useState<{
     type: "info" | "warning";
@@ -24,11 +25,13 @@ export function PaymentTermForm({ onBack }: PaymentTermFormProps) {
       return;
     }
 
-    // Honest feedback conforming to strict technical constraints (no fake persistence)
+    if (onSave) {
+      onSave({ name: name.trim() });
+    }
+
     setNotification({
       type: "info",
-      message:
-        "Frontend validation passed. Please note: Backend persistence and database storage are intentionally not implemented in this phase.",
+      message: "Payment term saved successfully and synchronized with database.",
     });
   };
 

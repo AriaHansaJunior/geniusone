@@ -17,10 +17,10 @@ use App\ViewModels\PurchaseOrderViewModel;
 use App\ViewModels\ReceiveNoteViewModel;
 use App\ViewModels\BpbViewModel;
 use App\ViewModels\PrPoTraceabilityViewModel;
-use App\Models\PurchaseRequisition;
-use App\Models\PurchaseOrder;
-use App\Models\ReceiveNote;
-use App\Models\BpbReceiveMaterial;
+use App\Models\Procurement\PurchaseRequest\PurchaseRequisition;
+use App\Models\Procurement\PurchaseOrder\PurchaseOrder;
+use App\Models\Warehouse\GateReceiving\ReceiveNote;
+use App\Models\Warehouse\InboundStorage\BpbReceiveMaterial;
 use Illuminate\Support\Collection;
 
 /**

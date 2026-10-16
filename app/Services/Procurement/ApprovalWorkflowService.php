@@ -2,10 +2,10 @@
 
 namespace App\Services\Procurement;
 
-use App\Models\PurchaseRequisition;
-use App\Models\PurchaseOrder;
-use App\Models\ApprovalPr;
-use App\Models\ApprovalPo;
+use App\Models\Procurement\PurchaseRequest\PurchaseRequisition;
+use App\Models\Procurement\PurchaseOrder\PurchaseOrder;
+use App\Models\Procurement\PurchaseRequest\ApprovalPr;
+use App\Models\Procurement\PurchaseOrder\ApprovalPo;
 use App\Services\AuditLogger;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;

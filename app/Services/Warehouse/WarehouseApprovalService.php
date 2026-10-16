@@ -2,10 +2,10 @@
 
 namespace App\Services\Warehouse;
 
-use App\Models\ReceiveNote;
-use App\Models\BpbReceiveMaterial;
-use App\Models\ApprovalRn;
-use App\Models\ApprovalBpb;
+use App\Models\Warehouse\GateReceiving\ReceiveNote;
+use App\Models\Warehouse\InboundStorage\BpbReceiveMaterial;
+use App\Models\Warehouse\GateReceiving\ApprovalRn;
+use App\Models\Warehouse\InboundStorage\ApprovalBpb;
 use App\Services\AuditLogger;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;

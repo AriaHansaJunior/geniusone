@@ -2,8 +2,8 @@
 
 namespace App\Services\Warehouse;
 
-use App\Models\ReceiveNote;
-use App\Models\PurchaseOrderReceiveNote;
+use App\Models\Warehouse\GateReceiving\ReceiveNote;
+use App\Models\Warehouse\GateReceiving\PurchaseOrderReceiveNote;
 use App\Services\DocumentNumber\DocumentNumberGenerator;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;

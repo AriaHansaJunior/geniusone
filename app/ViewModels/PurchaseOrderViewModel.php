@@ -2,7 +2,7 @@
 
 namespace App\ViewModels;
 
-use App\Models\PurchaseOrder;
+use App\Models\Procurement\PurchaseOrder\PurchaseOrder;
 
 class PurchaseOrderViewModel
 {

@@ -2,11 +2,11 @@
 
 namespace App\Services\Reporting;
 
-use App\Models\PurchaseRequisition;
-use App\Models\PurchaseOrder;
-use App\Models\ReceiveNote;
-use App\Models\BpbReceiveMaterial;
-use App\Models\PurchaseOrderReceiveNote;
+use App\Models\Procurement\PurchaseRequest\PurchaseRequisition;
+use App\Models\Procurement\PurchaseOrder\PurchaseOrder;
+use App\Models\Warehouse\GateReceiving\ReceiveNote;
+use App\Models\Warehouse\InboundStorage\BpbReceiveMaterial;
+use App\Models\Warehouse\GateReceiving\PurchaseOrderReceiveNote;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 

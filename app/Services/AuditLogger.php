@@ -2,7 +2,7 @@
 
 namespace App\Services;
 
-use App\Models\Log;
+use App\Models\System\Audit\Log;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Request;
 

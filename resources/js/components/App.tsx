@@ -105,7 +105,55 @@ import type {
 } from "../pages/Warehouse/MasterWarehouse/warehouse-master-types";
 import { initialItemRecords } from "../pages/Exim/Master/Item/item-data";
 import type { ItemRecord } from "../pages/Exim/Master/Item/item-types";
+import type { SupplierFormData } from "../pages/Procurement/PurchaseMaster/Supplier/supplier-types";
 import type { PageKey, ViewState, TableRow } from "../types";
+import {
+  fetchMasterSuppliers,
+  saveSupplierApi,
+  fetchMasterPaymentTerms,
+  savePaymentTermApi,
+  fetchMasterPurchaseCategories,
+  savePurchaseCategoryApi,
+  fetchMasterDeliveryTerms,
+  saveDeliveryTermApi,
+  fetchMasterAdditionalCosts,
+  saveAdditionalCostApi,
+  fetchMasterPph,
+  savePphApi,
+  fetchMasterUnits,
+  saveUnitApi,
+  deleteUnitApi,
+  fetchMasterBrands,
+  saveBrandApi,
+  deleteBrandApi,
+  fetchMasterClassifications,
+  saveClassificationApi,
+  deleteClassificationApi,
+  fetchMasterDepartments,
+  saveDepartmentApi,
+  deleteDepartmentApi,
+  fetchMasterFacilities,
+  saveFacilityApi,
+  deleteFacilityApi,
+  fetchMasterHsCodes,
+  saveHsApi,
+  deleteHsApi,
+  fetchMasterCategories,
+  saveCategoryApi,
+  deleteCategoryApi,
+  fetchMasterStyles,
+  saveStyleApi,
+  deleteStyleApi,
+  fetchMasterColours,
+  saveColorApi,
+  fetchMasterItems,
+  saveItemApi,
+  deleteItemApi,
+  fetchMasterWarehouses,
+  saveWarehouseMasterApi,
+  saveWarehouseCoordinateApi,
+  deleteWarehouseCoordinateApi,
+} from "../data/masterApi";
 
 interface AppProps {
   initialPage?: string;
@@ -736,6 +784,67 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
   const [itemRecords, setItemRecords] = useState<ItemRecord[]>(initialItemRecords);
   const [editingItem, setEditingItem] = useState<ItemRecord | null>(null);
 
+  // Live database synchronization on mount
+  useEffect(() => {
+    let isMounted = true;
+
+    fetchMasterSuppliers().then((data) => {
+      if (isMounted && data && data.length > 0) setSupplierRecords(data);
+    });
+    fetchMasterPaymentTerms().then((data) => {
+      if (isMounted && data && data.length > 0) setPaymentTermRecords(data);
+    });
+    fetchMasterPurchaseCategories().then((data) => {
+      if (isMounted && data && data.length > 0) setPurchaseCategoryRecords(data);
+    });
+    fetchMasterDeliveryTerms().then((data) => {
+      if (isMounted && data && data.length > 0) setDeliveryTermRecords(data);
+    });
+    fetchMasterAdditionalCosts().then((data) => {
+      if (isMounted && data && data.length > 0) setAdditionalCostRecords(data);
+    });
+    fetchMasterPph().then((data) => {
+      if (isMounted && data && data.length > 0) setPphRecords(data);
+    });
+    fetchMasterUnits().then((data) => {
+      if (isMounted && data && data.length > 0) setUnitRecords(data);
+    });
+    fetchMasterBrands().then((data) => {
+      if (isMounted && data && data.length > 0) setBrandRecords(data);
+    });
+    fetchMasterClassifications().then((data) => {
+      if (isMounted && data && data.length > 0) setClassificationRecords(data);
+    });
+    fetchMasterDepartments().then((data) => {
+      if (isMounted && data && data.length > 0) setDepartmentRecords(data);
+    });
+    fetchMasterFacilities().then((data) => {
+      if (isMounted && data && data.length > 0) setFacilityRecords(data);
+    });
+    fetchMasterHsCodes().then((data) => {
+      if (isMounted && data && data.length > 0) setHsRecords(data);
+    });
+    fetchMasterCategories().then((data) => {
+      if (isMounted && data && data.length > 0) setCategoryRecords(data);
+    });
+    fetchMasterStyles().then((data) => {
+      if (isMounted && data && data.length > 0) setStyleRecords(data);
+    });
+    fetchMasterColours().then((data) => {
+      if (isMounted && data && data.length > 0) setColorRecords(data);
+    });
+    fetchMasterItems().then((data) => {
+      if (isMounted && data && data.length > 0) setItemRecords(data);
+    });
+    fetchMasterWarehouses().then((data) => {
+      if (isMounted && data && data.length > 0) setWarehouseMasterRecords(data);
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   const handleTogglePphHide = useCallback((id: string) => {
     setPphRecords((prev) =>
       prev.map((r) => (r.id === id ? { ...r, hidden: !r.hidden } : r))
@@ -771,6 +880,99 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
       prev.map((r) => (r.id === id ? { ...r, hidden: !r.hidden } : r))
     );
   }, []);
+
+  const handleSaveSupplier = useCallback(
+    async (formData: SupplierFormData) => {
+      try {
+        const saved = await saveSupplierApi(formData);
+        if (saved) {
+          setSupplierRecords((prev) => [saved, ...prev.map((s, idx) => ({ ...s, no: idx + 2 }))]);
+        }
+      } catch (err) {
+        console.warn("Failed to persist supplier to backend:", err);
+      }
+      handleNavigateList("supplier", "/procurement/purchase-master/supplier");
+    },
+    [handleNavigateList]
+  );
+
+  const handleSavePaymentTerm = useCallback(
+    async (data: { name: string }) => {
+      try {
+        const saved = await savePaymentTermApi(data.name);
+        if (saved) {
+          setPaymentTermRecords((prev) => [saved, ...prev.map((p, idx) => ({ ...p, no: idx + 2 }))]);
+        }
+      } catch (err) {
+        console.warn("Failed to persist payment term to backend:", err);
+      }
+      handleNavigateList("payment-term", "/procurement/purchase-master/payment-term");
+    },
+    [handleNavigateList]
+  );
+
+  const handleSavePurchaseCategory = useCallback(
+    async (data: { code: string; name: string }) => {
+      try {
+        const saved = await savePurchaseCategoryApi(data.code, data.name);
+        if (saved) {
+          setPurchaseCategoryRecords((prev) => [saved, ...prev.map((c, idx) => ({ ...c, no: idx + 2 }))]);
+        }
+      } catch (err) {
+        console.warn("Failed to persist purchase category to backend:", err);
+      }
+      handleNavigateList("purchase-category", "/procurement/purchase-master/purchase-category");
+    },
+    [handleNavigateList]
+  );
+
+  const handleSaveDeliveryTerm = useCallback(
+    async (data: { name: string }) => {
+      try {
+        const saved = await saveDeliveryTermApi(data.name);
+        if (saved) {
+          setDeliveryTermRecords((prev) => [saved, ...prev.map((d, idx) => ({ ...d, no: idx + 2 }))]);
+        }
+      } catch (err) {
+        console.warn("Failed to persist delivery term to backend:", err);
+      }
+      handleNavigateList("delivery-terms", "/procurement/purchase-master/delivery-terms");
+    },
+    [handleNavigateList]
+  );
+
+  const handleSaveAdditionalCost = useCallback(
+    async (data: { code: string; name: string }) => {
+      try {
+        const saved = await saveAdditionalCostApi(data.code, data.name);
+        if (saved) {
+          setAdditionalCostRecords((prev) => [saved, ...prev.map((a, idx) => ({ ...a, no: idx + 2 }))]);
+        }
+      } catch (err) {
+        console.warn("Failed to persist additional cost to backend:", err);
+      }
+      handleNavigateList("additional-costs", "/procurement/purchase-master/additional-costs");
+    },
+    [handleNavigateList]
+  );
+
+  const handleSavePph = useCallback(
+    async (newRec: PphRecord) => {
+      try {
+        const saved = await savePphApi(newRec);
+        if (saved) {
+          setPphRecords((prev) => [saved, ...prev]);
+        } else {
+          setPphRecords((prev) => [newRec, ...prev]);
+        }
+      } catch (err) {
+        console.warn("Failed to persist pph to backend:", err);
+        setPphRecords((prev) => [newRec, ...prev]);
+      }
+      handleNavigateList("pph", "/procurement/purchase-master/pph");
+    },
+    [handleNavigateList]
+  );
 
   // Navigate to create new record view
   const handleNavigateCreate = useCallback((module: "warehouse" | "supplier" | "payment-term" | "purchase-category" | "delivery-terms" | "additional-costs" | "pph" | "unit" | "classification" | "department" | "brand" | "facility" | "hs" | "category" | "style" | "colour" | "color" | "item" | "receive-note" | "receive-note-return") => {
@@ -1001,19 +1203,36 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
     }
   }, []);
 
-  const handleSaveUnit = useCallback((record: UnitRecord, isEdit: boolean) => {
-    if (isEdit) {
-      setUnitRecords((prev) =>
-        prev.map((u) => (u.id === record.id ? record : u))
-      );
-    } else {
-      setUnitRecords((prev) => [record, ...prev]);
-    }
-    setEditingUnit(null);
-    handleNavigateList("unit", "/exim/master/unit");
-  }, [handleNavigateList]);
+  const handleSaveUnit = useCallback(
+    async (record: UnitRecord, isEdit: boolean) => {
+      try {
+        const saved = await saveUnitApi(record, isEdit);
+        const toSave = saved || record;
+        if (isEdit) {
+          setUnitRecords((prev) => prev.map((u) => (u.id === toSave.id ? toSave : u)));
+        } else {
+          setUnitRecords((prev) => [toSave, ...prev]);
+        }
+      } catch (err) {
+        console.warn("Unit API sync failed:", err);
+        if (isEdit) {
+          setUnitRecords((prev) => prev.map((u) => (u.id === record.id ? record : u)));
+        } else {
+          setUnitRecords((prev) => [record, ...prev]);
+        }
+      }
+      setEditingUnit(null);
+      handleNavigateList("unit", "/exim/master/unit");
+    },
+    [handleNavigateList]
+  );
 
-  const handleDeleteUnit = useCallback((id: string) => {
+  const handleDeleteUnit = useCallback(async (id: string) => {
+    try {
+      await deleteUnitApi(id);
+    } catch (err) {
+      console.warn("Unit API delete failed:", err);
+    }
     setUnitRecords((prev) => prev.filter((u) => u.id !== id));
   }, []);
 
@@ -1028,19 +1247,36 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
     }
   }, []);
 
-  const handleSaveClassification = useCallback((record: ClassificationRecord, isEdit: boolean) => {
-    if (isEdit) {
-      setClassificationRecords((prev) =>
-        prev.map((c) => (c.id === record.id ? record : c))
-      );
-    } else {
-      setClassificationRecords((prev) => [record, ...prev]);
-    }
-    setEditingClassification(null);
-    handleNavigateList("classification", "/exim/master/classification");
-  }, [handleNavigateList]);
+  const handleSaveClassification = useCallback(
+    async (record: ClassificationRecord, isEdit: boolean) => {
+      try {
+        const saved = await saveClassificationApi(record, isEdit);
+        const toSave = saved || record;
+        if (isEdit) {
+          setClassificationRecords((prev) => prev.map((c) => (c.id === toSave.id ? toSave : c)));
+        } else {
+          setClassificationRecords((prev) => [toSave, ...prev]);
+        }
+      } catch (err) {
+        console.warn("Classification API sync failed:", err);
+        if (isEdit) {
+          setClassificationRecords((prev) => prev.map((c) => (c.id === record.id ? record : c)));
+        } else {
+          setClassificationRecords((prev) => [record, ...prev]);
+        }
+      }
+      setEditingClassification(null);
+      handleNavigateList("classification", "/exim/master/classification");
+    },
+    [handleNavigateList]
+  );
 
-  const handleDeleteClassification = useCallback((id: string) => {
+  const handleDeleteClassification = useCallback(async (id: string) => {
+    try {
+      await deleteClassificationApi(id);
+    } catch (err) {
+      console.warn("Classification delete failed:", err);
+    }
     setClassificationRecords((prev) => prev.filter((c) => c.id !== id));
   }, []);
 
@@ -1061,19 +1297,36 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
     }
   }, []);
 
-  const handleSaveDepartment = useCallback((record: DepartmentRecord, isEdit: boolean) => {
-    if (isEdit) {
-      setDepartmentRecords((prev) =>
-        prev.map((d) => (d.id === record.id ? record : d))
-      );
-    } else {
-      setDepartmentRecords((prev) => [record, ...prev]);
-    }
-    setEditingDepartment(null);
-    handleNavigateList("department", "/exim/master/department");
-  }, [handleNavigateList]);
+  const handleSaveDepartment = useCallback(
+    async (record: DepartmentRecord, isEdit: boolean) => {
+      try {
+        const saved = await saveDepartmentApi(record, isEdit);
+        const toSave = saved || record;
+        if (isEdit) {
+          setDepartmentRecords((prev) => prev.map((d) => (d.id === toSave.id ? toSave : d)));
+        } else {
+          setDepartmentRecords((prev) => [toSave, ...prev]);
+        }
+      } catch (err) {
+        console.warn("Department API sync failed:", err);
+        if (isEdit) {
+          setDepartmentRecords((prev) => prev.map((d) => (d.id === record.id ? record : d)));
+        } else {
+          setDepartmentRecords((prev) => [record, ...prev]);
+        }
+      }
+      setEditingDepartment(null);
+      handleNavigateList("department", "/exim/master/department");
+    },
+    [handleNavigateList]
+  );
 
-  const handleDeleteDepartment = useCallback((id: string) => {
+  const handleDeleteDepartment = useCallback(async (id: string) => {
+    try {
+      await deleteDepartmentApi(id);
+    } catch (err) {
+      console.warn("Department delete failed:", err);
+    }
     setDepartmentRecords((prev) => prev.filter((d) => d.id !== id));
   }, []);
 
@@ -1094,19 +1347,36 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
     }
   }, []);
 
-  const handleSaveBrand = useCallback((record: BrandRecord, isEdit: boolean) => {
-    if (isEdit) {
-      setBrandRecords((prev) =>
-        prev.map((b) => (b.id === record.id ? record : b))
-      );
-    } else {
-      setBrandRecords((prev) => [record, ...prev]);
-    }
-    setEditingBrand(null);
-    handleNavigateList("brand", "/exim/master/brand");
-  }, [handleNavigateList]);
+  const handleSaveBrand = useCallback(
+    async (record: BrandRecord, isEdit: boolean) => {
+      try {
+        const saved = await saveBrandApi(record, isEdit);
+        const toSave = saved || record;
+        if (isEdit) {
+          setBrandRecords((prev) => prev.map((b) => (b.id === toSave.id ? toSave : b)));
+        } else {
+          setBrandRecords((prev) => [toSave, ...prev]);
+        }
+      } catch (err) {
+        console.warn("Brand API sync failed:", err);
+        if (isEdit) {
+          setBrandRecords((prev) => prev.map((b) => (b.id === record.id ? record : b)));
+        } else {
+          setBrandRecords((prev) => [record, ...prev]);
+        }
+      }
+      setEditingBrand(null);
+      handleNavigateList("brand", "/exim/master/brand");
+    },
+    [handleNavigateList]
+  );
 
-  const handleDeleteBrand = useCallback((id: string) => {
+  const handleDeleteBrand = useCallback(async (id: string) => {
+    try {
+      await deleteBrandApi(id);
+    } catch (err) {
+      console.warn("Brand delete failed:", err);
+    }
     setBrandRecords((prev) => prev.filter((b) => b.id !== id));
   }, []);
 
@@ -1127,19 +1397,36 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
     }
   }, []);
 
-  const handleSaveFacility = useCallback((record: FacilityRecord, isEdit: boolean) => {
-    if (isEdit) {
-      setFacilityRecords((prev) =>
-        prev.map((f) => (f.id === record.id ? record : f))
-      );
-    } else {
-      setFacilityRecords((prev) => [record, ...prev]);
-    }
-    setEditingFacility(null);
-    handleNavigateList("facility", "/exim/master/facility");
-  }, [handleNavigateList]);
+  const handleSaveFacility = useCallback(
+    async (record: FacilityRecord, isEdit: boolean) => {
+      try {
+        const saved = await saveFacilityApi(record, isEdit);
+        const toSave = saved || record;
+        if (isEdit) {
+          setFacilityRecords((prev) => prev.map((f) => (f.id === toSave.id ? toSave : f)));
+        } else {
+          setFacilityRecords((prev) => [toSave, ...prev]);
+        }
+      } catch (err) {
+        console.warn("Facility API sync failed:", err);
+        if (isEdit) {
+          setFacilityRecords((prev) => prev.map((f) => (f.id === record.id ? record : f)));
+        } else {
+          setFacilityRecords((prev) => [record, ...prev]);
+        }
+      }
+      setEditingFacility(null);
+      handleNavigateList("facility", "/exim/master/facility");
+    },
+    [handleNavigateList]
+  );
 
-  const handleDeleteFacility = useCallback((id: string) => {
+  const handleDeleteFacility = useCallback(async (id: string) => {
+    try {
+      await deleteFacilityApi(id);
+    } catch (err) {
+      console.warn("Facility delete failed:", err);
+    }
     setFacilityRecords((prev) => prev.filter((f) => f.id !== id));
   }, []);
 
@@ -1160,19 +1447,36 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
     }
   }, []);
 
-  const handleSaveHs = useCallback((record: HsRecord, isEdit: boolean) => {
-    if (isEdit) {
-      setHsRecords((prev) =>
-        prev.map((h) => (h.id === record.id ? record : h))
-      );
-    } else {
-      setHsRecords((prev) => [record, ...prev]);
-    }
-    setEditingHs(null);
-    handleNavigateList("hs", "/exim/master/hs");
-  }, [handleNavigateList]);
+  const handleSaveHs = useCallback(
+    async (record: HsRecord, isEdit: boolean) => {
+      try {
+        const saved = await saveHsApi(record, isEdit);
+        const toSave = saved || record;
+        if (isEdit) {
+          setHsRecords((prev) => prev.map((h) => (h.id === toSave.id ? toSave : h)));
+        } else {
+          setHsRecords((prev) => [toSave, ...prev]);
+        }
+      } catch (err) {
+        console.warn("HS API sync failed:", err);
+        if (isEdit) {
+          setHsRecords((prev) => prev.map((h) => (h.id === record.id ? record : h)));
+        } else {
+          setHsRecords((prev) => [record, ...prev]);
+        }
+      }
+      setEditingHs(null);
+      handleNavigateList("hs", "/exim/master/hs");
+    },
+    [handleNavigateList]
+  );
 
-  const handleDeleteHs = useCallback((id: string) => {
+  const handleDeleteHs = useCallback(async (id: string) => {
+    try {
+      await deleteHsApi(id);
+    } catch (err) {
+      console.warn("HS delete failed:", err);
+    }
     setHsRecords((prev) => prev.filter((h) => h.id !== id));
   }, []);
 
@@ -1187,19 +1491,36 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
     }
   }, []);
 
-  const handleSaveCategory = useCallback((record: CategoryRecord, isEdit: boolean) => {
-    if (isEdit) {
-      setCategoryRecords((prev) =>
-        prev.map((c) => (c.id === record.id ? record : c))
-      );
-    } else {
-      setCategoryRecords((prev) => [record, ...prev]);
-    }
-    setEditingCategory(null);
-    handleNavigateList("category", "/exim/master/category");
-  }, [handleNavigateList]);
+  const handleSaveCategory = useCallback(
+    async (record: CategoryRecord, isEdit: boolean) => {
+      try {
+        const saved = await saveCategoryApi(record, isEdit);
+        const toSave = saved || record;
+        if (isEdit) {
+          setCategoryRecords((prev) => prev.map((c) => (c.id === toSave.id ? toSave : c)));
+        } else {
+          setCategoryRecords((prev) => [toSave, ...prev]);
+        }
+      } catch (err) {
+        console.warn("Category API sync failed:", err);
+        if (isEdit) {
+          setCategoryRecords((prev) => prev.map((c) => (c.id === record.id ? record : c)));
+        } else {
+          setCategoryRecords((prev) => [record, ...prev]);
+        }
+      }
+      setEditingCategory(null);
+      handleNavigateList("category", "/exim/master/category");
+    },
+    [handleNavigateList]
+  );
 
-  const handleDeleteCategory = useCallback((id: string) => {
+  const handleDeleteCategory = useCallback(async (id: string) => {
+    try {
+      await deleteCategoryApi(id);
+    } catch (err) {
+      console.warn("Category delete failed:", err);
+    }
     setCategoryRecords((prev) => prev.filter((c) => c.id !== id));
   }, []);
 
@@ -1230,19 +1551,36 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
     }
   }, []);
 
-  const handleSaveStyle = useCallback((record: StyleRecord, isEdit: boolean) => {
-    if (isEdit) {
-      setStyleRecords((prev) =>
-        prev.map((s) => (s.id === record.id ? record : s))
-      );
-    } else {
-      setStyleRecords((prev) => [record, ...prev]);
-    }
-    setEditingStyle(null);
-    handleNavigateList("style", "/exim/master/style");
-  }, [handleNavigateList]);
+  const handleSaveStyle = useCallback(
+    async (record: StyleRecord, isEdit: boolean) => {
+      try {
+        const saved = await saveStyleApi(record, isEdit);
+        const toSave = saved || record;
+        if (isEdit) {
+          setStyleRecords((prev) => prev.map((s) => (s.id === toSave.id ? toSave : s)));
+        } else {
+          setStyleRecords((prev) => [toSave, ...prev]);
+        }
+      } catch (err) {
+        console.warn("Style API sync failed:", err);
+        if (isEdit) {
+          setStyleRecords((prev) => prev.map((s) => (s.id === record.id ? record : s)));
+        } else {
+          setStyleRecords((prev) => [record, ...prev]);
+        }
+      }
+      setEditingStyle(null);
+      handleNavigateList("style", "/exim/master/style");
+    },
+    [handleNavigateList]
+  );
 
-  const handleDeleteStyle = useCallback((id: string) => {
+  const handleDeleteStyle = useCallback(async (id: string) => {
+    try {
+      await deleteStyleApi(id);
+    } catch (err) {
+      console.warn("Style delete failed:", err);
+    }
     setStyleRecords((prev) => prev.filter((s) => s.id !== id));
   }, []);
 
@@ -1252,10 +1590,20 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
     );
   }, []);
 
-  const handleSaveColor = useCallback((record: ColorRecord) => {
-    setColorRecords((prev) => [record, ...prev]);
-    handleNavigateList("colour", "/exim/master/colour");
-  }, [handleNavigateList]);
+  const handleSaveColor = useCallback(
+    async (record: ColorRecord) => {
+      try {
+        const saved = await saveColorApi(record);
+        const toSave = saved || record;
+        setColorRecords((prev) => [toSave, ...prev]);
+      } catch (err) {
+        console.warn("Color API sync failed:", err);
+        setColorRecords((prev) => [record, ...prev]);
+      }
+      handleNavigateList("colour", "/exim/master/colour");
+    },
+    [handleNavigateList]
+  );
 
   const handleNavigateReceiveNoteDetail = useCallback((rnNumber: string) => {
     const slug = rnNumber.replace(/[\/\\]/g, "-");
@@ -1334,63 +1682,95 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
     }
   }, []);
 
-  const handleSaveWarehouseMaster = useCallback((newRecord: WarehouseMasterRecord) => {
-    setWarehouseMasterRecords((prev) => [
-      { ...newRecord, no: 1 },
-      ...prev.map((w) => ({ ...w, no: w.no + 1 })),
-    ]);
-    const nextState: ViewState = { type: "list", page: "warehouse-master" };
-    setViewState(nextState);
+  const handleSaveWarehouseMaster = useCallback(
+    async (newRecord: WarehouseMasterRecord) => {
+      try {
+        const saved = await saveWarehouseMasterApi(newRecord);
+        const toSave = saved || newRecord;
+        setWarehouseMasterRecords((prev) => [
+          { ...toSave, no: 1 },
+          ...prev.map((w) => ({ ...w, no: w.no + 1 })),
+        ]);
+      } catch (err) {
+        console.warn("Warehouse Master API sync failed:", err);
+        setWarehouseMasterRecords((prev) => [
+          { ...newRecord, no: 1 },
+          ...prev.map((w) => ({ ...w, no: w.no + 1 })),
+        ]);
+      }
+      const nextState: ViewState = { type: "list", page: "warehouse-master" };
+      setViewState(nextState);
 
-    if (typeof window !== "undefined") {
-      window.scrollTo(0, 0);
-      window.history.pushState(nextState, "", "/warehouse/master/warehouse");
-    }
-  }, []);
+      if (typeof window !== "undefined") {
+        window.scrollTo(0, 0);
+        window.history.pushState(nextState, "", "/warehouse/master/warehouse");
+      }
+    },
+    []
+  );
 
-  const handleSaveWarehouseCoordinate = useCallback((newCoordinate: WarehouseCoordinateRecord) => {
-    setWarehouseMasterRecords((prev) =>
-      prev.map((w) => {
-        if (w.id === newCoordinate.warehouseId) {
-          const currentCoords = w.coordinates || [];
-          return {
-            ...w,
-            coordinates: [...currentCoords, newCoordinate],
-          };
-        }
-        return w;
-      })
-    );
+  const handleSaveWarehouseCoordinate = useCallback(
+    async (newCoordinate: WarehouseCoordinateRecord) => {
+      let createdCoord = newCoordinate;
+      try {
+        const saved = await saveWarehouseCoordinateApi(newCoordinate);
+        if (saved) createdCoord = saved;
+      } catch (err) {
+        console.warn("Warehouse coordinate API sync failed:", err);
+      }
 
-    const nextState: ViewState = {
-      type: "warehouse-coordinate",
-      warehouseId: newCoordinate.warehouseId,
-    };
-    setViewState(nextState);
-
-    if (typeof window !== "undefined") {
-      window.scrollTo(0, 0);
-      window.history.pushState(
-        nextState,
-        "",
-        `/warehouse/master/warehouse/${newCoordinate.warehouseId}/coordinate`
+      setWarehouseMasterRecords((prev) =>
+        prev.map((w) => {
+          if (w.id === newCoordinate.warehouseId) {
+            const currentCoords = w.coordinates || [];
+            return {
+              ...w,
+              coordinates: [...currentCoords, createdCoord],
+            };
+          }
+          return w;
+        })
       );
-    }
-  }, []);
 
-  const handleDeleteWarehouseCoordinate = useCallback((warehouseId: string, coordinateId: string) => {
-    setWarehouseMasterRecords((prev) =>
-      prev.map((w) => {
-        if (w.id === warehouseId) {
-          return {
-            ...w,
-            coordinates: (w.coordinates || []).filter((c) => c.id !== coordinateId),
-          };
-        }
-        return w;
-      })
-    );
-  }, []);
+      const nextState: ViewState = {
+        type: "warehouse-coordinate",
+        warehouseId: newCoordinate.warehouseId,
+      };
+      setViewState(nextState);
+
+      if (typeof window !== "undefined") {
+        window.scrollTo(0, 0);
+        window.history.pushState(
+          nextState,
+          "",
+          `/warehouse/master/warehouse/${newCoordinate.warehouseId}/coordinate`
+        );
+      }
+    },
+    []
+  );
+
+  const handleDeleteWarehouseCoordinate = useCallback(
+    async (warehouseId: string, coordinateId: string) => {
+      try {
+        await deleteWarehouseCoordinateApi(coordinateId);
+      } catch (err) {
+        console.warn("Warehouse coordinate delete failed:", err);
+      }
+      setWarehouseMasterRecords((prev) =>
+        prev.map((w) => {
+          if (w.id === warehouseId) {
+            return {
+              ...w,
+              coordinates: (w.coordinates || []).filter((c) => c.id !== coordinateId),
+            };
+          }
+          return w;
+        })
+      );
+    },
+    []
+  );
 
   const handleSaveReceiveNoteReturn = useCallback((newRecord: ReceiveNoteReturnRecord) => {
     setReceiveNoteReturnRecords((prev) => [
@@ -1427,19 +1807,36 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
     }
   }, []);
 
-  const handleSaveItem = useCallback((record: ItemRecord, isEdit: boolean) => {
-    if (isEdit) {
-      setItemRecords((prev) =>
-        prev.map((i) => (i.id === record.id ? record : i))
-      );
-    } else {
-      setItemRecords((prev) => [record, ...prev]);
-    }
-    setEditingItem(null);
-    handleNavigateList("item", "/exim/master/item");
-  }, [handleNavigateList]);
+  const handleSaveItem = useCallback(
+    async (record: ItemRecord, isEdit: boolean) => {
+      try {
+        const saved = await saveItemApi(record, isEdit);
+        const toSave = saved || record;
+        if (isEdit) {
+          setItemRecords((prev) => prev.map((i) => (i.id === toSave.id ? toSave : i)));
+        } else {
+          setItemRecords((prev) => [toSave, ...prev]);
+        }
+      } catch (err) {
+        console.warn("Item API sync failed:", err);
+        if (isEdit) {
+          setItemRecords((prev) => prev.map((i) => (i.id === record.id ? record : i)));
+        } else {
+          setItemRecords((prev) => [record, ...prev]);
+        }
+      }
+      setEditingItem(null);
+      handleNavigateList("item", "/exim/master/item");
+    },
+    [handleNavigateList]
+  );
 
-  const handleDeleteItem = useCallback((id: string) => {
+  const handleDeleteItem = useCallback(async (id: string) => {
+    try {
+      await deleteItemApi(id);
+    } catch (err) {
+      console.warn("Item delete failed:", err);
+    }
     setItemRecords((prev) => prev.filter((i) => i.id !== id));
   }, []);
 
@@ -1942,40 +2339,42 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
         {viewState.type === "supplier-create" && (
           <SupplierForm
             onBack={() => handleNavigateList("supplier", "/procurement/purchase-master/supplier")}
+            onSave={handleSaveSupplier}
           />
         )}
 
         {viewState.type === "payment-term-create" && (
           <PaymentTermForm
             onBack={() => handleNavigateList("payment-term", "/procurement/purchase-master/payment-term")}
+            onSave={handleSavePaymentTerm}
           />
         )}
 
         {viewState.type === "purchase-category-create" && (
           <PurchaseCategoryForm
             onBack={() => handleNavigateList("purchase-category", "/procurement/purchase-master/purchase-category")}
+            onSave={handleSavePurchaseCategory}
           />
         )}
 
         {viewState.type === "delivery-terms-create" && (
           <DeliveryTermsForm
             onBack={() => handleNavigateList("delivery-terms", "/procurement/purchase-master/delivery-terms")}
+            onSave={handleSaveDeliveryTerm}
           />
         )}
 
         {viewState.type === "additional-costs-create" && (
           <AdditionalCostsForm
             onBack={() => handleNavigateList("additional-costs", "/procurement/purchase-master/additional-costs")}
+            onSave={handleSaveAdditionalCost}
           />
         )}
 
         {viewState.type === "pph-create" && (
           <PphForm
             onBack={() => handleNavigateList("pph", "/procurement/purchase-master/pph")}
-            onSave={(newRec) => {
-              setPphRecords((prev) => [newRec, ...prev]);
-              handleNavigateList("pph", "/procurement/purchase-master/pph");
-            }}
+            onSave={handleSavePph}
           />
         )}
 

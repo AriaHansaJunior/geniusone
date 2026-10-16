@@ -22,9 +22,9 @@ export { AdditionalCostsIndex } from "./Procurement/PurchaseMaster/AdditionalCos
 export { AdditionalCostsForm } from "./Procurement/PurchaseMaster/AdditionalCosts/AdditionalCostsForm";
 export { PphIndex } from "./Procurement/PurchaseMaster/Pph/PphIndex";
 export { PphForm } from "./Procurement/PurchaseMaster/Pph/PphForm";
-export { Warehouse } from "./Warehouse/Warehouse";
-export { WarehouseDetail } from "./Warehouse/WarehouseDetail";
-export { WarehouseCreate } from "./Warehouse/WarehouseCreate";
+export { Warehouse } from "./Warehouse/ReceiveMaterial/Warehouse";
+export { WarehouseDetail } from "./Warehouse/ReceiveMaterial/WarehouseDetail";
+export { WarehouseCreate } from "./Warehouse/ReceiveMaterial/WarehouseCreate";
 export { UnitIndex } from "./Exim/Master/Unit/UnitIndex";
 export { UnitForm } from "./Exim/Master/Unit/UnitForm";
 export { UnitReferenceIndex } from "./Exim/Master/UnitReference/UnitReferenceIndex";

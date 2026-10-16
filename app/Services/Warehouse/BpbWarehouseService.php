@@ -2,10 +2,10 @@
 
 namespace App\Services\Warehouse;
 
-use App\Models\BpbReceiveMaterial;
-use App\Models\PoRnToBpb;
-use App\Models\PurchaseOrderReceiveNote;
-use App\Models\Item;
+use App\Models\Warehouse\InboundStorage\BpbReceiveMaterial;
+use App\Models\Warehouse\InboundStorage\PoRnToBpb;
+use App\Models\Warehouse\GateReceiving\PurchaseOrderReceiveNote;
+use App\Models\Master\Material\Item;
 use App\Services\DocumentNumber\DocumentNumberGenerator;
 use App\Services\Inventory\InventoryService;
 use App\Services\AuditLogger;

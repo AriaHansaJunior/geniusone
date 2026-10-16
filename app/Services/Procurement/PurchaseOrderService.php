@@ -2,9 +2,9 @@
 
 namespace App\Services\Procurement;
 
-use App\Models\PurchaseOrder;
-use App\Models\PurchaseOrderItem;
-use App\Models\AdditionalCost;
+use App\Models\Procurement\PurchaseOrder\PurchaseOrder;
+use App\Models\Procurement\PurchaseOrder\PurchaseOrderItem;
+use App\Models\Procurement\PurchaseOrder\AdditionalCost;
 use App\Services\DocumentNumber\DocumentNumberGenerator;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;

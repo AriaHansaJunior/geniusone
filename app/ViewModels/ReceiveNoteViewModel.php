@@ -2,7 +2,7 @@
 
 namespace App\ViewModels;
 
-use App\Models\ReceiveNote;
+use App\Models\Warehouse\GateReceiving\ReceiveNote;
 
 class ReceiveNoteViewModel
 {

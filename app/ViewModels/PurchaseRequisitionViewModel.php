@@ -2,7 +2,7 @@
 
 namespace App\ViewModels;
 
-use App\Models\PurchaseRequisition;
+use App\Models\Procurement\PurchaseRequest\PurchaseRequisition;
 
 class PurchaseRequisitionViewModel
 {

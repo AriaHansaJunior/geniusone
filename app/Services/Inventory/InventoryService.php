@@ -2,7 +2,7 @@
 
 namespace App\Services\Inventory;
 
-use App\Models\Item;
+use App\Models\Master\Material\Item;
 use App\Services\AuditLogger;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;

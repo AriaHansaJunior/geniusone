@@ -5,43 +5,56 @@ namespace Database\Seeders;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
-use App\Models\User;
-use App\Models\Department;
-use App\Models\Section;
-use App\Models\Currency;
-use App\Models\Valuta;
-use App\Models\UnitOfMeasurement;
-use App\Models\Category;
-use App\Models\Classification;
-use App\Models\Facility;
-use App\Models\Origin;
-use App\Models\Port;
-use App\Models\ItemType;
-use App\Models\JobNumber;
-use App\Models\WarehouseType;
-use App\Models\Warehouse;
-use App\Models\PaymentTerm;
-use App\Models\PaymentMethod;
-use App\Models\DeliveryTerm;
-use App\Models\PoType;
-use App\Models\RafaksiType;
-use App\Models\ReportingType;
-use App\Models\Account;
-use App\Models\Supplier;
-use App\Models\Item;
-use App\Models\PurchaseRequisition;
-use App\Models\PurchaseRequisitionItem;
-use App\Models\PurchaseOrder;
-use App\Models\PurchaseOrderItem;
-use App\Models\ReceiveNote;
-use App\Models\PurchaseOrderReceiveNote;
-use App\Models\BpbReceiveMaterial;
-use App\Models\PoRnToBpb;
-use App\Models\ApprovalPr;
-use App\Models\ApprovalPo;
-use App\Models\ApprovalRn;
-use App\Models\ApprovalBpb;
-use App\Models\Log;
+use App\Models\System\Auth\User;
+use App\Models\System\Audit\Log;
+use App\Models\Master\Organization\Department;
+use App\Models\Master\Organization\Section;
+use App\Models\Master\Organization\ReportingType;
+use App\Models\Master\Organization\JobNumber;
+use App\Models\Master\Finance\Currency;
+use App\Models\Master\Finance\Valuta;
+use App\Models\Master\Finance\PaymentTerm;
+use App\Models\Master\Finance\PaymentMethod;
+use App\Models\Master\Finance\DeliveryTerm;
+use App\Models\Master\Finance\RafaksiType;
+use App\Models\Master\Finance\Account;
+use App\Models\Master\Finance\Pph;
+use App\Models\Master\Finance\PphType;
+use App\Models\Master\Material\UnitOfMeasurement;
+use App\Models\Master\Material\Category;
+use App\Models\Master\Material\Classification;
+use App\Models\Master\Material\Brand;
+use App\Models\Master\Material\Style;
+use App\Models\Master\Material\Colour;
+use App\Models\Master\Material\ItemType;
+use App\Models\Master\Material\Item;
+use App\Models\Master\Customs\Facility;
+use App\Models\Master\Customs\HsCode;
+use App\Models\Procurement\PurchaseOrder\AdditionalCostType;
+use App\Models\Master\Partner\Origin;
+use App\Models\Master\Partner\Port;
+use App\Models\Master\Partner\Supplier;
+use App\Models\Master\Partner\Country;
+use App\Models\Warehouse\Facility\WarehouseType;
+use App\Models\Warehouse\Facility\Warehouse;
+use App\Models\Procurement\PurchaseOrder\PoType;
+use App\Models\Procurement\PurchaseRequest\PurchaseRequisition;
+use App\Models\Procurement\PurchaseRequest\PurchaseRequisitionItem;
+use App\Models\Procurement\PurchaseRequest\ApprovalPr;
+use App\Models\Procurement\PurchaseOrder\PurchaseOrder;
+use App\Models\Procurement\PurchaseOrder\PurchaseOrderItem;
+use App\Models\Procurement\PurchaseOrder\ApprovalPo;
+use App\Models\Warehouse\GateReceiving\ReceiveNote;
+use App\Models\Warehouse\GateReceiving\PurchaseOrderReceiveNote;
+use App\Models\Warehouse\GateReceiving\ApprovalRn;
+use App\Models\Warehouse\InboundStorage\BpbReceiveMaterial;
+use App\Models\Warehouse\InboundStorage\PoRnToBpb;
+use App\Models\Warehouse\InboundStorage\ApprovalBpb;
+use App\Models\Warehouse\Facility\WarehouseCoordinate;
+use App\Models\Warehouse\GateReceiving\ReceiveNoteReturn;
+use App\Models\Warehouse\GateReceiving\ReceiveNoteReturnItem;
+use App\Models\Master\Customs\DocumentHistory;
+use App\Models\Master\Customs\DocumentHistoryItem;
 use Carbon\Carbon;
 
 class GeniusOneDemoSeeder extends Seeder
@@ -150,15 +163,60 @@ class GeniusOneDemoSeeder extends Seeder
         $whB2 = Warehouse::firstOrCreate(['name' => 'Gudang Sparepart B2'], ['warehouse_types_id' => $whTypeSpare->id, 'description' => 'Komponen Mesin & Kelistrikan']);
         $whC3 = Warehouse::firstOrCreate(['name' => 'Gudang Kimia C3'], ['warehouse_types_id' => $whTypeChem->id, 'description' => 'Asam Sulfat & Reagen Pembersih']);
 
-        $country = \App\Models\Country::firstOrCreate(['name' => 'Indonesia']);
+        WarehouseCoordinate::firstOrCreate(['warehouses_id' => $whA1->id, 'name' => 'RACK-A1-01'], ['description' => 'Rak Besi Lantai 1']);
+        WarehouseCoordinate::firstOrCreate(['warehouses_id' => $whA1->id, 'name' => 'RACK-A1-02'], ['description' => 'Rak Besi Lantai 2']);
+        WarehouseCoordinate::firstOrCreate(['warehouses_id' => $whB2->id, 'name' => 'ZONE-B2-01'], ['description' => 'Area Sparepart Elektrik']);
+
+        $country = Country::firstOrCreate(['name' => 'Indonesia']);
         $payTerm30 = PaymentTerm::firstOrCreate(['name' => 'Net 30 Days']);
         $payTerm14 = PaymentTerm::firstOrCreate(['name' => 'Net 14 Days']);
         $payMethodTf = PaymentMethod::firstOrCreate(['name' => 'Bank Transfer']);
         $delivLoco = DeliveryTerm::firstOrCreate(['name' => 'Loco Pabrik']);
         $delivFranco = DeliveryTerm::firstOrCreate(['name' => 'Franco Gudang Surabaya']);
         $poTypeStd = PoType::firstOrCreate(['code' => 'STD'], ['name' => 'PO Standard']);
+        $poTypeImp = PoType::firstOrCreate(['code' => 'IMP'], ['name' => 'PO Import']);
+        $poTypeJasa = PoType::firstOrCreate(['code' => 'SRV'], ['name' => 'PO Jasa Perbaikan']);
         $rafaksiAir = RafaksiType::firstOrCreate(['name' => 'Kadar Air & Kotoran']);
         $portPerak = Port::firstOrCreate(['name' => 'Tanjung Perak']);
+
+        // Brands
+        Brand::firstOrCreate(['code' => 'BRD-MITS'], ['name' => 'Mitsubishi Electric', 'description' => 'Industrial Automation & Motors', 'status' => 1]);
+        Brand::firstOrCreate(['code' => 'BRD-KOM'], ['name' => 'Komatsu Heavy Industries', 'description' => 'Heavy Equipment & Parts', 'status' => 1]);
+        Brand::firstOrCreate(['code' => 'BRD-SCH'], ['name' => 'Schneider Electric', 'description' => 'Electrical Switchgear & Breakers', 'status' => 1]);
+        Brand::firstOrCreate(['code' => 'BRD-KOBE'], ['name' => 'Kobe Steel Welding', 'description' => 'Welding Consumables', 'status' => 1]);
+        Brand::firstOrCreate(['code' => 'BRD-SHELL'], ['name' => 'Shell Lubricants', 'description' => 'Hydraulic & Gear Oils', 'status' => 1]);
+
+        // Models / Styles
+        Style::firstOrCreate(['code' => 'MOD-HEAVY'], ['name' => 'Heavy Duty Industrial', 'description' => 'Tipe beban berat kontinu', 'status' => 'active']);
+        Style::firstOrCreate(['code' => 'MOD-STD'], ['name' => 'Standard Industrial', 'description' => 'Tipe standar operasional', 'status' => 'active']);
+        Style::firstOrCreate(['code' => 'MOD-COMP'], ['name' => 'Compact High Temp', 'description' => 'Tahan panas & ruang sempit', 'status' => 'active']);
+
+        // Colours
+        Colour::firstOrCreate(['name' => 'Safety Yellow'], ['grade' => 'A', 'status' => 1]);
+        Colour::firstOrCreate(['name' => 'Industrial Blue'], ['grade' => 'A', 'status' => 1]);
+        Colour::firstOrCreate(['name' => 'Signal Red'], ['grade' => 'A', 'status' => 1]);
+        Colour::firstOrCreate(['name' => 'Matte Black'], ['grade' => 'B', 'status' => 1]);
+        Colour::firstOrCreate(['name' => 'Clean White'], ['grade' => 'A', 'status' => 1]);
+
+        // Additional Costs
+        AdditionalCostType::firstOrCreate(['code' => 'FRT'], ['name' => 'Biaya Angkut / Freight', 'status' => 1]);
+        AdditionalCostType::firstOrCreate(['code' => 'BKM'], ['name' => 'Biaya Bongkar Muat', 'status' => 1]);
+        AdditionalCostType::firstOrCreate(['code' => 'ASR'], ['name' => 'Asuransi Pengiriman', 'status' => 1]);
+        AdditionalCostType::firstOrCreate(['code' => 'CRN'], ['name' => 'Jasa Crane / Lifting', 'status' => 1]);
+
+        // PPh
+        $pphT21 = PphType::firstOrCreate(['nama' => 'PPh Pasal 21']);
+        $pphT23 = PphType::firstOrCreate(['nama' => 'PPh Pasal 23']);
+        $pphT42 = PphType::firstOrCreate(['nama' => 'PPh Final 4(2)']);
+        Pph::firstOrCreate(['name' => 'PPh 21 (2.5%)'], ['value' => 2.5, 'deduction' => 'no', 'status' => 'active', 'pph_type_id' => $pphT21->id]);
+        Pph::firstOrCreate(['name' => 'PPh 23 Jasa (2.0%)'], ['value' => 2.0, 'deduction' => 'no', 'status' => 'active', 'pph_type_id' => $pphT23->id]);
+        Pph::firstOrCreate(['name' => 'PPh 4(2) Sewa (10.0%)'], ['value' => 10.0, 'deduction' => 'no', 'status' => 'active', 'pph_type_id' => $pphT42->id]);
+
+        // HS Codes
+        HsCode::firstOrCreate(['name' => '7801.10.00'], ['description' => 'Unwrought lead - Refined lead', 'rates_bm' => 5.0, 'rates_ppn' => 11.0, 'rates_pph' => 2.5]);
+        HsCode::firstOrCreate(['name' => '7208.51.00'], ['description' => 'Flat-rolled products of iron/non-alloy steel', 'rates_bm' => 10.0, 'rates_ppn' => 11.0, 'rates_pph' => 2.5]);
+        HsCode::firstOrCreate(['name' => '8501.52.00'], ['description' => 'AC motors, multi-phase, 750W to 75kW', 'rates_bm' => 5.0, 'rates_ppn' => 11.0, 'rates_pph' => 2.5]);
+        HsCode::firstOrCreate(['name' => '2807.00.00'], ['description' => 'Sulphuric acid; oleum', 'rates_bm' => 5.0, 'rates_ppn' => 11.0, 'rates_pph' => 2.5]);
 
         // 5. Suppliers
         $supTimah = Supplier::updateOrCreate(
@@ -614,6 +672,86 @@ class GeniusOneDemoSeeder extends Seeder
 
             $this->command->info("Seeded record #" . ($idx + 1) . ": PR {$d['pr_number']}" . (!empty($d['po_number']) ? " -> PO {$d['po_number']}" : ""));
         }
+
+        // Seed sample Receive Note Return
+        $returnDoc = ReceiveNoteReturn::firstOrCreate(
+            ['rn_number' => 'RNR-2026-0001'],
+            [
+                'rn_date' => now()->subDays(5),
+                'delivery_order' => 'DO-RET-001',
+                'do_date' => now()->subDays(6),
+                'customer' => 'PT Mitra Logam Mandiri',
+                'facility' => 'FASILITAS',
+                'bc_code' => 'BC 2.7',
+                'aju_number' => '000027-010203-20261010-001234',
+                'no_daftar' => '001234',
+                'amount' => 15000000,
+                'type_of_return' => 'Reject Quality / Cacat Material',
+                'sales_delivery_number' => 'SD-2026-0099',
+                'vehicle_type' => 'Truk Fuso Box',
+                'license_plate' => 'B 9123 UXZ',
+                'notes' => 'Retur ingot timah karena kadar air di atas toleransi',
+                'approval_status' => 'Approved',
+                'created_by' => $warehouseUser->id,
+                'updated_by' => $approverUser->id,
+            ]
+        );
+
+        ReceiveNoteReturnItem::firstOrCreate(
+            [
+                'receive_note_return_id' => $returnDoc->id,
+                'item_name' => 'Timah Murni Ingot Sn 99.9%',
+            ],
+            [
+                'item_code' => 'ING-SN-001',
+                'do_number' => 'DO-RET-001',
+                'quantity' => 100,
+                'unit' => 'KG',
+                'price' => 150000,
+                'subtotal' => 15000000,
+                'subtotal_idr' => 15000000,
+                'retur_qty' => 100,
+            ]
+        );
+
+        // Seed sample Document History
+        $docHistory = DocumentHistory::firstOrCreate(
+            ['invoice_number' => 'INV-EXIM-2026-001'],
+            [
+                'invoice_alias' => 'INV/TI/X/2026',
+                'invoice_date' => now()->subDays(10),
+                'transaction_number' => 'TRX-EXIM-001',
+                'mutation_type' => 'Pemasukan Bahan Baku',
+                'customer_supplier' => 'PT Timah Industri',
+                'customer' => 'PT Timah Industri',
+                'destination' => 'Pabrik Cilegon',
+                'bl_number' => 'BL-SML-998811',
+                'currency' => 'IDR',
+                'customs_document' => 'BC 4.0',
+                'amount' => 450000000,
+                'created_by' => $procurementUser->id,
+                'updated_by' => $approverUser->id,
+            ]
+        );
+
+        DocumentHistoryItem::firstOrCreate(
+            [
+                'document_history_id' => $docHistory->id,
+                'item_name' => 'Timah Murni Ingot Sn 99.9%',
+            ],
+            [
+                'item_code' => 'ING-SN-001',
+                'so_number' => 'SO-2026-001',
+                'quantity' => 3000,
+                'unit' => 'KG',
+                'unit_price' => 150000,
+                'subtotal' => 450000000,
+                'nomor_aju' => '000040-010203-20261005-009876',
+                'nomor_daftar' => '009876',
+                'jenis_dokumen' => 'BC 4.0',
+                'seri_barang' => '1',
+            ]
+        );
 
         $this->command->info("GeniusOne 10 Demo Records successfully seeded!");
     }

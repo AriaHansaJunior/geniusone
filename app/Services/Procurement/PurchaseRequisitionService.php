@@ -2,8 +2,8 @@
 
 namespace App\Services\Procurement;
 
-use App\Models\PurchaseRequisition;
-use App\Models\PurchaseRequisitionItem;
+use App\Models\Procurement\PurchaseRequest\PurchaseRequisition;
+use App\Models\Procurement\PurchaseRequest\PurchaseRequisitionItem;
 use App\Services\DocumentNumber\DocumentNumberGenerator;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;

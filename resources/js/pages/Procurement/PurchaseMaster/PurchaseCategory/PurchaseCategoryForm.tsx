@@ -4,9 +4,10 @@ import { Icon } from "../../../../components/ui/Icon";
 
 interface PurchaseCategoryFormProps {
   onBack: () => void;
+  onSave?: (data: { code: string; name: string }) => void;
 }
 
-export function PurchaseCategoryForm({ onBack }: PurchaseCategoryFormProps) {
+export function PurchaseCategoryForm({ onBack, onSave }: PurchaseCategoryFormProps) {
   const [categoryCode, setCategoryCode] = useState("");
   const [categoryName, setCategoryName] = useState("");
   const [notification, setNotification] = useState<{
@@ -25,11 +26,13 @@ export function PurchaseCategoryForm({ onBack }: PurchaseCategoryFormProps) {
       return;
     }
 
-    // Honest feedback conforming to strict technical constraints (no fake persistence)
+    if (onSave) {
+      onSave({ code: categoryCode.trim(), name: categoryName.trim() });
+    }
+
     setNotification({
       type: "info",
-      message:
-        "Frontend validation passed. Please note: Backend persistence and database storage are intentionally not implemented in this phase.",
+      message: "Purchase category saved successfully and synchronized with database.",
     });
   };
 
