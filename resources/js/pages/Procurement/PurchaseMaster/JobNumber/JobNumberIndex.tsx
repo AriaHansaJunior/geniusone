@@ -40,6 +40,7 @@ export function JobNumberIndex({
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [formMode, setFormMode] = useState<"create" | "edit">("create");
   const [activeRecord, setActiveRecord] = useState<JobNumberRecord | null>(null);
+  const [exportNotice, setExportNotice] = useState<string | null>(null);
 
   useEffect(() => {
     setLocalRecords(records);

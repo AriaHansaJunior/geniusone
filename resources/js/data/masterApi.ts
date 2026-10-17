@@ -113,11 +113,10 @@ export async function fetchMasterPurchaseCategories(): Promise<PurchaseCategoryR
   const res = await apiGet<{ data: any[] }>("/api/procurement/master/purchase-categories");
   if (!res || !Array.isArray(res.data)) return null;
 
-  return res.data.map((item: any, idx: number): PurchaseCategoryRecord => ({
+  return res.data.map((item: any): PurchaseCategoryRecord => ({
     id: String(item.id),
-    no: idx + 1,
-    code: item.code || "",
-    name: item.name || "",
+    categoryCode: item.code || "",
+    categoryName: item.name || "",
     hidden: item.status === 0,
   }));
 }
@@ -127,9 +126,8 @@ export async function savePurchaseCategoryApi(code: string, name: string): Promi
   if (!res || !res.data) return null;
   return {
     id: String(res.data.id),
-    no: 1,
-    code: res.data.code || code,
-    name: res.data.name || name,
+    categoryCode: res.data.code || code,
+    categoryName: res.data.name || name,
   };
 }
 
@@ -137,9 +135,8 @@ export async function fetchMasterDeliveryTerms(): Promise<DeliveryTermRecord[] |
   const res = await apiGet<{ data: any[] }>("/api/procurement/master/delivery-terms");
   if (!res || !Array.isArray(res.data)) return null;
 
-  return res.data.map((item: any, idx: number): DeliveryTermRecord => ({
+  return res.data.map((item: any): DeliveryTermRecord => ({
     id: String(item.id),
-    no: idx + 1,
     name: item.name || "",
     hidden: item.status === 0,
   }));
@@ -150,7 +147,6 @@ export async function saveDeliveryTermApi(name: string): Promise<DeliveryTermRec
   if (!res || !res.data) return null;
   return {
     id: String(res.data.id),
-    no: 1,
     name: res.data.name || name,
   };
 }
@@ -159,11 +155,10 @@ export async function fetchMasterAdditionalCosts(): Promise<AdditionalCostRecord
   const res = await apiGet<{ data: any[] }>("/api/procurement/master/additional-costs");
   if (!res || !Array.isArray(res.data)) return null;
 
-  return res.data.map((item: any, idx: number): AdditionalCostRecord => ({
+  return res.data.map((item: any): AdditionalCostRecord => ({
     id: String(item.id),
-    no: idx + 1,
-    code: item.code || "",
-    name: item.name || "",
+    costCode: item.code || "",
+    costName: item.name || "",
     hidden: item.status === 0,
   }));
 }
@@ -173,9 +168,8 @@ export async function saveAdditionalCostApi(code: string, name: string): Promise
   if (!res || !res.data) return null;
   return {
     id: String(res.data.id),
-    no: 1,
-    code: res.data.code || code,
-    name: res.data.name || name,
+    costCode: res.data.code || code,
+    costName: res.data.name || name,
   };
 }
 
@@ -661,10 +655,8 @@ export async function fetchMasterCurrencies(): Promise<CurrencyRecord[] | null> 
     currencyCode: item.code || item.currency_code || "",
     currencyName: item.name || item.currency_name || "",
     symbol: item.symbol || "",
-    exchangeRate: Number(item.exchange_rate) || 1.0,
     syncStatus: item.sync_status || "Synced",
-    lastSyncTime: item.last_sync_time || new Date().toISOString().replace("T", " ").substring(0, 19),
-    status: item.status !== 0,
+    lastSynced: item.last_sync_time || item.last_synced || new Date().toISOString().replace("T", " ").substring(0, 19),
     createdAt: item.created_at ? new Date(item.created_at).toISOString().replace("T", " ").substring(0, 19) : "",
     createdBy: item.created_by || "ADMINISTRATOR",
   }));
@@ -679,8 +671,7 @@ export async function fetchMasterAccounts(): Promise<AccountRecord[] | null> {
     no: idx + 1,
     accountCode: item.code || item.account_code || "",
     accountName: item.name || item.account_name || "",
-    accountType: item.type || "Asset",
-    description: item.description || "",
+    category: item.category || item.type || "Current Asset",
     status: item.status !== 0,
     createdAt: item.created_at ? new Date(item.created_at).toISOString().replace("T", " ").substring(0, 19) : "",
     createdBy: item.created_by || "ADMINISTRATOR",

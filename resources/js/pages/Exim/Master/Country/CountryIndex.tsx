@@ -40,6 +40,7 @@ export function CountryIndex({
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [formMode, setFormMode] = useState<"create" | "edit">("create");
   const [activeRecord, setActiveRecord] = useState<CountryRecord | null>(null);
+  const [exportNotice, setExportNotice] = useState<string | null>(null);
 
   useEffect(() => {
     setLocalRecords(records);

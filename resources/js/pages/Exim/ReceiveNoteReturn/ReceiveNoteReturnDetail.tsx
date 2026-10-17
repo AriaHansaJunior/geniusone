@@ -284,7 +284,7 @@ export function ReceiveNoteReturnDetail({
               aria-haspopup="true"
               aria-expanded={printMenuOpen}
             >
-              <Icon name="printer" size={16} />
+              <Icon name="print" size={16} />
               <span>Print</span>
               <Icon name="chevronDown" size={14} />
             </button>

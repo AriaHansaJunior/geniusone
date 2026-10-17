@@ -163,8 +163,8 @@ export function MasterWarehouseIndex({
             Add New
           </Button>
           <Button
-            variant="default"
-            icon="fileSpreadsheet"
+            variant="secondary"
+            icon="download"
             onClick={handleExportExcel}
             className="wh-btn-export-excel"
           >

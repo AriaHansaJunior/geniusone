@@ -122,8 +122,8 @@ export function WarehouseCoordinateIndex({
             Add New
           </Button>
           <Button
-            variant="destructive"
-            icon="close"
+            variant="ghost"
+            icon="arrowLeft"
             onClick={onBack}
             className="wh-btn-back"
           >

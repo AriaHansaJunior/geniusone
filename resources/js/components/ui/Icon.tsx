@@ -33,6 +33,16 @@ export function Icon({
     ),
     arrowLeft: <path d="m15 18-6-6 6-6" />,
     arrowRight: <path d="m9 18 6-6-6-6" />,
+    arrowUp: (
+      <>
+        <path d="M12 21V3M6 9l6-6 6 6" />
+      </>
+    ),
+    arrowUpDown: (
+      <>
+        <path d="m7 15 5 5 5-5M7 9l5-5 5 5" />
+      </>
+    ),
     box: (
       <>
         <path d="m21 8-9 5-9-5 9-5z" />
@@ -53,8 +63,15 @@ export function Icon({
       </>
     ),
     check: <path d="m5 12 4 4L19 6" />,
+    checkCircle: (
+      <>
+        <circle cx="12" cy="12" r="10" />
+        <path d="m9 12 2 2 4-4" />
+      </>
+    ),
     chevron: <path d="m9 18 6-6-6-6" />,
     chevronDown: <path d="m6 9 6 6 6-6" />,
+    chevronLeft: <path d="m15 18-6-6 6-6" />,
     close: <path d="M18 6 6 18M6 6l12 12" />,
     download: (
       <>
@@ -113,6 +130,13 @@ export function Icon({
         <path d="M9 22V12h6v10" />
       </>
     ),
+    info: (
+      <>
+        <circle cx="12" cy="12" r="10" />
+        <line x1="12" y1="16" x2="12" y2="12" />
+        <line x1="12" y1="8" x2="12.01" y2="8" />
+      </>
+    ),
     layers: (
       <>
         <path d="m12 2 9 5-9 5-9-5z" />
@@ -146,6 +170,7 @@ export function Icon({
         <circle cx="19" cy="12" r="1" fill="currentColor" />
       </>
     ),
+    navigation: <polygon points="3 11 22 2 13 21 11 13 3 11" />,
     plus: <path d="M12 5v14M5 12h14" />,
     print: (
       <>

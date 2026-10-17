@@ -173,6 +173,6 @@ export async function createWarehouseBpb(payload: {
   receive_date?: string;
   note?: string;
   warehouse_id?: number;
-}): Promise<{ status: string; message?: string; data?: TableRow }> {
+}): Promise<{ status: string; message?: string; data?: TableRow } | null> {
   return apiPost("/api/warehouse", payload);
 }
