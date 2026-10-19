@@ -16,8 +16,9 @@ interface CountryIndexProps {
   records?: CountryRecord[];
   onAddNew?: () => void;
   onEdit?: (record: CountryRecord) => void;
-  onDelete?: (id: string) => void;
+  onDelete?: (id: string) => Promise<boolean | void> | void;
   onToggleStatus?: (id: string) => void;
+  onSave?: (data: { code: string; name: string; status: boolean }, id?: string) => Promise<CountryRecord | null>;
 }
 
 export function CountryIndex({
@@ -26,6 +27,7 @@ export function CountryIndex({
   onEdit,
   onDelete,
   onToggleStatus,
+  onSave,
 }: CountryIndexProps) {
   const [localRecords, setLocalRecords] = useState<CountryRecord[]>(records);
   const [search, setSearch] = useState("");
@@ -133,7 +135,25 @@ export function CountryIndex({
   };
 
   // Save from Modal
-  const handleSaveCountry = (data: { code: string; name: string; status: boolean }) => {
+  const handleSaveCountry = async (data: { code: string; name: string; status: boolean }) => {
+    if (onSave) {
+      try {
+        const saved = await onSave(data, formMode === "edit" ? activeRecord?.id : undefined);
+        if (saved) {
+          if (formMode === "create") {
+            setLocalRecords((prev) => [saved, ...prev.map((r, i) => ({ ...r, no: i + 2 }))]);
+          } else {
+            setLocalRecords((prev) => prev.map((r) => (r.id === saved.id ? saved : r)));
+          }
+          setIsFormModalOpen(false);
+          setActiveRecord(null);
+          return;
+        }
+      } catch (err) {
+        console.warn("Country save API error:", err);
+      }
+    }
+
     if (formMode === "create") {
       const newRecord: CountryRecord = {
         id: `country-${Date.now()}`,
@@ -159,11 +179,17 @@ export function CountryIndex({
   };
 
   // Confirm delete
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (!countryToDelete) return;
     const idToDelete = countryToDelete.id;
+    if (onDelete) {
+      try {
+        await onDelete(idToDelete);
+      } catch (err) {
+        console.warn("Country delete API error:", err);
+      }
+    }
     setLocalRecords((prev) => prev.filter((c) => c.id !== idToDelete));
-    if (onDelete) onDelete(idToDelete);
     setCountryToDelete(null);
   };
 

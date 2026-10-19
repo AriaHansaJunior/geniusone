@@ -6,6 +6,7 @@ import { ItemPickerModal } from "../../Exim/Master/Item/ItemPickerModal";
 import { initialItemRecords } from "../../Exim/Master/Item/item-data";
 import { initialJobNumberRecords } from "../PurchaseMaster/JobNumber/job-number-types";
 import type { ItemRecord } from "../../Exim/Master/Item/item-types";
+import { createPurchaseRequisition } from "../../../data/api";
 
 export interface PRItemRow {
   id: string;
@@ -156,30 +157,59 @@ export function PurchaseRequisitionCreate({
   };
 
   // Confirm Submit
-  const handleConfirmSubmit = () => {
+  const handleConfirmSubmit = async () => {
     setIsSubmitting(true);
-    const prNumber = `${String(Math.floor(Math.random() * 9000) + 1000).padStart(4, "0")}/PR-IMLI/X/2026`;
+    try {
+      const payload = {
+        deptRequest,
+        section,
+        date,
+        due_date: dueDate,
+        items: items.map((it) => ({
+          itemCode: it.itemCode,
+          itemName: it.itemName,
+          quantity: it.quantity,
+          dueDate: it.dueDate,
+          remark: it.remark || note || "Purchase Requisition Item",
+        })),
+      };
 
-    const newPR = {
-      _id: `pr-${Date.now()}`,
-      _type: "pr",
-      _rawNumber: prNumber,
-      _rawStatus: "Ready",
-      _rawDate: date,
-      _rawDueDate: dueDate,
-      _rawDept: deptRequest,
-      _rawRemark: note || items[0]?.remark || "New Requisition",
-      _rawCreatedBy: "ADMINISTRATOR " + today,
-      _items: items,
-      totalItem: items.length,
-      totalQuantity: items.reduce((acc, it) => acc + (Number(it.quantity) || 0), 0),
-    };
-
-    if (onSaveSuccess) {
-      onSaveSuccess(newPR);
+      const res = await createPurchaseRequisition(payload);
+      if (res && res.data) {
+        if (onSaveSuccess) {
+          onSaveSuccess(res.data);
+        }
+      } else {
+        const prNumber = `${String(Math.floor(Math.random() * 9000) + 1000).padStart(4, "0")}/PR-IMLI/X/2026`;
+        const newPR = {
+          _id: `pr-${Date.now()}`,
+          _type: "pr",
+          _rawNumber: prNumber,
+          _rawStatus: "Ready",
+          _rawDate: date,
+          _rawDueDate: dueDate,
+          _rawDept: deptRequest,
+          _rawRemark: note || items[0]?.remark || "New Requisition",
+          _rawCreatedBy: "ADMINISTRATOR " + today,
+          _items: items,
+          totalItem: items.length,
+          totalQuantity: items.reduce((acc, it) => acc + (Number(it.quantity) || 0), 0),
+        };
+        if (onSaveSuccess) onSaveSuccess(newPR);
+      }
+    } catch (err: any) {
+      console.error("Failed to submit PR to backend:", err);
+      setNotification({
+        type: "error",
+        message: err.message || "Failed to create Purchase Requisition. Please try again.",
+      });
+      setIsSubmitting(false);
+      setShowSaveConfirm(false);
+      return;
     }
 
     setShowSaveConfirm(false);
+    setIsSubmitting(false);
     onBack();
   };
 

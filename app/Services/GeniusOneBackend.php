@@ -73,6 +73,33 @@ class GeniusOneBackend
     }
 
     /**
+     * Unified Procurement Domain Accessor.
+     */
+    public static function procurement(): object
+    {
+        return new class {
+            public function createPr(array $headerData, array $itemsData, int $userId) {
+                return GeniusOneBackend::pr()->createPr($headerData, $itemsData, $userId);
+            }
+            public function createPo(array $headerData, array $items, array $additionalCosts = [], int $userId = 1) {
+                return GeniusOneBackend::po()->createPo($headerData, $items, $additionalCosts, $userId);
+            }
+            public function approvePr(int $id, int $userId, int $tier = 1, ?string $note = null) {
+                return GeniusOneBackend::procurementApproval()->approvePr($id, $userId, $tier, $note);
+            }
+            public function rejectPr(int $id, int $userId, int $tier = 1, ?string $reason = null) {
+                return GeniusOneBackend::procurementApproval()->rejectPr($id, $userId, $tier, $reason);
+            }
+            public function approvePo(int $id, int $userId, int $tier = 1, ?string $note = null) {
+                return GeniusOneBackend::procurementApproval()->approvePo($id, $userId, $tier, $note);
+            }
+            public function rejectPo(int $id, int $userId, int $tier = 1, ?string $reason = null) {
+                return GeniusOneBackend::procurementApproval()->rejectPo($id, $userId, $tier, $reason);
+            }
+        };
+    }
+
+    /**
      * Warehouse Receive Note Service (Gate Inbound).
      */
     public static function receiveNote(): ReceiveNoteService

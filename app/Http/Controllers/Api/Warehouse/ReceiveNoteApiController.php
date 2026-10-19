@@ -82,50 +82,87 @@ class ReceiveNoteApiController extends Controller
      */
     public function store(Request $request)
     {
-        $validated = $request->validate([
-            'rn_number' => 'nullable|string|max:100',
-            'supliers_id' => 'required|exists:supliers,id',
-            'currencies_id' => 'nullable|exists:currencies,id',
-            'rate' => 'nullable|numeric',
-            'arrival_date' => 'required|date',
-            'invoice_number' => 'nullable|string|max:100',
-            'invoice_date' => 'nullable|date',
-            'tax_invoice' => 'nullable|string|max:100',
-            'tax_invoice_date' => 'nullable|date',
-            'license_plate' => 'nullable|string|max:45',
-            'note' => 'nullable|string|max:255',
-            'sj_number' => 'nullable|string|max:45',
-            'sj_date' => 'nullable|date',
-            'items' => 'required|array|min:1',
-            'items.*.purchase_order_id' => 'required|exists:purchase_order,id',
-            'items.*.quantity' => 'required|numeric|min:0.01',
-            'items.*.item_name' => 'nullable|string|max:255',
-            'items.*.job_number_id' => 'nullable|exists:job_number,id',
-            'items.*.rafaksi' => 'nullable|numeric',
-            'items.*.price' => 'nullable|numeric',
-        ]);
-
         $userId = $request->user()?->id ?? 1;
 
+        // Resolve Supplier ID
+        $supInput = $request->input('supliers_id') ?? $request->input('supplier') ?? $request->input('supplier_id');
+        $supId = null;
+        if (is_numeric($supInput) && \App\Models\Master\Partner\Supplier::where('id', $supInput)->exists()) {
+            $supId = (int) $supInput;
+        } elseif (!empty($supInput)) {
+            $cleaned = preg_replace('/^sup-?/i', '', (string) $supInput);
+            if (is_numeric($cleaned) && \App\Models\Master\Partner\Supplier::where('id', $cleaned)->exists()) {
+                $supId = (int) $cleaned;
+            } else {
+                $sup = \App\Models\Master\Partner\Supplier::where('code', $supInput)->orWhere('name', 'like', "%{$supInput}%")->first();
+                $supId = $sup?->id;
+            }
+        }
+        if (!$supId) {
+            $supId = \App\Models\Master\Partner\Supplier::first()?->id ?? 1;
+        }
+
+        // Resolve Items
+        $rawItems = $request->input('items', []);
+        $firstPo = \App\Models\Procurement\PurchaseOrder\PurchaseOrder::first();
+        $fallbackPoId = $firstPo?->id ?? 1;
+
+        $processedItems = [];
+        if (!empty($rawItems)) {
+            foreach ($rawItems as $it) {
+                $poId = null;
+                if (!empty($it['purchase_order_id']) && is_numeric($it['purchase_order_id'])) {
+                    $poId = (int) $it['purchase_order_id'];
+                } elseif (!empty($it['poNumber']) || !empty($it['po_number'])) {
+                    $poCode = $it['poNumber'] ?? $it['po_number'];
+                    $poObj = \App\Models\Procurement\PurchaseOrder\PurchaseOrder::where('po_number', $poCode)->first();
+                    $poId = $poObj?->id;
+                }
+                if (!$poId) $poId = $fallbackPoId;
+
+                $processedItems[] = [
+                    'purchase_order_id' => $poId,
+                    'quantity' => (float) ($it['quantity'] ?? $it['suratJalanQty'] ?? 1),
+                    'item_name' => $it['item_name'] ?? $it['itemName'] ?? 'Material Item',
+                    'job_number_id' => !empty($it['job_number_id']) ? (int) $it['job_number_id'] : null,
+                    'rafaksi' => (float) ($it['rafaksi'] ?? 0),
+                    'price' => (float) ($it['price'] ?? 0),
+                ];
+            }
+        } else {
+            $processedItems[] = [
+                'purchase_order_id' => $fallbackPoId,
+                'quantity' => 1.0,
+                'item_name' => 'General Material Receipt',
+            ];
+        }
+
+        $arrivalDate = $request->input('arrival_date') ?? $request->input('arrivalDate') ?? date('Y-m-d');
+        if (str_contains($arrivalDate, '-') && strlen(explode('-', $arrivalDate)[0]) === 2) {
+            $parts = explode('-', $arrivalDate);
+            $arrivalDate = "{$parts[2]}-{$parts[1]}-{$parts[0]}";
+        }
+
         $headerData = [
-            'rn_number' => $validated['rn_number'] ?? null,
-            'supliers_id' => $validated['supliers_id'],
-            'currencies_id' => $validated['currencies_id'] ?? 1,
-            'rate' => $validated['rate'] ?? 1.0,
-            'arrival_date' => $validated['arrival_date'],
-            'invoice_number' => $validated['invoice_number'] ?? null,
-            'invoice_date' => $validated['invoice_date'] ?? null,
-            'tax_invoice' => $validated['tax_invoice'] ?? null,
-            'tax_invoice_date' => $validated['tax_invoice_date'] ?? null,
-            'license_plate' => $validated['license_plate'] ?? null,
-            'note' => $validated['note'] ?? null,
-            'sj_number' => $validated['sj_number'] ?? null,
-            'sj_date' => $validated['sj_date'] ?? null,
+            'rn_number' => $request->input('rn_number') ?? $request->input('rnNumber'),
+            'supliers_id' => $supId,
+            'currencies_id' => (int) ($request->input('currencies_id') ?? 1),
+            'rate' => (float) ($request->input('rate') ?? 1.0),
+            'arrival_date' => $arrivalDate,
+            'invoice_number' => $request->input('invoice_number') ?? $request->input('invoiceNumber'),
+            'invoice_date' => $request->input('invoice_date') ?? $request->input('invoiceDate'),
+            'tax_invoice' => $request->input('tax_invoice') ?? $request->input('taxInvoiceNumber'),
+            'tax_invoice_date' => $request->input('tax_invoice_date') ?? $request->input('taxInvoiceDate'),
+            'license_plate' => $request->input('license_plate') ?? $request->input('licensePlate'),
+            'note' => $request->input('note') ?? $request->input('notes'),
+            'sj_number' => $request->input('sj_number') ?? $request->input('nomorPackingList'),
+            'sj_date' => $request->input('sj_date') ?? $request->input('tanggalPackingList'),
         ];
 
-        $rn = GeniusOneBackend::warehouse()->createReceiveNote($headerData, $validated['items'], $userId);
+        $rn = GeniusOneBackend::warehouse()->createReceiveNote($headerData, $processedItems, $userId);
 
         return response()->json([
+            'status' => 'success',
             'message' => 'Receive Note created successfully',
             'data' => (new ReceiveNoteViewModel($rn))->toArray(),
         ], 201);

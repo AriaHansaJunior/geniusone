@@ -67,6 +67,11 @@ class PurchaseOrderItem extends Model
         return $this->belongsTo(PurchaseRequisitionItem::class, 'pr_has_items_id');
     }
 
+    public function prItem(): BelongsTo
+    {
+        return $this->requisitionItem();
+    }
+
     public function getItemAttribute(): ?Item
     {
         return $this->requisitionItem?->item;

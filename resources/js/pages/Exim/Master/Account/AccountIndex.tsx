@@ -16,8 +16,9 @@ interface AccountIndexProps {
   records?: AccountRecord[];
   onAddNew?: () => void;
   onEdit?: (record: AccountRecord) => void;
-  onDelete?: (id: string) => void;
+  onDelete?: (id: string) => Promise<boolean | void> | void;
   onToggleStatus?: (id: string) => void;
+  onSave?: (data: { accountCode: string; accountName: string; category?: string; status: boolean }, id?: string) => Promise<AccountRecord | null>;
 }
 
 export function AccountIndex({
@@ -26,6 +27,7 @@ export function AccountIndex({
   onEdit,
   onDelete,
   onToggleStatus,
+  onSave,
 }: AccountIndexProps) {
   const [localRecords, setLocalRecords] = useState<AccountRecord[]>(records);
   const [search, setSearch] = useState("");
@@ -137,12 +139,30 @@ export function AccountIndex({
   };
 
   // Save from Modal
-  const handleSaveAccount = (data: {
+  const handleSaveAccount = async (data: {
     accountCode: string;
     accountName: string;
     category: string;
     status: boolean;
   }) => {
+    if (onSave) {
+      try {
+        const saved = await onSave(data, formMode === "edit" ? activeRecord?.id : undefined);
+        if (saved) {
+          if (formMode === "create") {
+            setLocalRecords((prev) => [saved, ...prev.map((r, i) => ({ ...r, no: i + 2 }))]);
+          } else {
+            setLocalRecords((prev) => prev.map((r) => (r.id === saved.id ? saved : r)));
+          }
+          setIsFormModalOpen(false);
+          setActiveRecord(null);
+          return;
+        }
+      } catch (err) {
+        console.warn("Account save API error:", err);
+      }
+    }
+
     if (formMode === "create") {
       const newRecord: AccountRecord = {
         id: `acc-${Date.now()}`,
@@ -175,11 +195,17 @@ export function AccountIndex({
   };
 
   // Confirm delete
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (!accountToDelete) return;
     const idToDelete = accountToDelete.id;
+    if (onDelete) {
+      try {
+        await onDelete(idToDelete);
+      } catch (err) {
+        console.warn("Account delete API error:", err);
+      }
+    }
     setLocalRecords((prev) => prev.filter((a) => a.id !== idToDelete));
-    if (onDelete) onDelete(idToDelete);
     setAccountToDelete(null);
   };
 

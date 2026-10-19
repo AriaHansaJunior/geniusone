@@ -153,10 +153,16 @@ Route::prefix('reporting')->group(function () {
 // 5. BACKWARD-COMPATIBILITY ALIASES (Direct Routes for Existing Frontend)
 // =========================================================================
 Route::get('/pr', [PurchaseRequisitionApiController::class, 'index']);
+Route::post('/pr', [PurchaseRequisitionApiController::class, 'store']);
 Route::get('/pr/{code}', [PurchaseRequisitionApiController::class, 'show']);
 
 Route::get('/po', [PurchaseOrderApiController::class, 'index']);
+Route::post('/po', [PurchaseOrderApiController::class, 'store']);
 Route::get('/po/{code}', [PurchaseOrderApiController::class, 'show']);
+
+Route::get('/rn', [ReceiveNoteApiController::class, 'index']);
+Route::post('/rn', [ReceiveNoteApiController::class, 'store']);
+Route::get('/rn/{code}', [ReceiveNoteApiController::class, 'show']);
 
 Route::get('/report', [TraceabilityReportApiController::class, 'index']);
 Route::get('/report/{code}', [TraceabilityReportApiController::class, 'show']);
@@ -164,3 +170,4 @@ Route::get('/report/{code}', [TraceabilityReportApiController::class, 'show']);
 Route::get('/warehouse', [WarehouseApiController::class, 'index']);
 Route::get('/warehouse/{code}', [WarehouseApiController::class, 'show']);
 Route::post('/warehouse', [WarehouseApiController::class, 'store']);
+

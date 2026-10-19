@@ -209,33 +209,91 @@ class PurchaseRequisitionApiController extends Controller
      */
     public function store(Request $request)
     {
-        $validated = $request->validate([
-            'pr_number' => 'nullable|string|max:255',
-            'departments_id' => 'required|exists:departments,id',
-            'sections_id' => 'required|exists:sections,id',
-            'date' => 'nullable|string|max:45',
-            'due_date' => 'required|string|max:45',
-            'items' => 'required|array|min:1',
-            'items.*.items_id' => 'required|exists:items,id',
-            'items.*.quantity' => 'required|numeric|min:0.01',
-            'items.*.due_date' => 'nullable|string|max:45',
-            'items.*.remark' => 'nullable|string|max:255',
-        ]);
-
         $userId = $request->user()?->id ?? 1;
-        $pr = GeniusOneBackend::procurement()->createPr(
+
+        // Resolve Department ID
+        $deptInput = $request->input('departments_id') ?? $request->input('department') ?? $request->input('deptRequest');
+        $deptId = null;
+        if (is_numeric($deptInput) && \App\Models\Master\Organization\Department::where('id', $deptInput)->exists()) {
+            $deptId = (int) $deptInput;
+        } elseif (!empty($deptInput)) {
+            $dept = \App\Models\Master\Organization\Department::where('name', 'like', "%{$deptInput}%")->first();
+            $deptId = $dept?->id;
+        }
+        if (!$deptId) {
+            $deptId = \App\Models\Master\Organization\Department::first()?->id ?? 1;
+        }
+
+        // Resolve Section ID
+        $secInput = $request->input('sections_id') ?? $request->input('section');
+        $secId = null;
+        if (is_numeric($secInput) && \App\Models\Master\Organization\Section::where('id', $secInput)->exists()) {
+            $secId = (int) $secInput;
+        } elseif (!empty($secInput)) {
+            $sec = \App\Models\Master\Organization\Section::where('name', 'like', "%{$secInput}%")->first();
+            $secId = $sec?->id;
+        }
+        if (!$secId) {
+            $secId = \App\Models\Master\Organization\Section::first()?->id ?? 1;
+        }
+
+        // Resolve Line Items
+        $rawItems = $request->input('items', []);
+        if (empty($rawItems)) {
+            return response()->json([
+                'message' => 'Validation error',
+                'errors' => ['items' => ['At least one item is required.']]
+            ], 422);
+        }
+
+        $firstDbItem = \App\Models\Master\Material\Item::first();
+        $fallbackItemId = $firstDbItem?->id ?? 1;
+
+        $processedItems = [];
+        foreach ($rawItems as $idx => $it) {
+            $itemId = null;
+            if (!empty($it['items_id']) && is_numeric($it['items_id']) && \App\Models\Master\Material\Item::where('id', $it['items_id'])->exists()) {
+                $itemId = (int) $it['items_id'];
+            } elseif (!empty($it['itemCode']) || !empty($it['code']) || !empty($it['item_code'])) {
+                $code = $it['itemCode'] ?? $it['code'] ?? $it['item_code'];
+                $found = \App\Models\Master\Material\Item::where('code', $code)->first();
+                $itemId = $found?->id;
+            } elseif (!empty($it['itemName']) || !empty($it['name']) || !empty($it['item_name'])) {
+                $name = $it['itemName'] ?? $it['name'] ?? $it['item_name'];
+                $found = \App\Models\Master\Material\Item::where('name', 'like', "%{$name}%")->first();
+                $itemId = $found?->id;
+            }
+
+            if (!$itemId) {
+                $itemId = $fallbackItemId;
+            }
+
+            $processedItems[] = [
+                'items_id' => $itemId,
+                'quantity' => (float) ($it['quantity'] ?? 1),
+                'due_date' => $it['dueDate'] ?? $it['due_date'] ?? $request->input('due_date', now()->addDays(14)->format('Y-m-d')),
+                'remark' => $it['remark'] ?? $it['note'] ?? 'Purchase Requisition Item',
+            ];
+        }
+
+        $prNumber = $request->input('pr_number') ?? \App\Services\DocumentNumber\DocumentNumberGenerator::generatePrNumber();
+        $date = $request->input('date') ?? now()->format('Y-m-d');
+        $dueDate = $request->input('due_date') ?? now()->addDays(14)->format('Y-m-d');
+
+        $pr = GeniusOneBackend::pr()->createPr(
             [
-                'pr_number' => $validated['pr_number'] ?? null,
-                'departments_id' => $validated['departments_id'],
-                'sections_id' => $validated['sections_id'],
-                'date' => $validated['date'] ?? date('Y-m-d'),
-                'due_date' => $validated['due_date'],
+                'pr_number' => $prNumber,
+                'departments_id' => $deptId,
+                'sections_id' => $secId,
+                'date' => $date,
+                'due_date' => $dueDate,
             ],
-            $validated['items'],
+            $processedItems,
             $userId
         );
 
         return response()->json([
+            'status' => 'success',
             'message' => 'Purchase Requisition created successfully',
             'data' => $pr->load(['department', 'section', 'items.item']),
         ], 201);

@@ -118,20 +118,27 @@ import { initialAccountRecords, type AccountRecord } from "../pages/Exim/Master/
 import { initialJobNumberRecords, type JobNumberRecord } from "../pages/Procurement/PurchaseMaster/JobNumber/job-number-types";
 import { initialRafaksiTypeRecords, type RafaksiTypeRecord } from "../pages/Procurement/PurchaseMaster/RafaksiType/rafaksi-type-types";
 import { initialCurrencyRecords, type CurrencyRecord } from "../pages/Exim/Master/Currency/currency-types";
+import { initialUnitReferenceRecords } from "../pages/Exim/Master/UnitReference/unit-reference-data";
+import type { UnitReferenceRecord } from "../pages/Exim/Master/UnitReference/unit-reference-types";
 import type { PageKey, ViewState, TableRow } from "../types";
 import {
   fetchMasterSuppliers,
   saveSupplierApi,
   fetchMasterPaymentTerms,
   savePaymentTermApi,
+  togglePaymentTermStatusApi,
   fetchMasterPurchaseCategories,
   savePurchaseCategoryApi,
+  togglePurchaseCategoryStatusApi,
   fetchMasterDeliveryTerms,
   saveDeliveryTermApi,
+  toggleDeliveryTermStatusApi,
   fetchMasterAdditionalCosts,
   saveAdditionalCostApi,
+  toggleAdditionalCostStatusApi,
   fetchMasterPph,
   savePphApi,
+  togglePphStatusApi,
   fetchMasterUnits,
   saveUnitApi,
   deleteUnitApi,
@@ -166,11 +173,27 @@ import {
   saveWarehouseCoordinateApi,
   deleteWarehouseCoordinateApi,
   fetchMasterCountries,
+  saveCountryApi,
+  deleteCountryApi,
   fetchMasterRafaksiTypes,
+  saveRafaksiTypeApi,
+  deleteRafaksiTypeApi,
   fetchMasterCurrencies,
+  saveCurrencyApi,
+  deleteCurrencyApi,
   fetchMasterAccounts,
+  saveAccountApi,
+  deleteAccountApi,
   fetchMasterJobNumbers,
+  saveJobNumberApi,
+  deleteJobNumberApi,
+  fetchMasterReceiveNotes,
+  fetchMasterReceiveNoteReturns,
+  saveReceiveNoteReturnApi,
+  fetchMasterDocumentHistories,
+  fetchMasterUnitReferences,
 } from "../data/masterApi";
+import { createReceiveNote } from "../data/api";
 
 interface AppProps {
   initialPage?: string;
@@ -843,6 +866,7 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
   const [jobNumberRecords, setJobNumberRecords] = useState<JobNumberRecord[]>(initialJobNumberRecords);
   const [rafaksiTypeRecords, setRafaksiTypeRecords] = useState<RafaksiTypeRecord[]>(initialRafaksiTypeRecords);
   const [currencyRecords, setCurrencyRecords] = useState<CurrencyRecord[]>(initialCurrencyRecords);
+  const [unitReferenceRecords, setUnitReferenceRecords] = useState<UnitReferenceRecord[]>(initialUnitReferenceRecords);
 
   // Live database synchronization on mount
   useEffect(() => {
@@ -914,6 +938,18 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
     fetchMasterJobNumbers().then((data) => {
       if (isMounted && data && data.length > 0) setJobNumberRecords(data);
     });
+    fetchMasterReceiveNotes().then((data) => {
+      if (isMounted && data && data.length > 0) setReceiveNoteRecords(data);
+    });
+    fetchMasterReceiveNoteReturns().then((data) => {
+      if (isMounted && data && data.length > 0) setReceiveNoteReturnRecords(data);
+    });
+    fetchMasterDocumentHistories().then((data) => {
+      if (isMounted && data && data.length > 0) setDocumentHistoryRecords(data);
+    });
+    fetchMasterUnitReferences().then((data) => {
+      if (isMounted && data && data.length > 0) setUnitReferenceRecords(data);
+    });
 
     return () => {
       isMounted = false;
@@ -921,9 +957,13 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
   }, []);
 
   const handleTogglePphHide = useCallback((id: string) => {
-    setPphRecords((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, hidden: !r.hidden } : r))
-    );
+    setPphRecords((prev) => {
+      const target = prev.find((r) => r.id === id);
+      if (target) {
+        togglePphStatusApi(id, target.hidden).catch(console.warn);
+      }
+      return prev.map((r) => (r.id === id ? { ...r, hidden: !r.hidden } : r));
+    });
   }, []);
 
   const handleToggleSupplierHide = useCallback((id: string) => {
@@ -933,27 +973,43 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
   }, []);
 
   const handleTogglePaymentTermHide = useCallback((id: string) => {
-    setPaymentTermRecords((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, hidden: !r.hidden } : r))
-    );
+    setPaymentTermRecords((prev) => {
+      const target = prev.find((r) => r.id === id);
+      if (target) {
+        togglePaymentTermStatusApi(id, target.hidden).catch(console.warn);
+      }
+      return prev.map((r) => (r.id === id ? { ...r, hidden: !r.hidden } : r));
+    });
   }, []);
 
   const handleTogglePurchaseCategoryHide = useCallback((id: string) => {
-    setPurchaseCategoryRecords((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, hidden: !r.hidden } : r))
-    );
+    setPurchaseCategoryRecords((prev) => {
+      const target = prev.find((r) => r.id === id);
+      if (target) {
+        togglePurchaseCategoryStatusApi(id, target.hidden).catch(console.warn);
+      }
+      return prev.map((r) => (r.id === id ? { ...r, hidden: !r.hidden } : r));
+    });
   }, []);
 
   const handleToggleDeliveryTermHide = useCallback((id: string) => {
-    setDeliveryTermRecords((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, hidden: !r.hidden } : r))
-    );
+    setDeliveryTermRecords((prev) => {
+      const target = prev.find((r) => r.id === id);
+      if (target) {
+        toggleDeliveryTermStatusApi(id, target.hidden).catch(console.warn);
+      }
+      return prev.map((r) => (r.id === id ? { ...r, hidden: !r.hidden } : r));
+    });
   }, []);
 
   const handleToggleAdditionalCostHide = useCallback((id: string) => {
-    setAdditionalCostRecords((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, hidden: !r.hidden } : r))
-    );
+    setAdditionalCostRecords((prev) => {
+      const target = prev.find((r) => r.id === id);
+      if (target) {
+        toggleAdditionalCostStatusApi(id, target.hidden).catch(console.warn);
+      }
+      return prev.map((r) => (r.id === id ? { ...r, hidden: !r.hidden } : r));
+    });
   }, []);
 
   const handleSaveSupplier = useCallback(
@@ -1709,7 +1765,33 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
     }
   }, []);
 
-  const handleSaveReceiveNote = useCallback((newRecord: ReceiveNoteRecord) => {
+  const handleSaveReceiveNote = useCallback(async (newRecord: ReceiveNoteRecord) => {
+    try {
+      await createReceiveNote({
+        rnNumber: newRecord.rnNumber,
+        supplier: newRecord.supplier,
+        currency: newRecord.currency,
+        rate: newRecord.rate,
+        arrival_date: newRecord.arrivalDate,
+        invoice_number: newRecord.invoiceNumber,
+        invoice_date: newRecord.invoiceDate,
+        tax_invoice: newRecord.taxInvoiceNumber,
+        tax_invoice_date: newRecord.taxInvoiceDate,
+        license_plate: newRecord.licensePlate,
+        note: newRecord.description,
+        sj_number: newRecord.nomorPackingList,
+        sj_date: newRecord.tanggalPackingList,
+        items: newRecord.items?.map((it) => ({
+          poNumber: it.poNumber,
+          itemName: it.itemName,
+          suratJalanQty: it.suratJalanQty,
+          price: it.price,
+        })),
+      });
+    } catch (err) {
+      console.warn("Failed to persist Receive Note to backend:", err);
+    }
+
     setReceiveNoteRecords((prev) => [
       { ...newRecord, no: 1 },
       ...prev.map((r) => ({ ...r, no: r.no + 1 })),
@@ -1721,6 +1803,151 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
       window.scrollTo(0, 0);
       window.history.pushState(nextState, "", "/exim/receive-note");
     }
+  }, []);
+
+  const handleSaveCountry = useCallback(
+    async (data: { code?: string; name: string; status: boolean }, id?: string) => {
+      try {
+        const saved = await saveCountryApi(data, id);
+        if (saved) {
+          if (id) {
+            setCountryRecords((prev) => prev.map((c) => (c.id === saved.id ? saved : c)));
+          } else {
+            setCountryRecords((prev) => [saved, ...prev.map((c, i) => ({ ...c, no: i + 2 }))]);
+          }
+          return saved;
+        }
+      } catch (err) {
+        console.warn("Country API save failed:", err);
+      }
+      return null;
+    },
+    []
+  );
+
+  const handleDeleteCountry = useCallback(async (id: string) => {
+    try {
+      await deleteCountryApi(id);
+    } catch (err) {
+      console.warn("Country API delete failed:", err);
+    }
+    setCountryRecords((prev) => prev.filter((c) => c.id !== id));
+  }, []);
+
+  const handleSaveAccount = useCallback(
+    async (data: { accountCode: string; accountName: string; category?: string; status: boolean }, id?: string) => {
+      try {
+        const saved = await saveAccountApi(data, id);
+        if (saved) {
+          if (id) {
+            setAccountRecords((prev) => prev.map((a) => (a.id === saved.id ? saved : a)));
+          } else {
+            setAccountRecords((prev) => [saved, ...prev.map((a, i) => ({ ...a, no: i + 2 }))]);
+          }
+          return saved;
+        }
+      } catch (err) {
+        console.warn("Account API save failed:", err);
+      }
+      return null;
+    },
+    []
+  );
+
+  const handleDeleteAccount = useCallback(async (id: string) => {
+    try {
+      await deleteAccountApi(id);
+    } catch (err) {
+      console.warn("Account API delete failed:", err);
+    }
+    setAccountRecords((prev) => prev.filter((a) => a.id !== id));
+  }, []);
+
+  const handleSaveJobNumber = useCallback(
+    async (data: { jobNumber: string; jobName?: string; department?: string; status: boolean }, id?: string) => {
+      try {
+        const saved = await saveJobNumberApi(data, id);
+        if (saved) {
+          if (id) {
+            setJobNumberRecords((prev) => prev.map((j) => (j.id === saved.id ? saved : j)));
+          } else {
+            setJobNumberRecords((prev) => [saved, ...prev.map((j, i) => ({ ...j, no: i + 2 }))]);
+          }
+          return saved;
+        }
+      } catch (err) {
+        console.warn("Job Number API save failed:", err);
+      }
+      return null;
+    },
+    []
+  );
+
+  const handleDeleteJobNumber = useCallback(async (id: string) => {
+    try {
+      await deleteJobNumberApi(id);
+    } catch (err) {
+      console.warn("Job Number API delete failed:", err);
+    }
+    setJobNumberRecords((prev) => prev.filter((j) => j.id !== id));
+  }, []);
+
+  const handleSaveRafaksiType = useCallback(
+    async (data: { code?: string; name: string; description?: string; status: boolean }, id?: string) => {
+      try {
+        const saved = await saveRafaksiTypeApi(data, id);
+        if (saved) {
+          if (id) {
+            setRafaksiTypeRecords((prev) => prev.map((r) => (r.id === saved.id ? saved : r)));
+          } else {
+            setRafaksiTypeRecords((prev) => [saved, ...prev.map((r, i) => ({ ...r, no: i + 2 }))]);
+          }
+          return saved;
+        }
+      } catch (err) {
+        console.warn("Rafaksi Type API save failed:", err);
+      }
+      return null;
+    },
+    []
+  );
+
+  const handleDeleteRafaksiType = useCallback(async (id: string) => {
+    try {
+      await deleteRafaksiTypeApi(id);
+    } catch (err) {
+      console.warn("Rafaksi Type API delete failed:", err);
+    }
+    setRafaksiTypeRecords((prev) => prev.filter((r) => r.id !== id));
+  }, []);
+
+  const handleSaveCurrency = useCallback(
+    async (data: { currencyCode: string; currencyName: string; symbol?: string; status?: boolean }, id?: string) => {
+      try {
+        const saved = await saveCurrencyApi(data, id);
+        if (saved) {
+          if (id) {
+            setCurrencyRecords((prev) => prev.map((c) => (c.id === saved.id ? saved : c)));
+          } else {
+            setCurrencyRecords((prev) => [saved, ...prev.map((c, i) => ({ ...c, no: i + 2 }))]);
+          }
+          return saved;
+        }
+      } catch (err) {
+        console.warn("Currency API save failed:", err);
+      }
+      return null;
+    },
+    []
+  );
+
+  const handleDeleteCurrency = useCallback(async (id: string) => {
+    try {
+      await deleteCurrencyApi(id);
+    } catch (err) {
+      console.warn("Currency API delete failed:", err);
+    }
+    setCurrencyRecords((prev) => prev.filter((c) => c.id !== id));
   }, []);
 
   const handleNavigateReceiveNoteReturnDetail = useCallback((rnNumber: string) => {
@@ -1865,9 +2092,17 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
     []
   );
 
-  const handleSaveReceiveNoteReturn = useCallback((newRecord: ReceiveNoteReturnRecord) => {
+  const handleSaveReceiveNoteReturn = useCallback(async (newRecord: ReceiveNoteReturnRecord) => {
+    let toSave = newRecord;
+    try {
+      const saved = await saveReceiveNoteReturnApi(newRecord);
+      if (saved) toSave = saved;
+    } catch (err) {
+      console.warn("Failed to persist Receive Note Return to backend:", err);
+    }
+
     setReceiveNoteReturnRecords((prev) => [
-      { ...newRecord, no: 1 },
+      { ...toSave, no: 1 },
       ...prev.map((r) => ({ ...r, no: r.no + 1 })),
     ]);
     const nextState: ViewState = { type: "list", page: "receive-note-return" };
@@ -2157,7 +2392,7 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
 
         {/* Exim Unit Reference (Satuan) Listing */}
         {viewState.type === "list" && (viewState.page === "satuan" || (viewState.page as string) === "unit-reference") && (
-          <UnitReferenceIndex />
+          <UnitReferenceIndex records={unitReferenceRecords} />
         )}
 
         {/* Exim Master Classification Listing */}
@@ -2295,6 +2530,8 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
         {viewState.type === "list" && viewState.page === "country" && (
           <CountryIndex
             records={countryRecords}
+            onSave={handleSaveCountry}
+            onDelete={handleDeleteCountry}
           />
         )}
 
@@ -2302,6 +2539,8 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
         {viewState.type === "list" && viewState.page === "account" && (
           <AccountIndex
             records={accountRecords}
+            onSave={handleSaveAccount}
+            onDelete={handleDeleteAccount}
           />
         )}
 
@@ -2309,6 +2548,8 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
         {viewState.type === "list" && viewState.page === "job-number" && (
           <JobNumberIndex
             records={jobNumberRecords}
+            onSave={handleSaveJobNumber}
+            onDelete={handleDeleteJobNumber}
           />
         )}
 
@@ -2316,6 +2557,8 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
         {viewState.type === "list" && viewState.page === "rafaksi-type" && (
           <RafaksiTypeIndex
             records={rafaksiTypeRecords}
+            onSave={handleSaveRafaksiType}
+            onDelete={handleDeleteRafaksiType}
           />
         )}
 
@@ -2323,6 +2566,8 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
         {viewState.type === "list" && viewState.page === "currency" && (
           <CurrencyIndex
             records={currencyRecords}
+            onSave={handleSaveCurrency}
+            onDelete={handleDeleteCurrency}
           />
         )}
 
@@ -2405,6 +2650,14 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
         {viewState.type === "receive-note-detail" && (
           <ReceiveNoteDetail
             code={viewState.code}
+            record={
+              receiveNoteRecords.find(
+                (r) =>
+                  r.id === viewState.code ||
+                  r.rnNumber === viewState.code ||
+                  r.rnNumber.replace(/[\/\\]/g, "-") === viewState.code
+              )
+            }
             onBack={() => handleNavigateList("receive-note", "/exim/receive-note")}
           />
         )}
@@ -2413,6 +2666,14 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
         {viewState.type === "receive-note-return-detail" && (
           <ReceiveNoteReturnDetail
             code={viewState.code}
+            record={
+              receiveNoteReturnRecords.find(
+                (r) =>
+                  r.id === viewState.code ||
+                  r.rnNumber === viewState.code ||
+                  r.rnNumber.replace(/[\/\\]/g, "-") === viewState.code
+              )
+            }
             onBack={() => handleNavigateList("receive-note-return", "/exim/receive-note-return")}
           />
         )}
@@ -2421,6 +2682,14 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
         {viewState.type === "document-history-detail" && (
           <DocumentHistoryDetail
             code={viewState.code}
+            record={
+              documentHistoryRecords.find(
+                (r) =>
+                  r.id === viewState.code ||
+                  r.invoiceNumber === viewState.code ||
+                  r.invoiceNumber.replace(/[\/\\]/g, "-") === viewState.code
+              )
+            }
             onBack={() => handleNavigateList("document-history", "/exim/document-history")}
           />
         )}

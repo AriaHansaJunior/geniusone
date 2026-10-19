@@ -302,64 +302,131 @@ class PurchaseOrderApiController extends Controller
      */
     public function store(Request $request)
     {
-        $validated = $request->validate([
-            'po_number' => 'nullable|string|max:255',
-            'po_types_id' => 'required|exists:po_types,id',
-            'supliers_id' => 'required|exists:supliers,id',
-            'date' => 'nullable|string|max:45',
-            'due_date' => 'required|string|max:45',
-            'valutas_id' => 'nullable|exists:valutas,id',
-            'rate' => 'nullable|string|max:45',
-            'address' => 'nullable|string|max:500',
-            'payment_terms_id' => 'nullable|exists:payment_terms,id',
-            'payment_methods_id' => 'nullable|exists:payment_methods,id',
-            'delivery_terms_id' => 'nullable|exists:delivery_terms,id',
-            'latest_delivery' => 'nullable|date',
-            'service_subkon' => 'nullable|boolean',
-            'facility_status' => 'nullable|string|max:45',
-            'remark' => 'nullable|string|max:500',
-            'items' => 'required|array|min:1',
-            'items.*.pr_has_items_id' => 'nullable|exists:purchase_requisitions_has_items,id',
-            'items.*.price' => 'required|numeric|min:0',
-            'items.*.order' => 'required|numeric|min:0.01',
-            'items.*.purchased' => 'nullable|numeric',
-            'items.*.discount_types_id' => 'nullable|exists:discount_types,id',
-            'items.*.discount_val' => 'nullable|numeric',
-            'items.*.pph_id' => 'nullable|exists:pph,id',
-            'items.*.ppn_id' => 'nullable|exists:ppn,id',
-            'additional_costs' => 'nullable|array',
-            'additional_costs.*.additional_cost_types_id' => 'required|exists:additional_cost_types,id',
-            'additional_costs.*.value' => 'required|numeric|min:0',
-        ]);
-
         $userId = $request->user()?->id ?? 1;
 
+        // Resolve PO Type ID
+        $poTypeInput = $request->input('po_types_id') ?? $request->input('poType') ?? $request->input('po_type');
+        $poTypeId = null;
+        if (is_numeric($poTypeInput) && \App\Models\Procurement\PurchaseOrder\PoType::where('id', $poTypeInput)->exists()) {
+            $poTypeId = (int) $poTypeInput;
+        } elseif (!empty($poTypeInput)) {
+            $pt = \App\Models\Procurement\PurchaseOrder\PoType::where('code', $poTypeInput)->orWhere('name', 'like', "%{$poTypeInput}%")->first();
+            $poTypeId = $pt?->id;
+        }
+        if (!$poTypeId) {
+            $poTypeId = \App\Models\Procurement\PurchaseOrder\PoType::first()?->id ?? 1;
+        }
+
+        // Resolve Supplier ID
+        $supInput = $request->input('supliers_id') ?? $request->input('supplier_id') ?? $request->input('supplierId') ?? $request->input('supplier');
+        $supId = null;
+        if (is_numeric($supInput) && \App\Models\Master\Partner\Supplier::where('id', $supInput)->exists()) {
+            $supId = (int) $supInput;
+        } elseif (!empty($supInput)) {
+            // Check if input is formatted like "sup-1" or "SUP-001"
+            $cleaned = preg_replace('/^sup-?/i', '', (string) $supInput);
+            if (is_numeric($cleaned) && \App\Models\Master\Partner\Supplier::where('id', $cleaned)->exists()) {
+                $supId = (int) $cleaned;
+            } else {
+                $sup = \App\Models\Master\Partner\Supplier::where('code', $supInput)->orWhere('name', 'like', "%{$supInput}%")->first();
+                $supId = $sup?->id;
+            }
+        }
+        if (!$supId) {
+            $supId = \App\Models\Master\Partner\Supplier::first()?->id ?? 1;
+        }
+
+        // Resolve Valuta / Currency ID
+        $valutaInput = $request->input('valutas_id') ?? $request->input('currency_id') ?? $request->input('currency');
+        $valutaId = null;
+        if (is_numeric($valutaInput) && \App\Models\Master\Finance\Valuta::where('id', $valutaInput)->exists()) {
+            $valutaId = (int) $valutaInput;
+        } elseif (!empty($valutaInput)) {
+            $v = \App\Models\Master\Finance\Valuta::where('code', 'like', "%{$valutaInput}%")->orWhere('name', 'like', "%{$valutaInput}%")->first();
+            $valutaId = $v?->id;
+        }
+        if (!$valutaId) {
+            $valutaId = \App\Models\Master\Finance\Valuta::first()?->id ?? 1;
+        }
+
+        // Resolve Payment Term ID
+        $payTermInput = $request->input('payment_terms_id') ?? $request->input('paymentTerm');
+        $payTermId = is_numeric($payTermInput) && \App\Models\Master\Finance\PaymentTerm::where('id', $payTermInput)->exists()
+            ? (int) $payTermInput
+            : (\App\Models\Master\Finance\PaymentTerm::first()?->id ?? 1);
+
+        // Resolve Payment Method ID
+        $payMethodInput = $request->input('payment_methods_id') ?? $request->input('paymentMethod');
+        $payMethodId = is_numeric($payMethodInput) && \App\Models\Master\Finance\PaymentMethod::where('id', $payMethodInput)->exists()
+            ? (int) $payMethodInput
+            : (\App\Models\Master\Finance\PaymentMethod::first()?->id ?? 1);
+
+        // Resolve Delivery Term ID
+        $delivTermInput = $request->input('delivery_terms_id') ?? $request->input('deliveryTerm');
+        $delivTermId = is_numeric($delivTermInput) && \App\Models\Master\Finance\DeliveryTerm::where('id', $delivTermInput)->exists()
+            ? (int) $delivTermInput
+            : (\App\Models\Master\Finance\DeliveryTerm::first()?->id ?? 1);
+
+        // Resolve Line Items
+        $rawItems = $request->input('items', []);
+        if (empty($rawItems)) {
+            return response()->json([
+                'message' => 'Validation error',
+                'errors' => ['items' => ['At least one item is required.']]
+            ], 422);
+        }
+
+        $processedItems = [];
+        foreach ($rawItems as $it) {
+            $orderQty = (float) ($it['order'] ?? $it['orderQty'] ?? $it['quantity'] ?? 1);
+            $price = (float) ($it['price'] ?? 0);
+            $prHasItemId = !empty($it['pr_has_items_id']) && is_numeric($it['pr_has_items_id']) ? (int) $it['pr_has_items_id'] : null;
+
+            $processedItems[] = [
+                'pr_has_items_id' => $prHasItemId,
+                'item_alias' => $it['item_alias'] ?? $it['itemName'] ?? $it['item_name'] ?? null,
+                'price' => $price,
+                'order' => $orderQty,
+                'purchased' => (float) ($it['purchased'] ?? $orderQty),
+                'discount_types_id' => $it['discount_types_id'] ?? null,
+                'discount_val' => (float) ($it['discount_val'] ?? $it['discountPercent'] ?? 0),
+                'pph_id' => $it['pph_id'] ?? null,
+                'ppn_id' => $it['ppn_id'] ?? null,
+            ];
+        }
+
+        $poNumber = $request->input('po_number') ?? \App\Services\DocumentNumber\DocumentNumberGenerator::generatePoNumber();
+        $date = $request->input('date') ?? now()->format('Y-m-d');
+        $dueDate = $request->input('due_date') ?? now()->addDays(14)->format('Y-m-d');
+        $latestDeliv = $request->input('latest_delivery') ?? now()->addDays(14);
+
         $headerData = [
-            'po_number' => $validated['po_number'] ?? null,
-            'po_types_id' => $validated['po_types_id'],
-            'supliers_id' => $validated['supliers_id'],
-            'date' => $validated['date'] ?? date('Y-m-d'),
-            'due_date' => $validated['due_date'],
-            'valutas_id' => $validated['valutas_id'] ?? 1,
-            'rate' => $validated['rate'] ?? '1.00',
-            'address' => $validated['address'] ?? '-',
-            'payment_terms_id' => $validated['payment_terms_id'] ?? 1,
-            'payment_methods_id' => $validated['payment_methods_id'] ?? 1,
-            'delivery_terms_id' => $validated['delivery_terms_id'] ?? 1,
-            'latest_delivery' => $validated['latest_delivery'] ?? now()->addDays(14),
-            'service_subkon' => $validated['service_subkon'] ?? 0,
-            'facility_status' => $validated['facility_status'] ?? 'FASILITAS',
-            'remark' => $validated['remark'] ?? '',
+            'po_number' => $poNumber,
+            'po_types_id' => $poTypeId,
+            'supliers_id' => $supId,
+            'date' => $date,
+            'due_date' => $dueDate,
+            'valutas_id' => $valutaId,
+            'rate' => (string) ($request->input('rate') ?? $request->input('exchangeRate') ?? '1.00'),
+            'address' => $request->input('address') ?? $request->input('supplierAddress') ?? '-',
+            'payment_terms_id' => $payTermId,
+            'payment_methods_id' => $payMethodId,
+            'delivery_terms_id' => $delivTermId,
+            'latest_delivery' => $latestDeliv,
+            'service_subkon' => $request->boolean('service_subkon', false) ? 1 : 0,
+            'facility_status' => $request->input('facility_status') ?? $request->input('statusFacility') ?? 'FASILITAS',
+            'remark' => $request->input('remark') ?? $request->input('remarkPo') ?? '',
         ];
 
-        $po = GeniusOneBackend::procurement()->createPo(
+        $po = GeniusOneBackend::po()->createPo(
             $headerData,
-            $validated['items'],
-            $validated['additional_costs'] ?? [],
+            $processedItems,
+            $request->input('additional_costs', []),
             $userId
         );
 
         return response()->json([
+            'status' => 'success',
             'message' => 'Purchase Order created successfully',
             'data' => $po->load(['supplier', 'items.prItem.item', 'additionalCosts']),
         ], 201);

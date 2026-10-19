@@ -17,7 +17,8 @@ interface CurrencyIndexProps {
   records?: CurrencyRecord[];
   onAddNew?: () => void;
   onEdit?: (record: CurrencyRecord) => void;
-  onDelete?: (id: string) => void;
+  onDelete?: (id: string) => Promise<boolean | void> | void;
+  onSave?: (data: { currencyCode: string; currencyName: string; symbol?: string; syncStatus?: any; status?: boolean }, id?: string) => Promise<CurrencyRecord | null>;
 }
 
 export function CurrencyIndex({
@@ -25,6 +26,7 @@ export function CurrencyIndex({
   onAddNew,
   onEdit,
   onDelete,
+  onSave,
 }: CurrencyIndexProps) {
   const [localRecords, setLocalRecords] = useState<CurrencyRecord[]>(records);
   const [search, setSearch] = useState("");
@@ -127,12 +129,30 @@ export function CurrencyIndex({
   };
 
   // Save from Modal
-  const handleSaveCurrency = (data: {
+  const handleSaveCurrency = async (data: {
     currencyCode: string;
     currencyName: string;
     symbol: string;
     syncStatus: SyncStatus;
   }) => {
+    if (onSave) {
+      try {
+        const saved = await onSave(data, formMode === "edit" ? activeRecord?.id : undefined);
+        if (saved) {
+          if (formMode === "create") {
+            setLocalRecords((prev) => [saved, ...prev.map((r, i) => ({ ...r, no: i + 2 }))]);
+          } else {
+            setLocalRecords((prev) => prev.map((r) => (r.id === saved.id ? saved : r)));
+          }
+          setIsFormModalOpen(false);
+          setActiveRecord(null);
+          return;
+        }
+      } catch (err) {
+        console.warn("Currency save API error:", err);
+      }
+    }
+
     if (formMode === "create") {
       const newRecord: CurrencyRecord = {
         id: `curr-${Date.now()}`,
@@ -170,11 +190,17 @@ export function CurrencyIndex({
   };
 
   // Confirm delete
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (!currencyToDelete) return;
     const idToDelete = currencyToDelete.id;
+    if (onDelete) {
+      try {
+        await onDelete(idToDelete);
+      } catch (err) {
+        console.warn("Currency delete API error:", err);
+      }
+    }
     setLocalRecords((prev) => prev.filter((c) => c.id !== idToDelete));
-    if (onDelete) onDelete(idToDelete);
     setCurrencyToDelete(null);
   };
 

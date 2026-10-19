@@ -7,6 +7,7 @@ import { initialPaymentTermRecords } from "../PurchaseMaster/PaymentTerm/payment
 import { initialDeliveryTermRecords } from "../PurchaseMaster/DeliveryTerms/delivery-terms-types";
 import { initialCurrencyRecords } from "../../Exim/Master/Currency/currency-types";
 import { prRows } from "../../../data/mockData";
+import { createPurchaseOrder } from "../../../data/api";
 
 export interface POItemRow {
   id: string;
@@ -250,48 +251,90 @@ export function PurchaseOrderCreate({ onBack, onSaveSuccess }: PurchaseOrderCrea
     setShowSaveConfirm(true);
   };
 
-  const handleConfirmSubmit = () => {
+  const handleConfirmSubmit = async () => {
     setIsSubmitting(true);
-    const poNumber = `POL-1026-${String(Math.floor(Math.random() * 900) + 100)}`;
-    const supplierObj = initialSupplierRecords.find((s) => s.id === selectedSupplierId);
+    try {
+      const payload = {
+        poType,
+        supliers_id: selectedSupplierId,
+        date,
+        due_date: dueDate,
+        currency,
+        rate: exchangeRate,
+        address: supplierAddress,
+        paymentTerm,
+        paymentMethod,
+        deliveryTerm,
+        latest_delivery: latestDelivery,
+        service_subkon: isSubkon,
+        facility_status: statusFacility === "Facility" ? "FASILITAS" : "NON FASILITAS",
+        remark: remarkPo,
+        items: items.map((it) => ({
+          itemName: it.itemName,
+          item_alias: it.itemAlias,
+          price: it.price,
+          order: it.orderQty,
+          purchased: it.purchasedQty,
+          discountPercent: it.discountPercent,
+        })),
+      };
 
-    const newPO = {
-      _id: `po-${Date.now()}`,
-      _type: "po",
-      _rawNumber: poNumber,
-      _rawStatus: "Ready",
-      _rawDate: date,
-      _rawDueDate: dueDate,
-      _rawSupplier: supplierObj ? `[${supplierObj.supplierCode || "SUPP"}] ${supplierObj.supplierName}` : "Selected Supplier",
-      _rawTotal: `${currency.split(" ")[0]} ${grandTotal.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-      _rawCurrency: currency.split(" ")[0],
-      _rawRate: exchangeRate.toString(),
-      _rawPaymentMethod: paymentMethod,
-      _rawPaymentTerm: paymentTerm,
-      _rawFacility: statusFacility === "Facility" ? "FASILITAS" : "NON FASILITAS",
-      _rawDeptCreated: "PROCUREMENT",
-      _rawCreatedBy: "ADMINISTRATOR " + today,
-      _rawRemark: remarkPo || "New PO",
-      _items: items,
-      _otherCosts: additionalCosts,
-      _financials: {
-        total: totalSubtotal,
-        discount: discountAmount,
-        dpp,
-        ppn: ppnAmount,
-        otherCosts: totalAdditionalCosts,
-        totalPph,
-        grandTotal,
-      },
-      totalItem: items.length,
-      totalQuantity: items.reduce((acc, it) => acc + (Number(it.orderQty) || 0), 0),
-    };
+      const res = await createPurchaseOrder(payload);
+      if (res && res.data) {
+        if (onSaveSuccess) onSaveSuccess(res.data);
+      } else {
+        const poNumber = `POL-1026-${String(Math.floor(Math.random() * 900) + 100)}`;
+        const supplierObj = initialSupplierRecords.find((s) => s.id === selectedSupplierId);
 
-    if (onSaveSuccess) {
-      onSaveSuccess(newPO);
+        const newPO = {
+          _id: `po-${Date.now()}`,
+          _type: "po",
+          _rawNumber: poNumber,
+          _rawStatus: "Ready",
+          _rawDate: date,
+          _rawDueDate: dueDate,
+          _rawSupplier: supplierObj ? `[${supplierObj.supplierCode || "SUPP"}] ${supplierObj.supplierName}` : "Selected Supplier",
+          _rawTotal: `${currency.split(" ")[0]} ${grandTotal.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+          _rawCurrency: currency.split(" ")[0],
+          _rawRate: exchangeRate.toString(),
+          _rawPaymentMethod: paymentMethod,
+          _rawPaymentTerm: paymentTerm,
+          _rawFacility: statusFacility === "Facility" ? "FASILITAS" : "NON FASILITAS",
+          _rawDeptCreated: "PROCUREMENT",
+          _rawCreatedBy: "ADMINISTRATOR " + today,
+          _rawRemark: remarkPo || "New PO",
+          _items: items,
+          _otherCosts: additionalCosts,
+          _financials: {
+            total: totalSubtotal,
+            discount: discountAmount,
+            dpp,
+            ppn: ppnAmount,
+            otherCosts: totalAdditionalCosts,
+            totalPph,
+            grandTotal,
+          },
+          totalItem: items.length,
+          totalQuantity: items.reduce((acc, it) => acc + (Number(it.orderQty) || 0), 0),
+        };
+
+        if (onSaveSuccess) {
+          onSaveSuccess(newPO);
+        }
+      }
+    } catch (err: any) {
+      console.error("Failed to submit PO to backend:", err);
+      setNotification({
+        type: "error",
+        message: err.message || "Failed to create Purchase Order. Please try again.",
+      });
+      setIsSubmitting(false);
+      setShowSaveConfirm(false);
+      return;
     }
 
     setShowSaveConfirm(false);
+    setIsSubmitting(false);
     onBack();
   };
 

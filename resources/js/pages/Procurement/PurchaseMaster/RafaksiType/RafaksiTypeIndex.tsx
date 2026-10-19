@@ -16,8 +16,9 @@ interface RafaksiTypeIndexProps {
   records?: RafaksiTypeRecord[];
   onAddNew?: () => void;
   onEdit?: (record: RafaksiTypeRecord) => void;
-  onDelete?: (id: string) => void;
+  onDelete?: (id: string) => Promise<boolean | void> | void;
   onToggleStatus?: (id: string) => void;
+  onSave?: (data: { code: string; name: string; description?: string; status: boolean }, id?: string) => Promise<RafaksiTypeRecord | null>;
 }
 
 export function RafaksiTypeIndex({
@@ -26,6 +27,7 @@ export function RafaksiTypeIndex({
   onEdit,
   onDelete,
   onToggleStatus,
+  onSave,
 }: RafaksiTypeIndexProps) {
   const [localRecords, setLocalRecords] = useState<RafaksiTypeRecord[]>(records);
   const [search, setSearch] = useState("");
@@ -137,12 +139,30 @@ export function RafaksiTypeIndex({
   };
 
   // Save from Modal
-  const handleSaveRafaksiType = (data: {
+  const handleSaveRafaksiType = async (data: {
     code: string;
     name: string;
     description: string;
     status: boolean;
   }) => {
+    if (onSave) {
+      try {
+        const saved = await onSave(data, formMode === "edit" ? activeRecord?.id : undefined);
+        if (saved) {
+          if (formMode === "create") {
+            setLocalRecords((prev) => [saved, ...prev.map((r, i) => ({ ...r, no: i + 2 }))]);
+          } else {
+            setLocalRecords((prev) => prev.map((r) => (r.id === saved.id ? saved : r)));
+          }
+          setIsFormModalOpen(false);
+          setActiveRecord(null);
+          return;
+        }
+      } catch (err) {
+        console.warn("Rafaksi type save API error:", err);
+      }
+    }
+
     if (formMode === "create") {
       const newRecord: RafaksiTypeRecord = {
         id: `rfk-${Date.now()}`,
@@ -175,11 +195,17 @@ export function RafaksiTypeIndex({
   };
 
   // Confirm delete
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (!rafaksiToDelete) return;
     const idToDelete = rafaksiToDelete.id;
+    if (onDelete) {
+      try {
+        await onDelete(idToDelete);
+      } catch (err) {
+        console.warn("Rafaksi type delete API error:", err);
+      }
+    }
     setLocalRecords((prev) => prev.filter((r) => r.id !== idToDelete));
-    if (onDelete) onDelete(idToDelete);
     setRafaksiToDelete(null);
   };
 

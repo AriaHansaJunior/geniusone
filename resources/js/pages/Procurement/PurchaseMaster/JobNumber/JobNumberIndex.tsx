@@ -16,8 +16,9 @@ interface JobNumberIndexProps {
   records?: JobNumberRecord[];
   onAddNew?: () => void;
   onEdit?: (record: JobNumberRecord) => void;
-  onDelete?: (id: string) => void;
+  onDelete?: (id: string) => Promise<boolean | void> | void;
   onToggleStatus?: (id: string) => void;
+  onSave?: (data: { jobNumber: string; jobName?: string; department?: string; status: boolean }, id?: string) => Promise<JobNumberRecord | null>;
 }
 
 export function JobNumberIndex({
@@ -26,6 +27,7 @@ export function JobNumberIndex({
   onEdit,
   onDelete,
   onToggleStatus,
+  onSave,
 }: JobNumberIndexProps) {
   const [localRecords, setLocalRecords] = useState<JobNumberRecord[]>(records);
   const [search, setSearch] = useState("");
@@ -137,12 +139,30 @@ export function JobNumberIndex({
   };
 
   // Save from Modal
-  const handleSaveJobNumber = (data: {
+  const handleSaveJobNumber = async (data: {
     jobNumber: string;
     jobName: string;
     department: string;
     status: boolean;
   }) => {
+    if (onSave) {
+      try {
+        const saved = await onSave(data, formMode === "edit" ? activeRecord?.id : undefined);
+        if (saved) {
+          if (formMode === "create") {
+            setLocalRecords((prev) => [saved, ...prev.map((r, i) => ({ ...r, no: i + 2 }))]);
+          } else {
+            setLocalRecords((prev) => prev.map((r) => (r.id === saved.id ? saved : r)));
+          }
+          setIsFormModalOpen(false);
+          setActiveRecord(null);
+          return;
+        }
+      } catch (err) {
+        console.warn("Job number save API error:", err);
+      }
+    }
+
     if (formMode === "create") {
       const newRecord: JobNumberRecord = {
         id: `job-${Date.now()}`,
@@ -175,11 +195,17 @@ export function JobNumberIndex({
   };
 
   // Confirm delete
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (!jobToDelete) return;
     const idToDelete = jobToDelete.id;
+    if (onDelete) {
+      try {
+        await onDelete(idToDelete);
+      } catch (err) {
+        console.warn("Job number delete API error:", err);
+      }
+    }
     setLocalRecords((prev) => prev.filter((j) => j.id !== idToDelete));
-    if (onDelete) onDelete(idToDelete);
     setJobToDelete(null);
   };
 
