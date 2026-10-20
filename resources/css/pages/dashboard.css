@@ -40,7 +40,7 @@
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
-  max-width: 640px;
+  width: 100%;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -50,16 +50,18 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 20px;
+  padding: 16px 20px;
   background: #f8fafc;
   border-bottom: 1px solid var(--line);
+  flex-wrap: wrap;
+  gap: 12px;
 }
 
 .dashboard-rate-card__title {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 13.5px;
+  font-size: 14px;
   font-weight: 800;
   color: var(--ink);
 }
@@ -69,9 +71,90 @@
 }
 
 .dashboard-rate-card__header .button {
-  min-height: 30px;
-  padding: 0 12px;
-  font-size: 11.5px;
+  min-height: 32px;
+  padding: 0 14px;
+  font-size: 12px;
+}
+
+/* Tabs Navigation */
+.dashboard-tabs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 20px;
+  background: #f8fafc;
+  border-bottom: 1px solid var(--line);
+}
+
+.dashboard-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 16px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--muted);
+  border: none;
+  background: transparent;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.dashboard-tab:hover {
+  color: var(--ink);
+}
+
+.dashboard-tab--active {
+  color: var(--blue-600);
+  border-bottom-color: var(--blue-600);
+  font-weight: 700;
+}
+
+.dashboard-tab__pill {
+  font-size: 10.5px;
+  padding: 1px 6px;
+  border-radius: 10px;
+  background: #e2e8f0;
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.dashboard-tab--active .dashboard-tab__pill {
+  background: #dbeafe;
+  color: var(--blue-700);
+}
+
+/* Filter Bar */
+.dashboard-filters-bar {
+  padding: 16px 20px;
+  background: #ffffff;
+  border-bottom: 1px solid var(--line);
+}
+
+.dashboard-filters-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 14px;
+  align-items: flex-end;
+}
+
+.dashboard-filters-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+/* Table Toolbar */
+.dashboard-table-toolbar {
+  padding: 12px 20px;
+  background: #ffffff;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  justifyContent: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
 .dashboard-rate-table-wrapper {
@@ -88,30 +171,37 @@
 .dashboard-rate-table thead th {
   background: #505054;
   color: #ffffff;
-  padding: 10px 20px;
+  padding: 10px 16px;
   font-size: 11.5px;
   font-weight: 700;
   letter-spacing: 0.3px;
   text-transform: uppercase;
+  white-space: nowrap;
 }
 
-.dashboard-rate-table thead th:last-child {
-  text-align: right;
+.dashboard-rate-table thead th.sortable {
+  cursor: pointer;
+  user-select: none;
 }
 
-.dashboard-rate-table thead th:nth-child(2) {
-  text-align: right;
+.dashboard-rate-table thead th.sortable:hover {
+  background: #3f3f46;
 }
 
 .dashboard-rate-table tbody td {
-  padding: 14px 20px;
-  font-size: 13px;
+  padding: 12px 16px;
+  font-size: 12.5px;
   border-bottom: 1px solid var(--line);
   color: var(--ink);
+  vertical-align: middle;
 }
 
-.dashboard-rate-table tbody td:nth-child(2),
-.dashboard-rate-table tbody td:last-child {
+.dashboard-rate-table tbody tr:hover {
+  background: #f8fafc;
+}
+
+.dashboard-rate-table tbody td.numeric,
+.dashboard-rate-table thead th.numeric {
   text-align: right;
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum";
@@ -122,10 +212,15 @@
   color: var(--ink);
 }
 
+.rate-value--highlight {
+  font-weight: 800;
+  color: var(--blue-700);
+}
+
 .rate-unavailable {
   display: inline-flex;
   align-items: center;
-  padding: 3px 8px;
+  padding: 2px 7px;
   background: var(--canvas);
   border: 1px solid var(--line-strong);
   border-radius: var(--radius-sm);
@@ -149,7 +244,7 @@
 }
 
 .dashboard-rate-card__footer {
-  padding: 12px 20px;
+  padding: 14px 20px;
   background: #fafafc;
   border-top: 1px solid var(--line);
 }
@@ -157,8 +252,8 @@
 .dashboard-rate-source-info {
   display: flex;
   align-items: flex-start;
-  gap: 8px;
-  font-size: 11px;
+  gap: 10px;
+  font-size: 11.5px;
   color: var(--muted);
   line-height: 1.45;
 }
@@ -178,4 +273,3 @@
 .dashboard-rate-source-info p {
   margin: 0;
 }
-
