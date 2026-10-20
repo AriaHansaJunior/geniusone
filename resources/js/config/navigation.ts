@@ -155,7 +155,7 @@ export const navigationConfig: NavSection[] = [
         label: "Request",
         items: [
           { id: "wh-req-weight-note", label: "Weight Note", path: "/warehouse/request/weight-note", isPlaceholder: true },
-          { id: "wh-req-material", label: "Request Material", path: "/warehouse/request/request-material", isPlaceholder: true },
+          { id: "wh-req-material", label: "Request Material", path: "/warehouse/request/request-material" },
           { id: "wh-req-weight-note-fg", label: "Weight Note Multiple FG", path: "/warehouse/request/weight-note-multiple-fg", isPlaceholder: true },
           { id: "wh-req-shipping", label: "Shipping Instruction", path: "/warehouse/request/shipping-instruction", isPlaceholder: true },
         ],
@@ -173,8 +173,8 @@ export const navigationConfig: NavSection[] = [
         label: "Report",
         items: [
           { id: "wh-rep-receive-material", label: "Receive Material", path: "/warehouse/report/receive-material", isPlaceholder: true },
-          { id: "wh-rep-stock-item", label: "Stock Item", path: "/warehouse/report/stock-item", isPlaceholder: true },
-          { id: "wh-rep-stock-card", label: "Stock Card", path: "/warehouse/report/stock-card", isPlaceholder: true },
+          { id: "wh-rep-stock-item", label: "Stock Item", path: "/warehouse/report/stock-item" },
+          { id: "wh-rep-stock-card", label: "Stock Card", path: "/warehouse/report/stock-card" },
           { id: "wh-rep-stock-transfer", label: "Stock Transfer Report", path: "/warehouse/report/stock-transfer-report", isPlaceholder: true },
           { id: "wh-rep-delivery-order", label: "Delivery Order Report", path: "/warehouse/report/delivery-order-report", isPlaceholder: true },
           { id: "wh-rep-stock-mutation", label: "Stock Mutation Report", path: "/warehouse/report/stock-mutation-report", isPlaceholder: true },

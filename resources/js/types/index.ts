@@ -163,6 +163,8 @@ export type ViewState =
 
   | { type: "item-edit"; record?: any }
   | { type: "item-qr" }
+  | { type: "wh-req-material-create" }
+  | { type: "wh-req-material-detail"; id: string }
   | { type: "edit-profile" }
   | { type: "login" }
   | { type: "not-found"; path?: string };

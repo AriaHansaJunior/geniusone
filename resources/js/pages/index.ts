@@ -81,3 +81,10 @@ export { CurrencyIndex } from "./Exim/Master/Currency/CurrencyIndex";
 export { CurrencyForm } from "./Exim/Master/Currency/CurrencyForm";
 export { PurchaseRequisitionCreate } from "./Procurement/PurchaseRequest/PurchaseRequisitionCreate";
 export { PurchaseOrderCreate } from "./Procurement/PurchaseOrder/PurchaseOrderCreate";
+
+// Warehouse Reports & Request Material Pages
+export { StockCardIndex } from "./Warehouse/Report/StockCard/index";
+export { StockItemIndex } from "./Warehouse/Report/StockItem/index";
+export { RequestMaterialIndex } from "./Warehouse/Request/RequestMaterial/index";
+export { RequestMaterialCreate } from "./Warehouse/Request/RequestMaterial/create";
+export { RequestMaterialDetail } from "./Warehouse/Request/RequestMaterial/detail";

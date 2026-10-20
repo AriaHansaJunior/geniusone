@@ -71,7 +71,14 @@ import {
   CurrencyIndex,
   PurchaseRequisitionCreate,
   PurchaseOrderCreate,
+  StockCardIndex,
+  StockItemIndex,
+  RequestMaterialIndex,
+  RequestMaterialCreate,
+  RequestMaterialDetail,
 } from "../pages";
+import { initialRequestMaterialRecords } from "../pages/Warehouse/Request/RequestMaterial/request-material-data";
+import type { RequestMaterialRecord } from "../pages/Warehouse/Request/RequestMaterial/request-material-types";
 import { ConfirmDialog } from "./ui/ConfirmDialog";
 import { pageMeta, docToSlug } from "../data/mockData";
 import { navigationConfig } from "../config/navigation";
@@ -231,6 +238,13 @@ function resolveViewStateFromPath(pathname: string, defaultPage: PageKey = "dash
     cleanPath === "/warehouse/master/warehouse/add"
   ) {
     return { type: "warehouse-master-create" };
+  }
+
+  if (
+    cleanPath === "/warehouse/request/request-material/create" ||
+    cleanPath === "/warehouse/request/request-material/add"
+  ) {
+    return { type: "wh-req-material-create" };
   }
 
   if (
@@ -514,6 +528,13 @@ function resolveViewStateFromPath(pathname: string, defaultPage: PageKey = "dash
     return { type: "warehouse-detail", code: decodeURIComponent(warehouseDetailMatch[1]) };
   }
 
+  const reqMaterialDetailMatch = cleanPath.match(
+    /^\/warehouse\/request\/request-material\/(?!create$|add$)(.+)$/
+  );
+  if (reqMaterialDetailMatch) {
+    return { type: "wh-req-material-detail", id: decodeURIComponent(reqMaterialDetailMatch[1]) };
+  }
+
   // Check navigationConfig items (matches all hierarchical paths configured)
   for (const section of navigationConfig) {
     if (section.path && cleanPath === section.path) {
@@ -624,6 +645,9 @@ function resolveViewStateFromPath(pathname: string, defaultPage: PageKey = "dash
   if (cleanPath === "/exim/currency" || cleanPath === "/exim/master/currency" || cleanPath === "/procurement/purchase-master/currency") return { type: "list", page: "currency" };
 
   if (cleanPath === "/warehouse/master" || cleanPath === "/warehouse/master/warehouse") return { type: "list", page: "warehouse-master" };
+  if (cleanPath === "/warehouse/report/stock-card") return { type: "list", page: "wh-rep-stock-card" };
+  if (cleanPath === "/warehouse/report/stock-item") return { type: "list", page: "wh-rep-stock-item" };
+  if (cleanPath === "/warehouse/request/request-material") return { type: "list", page: "wh-req-material" };
 
   if (defaultPage === ("not-found" as any) || (cleanPath !== "" && cleanPath !== "/dashboard")) {
     return { type: "not-found", path: cleanPath };
@@ -673,6 +697,8 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
     if (initialPage === "po-create") return { type: "po-create" };
     if (initialPage === "report-detail") return { type: "report-detail", code: initialCode || "POL-1026-0040" };
     if (initialPage === "warehouse-detail") return { type: "warehouse-detail", code: initialCode || "0138-WHIN-IMLI-G-X-2026" };
+    if (initialPage === "wh-req-material-create") return { type: "wh-req-material-create" };
+    if (initialPage === "wh-req-material-detail") return { type: "wh-req-material-detail", id: initialCode || "REQ-WH-2026-001" };
     if (initialPage in pageMeta) return { type: "list", page: initialPage as PageKey };
     return { type: "dashboard" };
   });
@@ -733,6 +759,8 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
       ? "warehouse-master"
       : viewState.type === "item-create" || viewState.type === "item-edit" || viewState.type === "item-qr"
       ? "item"
+      : viewState.type === "wh-req-material-create" || viewState.type === "wh-req-material-detail"
+      ? "wh-req-material"
       : null;
 
   const isDetailPage = viewState.type !== "list" && viewState.type !== "dashboard";
@@ -867,6 +895,7 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
   const [rafaksiTypeRecords, setRafaksiTypeRecords] = useState<RafaksiTypeRecord[]>(initialRafaksiTypeRecords);
   const [currencyRecords, setCurrencyRecords] = useState<CurrencyRecord[]>(initialCurrencyRecords);
   const [unitReferenceRecords, setUnitReferenceRecords] = useState<UnitReferenceRecord[]>(initialUnitReferenceRecords);
+  const [requestMaterialRecords, setRequestMaterialRecords] = useState<RequestMaterialRecord[]>(initialRequestMaterialRecords);
 
   // Live database synchronization on mount
   useEffect(() => {
@@ -1120,6 +1149,34 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
     if (typeof window !== "undefined") {
       window.scrollTo(0, 0);
       window.history.pushState(nextState, "", "/procurement/transactions/purchase-order/create");
+    }
+  }, []);
+
+  const handleNavigateRequestMaterialCreate = useCallback(() => {
+    const nextState: ViewState = { type: "wh-req-material-create" };
+    setViewState(nextState);
+    if (typeof window !== "undefined") {
+      window.scrollTo(0, 0);
+      window.history.pushState(nextState, "", "/warehouse/request/request-material/create");
+    }
+  }, []);
+
+  const handleNavigateRequestMaterialDetail = useCallback((id: string) => {
+    const nextState: ViewState = { type: "wh-req-material-detail", id };
+    setViewState(nextState);
+    if (typeof window !== "undefined") {
+      window.scrollTo(0, 0);
+      window.history.pushState(nextState, "", `/warehouse/request/request-material/${encodeURIComponent(id)}`);
+    }
+  }, []);
+
+  const handleSaveRequestMaterial = useCallback((newRecord: RequestMaterialRecord) => {
+    setRequestMaterialRecords((prev) => [newRecord, ...prev]);
+    const nextState: ViewState = { type: "list", page: "wh-req-material" };
+    setViewState(nextState);
+    if (typeof window !== "undefined") {
+      window.scrollTo(0, 0);
+      window.history.pushState(nextState, "", "/warehouse/request/request-material");
     }
   }, []);
 
@@ -2571,6 +2628,25 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
           />
         )}
 
+        {/* Warehouse Stock Card Report */}
+        {viewState.type === "list" && viewState.page === "wh-rep-stock-card" && (
+          <StockCardIndex />
+        )}
+
+        {/* Warehouse Stock (Stock Item) Report */}
+        {viewState.type === "list" && viewState.page === "wh-rep-stock-item" && (
+          <StockItemIndex />
+        )}
+
+        {/* Warehouse Request Material Listing */}
+        {viewState.type === "list" && viewState.page === "wh-req-material" && (
+          <RequestMaterialIndex
+            records={requestMaterialRecords}
+            onAddNew={handleNavigateRequestMaterialCreate}
+            onOpenDetail={handleNavigateRequestMaterialDetail}
+          />
+        )}
+
         {/* New Lightweight Placeholder Pages */}
         {viewState.type === "list" &&
           viewState.page !== "pr" &&
@@ -2601,6 +2677,9 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
           viewState.page !== "receive-note-return" &&
           viewState.page !== "document-history" &&
           viewState.page !== "warehouse-master" &&
+          viewState.page !== "wh-rep-stock-card" &&
+          viewState.page !== "wh-rep-stock-item" &&
+          viewState.page !== "wh-req-material" &&
           viewState.page !== "country" &&
           viewState.page !== "account" &&
           viewState.page !== "job-number" &&
@@ -2643,6 +2722,15 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
             code={viewState.code}
             onBack={() => handleNavigateList("warehouse", "/warehouse/incoming/receive-material-bpb")}
             onNavigateDetail={handleNavigateDetail}
+          />
+        )}
+
+        {/* Dedicated Request Material Detail View */}
+        {viewState.type === "wh-req-material-detail" && (
+          <RequestMaterialDetail
+            id={viewState.id}
+            records={requestMaterialRecords}
+            onBack={() => handleNavigateList("wh-req-material", "/warehouse/request/request-material")}
           />
         )}
 
@@ -2752,6 +2840,14 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
           <WarehouseCreate
             onBack={() => handleNavigateList("warehouse", "/warehouse/incoming/receive-material-bpb")}
             onSaved={() => handleNavigateList("warehouse", "/warehouse/incoming/receive-material-bpb")}
+          />
+        )}
+
+        {/* Dedicated Full Page Request Material Create View */}
+        {viewState.type === "wh-req-material-create" && (
+          <RequestMaterialCreate
+            onSave={handleSaveRequestMaterial}
+            onCancel={() => handleNavigateList("wh-req-material", "/warehouse/request/request-material")}
           />
         )}
 

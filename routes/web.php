@@ -301,6 +301,10 @@ Route::get('/warehouse/outcoming/disposal', fn() => view('app', ['page' => 'wh-o
 // Warehouse Request Routes
 Route::get('/warehouse/request/weight-note', fn() => view('app', ['page' => 'wh-req-weight-note']));
 Route::get('/warehouse/request/request-material', fn() => view('app', ['page' => 'wh-req-material']));
+Route::get('/warehouse/request/request-material/create', fn() => view('app', ['page' => 'wh-req-material-create']));
+Route::get('/warehouse/request/request-material/add', fn() => view('app', ['page' => 'wh-req-material-create']));
+Route::get('/warehouse/request/request-material/{id}', fn($id) => view('app', ['page' => 'wh-req-material-detail', 'code' => $id]));
+Route::get('/warehouse/request/request-material/detail/{id}', fn($id) => view('app', ['page' => 'wh-req-material-detail', 'code' => $id]));
 Route::get('/warehouse/request/weight-note-multiple-fg', fn() => view('app', ['page' => 'wh-req-weight-note-fg']));
 Route::get('/warehouse/request/shipping-instruction', fn() => view('app', ['page' => 'wh-req-shipping']));
 

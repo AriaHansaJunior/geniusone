@@ -10,25 +10,38 @@ interface WarehouseCreateProps {
 }
 
 export function WarehouseCreate({ onBack, onSaved }: WarehouseCreateProps) {
-  const [rnNumber, setRnNumber] = useState("0131/RN-IMLI/X/2026");
+  const [rnNumber, setRnNumber] = useState("");
   const [bpbType, setBpbType] = useState("Gudang");
-  const [supplier, setSupplier] = useState("PT. Hasil Fastindo");
-  const [receiveDate, setReceiveDate] = useState("08-10-2026");
+  const [supplier, setSupplier] = useState("");
+  const [receiveDate, setReceiveDate] = useState("");
 
-  const [invoiceNumber, setInvoiceNumber] = useState("INV-2026-10-092");
-  const [invoiceDate, setInvoiceDate] = useState("08-10-2026");
-  const [taxInvoice, setTaxInvoice] = useState("010.002-26.88371920");
-  const [plateNo, setPlateNo] = useState("L 8372 VQ");
-  const [ajuNumber, setAjuNumber] = useState("00004001456220261008004282");
-  const [ajuDate, setAjuDate] = useState("08-10-2026");
-  const [noPen, setNoPen] = useState("088370");
-  const [regDate, setRegDate] = useState("08-10-2026");
+  const [invoiceNumber, setInvoiceNumber] = useState("");
+  const [invoiceDate, setInvoiceDate] = useState("");
+  const [taxInvoice, setTaxInvoice] = useState("");
+  const [plateNo, setPlateNo] = useState("");
+  const [ajuNumber, setAjuNumber] = useState("");
+  const [ajuDate, setAjuDate] = useState("");
+  const [noPen, setNoPen] = useState("");
+  const [regDate, setRegDate] = useState("");
   const [remark, setRemark] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
   const handleSubmit = async (e?: React.FormEvent | React.MouseEvent) => {
     e?.preventDefault();
+    if (!rnNumber.trim()) {
+      setErrorMsg("Please provide an RN Number before saving.");
+      return;
+    }
+    if (!supplier.trim()) {
+      setErrorMsg("Supplier Name is required.");
+      return;
+    }
+    if (!receiveDate.trim()) {
+      setErrorMsg("Receive Date is required.");
+      return;
+    }
+
     setIsSubmitting(true);
     setErrorMsg("");
 
@@ -50,7 +63,7 @@ export function WarehouseCreate({ onBack, onSaved }: WarehouseCreateProps) {
 
   return (
     <div className="full-page-detail">
-      {/* Detail Navigation & Action Bar */}
+      {/* Detail Navigation Bar */}
       <div className="detail-top-bar">
         <div className="detail-top-bar__left">
           <button type="button" className="btn-back-pill" onClick={onBack}>
@@ -64,15 +77,6 @@ export function WarehouseCreate({ onBack, onSaved }: WarehouseCreateProps) {
             <span>/</span>
             <span className="current">Create Receive Material</span>
           </div>
-        </div>
-
-        <div className="detail-top-bar__right">
-          <Button variant="ghost" onClick={onBack}>
-            Discard Draft
-          </Button>
-          <Button icon="check" onClick={handleSubmit}>
-            Save Receive Material
-          </Button>
         </div>
       </div>
 
