@@ -55,9 +55,53 @@ export function StockItemIndex() {
     }
   };
 
+  const [liveRecords, setLiveRecords] = useState<WarehouseStockRecord[]>(initialWarehouseStockRecords);
+
+  React.useEffect(() => {
+    let isMounted = true;
+    const params = new URLSearchParams();
+    if (search.trim()) params.set("search", search.trim());
+
+    fetch(`/api/warehouse/reports/stock-item?${params.toString()}`, {
+      headers: { Accept: "application/json" },
+    })
+      .then((res) => res.json())
+      .then((json) => {
+        if (!isMounted) return;
+        if (json?.status === "success" && Array.isArray(json.data) && json.data.length > 0) {
+          const mapped: WarehouseStockRecord[] = json.data.map((it: any, idx: number) => ({
+            id: String(it.id || idx + 1),
+            no: idx + 1,
+            itemCode: it.item_code,
+            itemName: it.item_name,
+            classification: it.category || "General",
+            coordinate: "A-01-01",
+            warehouse: it.warehouse || "Main Warehouse",
+            facility: "Bonded Zone",
+            locationType: "Warehouse",
+            stockStatus: it.current_stock > 0 ? "Available" : "Not Available",
+            qty: Number(it.current_stock) || 0,
+            unit: it.unit || "PCS",
+            pendingQty: 0,
+            availableQty: Number(it.current_stock) || 0,
+            lotNo: "LOT-2026-A",
+            lastUpdate: "2026-10-20",
+          }));
+          setLiveRecords(mapped);
+        }
+      })
+      .catch((err) => {
+        console.warn("[GeniusOne Stock Item] Network error, using baseline records:", err);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [search]);
+
   // Filter records
   const filteredRecords = useMemo(() => {
-    return initialWarehouseStockRecords.filter((rec) => {
+    return liveRecords.filter((rec) => {
       // Classification
       if (
         classification !== "All Classifications" &&

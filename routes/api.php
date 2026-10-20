@@ -35,6 +35,18 @@ use App\Http\Controllers\Api\Exim\Master\AccountApiController;
 use App\Http\Controllers\Api\Exim\Master\JobNumberApiController;
 use App\Http\Controllers\Api\Exim\Operations\ReceiveNoteReturnApiController;
 use App\Http\Controllers\Api\Exim\Operations\DocumentHistoryApiController;
+use App\Http\Controllers\Api\Exim\Master\StyleImportApiController;
+
+// Warehouse Extended Controllers
+use App\Http\Controllers\Api\Warehouse\WarehouseReportApiController;
+use App\Http\Controllers\Api\Warehouse\MaterialRequestApiController;
+
+// Auth & User Domain Controllers
+use App\Http\Controllers\Api\Auth\AuthApiController;
+use App\Http\Controllers\Api\Auth\UserProfileApiController;
+
+// Common & Dashboard Controllers
+use App\Http\Controllers\Api\Common\ExchangeRateApiController;
 
 // Reporting Domain Controllers
 use App\Http\Controllers\Api\Reporting\TraceabilityReportApiController;
@@ -101,6 +113,16 @@ Route::prefix('warehouse')->group(function () {
     Route::post('/rn/{id}/approve', [ReceiveNoteApiController::class, 'approve']);
     Route::post('/rn/{id}/reject', [ReceiveNoteApiController::class, 'reject']);
 
+    // Warehouse Reports (Stock Card & Stock Item)
+    Route::prefix('reports')->group(function () {
+        Route::get('/stock-card', [WarehouseReportApiController::class, 'stockCard']);
+        Route::get('/stock-item', [WarehouseReportApiController::class, 'stockItem']);
+    });
+
+    // Material Requisitions (Request Material)
+    Route::apiResource('request-materials', MaterialRequestApiController::class);
+    Route::post('request-materials/{id}/approve', [MaterialRequestApiController::class, 'approve']);
+
     // Warehouse Master & Coordinates
     Route::prefix('master')->group(function () {
         Route::apiResource('warehouses', WarehouseMasterApiController::class);
@@ -126,6 +148,8 @@ Route::prefix('exim')->group(function () {
         Route::apiResource('facilities', FacilityApiController::class);
         Route::apiResource('hs-codes', HsCodeApiController::class);
         Route::apiResource('categories', CategoryApiController::class);
+        Route::post('styles/import', [StyleImportApiController::class, 'import']);
+        Route::get('styles/template', [StyleImportApiController::class, 'template']);
         Route::apiResource('styles', StyleApiController::class);
         Route::apiResource('colours', ColourApiController::class);
         Route::apiResource('accounts', AccountApiController::class);
@@ -150,7 +174,29 @@ Route::prefix('reporting')->group(function () {
 });
 
 // =========================================================================
-// 5. BACKWARD-COMPATIBILITY ALIASES (Direct Routes for Existing Frontend)
+// 5. AUTH & USER PROFILE DOMAIN API
+// =========================================================================
+Route::prefix('auth')->group(function () {
+    Route::post('/login', [AuthApiController::class, 'login']);
+    Route::post('/logout', [AuthApiController::class, 'logout']);
+    Route::get('/me', [AuthApiController::class, 'me']);
+});
+
+Route::prefix('user')->group(function () {
+    Route::get('/profile', [UserProfileApiController::class, 'show']);
+    Route::post('/profile', [UserProfileApiController::class, 'update']);
+    Route::put('/profile', [UserProfileApiController::class, 'update']);
+});
+
+// =========================================================================
+// 6. DASHBOARD & COMMON UTILITIES DOMAIN API
+// =========================================================================
+Route::prefix('dashboard')->group(function () {
+    Route::get('/exchange-rates', [ExchangeRateApiController::class, 'index']);
+});
+
+// =========================================================================
+// 7. BACKWARD-COMPATIBILITY ALIASES (Direct Routes for Existing Frontend)
 // =========================================================================
 Route::get('/pr', [PurchaseRequisitionApiController::class, 'index']);
 Route::post('/pr', [PurchaseRequisitionApiController::class, 'store']);

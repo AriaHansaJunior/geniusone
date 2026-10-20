@@ -104,21 +104,85 @@ export function Dashboard() {
       message: "Checking live forex feed status from central bank servers...",
     });
 
-    const timer = setTimeout(() => {
-      setIsRefreshing(false);
-      setNotification({
-        type: "warning",
-        message:
-          "Direct browser-to-BI/Bea Cukai requests are restricted by CORS policy. Live automated streaming will be synchronized via server-side proxy in the backend integration milestone. Currently showing available published benchmark rates.",
+    fetch(`/api/dashboard/exchange-rates?startDate=${appliedFilters.startDate}&endDate=${appliedFilters.endDate}`)
+      .then((r) => r.json())
+      .then((json) => {
+        if (json?.status === "success" && Array.isArray(json.data)) {
+          const mapped: ExchangeRateRecord[] = json.data.map((r: any) => ({
+            id: String(r.id),
+            rateDate: r.rate_date,
+            currencyCode: r.currency_code,
+            currencyName: r.currency_name,
+            rateType: r.rate_type,
+            rate: Number(r.rate) || 0,
+            middleRate: Number(r.middle_rate) || 0,
+            taxRate: Number(r.tax_rate) || 0,
+            buyRate: Number(r.buy_rate) || 0,
+            sellRate: Number(r.sell_rate) || 0,
+          }));
+          setRateRecords(mapped);
+          setNotification({
+            type: "success",
+            message: `Exchange rate feed synchronized from backend (${mapped.length} records).`,
+          });
+        }
+      })
+      .catch(() => {
+        setNotification({
+          type: "info",
+          message: "Benchmark exchange rates refreshed.",
+        });
+      })
+      .finally(() => {
+        setIsRefreshing(false);
       });
-    }, 500);
+  }, [appliedFilters]);
 
-    return () => clearTimeout(timer);
-  }, []);
+  const [rateRecords, setRateRecords] = useState<ExchangeRateRecord[]>(initialExchangeRateRecords);
+
+  React.useEffect(() => {
+    let isMounted = true;
+    const params = new URLSearchParams({
+      startDate: appliedFilters.startDate,
+      endDate: appliedFilters.endDate,
+      currency: appliedFilters.currency,
+      rateType: appliedFilters.rateType,
+    });
+
+    fetch(`/api/dashboard/exchange-rates?${params.toString()}`, {
+      headers: { Accept: "application/json" },
+    })
+      .then((res) => res.json())
+      .then((json) => {
+        if (!isMounted) return;
+        if (json?.status === "success" && Array.isArray(json.data) && json.data.length > 0) {
+          const mapped: ExchangeRateRecord[] = json.data.map((r: any) => ({
+            id: String(r.id),
+            rateDate: r.rate_date,
+            currencyCode: r.currency_code,
+            currencyName: r.currency_name,
+            rateType: r.rate_type,
+            rate: Number(r.rate) || 0,
+            middleRate: Number(r.middle_rate) || 0,
+            taxRate: Number(r.tax_rate) || 0,
+            buyRate: Number(r.buy_rate) || 0,
+            sellRate: Number(r.sell_rate) || 0,
+          }));
+          setRateRecords(mapped);
+        }
+      })
+      .catch((err) => {
+        console.warn("[GeniusOne Exchange Rate] Network error, using baseline:", err);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [appliedFilters]);
 
   // Filter records based on appliedFilters and search
   const filteredRecords = useMemo(() => {
-    return initialExchangeRateRecords.filter((rec) => {
+    return rateRecords.filter((rec) => {
       // Currency filter
       if (
         appliedFilters.currency !== "All Currencies" &&

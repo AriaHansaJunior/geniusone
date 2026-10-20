@@ -25,6 +25,20 @@ export function EditProfile({ onBack, onSaveConfirmed }: EditProfileProps) {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  React.useEffect(() => {
+    fetch("/api/user/profile", { headers: { Accept: "application/json" } })
+      .then((r) => r.json())
+      .then((data) => {
+        if (data?.status === "success" && data.data) {
+          if (data.data.name) setName(data.data.name);
+          if (data.data.username) setUsername(data.data.username);
+          if (data.data.email) setEmail(data.data.email);
+          if (data.data.photo) setPhotoPreview(data.data.photo);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -56,8 +70,23 @@ export function EditProfile({ onBack, onSaveConfirmed }: EditProfileProps) {
     setShowSaveDialog(true);
   };
 
-  const handleConfirmSave = () => {
+  const handleConfirmSave = async () => {
     setShowSaveDialog(false);
+    try {
+      await fetch("/api/user/profile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({
+          name,
+          username,
+          email,
+          password: password.trim() ? password : undefined,
+          photo: photoPreview || undefined,
+        }),
+      });
+    } catch (e) {
+      console.warn("Failed to update profile to database:", e);
+    }
     onSaveConfirmed();
   };
 

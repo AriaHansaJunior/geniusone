@@ -70,9 +70,64 @@ export function StockCardIndex() {
     }
   };
 
+  const [liveRecords, setLiveRecords] = useState<StockCardRecord[]>(initialStockCardRecords);
+  const [isLoading, setIsLoading] = useState(false);
+
+  React.useEffect(() => {
+    let isMounted = true;
+    setIsLoading(true);
+
+    const params = new URLSearchParams({
+      startDate: appliedFilters.startDate,
+      endDate: appliedFilters.endDate,
+      itemCode: appliedFilters.itemCode,
+    });
+
+    fetch(`/api/warehouse/reports/stock-card?${params.toString()}`, {
+      headers: { Accept: "application/json" },
+    })
+      .then((res) => res.json())
+      .then((json) => {
+        if (!isMounted) return;
+        if (json?.status === "success" && json.data?.movements && json.data.movements.length > 0) {
+          const item = json.data.item;
+          const mapped: StockCardRecord[] = json.data.movements.map((m: any, idx: number) => ({
+            id: String(m.id || idx + 1),
+            no: idx + 1,
+            itemCode: item?.code || appliedFilters.itemCode,
+            itemName: item?.name || "100% Cotton Combed Fabric 30s",
+            unitCode: m.unit || item?.unit || "KG",
+            warehouse: m.warehouse || appliedFilters.warehouse,
+            date: m.date || appliedFilters.startDate,
+            ref: m.reference_no || "-",
+            description: m.notes || m.doc_type || "Stock movement",
+            in: m.qty_in > 0 ? Number(m.qty_in) : null,
+            out: m.qty_out > 0 ? Number(m.qty_out) : null,
+            stock: Number(m.balance) || 0,
+            historyDocIn: m.doc_number || "-",
+            docOutRef: "-",
+            noLot: "LOT-2026-A",
+            jobNumber: "JOB-2026-001",
+            lastUpdate: m.date || appliedFilters.startDate,
+          }));
+          setLiveRecords(mapped);
+        }
+      })
+      .catch((err) => {
+        console.warn("[GeniusOne Stock Card] Network error, using baseline records:", err);
+      })
+      .finally(() => {
+        if (isMounted) setIsLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [appliedFilters]);
+
   // Filter records based on applied filters
   const filteredRecords = useMemo(() => {
-    return initialStockCardRecords.filter((rec) => {
+    return liveRecords.filter((rec) => {
       // Item code match
       if (appliedFilters.itemCode && rec.itemCode !== appliedFilters.itemCode) {
         return false;

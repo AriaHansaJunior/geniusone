@@ -85,7 +85,9 @@ export function StyleImport({ onBack }: StyleImportProps) {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!selectedFile) {
@@ -94,12 +96,34 @@ export function StyleImport({ onBack }: StyleImportProps) {
     }
 
     setErrorMsg(null);
-    // Explicitly document frontend limitation rather than claiming fake DB import
-    setInfoNotice(
-      `File "${selectedFile.name}" (${(selectedFile.size / 1024).toFixed(
-        1
-      )} KB) is selected. Note: Frontend verification completed. Backend Excel processing and database persistence require backend API integration.`
-    );
+    setIsSubmitting(true);
+    setInfoNotice(null);
+
+    try {
+      const formData = new FormData();
+      formData.append("file", selectedFile);
+
+      const response = await fetch("/api/exim/master/styles/import", {
+        method: "POST",
+        headers: { Accept: "application/json" },
+        body: formData,
+      });
+      const data = await response.json();
+
+      if (response.ok && data?.status === "success") {
+        setInfoNotice(
+          `Success! ${data.message || `Imported ${data.data?.imported_count ?? 0} styles into database.`}`
+        );
+        setSelectedFile(null);
+        if (fileInputRef.current) fileInputRef.current.value = "";
+      } else {
+        setErrorMsg(data?.message || "Failed to process Excel import file.");
+      }
+    } catch (err: any) {
+      setErrorMsg(err?.message || "Network error while uploading style import file.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const formatFileSize = (bytes: number): string => {

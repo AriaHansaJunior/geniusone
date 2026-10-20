@@ -199,6 +199,8 @@ import {
   saveReceiveNoteReturnApi,
   fetchMasterDocumentHistories,
   fetchMasterUnitReferences,
+  fetchRequestMaterials,
+  saveRequestMaterialApi,
 } from "../data/masterApi";
 import { createReceiveNote } from "../data/api";
 
@@ -979,6 +981,9 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
     fetchMasterUnitReferences().then((data) => {
       if (isMounted && data && data.length > 0) setUnitReferenceRecords(data);
     });
+    fetchRequestMaterials().then((data) => {
+      if (isMounted && data && data.length > 0) setRequestMaterialRecords(data);
+    });
 
     return () => {
       isMounted = false;
@@ -989,7 +994,7 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
     setPphRecords((prev) => {
       const target = prev.find((r) => r.id === id);
       if (target) {
-        togglePphStatusApi(id, target.hidden).catch(console.warn);
+        togglePphStatusApi(id, Boolean(target.hidden)).catch(console.warn);
       }
       return prev.map((r) => (r.id === id ? { ...r, hidden: !r.hidden } : r));
     });
@@ -1005,7 +1010,7 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
     setPaymentTermRecords((prev) => {
       const target = prev.find((r) => r.id === id);
       if (target) {
-        togglePaymentTermStatusApi(id, target.hidden).catch(console.warn);
+        togglePaymentTermStatusApi(id, Boolean(target.hidden)).catch(console.warn);
       }
       return prev.map((r) => (r.id === id ? { ...r, hidden: !r.hidden } : r));
     });
@@ -1015,7 +1020,7 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
     setPurchaseCategoryRecords((prev) => {
       const target = prev.find((r) => r.id === id);
       if (target) {
-        togglePurchaseCategoryStatusApi(id, target.hidden).catch(console.warn);
+        togglePurchaseCategoryStatusApi(id, Boolean(target.hidden)).catch(console.warn);
       }
       return prev.map((r) => (r.id === id ? { ...r, hidden: !r.hidden } : r));
     });
@@ -1025,7 +1030,7 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
     setDeliveryTermRecords((prev) => {
       const target = prev.find((r) => r.id === id);
       if (target) {
-        toggleDeliveryTermStatusApi(id, target.hidden).catch(console.warn);
+        toggleDeliveryTermStatusApi(id, Boolean(target.hidden)).catch(console.warn);
       }
       return prev.map((r) => (r.id === id ? { ...r, hidden: !r.hidden } : r));
     });
@@ -1035,7 +1040,7 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
     setAdditionalCostRecords((prev) => {
       const target = prev.find((r) => r.id === id);
       if (target) {
-        toggleAdditionalCostStatusApi(id, target.hidden).catch(console.warn);
+        toggleAdditionalCostStatusApi(id, Boolean(target.hidden)).catch(console.warn);
       }
       return prev.map((r) => (r.id === id ? { ...r, hidden: !r.hidden } : r));
     });
@@ -1171,6 +1176,7 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
   }, []);
 
   const handleSaveRequestMaterial = useCallback((newRecord: RequestMaterialRecord) => {
+    saveRequestMaterialApi(newRecord).catch(console.warn);
     setRequestMaterialRecords((prev) => [newRecord, ...prev]);
     const nextState: ViewState = { type: "list", page: "wh-req-material" };
     setViewState(nextState);
@@ -1842,7 +1848,7 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
           poNumber: it.poNumber,
           itemName: it.itemName,
           suratJalanQty: it.suratJalanQty,
-          price: it.price,
+          price: (it as any).price ?? it.pricePerUnit ?? 0,
         })),
       });
     } catch (err) {

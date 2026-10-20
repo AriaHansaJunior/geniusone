@@ -29,6 +29,7 @@ import type { ReceiveNoteRecord } from "../pages/Exim/ReceiveNote/receive-note-t
 import type { ReceiveNoteReturnRecord } from "../pages/Exim/ReceiveNoteReturn/receive-note-return-types";
 import type { DocumentHistoryRecord } from "../pages/Exim/DocumentHistory/document-history-types";
 import type { UnitReferenceRecord } from "../pages/Exim/Master/UnitReference/unit-reference-types";
+import type { RequestMaterialRecord } from "../pages/Warehouse/Request/RequestMaterial/request-material-types";
 
 // ============================================================================
 // 1. PROCUREMENT MASTER FETCH & MUTATION HELPERS
@@ -1091,7 +1092,7 @@ export async function fetchMasterDocumentHistories(): Promise<DocumentHistoryRec
       no: idx + 1,
       invoiceNumber: item.invoice_number || "",
       invoiceAlias: item.invoice_alias || "",
-      date: dateStr,
+      invoiceDate: dateStr,
       transactionNumber: item.transaction_number || "-",
       mutationType: item.mutation_type || "Export",
       customerSupplier: item.customer_supplier || item.customer || "-",
@@ -1102,23 +1103,31 @@ export async function fetchMasterDocumentHistories(): Promise<DocumentHistoryRec
       customsDocument: item.customs_document || "BC 3.0",
       amount: amountVal,
       amountFormatted: `${item.currency || "USD"} ${amountVal.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-      userCreated: item.created_by_user?.name || "System",
-      createdAtTimestamp: `${dateStr} 10:00`,
+      lastUpdatedUser: item.created_by_user?.name || "System",
+      lastUpdatedTimestamp: `${dateStr} 10:00`,
+      createdAt: dateStr,
+      lastUpdatedAt: dateStr,
+      totalUnitPrice: itemsList.reduce((sum: number, it: any) => sum + (Number(it.unit_price) || 0), 0),
+      totalSubtotal: amountVal,
       items: itemsList.map((it: any, i: number) => ({
         id: String(it.id),
         no: i + 1,
         soNumber: it.so_number || "-",
+        soDate: it.so_date || dateStr,
         plNumber: it.pl_number || "-",
+        plDate: it.pl_date || dateStr,
+        itemProduct: it.item_name || "",
         itemCode: it.item_code || "",
-        itemName: it.item_name || "",
+        nettWeight: Number(it.nett_weight) || 0,
+        grossWeight: Number(it.gross_weight) || 0,
+        pack: Number(it.pack) || 0,
+        packUnit: it.pack_unit || "PKG",
         quantity: Number(it.quantity) || 0,
         unit: it.unit || "PCS",
         unitPrice: Number(it.unit_price) || 0,
         subtotal: Number(it.subtotal) || 0,
-        nomorAju: it.nomor_aju || "-",
-        nomorDaftar: it.nomor_daftar || "-",
-        jenisDokumen: it.jenis_dokumen || item.customs_document || "BC 3.0",
-        seriBarang: it.seri_barang || "1",
+        currency: item.currency || "USD",
+        history: [],
       })),
     };
   });
@@ -1170,5 +1179,33 @@ export async function togglePphStatusApi(id: string, status: boolean): Promise<b
   const res = await apiPut(`/api/procurement/master/pph/${id}`, { status: status ? 1 : 0 });
   return !!res;
 }
+
+// ----------------------------------------------------------------------------
+// WAREHOUSE REQUEST MATERIAL API HELPERS
+// ----------------------------------------------------------------------------
+export async function fetchRequestMaterials(): Promise<RequestMaterialRecord[] | null> {
+  const res = await apiGet<{ data: any[] }>("/api/warehouse/request-materials");
+  if (!res || !Array.isArray(res.data) || res.data.length === 0) return null;
+  return res.data;
+}
+
+export async function saveRequestMaterialApi(record: Partial<RequestMaterialRecord>): Promise<RequestMaterialRecord | null> {
+  const res = await apiPost<{ data: RequestMaterialRecord }>("/api/warehouse/request-materials", record);
+  return res?.data ?? null;
+}
+
+export async function approveRequestMaterialApi(id: string): Promise<RequestMaterialRecord | null> {
+  const res = await apiPost<{ data: RequestMaterialRecord }>(`/api/warehouse/request-materials/${encodeURIComponent(id)}/approve`, {});
+  return res?.data ?? null;
+}
+
+// ----------------------------------------------------------------------------
+// USER PROFILE API HELPERS
+// ----------------------------------------------------------------------------
+export async function updateUserProfileApi(data: { name?: string; username?: string; email?: string; password?: string; photo?: string }): Promise<boolean> {
+  const res = await apiPost<{ status: string }>("/api/user/profile", data);
+  return res?.status === "success";
+}
+
 
 
