@@ -764,7 +764,7 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
       : null;
 
   const isDetailPage = viewState.type !== "list" && viewState.type !== "dashboard";
-  const hideDefaultHeader = isDetailPage || viewState.type === "dashboard";
+  const hideDefaultHeader = isDetailPage;
 
   // Reset scroll position on route transition
   useEffect(() => {

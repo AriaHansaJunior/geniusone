@@ -212,14 +212,6 @@ export function Dashboard() {
 
   return (
     <div className="dashboard-view">
-      {/* Page Title */}
-      <div className="dashboard-header">
-        <div className="dashboard-header__title">
-          <Icon name="home" size={20} className="dashboard-header__icon" />
-          <h1>Dashboard</h1>
-        </div>
-      </div>
-
       {/* Exchange Rates Master Card */}
       <div className="dashboard-rate-card">
         {/* Card Header with Refresh Action */}
