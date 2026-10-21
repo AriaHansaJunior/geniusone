@@ -29,6 +29,12 @@ Route::get('/dashboard', function () {
     return view('app', ['page' => 'dashboard']);
 })->name('dashboard');
 
+// Dashboard - Master Notifikasi Buffer Stok
+Route::get('/dashboard/stock-notification-master', fn() => view('app', ['page' => 'stock-notification-master']))->name('dashboard.stock-notification');
+Route::get('/dashboard/stock-notification-master/create', fn() => view('app', ['page' => 'stock-notification-create']))->name('dashboard.stock-notification.create');
+Route::get('/dashboard/stock-notification-master/add', fn() => view('app', ['page' => 'stock-notification-create']));
+Route::get('/dashboard/notification-master', fn() => redirect('/dashboard/stock-notification-master'));
+
 // Purchase Requisition (PR)
 Route::get('/pr', [PurchaseRequisitionController::class, 'index'])->name('pr.index');
 Route::get('/purchase-requisitions', [PurchaseRequisitionController::class, 'index'])->name('purchase-requisitions.index');
@@ -279,6 +285,18 @@ Route::get('/warehouse/master/warehouse/coordinate/{id}', fn($id) => view('app',
 Route::get('/warehouse/master/warehouse/{id}/coordinate/create', fn($id) => view('app', ['page' => 'warehouse-coordinate-create', 'code' => $id]))->name('warehouse.master.warehouse.coordinate.create');
 Route::get('/warehouse/master/warehouse/coordinate/{id}/create', fn($id) => view('app', ['page' => 'warehouse-coordinate-create', 'code' => $id]));
 Route::get('/warehouse/master/type-of-mutation', fn() => view('app', ['page' => 'type-of-mutation']));
+
+// Warehouse Master - Type of Request
+Route::get('/warehouse/master/type-of-request', fn() => view('app', ['page' => 'wh-type-of-request']))->name('warehouse.master.type-of-request');
+Route::get('/warehouse/type-of-request', fn() => redirect('/warehouse/master/type-of-request'));
+Route::get('/warehouse/master/type-of-request/create', fn() => view('app', ['page' => 'wh-type-of-request-create']))->name('warehouse.master.type-of-request.create');
+Route::get('/warehouse/master/type-of-request/add', fn() => view('app', ['page' => 'wh-type-of-request-create']));
+
+// Warehouse Master - Destination Location
+Route::get('/warehouse/master/destination-location', fn() => view('app', ['page' => 'wh-destination-location']))->name('warehouse.master.destination-location');
+Route::get('/warehouse/destination-location', fn() => redirect('/warehouse/master/destination-location'));
+Route::get('/warehouse/master/destination-location/create', fn() => view('app', ['page' => 'wh-destination-location-create']))->name('warehouse.master.destination-location.create');
+Route::get('/warehouse/master/destination-location/add', fn() => view('app', ['page' => 'wh-destination-location-create']));
 
 // Warehouse Adjustment Routes
 Route::get('/warehouse/adjustment/adjustment-production', fn() => view('app', ['page' => 'wh-adj-prod']));

@@ -76,9 +76,21 @@ import {
   RequestMaterialIndex,
   RequestMaterialCreate,
   RequestMaterialDetail,
+  StockNotificationIndex,
+  StockNotificationForm,
+  TypeOfRequestIndex,
+  TypeOfRequestForm,
+  DestinationLocationIndex,
+  DestinationLocationForm,
 } from "../pages";
 import { initialRequestMaterialRecords } from "../pages/Warehouse/Request/RequestMaterial/request-material-data";
 import type { RequestMaterialRecord } from "../pages/Warehouse/Request/RequestMaterial/request-material-types";
+import { initialStockNotificationRecords } from "../pages/Dashboard/StockNotificationMaster/stock-notification-data";
+import type { StockNotificationRecord } from "../pages/Dashboard/StockNotificationMaster/stock-notification-types";
+import { initialTypeOfRequestRecords } from "../pages/Warehouse/Master/TypeOfRequest/type-of-request-data";
+import type { TypeOfRequestRecord } from "../pages/Warehouse/Master/TypeOfRequest/type-of-request-types";
+import { initialDestinationLocationRecords } from "../pages/Warehouse/Master/DestinationLocation/destination-location-data";
+import type { DestinationLocationRecord } from "../pages/Warehouse/Master/DestinationLocation/destination-location-types";
 import { ConfirmDialog } from "./ui/ConfirmDialog";
 import { pageMeta, docToSlug } from "../data/mockData";
 import { navigationConfig } from "../config/navigation";
@@ -247,6 +259,27 @@ function resolveViewStateFromPath(pathname: string, defaultPage: PageKey = "dash
     cleanPath === "/warehouse/request/request-material/add"
   ) {
     return { type: "wh-req-material-create" };
+  }
+
+  if (
+    cleanPath === "/dashboard/stock-notification-master/create" ||
+    cleanPath === "/dashboard/stock-notification-master/add"
+  ) {
+    return { type: "stock-notification-create" };
+  }
+
+  if (
+    cleanPath === "/warehouse/master/type-of-request/create" ||
+    cleanPath === "/warehouse/master/type-of-request/add"
+  ) {
+    return { type: "wh-type-of-request-create" };
+  }
+
+  if (
+    cleanPath === "/warehouse/master/destination-location/create" ||
+    cleanPath === "/warehouse/master/destination-location/add"
+  ) {
+    return { type: "wh-destination-location-create" };
   }
 
   if (
@@ -647,6 +680,9 @@ function resolveViewStateFromPath(pathname: string, defaultPage: PageKey = "dash
   if (cleanPath === "/exim/currency" || cleanPath === "/exim/master/currency" || cleanPath === "/procurement/purchase-master/currency") return { type: "list", page: "currency" };
 
   if (cleanPath === "/warehouse/master" || cleanPath === "/warehouse/master/warehouse") return { type: "list", page: "warehouse-master" };
+  if (cleanPath === "/warehouse/master/type-of-request" || cleanPath === "/warehouse/type-of-request") return { type: "list", page: "wh-type-of-request" };
+  if (cleanPath === "/warehouse/master/destination-location" || cleanPath === "/warehouse/destination-location") return { type: "list", page: "wh-destination-location" };
+  if (cleanPath === "/dashboard/stock-notification-master" || cleanPath === "/dashboard/notification-master") return { type: "list", page: "stock-notification-master" };
   if (cleanPath === "/warehouse/report/stock-card") return { type: "list", page: "wh-rep-stock-card" };
   if (cleanPath === "/warehouse/report/stock-item") return { type: "list", page: "wh-rep-stock-item" };
   if (cleanPath === "/warehouse/request/request-material") return { type: "list", page: "wh-req-material" };
@@ -701,6 +737,9 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
     if (initialPage === "warehouse-detail") return { type: "warehouse-detail", code: initialCode || "0138-WHIN-IMLI-G-X-2026" };
     if (initialPage === "wh-req-material-create") return { type: "wh-req-material-create" };
     if (initialPage === "wh-req-material-detail") return { type: "wh-req-material-detail", id: initialCode || "REQ-WH-2026-001" };
+    if (initialPage === "stock-notification-create") return { type: "stock-notification-create" };
+    if (initialPage === "wh-type-of-request-create") return { type: "wh-type-of-request-create" };
+    if (initialPage === "wh-destination-location-create") return { type: "wh-destination-location-create" };
     if (initialPage in pageMeta) return { type: "list", page: initialPage as PageKey };
     return { type: "dashboard" };
   });
@@ -763,6 +802,12 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
       ? "item"
       : viewState.type === "wh-req-material-create" || viewState.type === "wh-req-material-detail"
       ? "wh-req-material"
+      : viewState.type === "stock-notification-create" || viewState.type === "stock-notification-edit"
+      ? "stock-notification-master"
+      : viewState.type === "wh-type-of-request-create" || viewState.type === "wh-type-of-request-edit"
+      ? "wh-type-of-request"
+      : viewState.type === "wh-destination-location-create" || viewState.type === "wh-destination-location-edit"
+      ? "wh-destination-location"
       : null;
 
   const isDetailPage = viewState.type !== "list" && viewState.type !== "dashboard";
@@ -898,6 +943,12 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
   const [currencyRecords, setCurrencyRecords] = useState<CurrencyRecord[]>(initialCurrencyRecords);
   const [unitReferenceRecords, setUnitReferenceRecords] = useState<UnitReferenceRecord[]>(initialUnitReferenceRecords);
   const [requestMaterialRecords, setRequestMaterialRecords] = useState<RequestMaterialRecord[]>(initialRequestMaterialRecords);
+  const [stockNotificationRecords, setStockNotificationRecords] = useState<StockNotificationRecord[]>(initialStockNotificationRecords);
+  const [editingStockNotification, setEditingStockNotification] = useState<StockNotificationRecord | null>(null);
+  const [typeOfRequestRecords, setTypeOfRequestRecords] = useState<TypeOfRequestRecord[]>(initialTypeOfRequestRecords);
+  const [editingTypeOfRequest, setEditingTypeOfRequest] = useState<TypeOfRequestRecord | null>(null);
+  const [destinationLocationRecords, setDestinationLocationRecords] = useState<DestinationLocationRecord[]>(initialDestinationLocationRecords);
+  const [editingDestinationLocation, setEditingDestinationLocation] = useState<DestinationLocationRecord | null>(null);
 
   // Live database synchronization on mount
   useEffect(() => {
@@ -2231,6 +2282,117 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
     setItemRecords((prev) => prev.filter((i) => i.id !== id));
   }, []);
 
+  // Stock Notification Master Handlers
+  const handleNavigateStockNotificationCreate = useCallback(() => {
+    setEditingStockNotification(null);
+    const nextState: ViewState = { type: "stock-notification-create" };
+    setViewState(nextState);
+    if (typeof window !== "undefined") {
+      window.scrollTo(0, 0);
+      window.history.pushState(nextState, "", "/dashboard/stock-notification-master/create");
+    }
+  }, []);
+
+  const handleEditStockNotification = useCallback((record: StockNotificationRecord) => {
+    setEditingStockNotification(record);
+    const nextState: ViewState = { type: "stock-notification-edit", record };
+    setViewState(nextState);
+    if (typeof window !== "undefined") {
+      window.scrollTo(0, 0);
+      window.history.pushState(nextState, "", "/dashboard/stock-notification-master/create");
+    }
+  }, []);
+
+  const handleSaveStockNotification = useCallback((record: StockNotificationRecord, isEdit: boolean) => {
+    if (isEdit) {
+      setStockNotificationRecords((prev) =>
+        prev.map((r) => (r.id === record.id ? record : r))
+      );
+    } else {
+      setStockNotificationRecords((prev) => [record, ...prev]);
+    }
+    setEditingStockNotification(null);
+    handleNavigateList("stock-notification-master", "/dashboard/stock-notification-master");
+  }, [handleNavigateList]);
+
+  const handleDeleteStockNotification = useCallback((id: string) => {
+    setStockNotificationRecords((prev) => prev.filter((r) => r.id !== id));
+  }, []);
+
+  // Type of Request Master Handlers
+  const handleNavigateTypeOfRequestCreate = useCallback(() => {
+    setEditingTypeOfRequest(null);
+    const nextState: ViewState = { type: "wh-type-of-request-create" };
+    setViewState(nextState);
+    if (typeof window !== "undefined") {
+      window.scrollTo(0, 0);
+      window.history.pushState(nextState, "", "/warehouse/master/type-of-request/create");
+    }
+  }, []);
+
+  const handleEditTypeOfRequest = useCallback((record: TypeOfRequestRecord) => {
+    setEditingTypeOfRequest(record);
+    const nextState: ViewState = { type: "wh-type-of-request-edit", record };
+    setViewState(nextState);
+    if (typeof window !== "undefined") {
+      window.scrollTo(0, 0);
+      window.history.pushState(nextState, "", "/warehouse/master/type-of-request/create");
+    }
+  }, []);
+
+  const handleSaveTypeOfRequest = useCallback((record: TypeOfRequestRecord, isEdit: boolean) => {
+    if (isEdit) {
+      setTypeOfRequestRecords((prev) =>
+        prev.map((r) => (r.id === record.id ? record : r))
+      );
+    } else {
+      setTypeOfRequestRecords((prev) => [record, ...prev]);
+    }
+    setEditingTypeOfRequest(null);
+    handleNavigateList("wh-type-of-request", "/warehouse/master/type-of-request");
+  }, [handleNavigateList]);
+
+  const handleDeleteTypeOfRequest = useCallback((id: string) => {
+    setTypeOfRequestRecords((prev) => prev.filter((r) => r.id !== id));
+  }, []);
+
+  // Destination Location Master Handlers
+  const handleNavigateDestinationLocationCreate = useCallback(() => {
+    setEditingDestinationLocation(null);
+    const nextState: ViewState = { type: "wh-destination-location-create" };
+    setViewState(nextState);
+    if (typeof window !== "undefined") {
+      window.scrollTo(0, 0);
+      window.history.pushState(nextState, "", "/warehouse/master/destination-location/create");
+    }
+  }, []);
+
+  const handleEditDestinationLocation = useCallback((record: DestinationLocationRecord) => {
+    setEditingDestinationLocation(record);
+    const nextState: ViewState = { type: "wh-destination-location-edit", record };
+    setViewState(nextState);
+    if (typeof window !== "undefined") {
+      window.scrollTo(0, 0);
+      window.history.pushState(nextState, "", "/warehouse/master/destination-location/create");
+    }
+  }, []);
+
+  const handleSaveDestinationLocation = useCallback((record: DestinationLocationRecord, isEdit: boolean) => {
+    if (isEdit) {
+      setDestinationLocationRecords((prev) =>
+        prev.map((r) => (r.id === record.id ? record : r))
+      );
+    } else {
+      setDestinationLocationRecords((prev) => [record, ...prev]);
+    }
+    setEditingDestinationLocation(null);
+    handleNavigateList("wh-destination-location", "/warehouse/master/destination-location");
+  }, [handleNavigateList]);
+
+  const handleDeleteDestinationLocation = useCallback((id: string) => {
+    setDestinationLocationRecords((prev) => prev.filter((r) => r.id !== id));
+  }, []);
+
   // Navigate to edit profile view
   const handleNavigateProfile = useCallback(() => {
     setViewState({ type: "edit-profile" });
@@ -2333,7 +2495,15 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
         hideDefaultHeader={hideDefaultHeader}
       >
         {/* Dashboard Landing Page */}
-        {viewState.type === "dashboard" && <Dashboard />}
+        {viewState.type === "dashboard" && (
+          <Dashboard
+            onAddNewBufferRule={handleNavigateStockNotificationCreate}
+            onManageBufferRules={() =>
+              handleNavigateList("stock-notification-master", "/dashboard/stock-notification-master")
+            }
+            onNavigatePrCreate={handleNavigatePrCreate}
+          />
+        )}
 
         {/* Existing Core List Page Views */}
         {viewState.type === "list" && viewState.page === "pr" && (
@@ -2653,6 +2823,37 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
           />
         )}
 
+        {/* Stock Notification Master Listing */}
+        {viewState.type === "list" && viewState.page === "stock-notification-master" && (
+          <StockNotificationIndex
+            records={stockNotificationRecords}
+            onAddNew={handleNavigateStockNotificationCreate}
+            onEdit={handleEditStockNotification}
+            onDelete={handleDeleteStockNotification}
+            onNavigateDashboard={() => handleNavigateList("dashboard", "/dashboard")}
+          />
+        )}
+
+        {/* Warehouse Type of Request Master Listing */}
+        {viewState.type === "list" && viewState.page === "wh-type-of-request" && (
+          <TypeOfRequestIndex
+            records={typeOfRequestRecords}
+            onAddNew={handleNavigateTypeOfRequestCreate}
+            onEdit={handleEditTypeOfRequest}
+            onDelete={handleDeleteTypeOfRequest}
+          />
+        )}
+
+        {/* Warehouse Destination Location Master Listing */}
+        {viewState.type === "list" && viewState.page === "wh-destination-location" && (
+          <DestinationLocationIndex
+            records={destinationLocationRecords}
+            onAddNew={handleNavigateDestinationLocationCreate}
+            onEdit={handleEditDestinationLocation}
+            onDelete={handleDeleteDestinationLocation}
+          />
+        )}
+
         {/* New Lightweight Placeholder Pages */}
         {viewState.type === "list" &&
           viewState.page !== "pr" &&
@@ -2686,6 +2887,9 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
           viewState.page !== "wh-rep-stock-card" &&
           viewState.page !== "wh-rep-stock-item" &&
           viewState.page !== "wh-req-material" &&
+          viewState.page !== "stock-notification-master" &&
+          viewState.page !== "wh-type-of-request" &&
+          viewState.page !== "wh-destination-location" &&
           viewState.page !== "country" &&
           viewState.page !== "account" &&
           viewState.page !== "job-number" &&
@@ -2854,6 +3058,8 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
           <RequestMaterialCreate
             onSave={handleSaveRequestMaterial}
             onCancel={() => handleNavigateList("wh-req-material", "/warehouse/request/request-material")}
+            availableTypesOfRequest={typeOfRequestRecords.filter((t) => t.status === "Active").map((t) => t.name)}
+            availableDestinations={destinationLocationRecords.filter((d) => d.status === "Active").map((d) => d.name)}
           />
         )}
 
@@ -3083,6 +3289,54 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
           <GenerateQrCodePage
             allItems={itemRecords}
             onCancel={() => handleNavigateList("item", "/exim/master/item")}
+          />
+        )}
+
+        {/* Dedicated Stock Notification Master Form (Add / Edit) */}
+        {(viewState.type === "stock-notification-create" || viewState.type === "stock-notification-edit") && (
+          <StockNotificationForm
+            initialRecord={
+              viewState.type === "stock-notification-edit" && viewState.record
+                ? viewState.record
+                : editingStockNotification
+            }
+            onBack={() => {
+              setEditingStockNotification(null);
+              handleNavigateList("stock-notification-master", "/dashboard/stock-notification-master");
+            }}
+            onSave={handleSaveStockNotification}
+          />
+        )}
+
+        {/* Dedicated Warehouse Type of Request Form (Add / Edit) */}
+        {(viewState.type === "wh-type-of-request-create" || viewState.type === "wh-type-of-request-edit") && (
+          <TypeOfRequestForm
+            initialRecord={
+              viewState.type === "wh-type-of-request-edit" && viewState.record
+                ? viewState.record
+                : editingTypeOfRequest
+            }
+            onBack={() => {
+              setEditingTypeOfRequest(null);
+              handleNavigateList("wh-type-of-request", "/warehouse/master/type-of-request");
+            }}
+            onSave={handleSaveTypeOfRequest}
+          />
+        )}
+
+        {/* Dedicated Warehouse Destination Location Form (Add / Edit) */}
+        {(viewState.type === "wh-destination-location-create" || viewState.type === "wh-destination-location-edit") && (
+          <DestinationLocationForm
+            initialRecord={
+              viewState.type === "wh-destination-location-edit" && viewState.record
+                ? viewState.record
+                : editingDestinationLocation
+            }
+            onBack={() => {
+              setEditingDestinationLocation(null);
+              handleNavigateList("wh-destination-location", "/warehouse/master/destination-location");
+            }}
+            onSave={handleSaveDestinationLocation}
           />
         )}
 

@@ -18,11 +18,15 @@ import type { ItemRecord } from "../../../Exim/Master/Item/item-types";
 interface RequestMaterialCreateProps {
   onSave: (record: RequestMaterialRecord) => void;
   onCancel: () => void;
+  availableTypesOfRequest?: string[];
+  availableDestinations?: string[];
 }
 
 export function RequestMaterialCreate({
   onSave,
   onCancel,
+  availableTypesOfRequest,
+  availableDestinations,
 }: RequestMaterialCreateProps) {
   // Header form states - All empty by default as requested
   const [typeOfRequest, setTypeOfRequest] = useState("");
@@ -421,13 +425,14 @@ export function RequestMaterialCreate({
               }}
             >
               <option value="">-- Select Type of Request --</option>
-              {requestMaterialTypesList
-                .filter((t) => t !== "All Types")
-                .map((t) => (
-                  <option key={t} value={t}>
-                    {t}
-                  </option>
-                ))}
+              {(availableTypesOfRequest && availableTypesOfRequest.length > 0
+                ? availableTypesOfRequest
+                : requestMaterialTypesList.filter((t) => t !== "All Types")
+              ).map((t) => (
+                <option key={t} value={t}>
+                  {t}
+                </option>
+              ))}
             </select>
             {formErrors.typeOfRequest && (
               <span
@@ -734,13 +739,14 @@ export function RequestMaterialCreate({
               }}
             >
               <option value="">-- Select Destination Location --</option>
-              {requestMaterialDestinationsList
-                .filter((d) => d !== "All Destinations")
-                .map((d) => (
-                  <option key={d} value={d}>
-                    {d}
-                  </option>
-                ))}
+              {(availableDestinations && availableDestinations.length > 0
+                ? availableDestinations
+                : requestMaterialDestinationsList.filter((d) => d !== "All Destinations")
+              ).map((d) => (
+                <option key={d} value={d}>
+                  {d}
+                </option>
+              ))}
             </select>
             {formErrors.destinationLocation && (
               <span

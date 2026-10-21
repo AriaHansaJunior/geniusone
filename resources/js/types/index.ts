@@ -87,6 +87,10 @@ export type PageKey =
   // Warehouse Master
   | "warehouse-master"
   | "type-of-mutation"
+  | "wh-type-of-request"
+  | "wh-destination-location"
+  // Dashboard Master
+  | "stock-notification-master"
   // Warehouse Adjustment
   | "wh-adj-prod"
   | "wh-adj-bc"
@@ -160,11 +164,16 @@ export type ViewState =
   | { type: "warehouse-coordinate"; warehouseId: string }
   | { type: "warehouse-coordinate-create"; warehouseId: string }
   | { type: "item-create" }
-
   | { type: "item-edit"; record?: any }
   | { type: "item-qr" }
   | { type: "wh-req-material-create" }
   | { type: "wh-req-material-detail"; id: string }
+  | { type: "stock-notification-create" }
+  | { type: "stock-notification-edit"; record?: any }
+  | { type: "wh-type-of-request-create" }
+  | { type: "wh-type-of-request-edit"; record?: any }
+  | { type: "wh-destination-location-create" }
+  | { type: "wh-destination-location-edit"; record?: any }
   | { type: "edit-profile" }
   | { type: "login" }
   | { type: "not-found"; path?: string };

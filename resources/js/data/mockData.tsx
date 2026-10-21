@@ -211,6 +211,21 @@ export const pageMeta: Record<PageKey, PageMeta> = {
     title: "Type of Mutation",
     description: "Classification of inventory stock movement and mutation categories.",
   },
+  "wh-type-of-request": {
+    eyebrow: "WAREHOUSE MASTER",
+    title: "Type of Request",
+    description: "Manage material requisition categories, authorization workflows, and job requirements.",
+  },
+  "wh-destination-location": {
+    eyebrow: "WAREHOUSE MASTER",
+    title: "Destination Location",
+    description: "Manage plant delivery destinations, production areas, workshops, and intermediate buffers.",
+  },
+  "stock-notification-master": {
+    eyebrow: "DASHBOARD",
+    title: "Master Notifikasi Buffer Stok",
+    description: "Configure minimum safety stock buffer thresholds and automated notification rules per item.",
+  },
   // Warehouse Adjustment
   "wh-adj-prod": {
     eyebrow: "WAREHOUSE ADJUSTMENT",

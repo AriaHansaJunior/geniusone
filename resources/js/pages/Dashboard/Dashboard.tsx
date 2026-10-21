@@ -10,13 +10,24 @@ import {
   initialExchangeRateRecords,
 } from "./dashboard-rate-data";
 import { DashboardRateChart } from "./DashboardRateChart";
+import { DashboardStockAlert } from "./DashboardStockAlert";
 import type {
   ExchangeRateRecord,
   RateSortField,
   SortDirection,
 } from "./dashboard-rate-types";
 
-export function Dashboard() {
+interface DashboardProps {
+  onAddNewBufferRule?: () => void;
+  onManageBufferRules?: () => void;
+  onNavigatePrCreate?: () => void;
+}
+
+export function Dashboard({
+  onAddNewBufferRule,
+  onManageBufferRules,
+  onNavigatePrCreate,
+}: DashboardProps = {}) {
   // Filter form state
   const [startDate, setStartDate] = useState("2026-10-01");
   const [endDate, setEndDate] = useState("2026-10-31");
@@ -276,6 +287,13 @@ export function Dashboard() {
 
   return (
     <div className="dashboard-view">
+      {/* Stock Buffer Alert & Low Inventory Reminders */}
+      <DashboardStockAlert
+        onAddNewRule={onAddNewBufferRule}
+        onManageRules={onManageBufferRules}
+        onNavigatePrCreate={onNavigatePrCreate}
+      />
+
       {/* Exchange Rates Master Card */}
       <div className="dashboard-rate-card">
         {/* Card Header with Refresh Action */}

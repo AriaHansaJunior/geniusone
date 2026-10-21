@@ -34,7 +34,10 @@ export const navigationConfig: NavSection[] = [
     id: "dashboard",
     label: "Dashboard",
     icon: "home",
-    path: "/dashboard",
+    directItems: [
+      { id: "dashboard", label: "Dashboard", path: "/dashboard" },
+      { id: "stock-notification-master", label: "Master Notifikasi", path: "/dashboard/stock-notification-master" },
+    ],
   },
   {
     id: "procurement",
@@ -117,6 +120,8 @@ export const navigationConfig: NavSection[] = [
         items: [
           { id: "warehouse-master", label: "Warehouse", path: "/warehouse/master/warehouse" },
           { id: "type-of-mutation", label: "Type of Mutation", path: "/warehouse/master/type-of-mutation", isPlaceholder: true },
+          { id: "wh-type-of-request", label: "Type of Request", path: "/warehouse/master/type-of-request" },
+          { id: "wh-destination-location", label: "Destination Location", path: "/warehouse/master/destination-location" },
         ],
       },
       {
