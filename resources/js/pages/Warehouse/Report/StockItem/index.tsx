@@ -471,7 +471,7 @@ export function StockItemIndex() {
           <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
             <Button
               type="button"
-              icon="download"
+              variant="excel"
               onClick={handleExportExcel}
             >
               Export to Excel

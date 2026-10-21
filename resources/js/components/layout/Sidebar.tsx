@@ -29,9 +29,9 @@ export function Sidebar({
         // ignore parse error
       }
     }
-    // Default on login / dashboard: dashboard section open, others closed
+    // Default on login / dashboard: all accordion sections closed by default
     const defaults: Record<string, boolean> = {
-      dashboard: true,
+      dashboard: false,
       procurement: false,
       exim: false,
       warehouse: false,

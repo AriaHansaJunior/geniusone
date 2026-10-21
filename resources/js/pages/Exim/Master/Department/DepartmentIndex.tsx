@@ -208,7 +208,7 @@ export function DepartmentIndex({
           </Button>
 
           <Button
-            variant="ghost"
+            variant="excel"
             onClick={handleExportToExcel}
             title="Export filtered records to Excel-compatible CSV"
           >
@@ -416,7 +416,6 @@ export function DepartmentIndex({
         isOpen={!!departmentToDelete}
         entityType="department"
         entityName={departmentToDelete?.sectionName}
-        entityCode={departmentToDelete?.code}
         onConfirm={handleConfirmDelete}
         onCancel={() => setDepartmentToDelete(null)}
       />

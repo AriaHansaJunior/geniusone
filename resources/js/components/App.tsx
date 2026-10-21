@@ -263,7 +263,9 @@ function resolveViewStateFromPath(pathname: string, defaultPage: PageKey = "dash
 
   if (
     cleanPath === "/dashboard/stock-notification-master/create" ||
-    cleanPath === "/dashboard/stock-notification-master/add"
+    cleanPath === "/dashboard/stock-notification-master/add" ||
+    cleanPath === "/stock-notification-master/create" ||
+    cleanPath === "/stock-notification-master/add"
   ) {
     return { type: "stock-notification-create" };
   }
@@ -682,7 +684,12 @@ function resolveViewStateFromPath(pathname: string, defaultPage: PageKey = "dash
   if (cleanPath === "/warehouse/master" || cleanPath === "/warehouse/master/warehouse") return { type: "list", page: "warehouse-master" };
   if (cleanPath === "/warehouse/master/type-of-request" || cleanPath === "/warehouse/type-of-request") return { type: "list", page: "wh-type-of-request" };
   if (cleanPath === "/warehouse/master/destination-location" || cleanPath === "/warehouse/destination-location") return { type: "list", page: "wh-destination-location" };
-  if (cleanPath === "/dashboard/stock-notification-master" || cleanPath === "/dashboard/notification-master") return { type: "list", page: "stock-notification-master" };
+  if (
+    cleanPath === "/dashboard/stock-notification-master" ||
+    cleanPath === "/dashboard/notification-master" ||
+    cleanPath === "/stock-notification-master" ||
+    cleanPath === "/stock-notification"
+  ) return { type: "list", page: "stock-notification-master" };
   if (cleanPath === "/warehouse/report/stock-card") return { type: "list", page: "wh-rep-stock-card" };
   if (cleanPath === "/warehouse/report/stock-item") return { type: "list", page: "wh-rep-stock-item" };
   if (cleanPath === "/warehouse/request/request-material") return { type: "list", page: "wh-req-material" };

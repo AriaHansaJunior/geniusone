@@ -79,10 +79,10 @@ export function WarehouseDetail({
           <Badge tone="cyan">{bcType}</Badge>
           <Badge tone="blue">No Pen: {noPen}</Badge>
           <Badge tone="purple">{location}</Badge>
-          <Button variant="secondary" icon="print">
+          <Button variant="secondary">
             Print PDF
           </Button>
-          <Button icon="download">Export XLSX</Button>
+          <Button variant="excel">Export XLSX</Button>
         </div>
       </div>
 

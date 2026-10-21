@@ -513,8 +513,7 @@ export function DocumentHistoryDetail({
           </div>
 
           <Button
-            variant="ghost"
-            icon="download"
+            variant="excel"
             onClick={handleExportToExcel}
             title="Export Document History to Excel (.xlsx)"
           >

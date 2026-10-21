@@ -859,7 +859,7 @@ export function DetailDrawer({ row, onClose }: { row: TableRow; onClose: () => v
             <Button variant="secondary" icon="print">
               Print PDF
             </Button>
-            <Button icon="download">Export XLSX</Button>
+            <Button variant="excel">Export XLSX</Button>
             <Button variant="ghost" onClick={onClose}>
               Close
             </Button>

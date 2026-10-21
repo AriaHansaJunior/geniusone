@@ -85,7 +85,7 @@ export function PurchaseOrderReport({ onDetail }: PurchaseOrderReportProps) {
             <span>{filtered.length} records shown</span>
           </div>
           <div className="button-row">
-            <Button variant="secondary" icon="download">
+            <Button variant="excel">
               Export XLSX
             </Button>
           </div>

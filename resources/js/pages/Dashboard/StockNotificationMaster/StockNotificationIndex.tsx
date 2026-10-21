@@ -158,7 +158,7 @@ export function StockNotificationIndex({
           <Button variant="primary" onClick={onAddNew}>
             Add New
           </Button>
-          <Button variant="secondary" onClick={handleExportExcel}>
+          <Button variant="excel" onClick={handleExportExcel}>
             Export To Excel
           </Button>
         </div>

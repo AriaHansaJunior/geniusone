@@ -24,6 +24,40 @@
 .button--warning { background: var(--orange-500); color: white; }
 .button--success { background: #16a34a; border-color: #15803d; color: white; }
 .button--success:hover { background: #15803d; color: white; }
+.button--excel,
+.btn-export-excel,
+.wh-btn-export-excel,
+.dh-btn-export-excel {
+  background-color: #16a34a !important;
+  border-color: #15803d !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  box-shadow: 0 1px 2px rgba(22, 163, 74, 0.22);
+}
+.button--excel:hover,
+.btn-export-excel:hover:not(:disabled),
+.wh-btn-export-excel:hover,
+.dh-btn-export-excel:hover {
+  background-color: #15803d !important;
+  border-color: #166534 !important;
+  color: #ffffff !important;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(22, 163, 74, 0.35);
+}
+.button--excel:active,
+.btn-export-excel:active:not(:disabled),
+.wh-btn-export-excel:active,
+.dh-btn-export-excel:active {
+  background-color: #166534 !important;
+  transform: translateY(0);
+}
+.button--excel svg,
+.btn-export-excel svg,
+.wh-btn-export-excel svg,
+.dh-btn-export-excel svg {
+  color: #ffffff !important;
+}
+
 
 
 /* SmartOne Orange Option Button */

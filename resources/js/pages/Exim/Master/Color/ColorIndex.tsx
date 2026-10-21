@@ -166,7 +166,7 @@ export function ColorIndex({
           </Button>
 
           <Button
-            variant="ghost"
+            variant="excel"
             onClick={handleExportToExcel}
             title="Export color records to Excel (.xlsx)"
           >

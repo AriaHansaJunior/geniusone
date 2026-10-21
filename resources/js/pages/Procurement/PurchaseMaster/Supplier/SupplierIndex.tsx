@@ -222,7 +222,7 @@ export function SupplierIndex({
           />
           <div className="button-row">
             <Button
-              variant="secondary"
+              variant="excel"
               onClick={handleExportToExcel}
             >
               Export to Excel

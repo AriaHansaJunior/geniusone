@@ -255,12 +255,11 @@ export function ReceiveNoteReturnIndex({
       <div className="rnr-page-header">
         <h1 className="rnr-page-title">Receive Note (Sales Return)</h1>
         <div className="rnr-header-actions">
-          <Button variant="primary" icon="plus" onClick={onAddNew}>
+          <Button variant="primary" onClick={onAddNew}>
             Add New
           </Button>
           <Button
-            variant="ghost"
-            icon="download"
+            variant="excel"
             onClick={handleExportToExcel}
             title="Export records to Excel (.xlsx)"
           >

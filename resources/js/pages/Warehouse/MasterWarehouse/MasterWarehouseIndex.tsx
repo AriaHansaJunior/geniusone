@@ -162,7 +162,7 @@ export function MasterWarehouseIndex({
             Add New
           </Button>
           <Button
-            variant="secondary"
+            variant="excel"
             onClick={handleExportExcel}
             className="wh-btn-export-excel"
           >

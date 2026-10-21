@@ -246,7 +246,6 @@ export function UnitIndex({
         isOpen={!!unitToDelete}
         entityType="unit"
         entityName={unitToDelete?.name}
-        entityCode={unitToDelete?.code}
         onConfirm={handleConfirmDelete}
         onCancel={() => setUnitToDelete(null)}
       />

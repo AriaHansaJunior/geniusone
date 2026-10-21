@@ -219,7 +219,6 @@ export function WarehouseCoordinateIndex({
         isOpen={!!coordToDelete}
         entityType="warehouse coordinate"
         entityName={coordToDelete?.name}
-        entityCode={coordToDelete?.code}
         onConfirm={() => {
           if (coordToDelete && onDeleteCoordinate) {
             onDeleteCoordinate(coordToDelete.id);

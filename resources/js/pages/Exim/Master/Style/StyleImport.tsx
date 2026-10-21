@@ -145,8 +145,7 @@ export function StyleImport({ onBack }: StyleImportProps) {
 
         <Button
           type="button"
-          variant="primary"
-          icon="download"
+          variant="excel"
           onClick={handleExportTemplateExcel}
           title="Download the official Excel template for Master Specification/Model"
         >

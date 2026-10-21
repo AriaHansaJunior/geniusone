@@ -459,7 +459,7 @@ export function StockCardIndex() {
           </Button>
           <Button
             type="button"
-            icon="download"
+            variant="excel"
             onClick={handleExportExcel}
           >
             Export to Excel

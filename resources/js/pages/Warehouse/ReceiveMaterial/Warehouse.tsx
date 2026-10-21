@@ -86,10 +86,10 @@ export function Warehouse({ onDetail, onCreate }: WarehouseProps) {
             <span>{filtered.length} records shown</span>
           </div>
           <div className="button-row">
-            <Button variant="secondary" icon="download">
+            <Button variant="excel">
               Export XLSX
             </Button>
-            <Button icon="plus" onClick={onCreate}>
+            <Button onClick={onCreate}>
               Receive material
             </Button>
           </div>

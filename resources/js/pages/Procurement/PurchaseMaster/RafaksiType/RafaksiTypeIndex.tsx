@@ -284,7 +284,7 @@ export function RafaksiTypeIndex({
             Add New
           </Button>
           <Button
-            variant="ghost"
+            variant="excel"
             onClick={handleExportToExcel}
             title="Export to Excel CSV"
           >

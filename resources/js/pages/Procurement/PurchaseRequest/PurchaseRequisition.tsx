@@ -86,10 +86,10 @@ export function PurchaseRequisition({ onDetail, onCreate }: PurchaseRequisitionP
             <span>{filtered.length} records shown</span>
           </div>
           <div className="button-row">
-            <Button variant="secondary" icon="download">
+            <Button variant="excel">
               Export XLSX
             </Button>
-            <Button icon="plus" onClick={onCreate}>Create PR</Button>
+            <Button onClick={onCreate}>Create PR</Button>
           </div>
         </div>
 

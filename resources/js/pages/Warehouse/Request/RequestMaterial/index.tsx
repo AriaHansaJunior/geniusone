@@ -308,14 +308,13 @@ export function RequestMaterialIndex({
         <Button
           type="button"
           variant="primary"
-          icon="plus"
           onClick={onAddNew}
         >
           Add New
         </Button>
         <Button
           type="button"
-          icon="download"
+          variant="excel"
           onClick={handleExportExcel}
         >
           Export to Excel

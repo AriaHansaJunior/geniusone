@@ -232,7 +232,7 @@ export function HsIndex({
           </Button>
 
           <Button
-            variant="ghost"
+            variant="excel"
             onClick={handleExportToExcel}
             title="Export filtered records to Excel-compatible CSV"
           >
@@ -514,7 +514,6 @@ export function HsIndex({
         isOpen={!!hsToDelete}
         entityType="HS code"
         entityName={hsToDelete?.name}
-        entityCode={hsToDelete?.code}
         onConfirm={handleConfirmDelete}
         onCancel={() => setHsToDelete(null)}
       />

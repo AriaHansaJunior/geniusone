@@ -284,7 +284,7 @@ export function JobNumberIndex({
             Add New
           </Button>
           <Button
-            variant="ghost"
+            variant="excel"
             onClick={handleExportToExcel}
             title="Export to Excel CSV"
           >
@@ -508,8 +508,8 @@ export function JobNumberIndex({
       <ConfirmDialog
         isOpen={!!jobToDelete}
         entityType="job number"
-        entityName={jobToDelete?.jobNumber}
-        entityCode={jobToDelete?.soNumber}
+        entityName={jobToDelete?.jobName}
+        entityCode={jobToDelete?.jobNumber}
         onConfirm={handleConfirmDelete}
         onCancel={() => setJobToDelete(null)}
       />

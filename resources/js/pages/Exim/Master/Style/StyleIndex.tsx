@@ -219,7 +219,7 @@ export function StyleIndex({
           </Button>
 
           <Button
-            variant="ghost"
+            variant="excel"
             onClick={handleExportToExcel}
             title="Export filtered records to Excel-compatible CSV"
           >

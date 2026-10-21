@@ -73,7 +73,7 @@ export function PurchaseRequisitionDetail({
           <Button variant="secondary" icon="print">
             Print PDF
           </Button>
-          <Button icon="download">Export XLSX</Button>
+          <Button variant="excel">Export XLSX</Button>
         </div>
       </div>
 

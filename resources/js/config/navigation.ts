@@ -34,10 +34,13 @@ export const navigationConfig: NavSection[] = [
     id: "dashboard",
     label: "Dashboard",
     icon: "home",
-    directItems: [
-      { id: "dashboard", label: "Dashboard", path: "/dashboard" },
-      { id: "stock-notification-master", label: "Stock Notification", path: "/dashboard/stock-notification-master" },
-    ],
+    path: "/dashboard",
+  },
+  {
+    id: "stock-notification-master",
+    label: "Stock Notification Master",
+    icon: "bell",
+    path: "/dashboard/stock-notification-master",
   },
   {
     id: "procurement",

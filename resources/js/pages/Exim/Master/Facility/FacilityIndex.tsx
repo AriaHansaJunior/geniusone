@@ -208,7 +208,7 @@ export function FacilityIndex({
           </Button>
 
           <Button
-            variant="ghost"
+            variant="excel"
             onClick={handleExportToExcel}
             title="Export filtered records to Excel-compatible CSV"
           >
@@ -417,7 +417,6 @@ export function FacilityIndex({
         isOpen={!!facilityToDelete}
         entityType="facility"
         entityName={facilityToDelete?.name}
-        entityCode={facilityToDelete?.code}
         onConfirm={handleConfirmDelete}
         onCancel={() => setFacilityToDelete(null)}
       />
