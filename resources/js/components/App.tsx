@@ -2830,7 +2830,6 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
             onAddNew={handleNavigateStockNotificationCreate}
             onEdit={handleEditStockNotification}
             onDelete={handleDeleteStockNotification}
-            onNavigateDashboard={() => handleNavigateList("dashboard", "/dashboard")}
           />
         )}
 

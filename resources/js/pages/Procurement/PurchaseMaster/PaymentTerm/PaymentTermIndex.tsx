@@ -100,7 +100,7 @@ export function PaymentTermIndex({
             placeholder="Search payment term..."
           />
           <div className="button-row">
-            <Button variant="primary" icon="plus" onClick={onAddNew}>
+            <Button variant="primary" onClick={onAddNew}>
               Add New
             </Button>
           </div>

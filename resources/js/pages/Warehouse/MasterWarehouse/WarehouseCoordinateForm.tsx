@@ -79,7 +79,6 @@ export function WarehouseCoordinateForm({
           {/* Form Actions (Green Save & Red Cancel) */}
           <div className="wh-form-actions">
             <button type="submit" className="wh-btn-save">
-              <Icon name="check" size={14} />
               <span>Save</span>
             </button>
             <button
@@ -87,7 +86,6 @@ export function WarehouseCoordinateForm({
               className="wh-btn-cancel"
               onClick={onBack}
             >
-              <Icon name="close" size={14} />
               <span>Cancel</span>
             </button>
           </div>

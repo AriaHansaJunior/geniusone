@@ -27,6 +27,16 @@ export function Button({
   "aria-label": ariaLabel,
   title,
 }: ButtonProps) {
+  // When text is present, icons are omitted ("cukup hanya tulisan aja, ga perlu ditambahin icons").
+  // Icons are only rendered for icon-only buttons (when there is no text).
+  const hasText = Boolean(
+    children !== undefined &&
+    children !== null &&
+    children !== false &&
+    children !== true &&
+    (typeof children !== "string" || children.trim().length > 0)
+  );
+
   return (
     <button
       type={type}
@@ -37,7 +47,7 @@ export function Button({
       aria-label={ariaLabel}
       title={title}
     >
-      {icon && <Icon name={icon} size={16} />}
+      {icon && !hasText && <Icon name={icon} size={16} />}
       {children}
     </button>
   );

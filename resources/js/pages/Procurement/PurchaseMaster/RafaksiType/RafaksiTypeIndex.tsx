@@ -280,12 +280,11 @@ export function RafaksiTypeIndex({
           Master Rafaksi Type
         </h1>
         <div style={{ display: "flex", gap: "10px" }}>
-          <Button variant="primary" icon="plus" onClick={handleOpenCreateModal}>
+          <Button variant="primary" onClick={handleOpenCreateModal}>
             Add New
           </Button>
           <Button
             variant="ghost"
-            icon="download"
             onClick={handleExportToExcel}
             title="Export to Excel CSV"
           >
@@ -418,7 +417,6 @@ export function RafaksiTypeIndex({
                               title={`Edit ${item.name}`}
                             >
                               <Icon name="edit" size={13} />
-                              <span>Edit</span>
                             </button>
                             <button
                               type="button"
@@ -440,7 +438,6 @@ export function RafaksiTypeIndex({
                               title={`Delete ${item.name}`}
                             >
                               <Icon name="trash" size={13} />
-                              <span>Delete</span>
                             </button>
                           </div>
                         </td>
@@ -495,7 +492,7 @@ export function RafaksiTypeIndex({
       {/* Edit Confirmation Dialog */}
       <ConfirmDialog
         isOpen={!!rafaksiToConfirmEdit}
-        title="Edit Record?"
+        title="Edit Record"
         message={`Do you want to edit rafaksi type "${rafaksiToConfirmEdit?.name}"?`}
         confirmLabel="Continue"
         cancelLabel="Cancel"
@@ -508,12 +505,9 @@ export function RafaksiTypeIndex({
       {/* Delete Confirmation Dialog */}
       <ConfirmDialog
         isOpen={!!rafaksiToDelete}
-        title="Delete Record?"
-        message={`Are you sure you want to delete rafaksi type "${rafaksiToDelete?.name}"? This action cannot be undone.`}
-        confirmLabel="Delete"
-        cancelLabel="Cancel"
-        confirmVariant="danger"
-        icon="alertTriangle"
+        entityType="rafaksi type"
+        entityName={rafaksiToDelete?.name}
+        entityCode={rafaksiToDelete?.code}
         onConfirm={handleConfirmDelete}
         onCancel={() => setRafaksiToDelete(null)}
       />

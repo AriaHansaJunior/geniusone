@@ -454,7 +454,6 @@ export function Dashboard({
             }`}
             onClick={() => setActiveTab("table")}
           >
-            <Icon name="list" size={14} />
             <span>Table</span>
             <span className="dashboard-tab__pill">{filteredRecords.length}</span>
           </button>
@@ -465,7 +464,6 @@ export function Dashboard({
             }`}
             onClick={() => setActiveTab("chart")}
           >
-            <Icon name="layers" size={14} />
             <span>Chart</span>
           </button>
         </div>

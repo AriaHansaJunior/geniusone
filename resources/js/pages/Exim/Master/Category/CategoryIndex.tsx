@@ -208,13 +208,12 @@ export function CategoryIndex({
         <h1 className="category-page-title">Master Category</h1>
 
         <div className="category-header-actions">
-          <Button variant="primary" icon="plus" onClick={onAddNew}>
+          <Button variant="primary" onClick={onAddNew}>
             Add New
           </Button>
 
           <Button
             variant="ghost"
-            icon="download"
             onClick={handleExportToExcel}
             title="Export filtered records to Excel-compatible CSV"
           >
@@ -377,7 +376,6 @@ export function CategoryIndex({
                                 onClick={() => setCategoryToEdit(item)}
                               >
                                 <Icon name="edit" size={13} />
-                                <span>Edit</span>
                               </button>
                             )}
                             <button
@@ -387,7 +385,6 @@ export function CategoryIndex({
                               onClick={() => setCategoryToDelete(item)}
                             >
                               <Icon name="trash" size={13} />
-                              <span>Delete</span>
                             </button>
                           </div>
                         </td>
@@ -429,7 +426,7 @@ export function CategoryIndex({
       {/* Edit Confirmation Dialog */}
       <ConfirmDialog
         isOpen={!!categoryToEdit}
-        title="Edit Record?"
+        title="Edit Record"
         message={`Do you want to edit category "${categoryToEdit?.name}"?`}
         confirmLabel="Continue"
         cancelLabel="Cancel"
@@ -447,12 +444,9 @@ export function CategoryIndex({
       {/* Delete Confirmation Dialog */}
       <ConfirmDialog
         isOpen={!!categoryToDelete}
-        title="Delete Record?"
-        message={`Are you sure you want to delete category "${categoryToDelete?.name}"? This action cannot be undone.`}
-        confirmLabel="Delete"
-        cancelLabel="Cancel"
-        confirmVariant="danger"
-        icon="alertTriangle"
+        entityType="category"
+        entityName={categoryToDelete?.name}
+        entityCode={categoryToDelete?.code}
         onConfirm={handleConfirmDelete}
         onCancel={() => setCategoryToDelete(null)}
       />

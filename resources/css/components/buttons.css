@@ -161,6 +161,29 @@
   color: var(--blue-600);
 }
 
+/* Standardized Dimensions & Styles for Table Action Buttons */
+[class*="-action-btn"],
+.btn-action-edit,
+.btn-action-delete {
+  width: 30px !important;
+  height: 30px !important;
+  min-width: 30px !important;
+  padding: 0 !important;
+  border-radius: var(--radius-sm) !important;
+  display: inline-grid !important;
+  place-items: center !important;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  border: 1px solid var(--line);
+  background-color: #ffffff;
+}
+[class*="-action-btn"] svg,
+.btn-action-edit svg,
+.btn-action-delete svg {
+  flex-shrink: 0;
+  display: block;
+}
+
 /* Persistent Semantic Colors for Action Buttons */
 [class*="-action-btn--edit"],
 .btn-action-edit {
@@ -203,4 +226,5 @@
 .btn-action-delete:hover svg {
   color: #b91c1c !important;
 }
+
 

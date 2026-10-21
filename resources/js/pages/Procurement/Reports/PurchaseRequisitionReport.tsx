@@ -612,7 +612,6 @@ export function PurchaseRequisitionReport({
             onClick={handleExportToExcel}
             title="Export current filtered records to Excel compatible CSV"
           >
-            <Icon name="file" size={14} />
             <span>Export To Excel</span>
           </button>
 

@@ -203,13 +203,12 @@ export function DepartmentIndex({
         <h1 className="department-page-title">Master Department</h1>
 
         <div className="department-header-actions">
-          <Button variant="primary" icon="plus" onClick={onAddNew}>
+          <Button variant="primary" onClick={onAddNew}>
             Add New
           </Button>
 
           <Button
             variant="ghost"
-            icon="download"
             onClick={handleExportToExcel}
             title="Export filtered records to Excel-compatible CSV"
           >
@@ -347,7 +346,6 @@ export function DepartmentIndex({
                                 onClick={() => setDepartmentToEdit(item)}
                               >
                                 <Icon name="edit" size={13} />
-                                <span>Edit</span>
                               </button>
                             )}
                             <button
@@ -357,7 +355,6 @@ export function DepartmentIndex({
                               onClick={() => setDepartmentToDelete(item)}
                             >
                               <Icon name="trash" size={13} />
-                              <span>Delete</span>
                             </button>
                           </div>
                         </td>
@@ -399,7 +396,7 @@ export function DepartmentIndex({
       {/* Edit Confirmation Dialog */}
       <ConfirmDialog
         isOpen={!!departmentToEdit}
-        title="Edit Record?"
+        title="Edit Record"
         message={`Do you want to edit department "${departmentToEdit?.sectionName}"?`}
         confirmLabel="Continue"
         cancelLabel="Cancel"
@@ -417,12 +414,9 @@ export function DepartmentIndex({
       {/* Delete Confirmation Dialog */}
       <ConfirmDialog
         isOpen={!!departmentToDelete}
-        title="Delete Record?"
-        message={`Are you sure you want to delete department "${departmentToDelete?.sectionName}"? This action cannot be undone.`}
-        confirmLabel="Delete"
-        cancelLabel="Cancel"
-        confirmVariant="danger"
-        icon="alertTriangle"
+        entityType="department"
+        entityName={departmentToDelete?.sectionName}
+        entityCode={departmentToDelete?.code}
         onConfirm={handleConfirmDelete}
         onCancel={() => setDepartmentToDelete(null)}
       />

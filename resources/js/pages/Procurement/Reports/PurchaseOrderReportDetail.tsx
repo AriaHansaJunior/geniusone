@@ -65,7 +65,6 @@ export function PurchaseOrderReportDetail({
       <div className="detail-top-bar">
         <div className="detail-top-bar__left">
           <button type="button" className="btn-back-pill" onClick={onBack}>
-            <Icon name="arrowLeft" size={14} />
             <span>Back to PR–PO Report</span>
           </button>
           <div className="detail-breadcrumb-trail">

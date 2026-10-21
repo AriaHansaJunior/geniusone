@@ -104,7 +104,7 @@ export function UnitIndex({
           />
 
           <div className="button-row">
-            <Button variant="primary" icon="plus" onClick={onAddNew}>
+            <Button variant="primary" onClick={onAddNew}>
               Add Unit
             </Button>
           </div>
@@ -176,7 +176,6 @@ export function UnitIndex({
                                 onClick={() => setUnitToEdit(item)}
                               >
                                 <Icon name="edit" size={13} />
-                                <span>Edit</span>
                               </button>
                             )}
                             <button
@@ -186,7 +185,6 @@ export function UnitIndex({
                               onClick={() => setUnitToDelete(item)}
                             >
                               <Icon name="trash" size={13} />
-                              <span>Delete</span>
                             </button>
                           </div>
                         </td>
@@ -228,7 +226,7 @@ export function UnitIndex({
       {/* Edit Confirmation Dialog */}
       <ConfirmDialog
         isOpen={!!unitToEdit}
-        title="Edit Record?"
+        title="Edit Record"
         message={`Do you want to edit unit "${unitToEdit?.name}"?`}
         confirmLabel="Continue"
         cancelLabel="Cancel"
@@ -246,12 +244,9 @@ export function UnitIndex({
       {/* Delete Confirmation Dialog */}
       <ConfirmDialog
         isOpen={!!unitToDelete}
-        title="Delete Record?"
-        message={`Are you sure you want to delete unit "${unitToDelete?.name}"? This action cannot be undone.`}
-        confirmLabel="Delete"
-        cancelLabel="Cancel"
-        confirmVariant="danger"
-        icon="alertTriangle"
+        entityType="unit"
+        entityName={unitToDelete?.name}
+        entityCode={unitToDelete?.code}
         onConfirm={handleConfirmDelete}
         onCancel={() => setUnitToDelete(null)}
       />

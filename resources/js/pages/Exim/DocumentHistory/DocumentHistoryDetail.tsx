@@ -421,10 +421,6 @@ export function DocumentHistoryDetail({
                             onClick={() => handleToggleHistory(it.id)}
                             title={isExpanded ? "Hide history" : "Show history"}
                           >
-                            <Icon
-                              name={isExpanded ? "close" : "eye"}
-                              size={13}
-                            />
                             <span>{isExpanded ? "Hide" : "Show"}</span>
                           </button>
                         </td>
@@ -479,9 +475,7 @@ export function DocumentHistoryDetail({
               aria-haspopup="true"
               aria-expanded={generateMenuOpen}
             >
-              <Icon name="navigation" size={15} />
-              <span>Generate History</span>
-              <Icon name="chevronDown" size={13} />
+              <span>Generate History ▾</span>
             </button>
 
             {generateMenuOpen && (
@@ -533,7 +527,6 @@ export function DocumentHistoryDetail({
             onClick={onBack}
             aria-label="Back to listing"
           >
-            <Icon name="chevronLeft" size={16} />
             <span>Back</span>
           </button>
         </div>

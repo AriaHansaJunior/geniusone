@@ -227,13 +227,12 @@ export function HsIndex({
         <h1 className="hs-page-title">Master HS</h1>
 
         <div className="hs-header-actions">
-          <Button variant="primary" icon="plus" onClick={onAddNew}>
+          <Button variant="primary" onClick={onAddNew}>
             Add New
           </Button>
 
           <Button
             variant="ghost"
-            icon="download"
             onClick={handleExportToExcel}
             title="Export filtered records to Excel-compatible CSV"
           >
@@ -445,7 +444,6 @@ export function HsIndex({
                                 onClick={() => setHsToEdit(item)}
                               >
                                 <Icon name="edit" size={13} />
-                                <span>Edit</span>
                               </button>
                             )}
                             <button
@@ -455,7 +453,6 @@ export function HsIndex({
                               onClick={() => setHsToDelete(item)}
                             >
                               <Icon name="trash" size={13} />
-                              <span>Delete</span>
                             </button>
                           </div>
                         </td>
@@ -497,7 +494,7 @@ export function HsIndex({
       {/* Edit Confirmation Dialog */}
       <ConfirmDialog
         isOpen={!!hsToEdit}
-        title="Edit Record?"
+        title="Edit Record"
         message={`Do you want to edit HS Code "${hsToEdit?.name}"?`}
         confirmLabel="Continue"
         cancelLabel="Cancel"
@@ -515,12 +512,9 @@ export function HsIndex({
       {/* Delete Confirmation Dialog */}
       <ConfirmDialog
         isOpen={!!hsToDelete}
-        title="Delete Record?"
-        message={`Are you sure you want to delete HS Code "${hsToDelete?.name}"? This action cannot be undone.`}
-        confirmLabel="Delete"
-        cancelLabel="Cancel"
-        confirmVariant="danger"
-        icon="alertTriangle"
+        entityType="HS code"
+        entityName={hsToDelete?.name}
+        entityCode={hsToDelete?.code}
         onConfirm={handleConfirmDelete}
         onCancel={() => setHsToDelete(null)}
       />

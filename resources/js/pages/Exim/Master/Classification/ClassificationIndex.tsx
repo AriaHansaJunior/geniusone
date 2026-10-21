@@ -222,13 +222,12 @@ export function ClassificationIndex({
         <h1 className="classification-page-title">Master Classification</h1>
 
         <div className="classification-header-actions">
-          <Button variant="primary" icon="plus" onClick={onAddNew}>
+          <Button variant="primary" onClick={onAddNew}>
             Add New
           </Button>
 
           <Button
             variant="ghost"
-            icon="download"
             onClick={handleExportToExcel}
             title="Export filtered records to Excel-compatible CSV"
           >
@@ -392,7 +391,6 @@ export function ClassificationIndex({
                                 onClick={() => setClassificationToEdit(item)}
                               >
                                 <Icon name="edit" size={13} />
-                                <span>Edit</span>
                               </button>
                             )}
                             <button
@@ -402,7 +400,6 @@ export function ClassificationIndex({
                               onClick={() => setClassificationToDelete(item)}
                             >
                               <Icon name="trash" size={13} />
-                              <span>Delete</span>
                             </button>
                           </div>
                         </td>
@@ -444,7 +441,7 @@ export function ClassificationIndex({
       {/* Edit Confirmation Dialog */}
       <ConfirmDialog
         isOpen={!!classificationToEdit}
-        title="Edit Record?"
+        title="Edit Record"
         message={`Do you want to edit classification "${classificationToEdit?.name}"?`}
         confirmLabel="Continue"
         cancelLabel="Cancel"
@@ -462,12 +459,9 @@ export function ClassificationIndex({
       {/* Delete Confirmation Dialog */}
       <ConfirmDialog
         isOpen={!!classificationToDelete}
-        title="Delete Record?"
-        message={`Are you sure you want to delete classification "${classificationToDelete?.name}"? This action cannot be undone.`}
-        confirmLabel="Delete"
-        cancelLabel="Cancel"
-        confirmVariant="danger"
-        icon="alertTriangle"
+        entityType="classification"
+        entityName={classificationToDelete?.name}
+        entityCode={classificationToDelete?.code}
         onConfirm={handleConfirmDelete}
         onCancel={() => setClassificationToDelete(null)}
       />

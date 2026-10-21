@@ -223,7 +223,7 @@ export const pageMeta: Record<PageKey, PageMeta> = {
   },
   "stock-notification-master": {
     eyebrow: "DASHBOARD",
-    title: "Master Notifikasi Buffer Stok",
+    title: "Stock Notification Master",
     description: "Configure minimum safety stock buffer thresholds and automated notification rules per item.",
   },
   // Warehouse Adjustment

@@ -140,7 +140,7 @@ export function PphIndex({ records = initialPphRecords, onAddNew, onToggleHide }
           />
 
           <div className="button-row">
-            <Button variant="primary" icon="plus" onClick={onAddNew}>
+            <Button variant="primary" onClick={onAddNew}>
               Add New
             </Button>
           </div>

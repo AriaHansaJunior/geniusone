@@ -106,7 +106,6 @@ export function EditProfile({ onBack, onSaveConfirmed }: EditProfileProps) {
             onClick={onBack}
             aria-label="Back to dashboard"
           >
-            <Icon name="arrowLeft" size={14} />
             <span>Back</span>
           </button>
           <div className="detail-breadcrumb-trail">

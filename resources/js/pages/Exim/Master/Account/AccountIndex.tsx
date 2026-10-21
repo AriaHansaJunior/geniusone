@@ -280,12 +280,11 @@ export function AccountIndex({
           Master Account
         </h1>
         <div style={{ display: "flex", gap: "10px" }}>
-          <Button variant="primary" icon="plus" onClick={handleOpenCreateModal}>
+          <Button variant="primary" onClick={handleOpenCreateModal}>
             Add New
           </Button>
           <Button
             variant="ghost"
-            icon="download"
             onClick={handleExportToExcel}
             title="Export to Excel CSV"
           >
@@ -418,7 +417,6 @@ export function AccountIndex({
                               title={`Edit ${item.accountName}`}
                             >
                               <Icon name="edit" size={13} />
-                              <span>Edit</span>
                             </button>
                             <button
                               type="button"
@@ -440,7 +438,6 @@ export function AccountIndex({
                               title={`Delete ${item.accountName}`}
                             >
                               <Icon name="trash" size={13} />
-                              <span>Delete</span>
                             </button>
                           </div>
                         </td>
@@ -495,7 +492,7 @@ export function AccountIndex({
       {/* Edit Confirmation Dialog */}
       <ConfirmDialog
         isOpen={!!accountToConfirmEdit}
-        title="Edit Record?"
+        title="Edit Record"
         message={`Do you want to edit account "${accountToConfirmEdit?.accountName}" (${accountToConfirmEdit?.accountCode})?`}
         confirmLabel="Continue"
         cancelLabel="Cancel"
@@ -508,12 +505,9 @@ export function AccountIndex({
       {/* Delete Confirmation Dialog */}
       <ConfirmDialog
         isOpen={!!accountToDelete}
-        title="Delete Record?"
-        message={`Are you sure you want to delete account "${accountToDelete?.accountName}" (${accountToDelete?.accountCode})? This action cannot be undone.`}
-        confirmLabel="Delete"
-        cancelLabel="Cancel"
-        confirmVariant="danger"
-        icon="alertTriangle"
+        entityType="account"
+        entityName={accountToDelete?.accountName}
+        entityCode={accountToDelete?.accountCode}
         onConfirm={handleConfirmDelete}
         onCancel={() => setAccountToDelete(null)}
       />

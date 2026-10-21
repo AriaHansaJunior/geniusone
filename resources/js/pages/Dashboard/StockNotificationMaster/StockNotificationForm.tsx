@@ -27,12 +27,16 @@ export function StockNotificationForm({
 }: StockNotificationFormProps) {
   const isEdit = !!initialRecord;
 
-  const [itemCode, setItemCode] = useState(initialRecord?.itemCode || predefinedItems[0].code);
-  const [itemName, setItemName] = useState(initialRecord?.itemName || predefinedItems[0].name);
-  const [category, setCategory] = useState(initialRecord?.category || predefinedItems[0].category);
-  const [unit, setUnit] = useState(initialRecord?.unit || predefinedItems[0].unit);
-  const [currentStock, setCurrentStock] = useState(initialRecord ? initialRecord.currentStock : predefinedItems[0].stock);
-  const [bufferQuantity, setBufferQuantity] = useState<number>(initialRecord ? initialRecord.bufferQuantity : 5);
+  const [itemCode, setItemCode] = useState(initialRecord?.itemCode || "");
+  const [itemName, setItemName] = useState(initialRecord?.itemName || "");
+  const [category, setCategory] = useState(initialRecord?.category || "");
+  const [unit, setUnit] = useState(initialRecord?.unit || "");
+  const [currentStock, setCurrentStock] = useState<number | "">(
+    initialRecord ? initialRecord.currentStock : ""
+  );
+  const [bufferQuantity, setBufferQuantity] = useState<number | "">(
+    initialRecord ? initialRecord.bufferQuantity : ""
+  );
   const [notificationLevel, setNotificationLevel] = useState<"Critical" | "Warning" | "Standard">(
     initialRecord?.notificationLevel || "Warning"
   );
@@ -41,6 +45,14 @@ export function StockNotificationForm({
   const [error, setError] = useState<string | null>(null);
 
   const handleSelectItem = (code: string) => {
+    if (!code) {
+      setItemCode("");
+      setItemName("");
+      setCategory("");
+      setUnit("");
+      setCurrentStock("");
+      return;
+    }
     const found = predefinedItems.find((p) => p.code === code);
     if (found) {
       setItemCode(found.code);
@@ -54,13 +66,19 @@ export function StockNotificationForm({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!itemCode.trim() || !itemName.trim()) {
-      setError("Item information is required.");
+    if (!itemCode.trim()) {
+      setError("Item Code is required. Please select an item or enter code.");
       return;
     }
 
-    if (bufferQuantity <= 0) {
-      setError("Buffer quantity must be greater than 0.");
+    if (!itemName.trim()) {
+      setError("Item Name is required. Please enter item name.");
+      return;
+    }
+
+    const numBuffer = Number(bufferQuantity);
+    if (bufferQuantity === "" || isNaN(numBuffer) || numBuffer <= 0) {
+      setError("Buffer threshold quantity is required and must be greater than 0.");
       return;
     }
 
@@ -72,9 +90,9 @@ export function StockNotificationForm({
       itemCode: itemCode.trim(),
       itemName: itemName.trim(),
       category: category.trim(),
-      unit: unit.trim(),
-      currentStock,
-      bufferQuantity,
+      unit: unit.trim() || "PCE",
+      currentStock: currentStock === "" ? 0 : Number(currentStock),
+      bufferQuantity: numBuffer,
       triggerCondition: "Stock <= Buffer",
       notificationLevel,
       status,
@@ -148,6 +166,7 @@ export function StockNotificationForm({
               value={itemCode}
               onChange={(e) => handleSelectItem(e.target.value)}
             >
+              <option value="">-- Select Item from Catalog (Optional) --</option>
               {predefinedItems.map((p) => (
                 <option key={p.code} value={p.code}>
                   [{p.code}] {p.name} (Current Stock: {p.stock} {p.unit})
@@ -163,6 +182,7 @@ export function StockNotificationForm({
               <input
                 type="text"
                 className="master-form-input"
+                placeholder="e.g. 80.100.001.001"
                 value={itemCode}
                 onChange={(e) => setItemCode(e.target.value)}
               />
@@ -172,6 +192,7 @@ export function StockNotificationForm({
               <input
                 type="text"
                 className="master-form-input"
+                placeholder="Enter item name"
                 value={itemName}
                 onChange={(e) => setItemName(e.target.value)}
               />
@@ -184,6 +205,7 @@ export function StockNotificationForm({
               <input
                 type="text"
                 className="master-form-input"
+                placeholder="e.g. IT EQUIPMENT"
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
               />
@@ -193,6 +215,7 @@ export function StockNotificationForm({
               <input
                 type="text"
                 className="master-form-input"
+                placeholder="e.g. PCE"
                 value={unit}
                 onChange={(e) => setUnit(e.target.value)}
               />
@@ -202,8 +225,12 @@ export function StockNotificationForm({
               <input
                 type="number"
                 className="master-form-input"
+                placeholder="0"
                 value={currentStock}
-                onChange={(e) => setCurrentStock(Number(e.target.value) || 0)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setCurrentStock(val === "" ? "" : Number(val));
+                }}
               />
             </div>
           </div>
@@ -218,12 +245,18 @@ export function StockNotificationForm({
                 type="number"
                 min="1"
                 className="master-form-input"
+                placeholder="e.g. 5"
                 value={bufferQuantity}
-                onChange={(e) => setBufferQuantity(Math.max(1, Number(e.target.value) || 1))}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setBufferQuantity(val === "" ? "" : Math.max(1, Number(val)));
+                }}
               />
-              <span style={{ fontSize: "11px", color: "var(--muted)", marginTop: "4px" }}>
-                Reminder triggers when Current Stock &le; {bufferQuantity} {unit}
-              </span>
+              {bufferQuantity !== "" && Number(bufferQuantity) > 0 && (
+                <span style={{ fontSize: "11px", color: "var(--muted)", marginTop: "4px" }}>
+                  Reminder triggers when Current Stock &le; {bufferQuantity} {unit || "units"}
+                </span>
+              )}
             </div>
 
             <div className="master-form-group">
@@ -269,7 +302,7 @@ export function StockNotificationForm({
             <Button type="button" variant="ghost" onClick={onBack}>
               Cancel
             </Button>
-            <Button type="submit" variant="primary" icon="check">
+            <Button type="submit" variant="primary">
               Save
             </Button>
           </div>

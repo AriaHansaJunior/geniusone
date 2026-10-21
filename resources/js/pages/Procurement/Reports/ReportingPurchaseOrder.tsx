@@ -472,7 +472,6 @@ export function ReportingPurchaseOrder({
             onClick={handleExportToExcel}
             title="Export filtered records to Excel compatible CSV"
           >
-            <Icon name="file" size={14} />
             <span>Export To Excel</span>
           </button>
         </div>

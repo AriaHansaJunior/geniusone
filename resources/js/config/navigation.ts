@@ -36,7 +36,7 @@ export const navigationConfig: NavSection[] = [
     icon: "home",
     directItems: [
       { id: "dashboard", label: "Dashboard", path: "/dashboard" },
-      { id: "stock-notification-master", label: "Master Notifikasi", path: "/dashboard/stock-notification-master" },
+      { id: "stock-notification-master", label: "Stock Notification", path: "/dashboard/stock-notification-master" },
     ],
   },
   {

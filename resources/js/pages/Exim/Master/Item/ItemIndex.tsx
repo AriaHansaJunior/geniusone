@@ -268,17 +268,15 @@ export function ItemIndex({
             onClick={onGenerateQr}
             title="Generate and print standardized customs QR labels"
           >
-            <Icon name="grid" size={14} />
             <span>Generate QR Code</span>
           </button>
 
-          <Button variant="primary" icon="plus" onClick={onAddNew}>
+          <Button variant="primary" onClick={onAddNew}>
             Add New
           </Button>
 
           <Button
             variant="ghost"
-            icon="download"
             onClick={handleExportToExcel}
             title="Export filtered records to Excel-compatible CSV"
           >
@@ -359,7 +357,6 @@ export function ItemIndex({
               onClick={() => setIsColumnSettingsOpen((prev) => !prev)}
               title="Configure visible columns"
             >
-              <Icon name="settings" size={14} />
               <span>Columns</span>
             </button>
 
@@ -774,7 +771,7 @@ export function ItemIndex({
       {/* Edit Confirmation Dialog */}
       <ConfirmDialog
         isOpen={!!itemToEdit}
-        title="Edit Record?"
+        title="Edit Record"
         message={`Do you want to edit item "${itemToEdit?.itemName}"?`}
         confirmLabel="Continue"
         cancelLabel="Cancel"
@@ -792,12 +789,9 @@ export function ItemIndex({
       {/* Delete Confirmation Dialog */}
       <ConfirmDialog
         isOpen={!!itemToDelete}
-        title="Delete Record?"
-        message={`Are you sure you want to delete item "${itemToDelete?.itemName}"? This action cannot be undone.`}
-        confirmLabel="Delete"
-        cancelLabel="Cancel"
-        confirmVariant="danger"
-        icon="alertTriangle"
+        entityType="item"
+        entityName={itemToDelete?.itemName}
+        entityCode={itemToDelete?.itemCode}
         onConfirm={handleConfirmDelete}
         onCancel={() => setItemToDelete(null)}
       />

@@ -280,12 +280,11 @@ export function JobNumberIndex({
           Master Job Number
         </h1>
         <div style={{ display: "flex", gap: "10px" }}>
-          <Button variant="primary" icon="plus" onClick={handleOpenCreateModal}>
+          <Button variant="primary" onClick={handleOpenCreateModal}>
             Add New
           </Button>
           <Button
             variant="ghost"
-            icon="download"
             onClick={handleExportToExcel}
             title="Export to Excel CSV"
           >
@@ -420,7 +419,6 @@ export function JobNumberIndex({
                               title={`Edit ${item.jobNumber}`}
                             >
                               <Icon name="edit" size={13} />
-                              <span>Edit</span>
                             </button>
                             <button
                               type="button"
@@ -442,7 +440,6 @@ export function JobNumberIndex({
                               title={`Delete ${item.jobNumber}`}
                             >
                               <Icon name="trash" size={13} />
-                              <span>Delete</span>
                             </button>
                           </div>
                         </td>
@@ -497,7 +494,7 @@ export function JobNumberIndex({
       {/* Edit Confirmation Dialog */}
       <ConfirmDialog
         isOpen={!!jobToConfirmEdit}
-        title="Edit Record?"
+        title="Edit Record"
         message={`Do you want to edit job number "${jobToConfirmEdit?.jobNumber}"?`}
         confirmLabel="Continue"
         cancelLabel="Cancel"
@@ -510,12 +507,9 @@ export function JobNumberIndex({
       {/* Delete Confirmation Dialog */}
       <ConfirmDialog
         isOpen={!!jobToDelete}
-        title="Delete Record?"
-        message={`Are you sure you want to delete job number "${jobToDelete?.jobNumber}"? This action cannot be undone.`}
-        confirmLabel="Delete"
-        cancelLabel="Cancel"
-        confirmVariant="danger"
-        icon="alertTriangle"
+        entityType="job number"
+        entityName={jobToDelete?.jobNumber}
+        entityCode={jobToDelete?.soNumber}
         onConfirm={handleConfirmDelete}
         onCancel={() => setJobToDelete(null)}
       />

@@ -391,9 +391,7 @@ export function ReceiveNoteReturnForm({
                   className="rnr-btn-add-item"
                   onClick={() => setIsPickerOpen(true)}
                 >
-                  <Icon name="plus" size={15} />
                   <span>Add Item</span>
-                  <Icon name="chevronDown" size={12} />
                 </button>
               </div>
 
@@ -591,7 +589,6 @@ export function ReceiveNoteReturnForm({
         <div className="rnr-form-footer">
           <div className="rnr-footer-actions">
             <button type="submit" className="rnr-btn-save">
-              <Icon name="check" size={16} />
               <span>Save</span>
             </button>
             <button
@@ -599,7 +596,6 @@ export function ReceiveNoteReturnForm({
               className="rnr-btn-cancel"
               onClick={onBack}
             >
-              <Icon name="close" size={16} />
               <span>Cancel</span>
             </button>
           </div>

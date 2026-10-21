@@ -203,13 +203,12 @@ export function FacilityIndex({
         <h1 className="facility-page-title">Master Facility</h1>
 
         <div className="facility-header-actions">
-          <Button variant="primary" icon="plus" onClick={onAddNew}>
+          <Button variant="primary" onClick={onAddNew}>
             Add New
           </Button>
 
           <Button
             variant="ghost"
-            icon="download"
             onClick={handleExportToExcel}
             title="Export filtered records to Excel-compatible CSV"
           >
@@ -348,7 +347,6 @@ export function FacilityIndex({
                                 onClick={() => setFacilityToEdit(item)}
                               >
                                 <Icon name="edit" size={13} />
-                                <span>Edit</span>
                               </button>
                             )}
                             <button
@@ -358,7 +356,6 @@ export function FacilityIndex({
                               onClick={() => setFacilityToDelete(item)}
                             >
                               <Icon name="trash" size={13} />
-                              <span>Delete</span>
                             </button>
                           </div>
                         </td>
@@ -400,7 +397,7 @@ export function FacilityIndex({
       {/* Edit Confirmation Dialog */}
       <ConfirmDialog
         isOpen={!!facilityToEdit}
-        title="Edit Record?"
+        title="Edit Record"
         message={`Do you want to edit facility "${facilityToEdit?.name}"?`}
         confirmLabel="Continue"
         cancelLabel="Cancel"
@@ -418,12 +415,9 @@ export function FacilityIndex({
       {/* Delete Confirmation Dialog */}
       <ConfirmDialog
         isOpen={!!facilityToDelete}
-        title="Delete Record?"
-        message={`Are you sure you want to delete facility "${facilityToDelete?.name}"? This action cannot be undone.`}
-        confirmLabel="Delete"
-        cancelLabel="Cancel"
-        confirmVariant="danger"
-        icon="alertTriangle"
+        entityType="facility"
+        entityName={facilityToDelete?.name}
+        entityCode={facilityToDelete?.code}
         onConfirm={handleConfirmDelete}
         onCancel={() => setFacilityToDelete(null)}
       />

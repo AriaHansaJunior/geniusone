@@ -31,7 +31,6 @@ export function RequestMaterialDetail({
       <div className="full-page-detail">
         <div className="detail-top-bar">
           <button type="button" className="btn-back-pill" onClick={onBack}>
-            <Icon name="arrowLeft" size={14} />
             <span>Back to Request Material</span>
           </button>
         </div>
@@ -96,7 +95,6 @@ export function RequestMaterialDetail({
       <div className="detail-top-bar">
         <div className="detail-top-bar__left">
           <button type="button" className="btn-back-pill" onClick={onBack}>
-            <Icon name="arrowLeft" size={14} />
             <span>Back to Request Material</span>
           </button>
           <div className="detail-breadcrumb-trail">

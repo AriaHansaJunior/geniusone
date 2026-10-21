@@ -289,12 +289,11 @@ export function CurrencyIndex({
           Master Currency
         </h1>
         <div style={{ display: "flex", gap: "10px" }}>
-          <Button variant="primary" icon="plus" onClick={handleOpenCreateModal}>
+          <Button variant="primary" onClick={handleOpenCreateModal}>
             Add New
           </Button>
           <Button
             variant="ghost"
-            icon="download"
             onClick={handleExportToExcel}
             title="Export to Excel CSV"
           >
@@ -417,7 +416,6 @@ export function CurrencyIndex({
                               title={`Edit ${item.currencyName}`}
                             >
                               <Icon name="edit" size={13} />
-                              <span>Edit</span>
                             </button>
                             <button
                               type="button"
@@ -439,7 +437,6 @@ export function CurrencyIndex({
                               title={`Delete ${item.currencyName}`}
                             >
                               <Icon name="trash" size={13} />
-                              <span>Delete</span>
                             </button>
                           </div>
                         </td>
@@ -494,7 +491,7 @@ export function CurrencyIndex({
       {/* Edit Confirmation Dialog */}
       <ConfirmDialog
         isOpen={!!currencyToConfirmEdit}
-        title="Edit Record?"
+        title="Edit Record"
         message={`Do you want to edit currency "${currencyToConfirmEdit?.currencyName}" (${currencyToConfirmEdit?.currencyCode})?`}
         confirmLabel="Continue"
         cancelLabel="Cancel"
@@ -507,12 +504,9 @@ export function CurrencyIndex({
       {/* Delete Confirmation Dialog */}
       <ConfirmDialog
         isOpen={!!currencyToDelete}
-        title="Delete Record?"
-        message={`Are you sure you want to delete currency "${currencyToDelete?.currencyName}" (${currencyToDelete?.currencyCode})? This action cannot be undone.`}
-        confirmLabel="Delete"
-        cancelLabel="Cancel"
-        confirmVariant="danger"
-        icon="alertTriangle"
+        entityType="currency"
+        entityName={currencyToDelete?.currencyName}
+        entityCode={currencyToDelete?.currencyCode}
         onConfirm={handleConfirmDelete}
         onCancel={() => setCurrencyToDelete(null)}
       />

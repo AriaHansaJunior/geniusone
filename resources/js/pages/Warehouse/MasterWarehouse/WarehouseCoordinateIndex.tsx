@@ -115,7 +115,6 @@ export function WarehouseCoordinateIndex({
         <div className="wh-coordinate-top-actions">
           <Button
             variant="primary"
-            icon="plus"
             onClick={onAddNew}
             className="wh-btn-add-new"
           >
@@ -123,7 +122,6 @@ export function WarehouseCoordinateIndex({
           </Button>
           <Button
             variant="ghost"
-            icon="arrowLeft"
             onClick={onBack}
             className="wh-btn-back"
           >
@@ -219,12 +217,9 @@ export function WarehouseCoordinateIndex({
       {/* Delete Confirmation Dialog */}
       <ConfirmDialog
         isOpen={!!coordToDelete}
-        title="Delete Record?"
-        message={`Are you sure you want to delete coordinate "${coordToDelete?.name}"? This action cannot be undone.`}
-        confirmLabel="Delete"
-        cancelLabel="Cancel"
-        confirmVariant="danger"
-        icon="alertTriangle"
+        entityType="warehouse coordinate"
+        entityName={coordToDelete?.name}
+        entityCode={coordToDelete?.code}
         onConfirm={() => {
           if (coordToDelete && onDeleteCoordinate) {
             onDeleteCoordinate(coordToDelete.id);

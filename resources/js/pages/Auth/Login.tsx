@@ -205,7 +205,6 @@ export function Login({ onNavigateHome, onLoginSuccess }: LoginProps) {
                     }
                   }}
                 >
-                  <Icon name="arrowLeft" size={13} />
                   <span>Return to Workspace (Preview Navigation)</span>
                 </button>
               </div>

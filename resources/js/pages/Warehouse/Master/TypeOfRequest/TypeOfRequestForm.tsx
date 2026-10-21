@@ -218,7 +218,7 @@ export function TypeOfRequestForm({
             <Button type="button" variant="ghost" onClick={onBack}>
               Cancel
             </Button>
-            <Button type="submit" variant="primary" icon="check">
+            <Button type="submit" variant="primary">
               Save
             </Button>
           </div>

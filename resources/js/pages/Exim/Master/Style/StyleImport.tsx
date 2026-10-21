@@ -274,7 +274,6 @@ export function StyleImport({ onBack }: StyleImportProps) {
                     }
                   }}
                 >
-                  <Icon name="trash" size={14} />
                   <span>Remove</span>
                 </button>
               </div>

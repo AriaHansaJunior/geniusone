@@ -135,7 +135,6 @@ export function DetailDrawer({ row, onClose }: { row: TableRow; onClose: () => v
                 className="btn-history-trigger"
                 onClick={() => setShowHistoryModal(true)}
               >
-                <Icon name="history" size={14} />
                 <span>History Transaction</span>
               </button>
             ) : (

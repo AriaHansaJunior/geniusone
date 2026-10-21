@@ -284,9 +284,7 @@ export function ReceiveNoteReturnDetail({
               aria-haspopup="true"
               aria-expanded={printMenuOpen}
             >
-              <Icon name="print" size={16} />
-              <span>Print</span>
-              <Icon name="chevronDown" size={14} />
+              <span>Print ▾</span>
             </button>
 
             {printMenuOpen && (
@@ -317,7 +315,6 @@ export function ReceiveNoteReturnDetail({
             onClick={onBack}
             aria-label="Back to listing"
           >
-            <Icon name="chevronLeft" size={16} />
             <span>Back</span>
           </button>
         </div>

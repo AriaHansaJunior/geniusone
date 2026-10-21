@@ -113,6 +113,9 @@
   padding: 16px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
   margin-bottom: 16px;
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 /* ------------------------------------------------------------------------- */
@@ -168,6 +171,7 @@
 
 .wh-table-wrapper {
   width: 100%;
+  min-width: 0;
   overflow-x: auto;
   border: 1px solid var(--line, #e2e8f0);
   border-radius: var(--radius-sm, 4px);
@@ -263,6 +267,16 @@
 /* Status Indicator (Blue Checked Box matching Screenshot 1)                 */
 /* ------------------------------------------------------------------------- */
 
+.wh-status-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
 .wh-status-checkbox {
   display: inline-flex;
   align-items: center;
@@ -271,16 +285,67 @@
   height: 18px;
   border-radius: 3px;
   user-select: none;
+  transition: all 0.15s ease;
 }
 
 .wh-status-checkbox--checked {
   background-color: #0284c7;
+  border: 1px solid #0284c7;
   color: #ffffff;
 }
 
 .wh-status-checkbox--unchecked {
   background-color: #ffffff;
-  border: 1px solid #cbd5e1;
+  border: 1.5px solid #cbd5e1;
+}
+
+.wh-status-checkbox--unchecked:hover {
+  border-color: #0284c7;
+  background-color: #f0f9ff;
+}
+
+/* ------------------------------------------------------------------------- */
+/* Option Buttons (Icon-Only Action Buttons)                                  */
+/* ------------------------------------------------------------------------- */
+
+.wh-row-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.wh-action-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm, 4px);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border: 1px solid var(--line-strong, #cbd5e1);
+  background: var(--white, #ffffff);
+  color: var(--ink-soft, #475569);
+  transition: all 0.15s ease;
+  padding: 0;
+}
+
+.wh-action-btn--edit:hover {
+  border-color: var(--blue-500, #3b82f6);
+  background: var(--blue-50, #eff6ff);
+  color: var(--blue-700, #1d4ed8);
+}
+
+.wh-action-btn--delete {
+  color: #dc2626;
+  border-color: #fecaca;
+  background: #fef2f2;
+}
+
+.wh-action-btn--delete:hover {
+  border-color: #f87171;
+  background: #fee2e2;
+  color: #b91c1c;
 }
 
 /* ------------------------------------------------------------------------- */

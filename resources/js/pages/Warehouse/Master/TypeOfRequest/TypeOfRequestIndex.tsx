@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from "react";
+import * as XLSX from "xlsx";
 import { Button } from "../../../../components/ui/Button";
 import { SearchField } from "../../../../components/ui/SearchField";
 import { Pagination } from "../../../../components/ui/Pagination";
@@ -30,6 +31,7 @@ export function TypeOfRequestIndex({
   const [sortField, setSortField] = useState<TypeOfRequestSortField>("no");
   const [sortDirection, setSortDirection] = useState<SortDirection>("none");
   const [recordToDelete, setRecordToDelete] = useState<TypeOfRequestRecord | null>(null);
+  const [exportNotice, setExportNotice] = useState<string | null>(null);
 
   useEffect(() => {
     setLocalRecords(records);
@@ -87,6 +89,25 @@ export function TypeOfRequestIndex({
     }
   };
 
+  const renderSortIndicator = (field: TypeOfRequestSortField) => {
+    if (sortField !== field || sortDirection === "none") {
+      return (
+        <span className="wh-sort-icon opacity-40">
+          <Icon name="arrowUpDown" size={13} />
+        </span>
+      );
+    }
+    return (
+      <span className="wh-sort-icon text-primary font-bold">
+        {sortDirection === "asc" ? (
+          <Icon name="arrowUp" size={13} />
+        ) : (
+          <Icon name="arrowDown" size={13} />
+        )}
+      </span>
+    );
+  };
+
   const handleConfirmDelete = () => {
     if (!recordToDelete) return;
     const id = recordToDelete.id;
@@ -102,89 +123,147 @@ export function TypeOfRequestIndex({
     );
   };
 
-  return (
-    <div className="panel" style={{ width: "100%", padding: 0 }}>
-      {/* Table Toolbar */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "16px 20px",
-          borderBottom: "1px solid var(--line)",
-          background: "var(--white)",
-          gap: "12px",
-          flexWrap: "wrap",
-        }}
-      >
-        <div style={{ maxWidth: "340px", width: "100%" }}>
-          <SearchField
-            value={search}
-            onChange={(val) => {
-              setSearch(val);
-              setCurrentPage(1);
-            }}
-            placeholder="Search request type code, name, department..."
-          />
-        </div>
+  const handleExportExcel = () => {
+    try {
+      const dataToExport = sortedRecords.map((r, idx) => ({
+        No: idx + 1,
+        "Type Code": r.code,
+        "Request Type Name": r.name,
+        Department: r.department,
+        Description: r.description || "-",
+        "Job Required": r.requiresJobNumber ? "Yes" : "No",
+        Status: r.status,
+      }));
 
-        <div className="button-row">
-          <Button variant="primary" icon="plus" onClick={onAddNew}>
+      const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Type of Request");
+      XLSX.writeFile(workbook, "Type_of_Request.xlsx");
+
+      setExportNotice("Type of Request exported successfully as Excel.");
+      setTimeout(() => setExportNotice(null), 4000);
+    } catch {
+      setExportNotice("Failed to generate Excel export.");
+      setTimeout(() => setExportNotice(null), 4000);
+    }
+  };
+
+  return (
+    <div className="wh-page">
+      {/* Page Header */}
+      <div className="wh-page-header">
+        <h1 className="wh-page-title">Type of Request</h1>
+        <div className="wh-header-actions">
+          <Button variant="primary" onClick={onAddNew}>
             Add New
+          </Button>
+          <Button variant="secondary" onClick={handleExportExcel}>
+            Export To Excel
           </Button>
         </div>
       </div>
 
-      {/* Table Frame */}
-      <div className="table-frame">
-        <div className="table-scroll">
-          <table className="data-table" style={{ width: "100%" }}>
+      {/* Export / Informational Notice */}
+      {exportNotice && (
+        <div className="wh-alert wh-alert--info" role="status">
+          <Icon name="checkCircle" size={16} />
+          <div className="wh-alert__content">
+            <p>{exportNotice}</p>
+          </div>
+          <button
+            type="button"
+            className="wh-alert-close"
+            onClick={() => setExportNotice(null)}
+            aria-label="Close alert"
+          >
+            &times;
+          </button>
+        </div>
+      )}
+
+      {/* White Content Card */}
+      <div className="wh-table-card">
+        {/* Top Controls Bar */}
+        <div className="wh-controls-bar">
+          <div className="wh-search-box">
+            <SearchField
+              value={search}
+              onChange={(val) => {
+                setSearch(val);
+                setCurrentPage(1);
+              }}
+              placeholder="Search..."
+            />
+          </div>
+        </div>
+
+        {/* Unified Responsive Table Wrapper */}
+        <div className="wh-table-wrapper">
+          <table className="wh-table">
             <thead>
               <tr>
-                <th style={{ width: "50px", textAlign: "center" }}>No</th>
+                <th className="wh-th-no">No</th>
                 <th
-                  className="sortable"
+                  className="wh-th-sortable"
                   onClick={() => handleToggleSort("code")}
-                  style={{ width: "140px" }}
+                  style={{ width: "130px" }}
                 >
-                  Type Code{" "}
-                  {sortField === "code" &&
-                    (sortDirection === "asc" ? "↑" : sortDirection === "desc" ? "↓" : "")}
+                  <div className="wh-th-content">
+                    <span>Type Code</span>
+                    {renderSortIndicator("code")}
+                  </div>
                 </th>
                 <th
-                  className="sortable"
+                  className="wh-th-sortable"
                   onClick={() => handleToggleSort("name")}
-                  style={{ width: "200px" }}
+                  style={{ width: "170px" }}
                 >
-                  Request Type Name{" "}
-                  {sortField === "name" &&
-                    (sortDirection === "asc" ? "↑" : sortDirection === "desc" ? "↓" : "")}
+                  <div className="wh-th-content">
+                    <span>Request Type Name</span>
+                    {renderSortIndicator("name")}
+                  </div>
                 </th>
                 <th
-                  className="sortable"
+                  className="wh-th-sortable"
                   onClick={() => handleToggleSort("department")}
-                  style={{ width: "160px" }}
+                  style={{ width: "150px" }}
                 >
-                  Department{" "}
-                  {sortField === "department" &&
-                    (sortDirection === "asc" ? "↑" : sortDirection === "desc" ? "↓" : "")}
+                  <div className="wh-th-content">
+                    <span>Department</span>
+                    {renderSortIndicator("department")}
+                  </div>
                 </th>
-                <th>Description</th>
-                <th style={{ width: "120px", textAlign: "center" }}>Job Required</th>
-                <th style={{ width: "100px", textAlign: "center" }}>Status</th>
-                <th style={{ width: "130px", textAlign: "center" }}>Actions</th>
+                <th style={{ minWidth: "220px" }}>Description</th>
+                <th style={{ width: "110px", textAlign: "center" }}>Job Required</th>
+                <th
+                  className="wh-th-sortable text-center"
+                  onClick={() => handleToggleSort("status")}
+                  style={{ width: "80px" }}
+                >
+                  <div className="wh-th-content justify-center">
+                    <span>Status</span>
+                    {renderSortIndicator("status")}
+                  </div>
+                </th>
+                <th className="wh-th-option text-center" style={{ width: "80px" }}>
+                  Option
+                </th>
               </tr>
             </thead>
             <tbody>
-              {paginatedRecords.length > 0 ? (
+              {paginatedRecords.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="wh-table-empty">
+                    No request type records found matching filters.
+                  </td>
+                </tr>
+              ) : (
                 paginatedRecords.map((item, index) => {
                   const sequentialNo = (safeCurrentPage - 1) * pageSize + index + 1;
 
                   return (
                     <tr key={item.id}>
-                      <td style={{ textAlign: "center", color: "var(--muted)", fontWeight: 600 }}>
-                        {sequentialNo}
-                      </td>
+                      <td className="wh-td-no text-center">{sequentialNo}</td>
                       <td>
                         <span className="code-pill">{item.code}</span>
                       </td>
@@ -196,11 +275,7 @@ export function TypeOfRequestIndex({
                           {item.department}
                         </span>
                       </td>
-                      <td>
-                        <span style={{ fontSize: "12px", color: "var(--ink-soft)" }}>
-                          {item.description}
-                        </span>
-                      </td>
+                      <td className="wh-td-desc">{item.description}</td>
                       <td style={{ textAlign: "center" }}>
                         {item.requiresJobNumber ? (
                           <Badge tone="purple">Yes</Badge>
@@ -208,64 +283,44 @@ export function TypeOfRequestIndex({
                           <Badge tone="gray">No</Badge>
                         )}
                       </td>
-                      <td style={{ textAlign: "center" }}>
+                      <td className="text-center">
                         <button
                           type="button"
+                          className="wh-status-toggle"
                           onClick={() => handleToggleStatus(item)}
-                          style={{
-                            border: 0,
-                            background: "transparent",
-                            cursor: "pointer",
-                            padding: 0,
-                          }}
-                          title="Click to toggle status"
+                          title={`Click to toggle status (${
+                            item.status === "Active" ? "Active" : "Inactive"
+                          })`}
+                          aria-label={`Toggle status for ${item.name}`}
                         >
-                          <Badge tone={item.status === "Active" ? "green" : "gray"}>
-                            {item.status}
-                          </Badge>
+                          <span
+                            className={`wh-status-checkbox ${
+                              item.status === "Active"
+                                ? "wh-status-checkbox--checked"
+                                : "wh-status-checkbox--unchecked"
+                            }`}
+                          >
+                            {item.status === "Active" && <Icon name="check" size={13} />}
+                          </span>
                         </button>
                       </td>
-                      <td style={{ textAlign: "center" }}>
-                        <div style={{ display: "inline-flex", gap: "6px" }}>
+                      <td className="text-center">
+                        <div className="wh-row-actions">
                           {onEdit && (
                             <button
                               type="button"
-                              className="btn-icon"
+                              className="wh-action-btn wh-action-btn--edit"
+                              title={`Edit ${item.name}`}
                               onClick={() => onEdit(item)}
-                              title="Edit request type"
-                              style={{
-                                border: "1px solid var(--line)",
-                                borderRadius: "4px",
-                                background: "var(--white)",
-                                padding: "4px 8px",
-                                cursor: "pointer",
-                                display: "inline-flex",
-                                alignItems: "center",
-                                gap: "4px",
-                                fontSize: "12px",
-                              }}
                             >
                               <Icon name="edit" size={13} />
-                              <span>Edit</span>
                             </button>
                           )}
                           <button
                             type="button"
-                            className="btn-icon"
+                            className="wh-action-btn wh-action-btn--delete"
+                            title={`Delete ${item.name}`}
                             onClick={() => setRecordToDelete(item)}
-                            title="Delete request type"
-                            style={{
-                              border: "1px solid #fecaca",
-                              borderRadius: "4px",
-                              background: "#fef2f2",
-                              color: "#b91c1c",
-                              padding: "4px 8px",
-                              cursor: "pointer",
-                              display: "inline-flex",
-                              alignItems: "center",
-                              gap: "4px",
-                              fontSize: "12px",
-                            }}
                           >
                             <Icon name="trash" size={13} />
                           </button>
@@ -274,48 +329,36 @@ export function TypeOfRequestIndex({
                     </tr>
                   );
                 })
-              ) : (
-                <tr>
-                  <td colSpan={8} style={{ textAlign: "center", padding: "40px 16px" }}>
-                    <div className="empty">
-                      <div className="empty__icon">
-                        <Icon name="search" />
-                      </div>
-                      <strong>No request types found</strong>
-                      <span>Try adjusting your search criteria or add a new request type.</span>
-                    </div>
-                  </td>
-                </tr>
               )}
             </tbody>
           </table>
         </div>
+
+        {/* Bottom Pagination */}
+        <Pagination
+          totalRecords={totalRecords}
+          currentPage={safeCurrentPage}
+          pageSize={pageSize}
+          showPageSize={true}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={(newSize) => {
+            setPageSize(newSize);
+            setCurrentPage(1);
+          }}
+        />
       </div>
 
-      {/* Pagination Controls below table */}
-      <Pagination
-        totalRecords={totalRecords}
-        currentPage={safeCurrentPage}
-        pageSize={pageSize}
-        onPageChange={(p) => setCurrentPage(p)}
-        onPageSizeChange={(s) => {
-          setPageSize(s);
-          setCurrentPage(1);
-        }}
-      />
-
-      {/* Delete Confirmation Dialog */}
-      <ConfirmDialog
-        isOpen={!!recordToDelete}
-        title="Delete Request Type"
-        message={`Are you sure you want to delete request type "${recordToDelete?.name}" (${recordToDelete?.code})?`}
-        confirmLabel="Delete Request Type"
-        cancelLabel="Cancel"
-        confirmVariant="danger"
-        icon="trash"
-        onConfirm={handleConfirmDelete}
-        onCancel={() => setRecordToDelete(null)}
-      />
+      {/* Delete Confirmation Modal */}
+      {recordToDelete && (
+        <ConfirmDialog
+          isOpen={true}
+          entityType="request type"
+          entityName={recordToDelete.name}
+          entityCode={recordToDelete.code}
+          onConfirm={handleConfirmDelete}
+          onCancel={() => setRecordToDelete(null)}
+        />
+      )}
     </div>
   );
 }

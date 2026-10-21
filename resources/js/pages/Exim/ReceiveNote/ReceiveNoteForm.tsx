@@ -641,7 +641,6 @@ export function ReceiveNoteForm({ onBack, onSave }: ReceiveNoteFormProps) {
         <div className="rn-form-footer">
           <div className="rn-footer-actions">
             <button type="submit" className="rn-btn-save">
-              <Icon name="check" size={16} />
               <span>Save</span>
             </button>
             <button
@@ -649,7 +648,6 @@ export function ReceiveNoteForm({ onBack, onSave }: ReceiveNoteFormProps) {
               className="rn-btn-cancel"
               onClick={onBack}
             >
-              <Icon name="close" size={16} />
               <span>Cancel</span>
             </button>
           </div>

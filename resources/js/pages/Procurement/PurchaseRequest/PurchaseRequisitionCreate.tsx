@@ -401,7 +401,6 @@ export function PurchaseRequisitionCreate({
                   cursor: "pointer",
                 }}
               >
-                <Icon name="upload" size={13} />
                 <span>Upload From Master Item</span>
               </button>
 
@@ -422,7 +421,6 @@ export function PurchaseRequisitionCreate({
                   cursor: "pointer",
                 }}
               >
-                <Icon name="plus" size={13} />
                 <span>Add Item</span>
               </button>
             </div>
@@ -611,7 +609,6 @@ export function PurchaseRequisitionCreate({
               className="btn-tx-save"
               disabled={isSubmitting}
             >
-              <Icon name="check" size={14} />
               <span>{isSubmitting ? "Saving..." : "Save"}</span>
             </button>
 
@@ -620,7 +617,6 @@ export function PurchaseRequisitionCreate({
               className="btn-tx-cancel"
               onClick={() => setShowCancelConfirm(true)}
             >
-              <Icon name="close" size={14} />
               <span>Cancel</span>
             </button>
           </div>

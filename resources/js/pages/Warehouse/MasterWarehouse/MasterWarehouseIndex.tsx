@@ -156,7 +156,6 @@ export function MasterWarehouseIndex({
         <div className="wh-header-actions">
           <Button
             variant="primary"
-            icon="plus"
             onClick={onAddNew}
             className="wh-btn-add-new"
           >
@@ -164,7 +163,6 @@ export function MasterWarehouseIndex({
           </Button>
           <Button
             variant="secondary"
-            icon="download"
             onClick={handleExportExcel}
             className="wh-btn-export-excel"
           >

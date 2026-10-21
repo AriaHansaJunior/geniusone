@@ -111,7 +111,7 @@ export function DeliveryTermsIndex({
             placeholder="Search delivery term..."
           />
           <div className="button-row">
-            <Button variant="primary" icon="plus" onClick={onAddNew}>
+            <Button variant="primary" onClick={onAddNew}>
               Add New
             </Button>
           </div>

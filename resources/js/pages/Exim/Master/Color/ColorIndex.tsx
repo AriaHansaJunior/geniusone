@@ -161,13 +161,12 @@ export function ColorIndex({
         <h1 className="color-page-title">Master Color</h1>
 
         <div className="color-header-actions">
-          <Button variant="primary" icon="plus" onClick={onAddNew}>
+          <Button variant="primary" onClick={onAddNew}>
             Add New
           </Button>
 
           <Button
             variant="ghost"
-            icon="download"
             onClick={handleExportToExcel}
             title="Export color records to Excel (.xlsx)"
           >

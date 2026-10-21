@@ -263,12 +263,11 @@ export function CountryIndex({
           Master Country
         </h1>
         <div style={{ display: "flex", gap: "10px" }}>
-          <Button variant="primary" icon="plus" onClick={handleOpenCreateModal}>
+          <Button variant="primary" onClick={handleOpenCreateModal}>
             Add New
           </Button>
           <Button
             variant="ghost"
-            icon="download"
             onClick={handleExportToExcel}
             title="Export to Excel CSV"
           >
@@ -390,7 +389,6 @@ export function CountryIndex({
                               title={`Edit ${item.name}`}
                             >
                               <Icon name="edit" size={13} />
-                              <span>Edit</span>
                             </button>
                             <button
                               type="button"
@@ -412,7 +410,6 @@ export function CountryIndex({
                               title={`Delete ${item.name}`}
                             >
                               <Icon name="trash" size={13} />
-                              <span>Delete</span>
                             </button>
                           </div>
                         </td>
@@ -467,7 +464,7 @@ export function CountryIndex({
       {/* Edit Confirmation Dialog */}
       <ConfirmDialog
         isOpen={!!countryToConfirmEdit}
-        title="Edit Record?"
+        title="Edit Record"
         message={`Do you want to edit country "${countryToConfirmEdit?.name}" (${countryToConfirmEdit?.code})?`}
         confirmLabel="Continue"
         cancelLabel="Cancel"
@@ -480,12 +477,9 @@ export function CountryIndex({
       {/* Delete Confirmation Dialog */}
       <ConfirmDialog
         isOpen={!!countryToDelete}
-        title="Delete Record?"
-        message={`Are you sure you want to delete country "${countryToDelete?.name}" (${countryToDelete?.code})? This action cannot be undone.`}
-        confirmLabel="Delete"
-        cancelLabel="Cancel"
-        confirmVariant="danger"
-        icon="alertTriangle"
+        entityType="country"
+        entityName={countryToDelete?.name}
+        entityCode={countryToDelete?.code}
         onConfirm={handleConfirmDelete}
         onCancel={() => setCountryToDelete(null)}
       />

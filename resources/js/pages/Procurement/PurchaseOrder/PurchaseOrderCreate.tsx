@@ -1098,7 +1098,6 @@ export function PurchaseOrderCreate({ onBack, onSaveSuccess }: PurchaseOrderCrea
               className="btn-tx-save"
               disabled={isSubmitting}
             >
-              <Icon name="check" size={14} />
               <span>{isSubmitting ? "Saving..." : "Save"}</span>
             </button>
 
@@ -1107,7 +1106,6 @@ export function PurchaseOrderCreate({ onBack, onSaveSuccess }: PurchaseOrderCrea
               className="btn-tx-cancel"
               onClick={() => setShowCancelConfirm(true)}
             >
-              <Icon name="close" size={14} />
               <span>Cancel</span>
             </button>
           </div>

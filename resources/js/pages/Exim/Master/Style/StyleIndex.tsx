@@ -206,13 +206,12 @@ export function StyleIndex({
         <h1 className="style-page-title">Master Specification/Model</h1>
 
         <div className="style-header-actions">
-          <Button variant="primary" icon="plus" onClick={onAddNew}>
+          <Button variant="primary" onClick={onAddNew}>
             Add New
           </Button>
 
           <Button
             variant="ghost"
-            icon="upload"
             onClick={onImportExcel}
             title="Import Excel file for Specification/Model"
           >
@@ -221,7 +220,6 @@ export function StyleIndex({
 
           <Button
             variant="ghost"
-            icon="download"
             onClick={handleExportToExcel}
             title="Export filtered records to Excel-compatible CSV"
           >
@@ -382,7 +380,6 @@ export function StyleIndex({
                                 onClick={() => setStyleToEdit(item)}
                               >
                                 <Icon name="edit" size={13} />
-                                <span>Edit</span>
                               </button>
                             )}
                             <button
@@ -392,7 +389,6 @@ export function StyleIndex({
                               onClick={() => setStyleToDelete(item)}
                             >
                               <Icon name="trash" size={13} />
-                              <span>Delete</span>
                             </button>
                           </div>
                         </td>
@@ -434,7 +430,7 @@ export function StyleIndex({
       {/* Edit Confirmation Dialog */}
       <ConfirmDialog
         isOpen={!!styleToEdit}
-        title="Edit Record?"
+        title="Edit Record"
         message={`Do you want to edit specification/model "${styleToEdit?.name}"?`}
         confirmLabel="Continue"
         cancelLabel="Cancel"
@@ -452,12 +448,9 @@ export function StyleIndex({
       {/* Delete Confirmation Dialog */}
       <ConfirmDialog
         isOpen={!!styleToDelete}
-        title="Delete Record?"
-        message={`Are you sure you want to delete specification/model "${styleToDelete?.name}"? This action cannot be undone.`}
-        confirmLabel="Delete"
-        cancelLabel="Cancel"
-        confirmVariant="danger"
-        icon="alertTriangle"
+        entityType="specification/model"
+        entityName={styleToDelete?.name}
+        entityCode={styleToDelete?.code}
         onConfirm={handleConfirmDelete}
         onCancel={() => setStyleToDelete(null)}
       />

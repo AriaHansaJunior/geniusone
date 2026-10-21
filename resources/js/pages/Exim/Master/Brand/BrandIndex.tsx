@@ -206,13 +206,12 @@ export function BrandIndex({
         <h1 className="brand-page-title">Master Brand</h1>
 
         <div className="brand-header-actions">
-          <Button variant="primary" icon="plus" onClick={onAddNew}>
+          <Button variant="primary" onClick={onAddNew}>
             Add New
           </Button>
 
           <Button
             variant="ghost"
-            icon="download"
             onClick={handleExportToExcel}
             title="Export filtered records to Excel-compatible CSV"
           >
@@ -363,7 +362,6 @@ export function BrandIndex({
                                 onClick={() => setBrandToEdit(item)}
                               >
                                 <Icon name="edit" size={13} />
-                                <span>Edit</span>
                               </button>
                             )}
                             <button
@@ -373,7 +371,6 @@ export function BrandIndex({
                               onClick={() => setBrandToDelete(item)}
                             >
                               <Icon name="trash" size={13} />
-                              <span>Delete</span>
                             </button>
                           </div>
                         </td>
@@ -415,7 +412,7 @@ export function BrandIndex({
       {/* Edit Confirmation Dialog */}
       <ConfirmDialog
         isOpen={!!brandToEdit}
-        title="Edit Record?"
+        title="Edit Record"
         message={`Do you want to edit brand "${brandToEdit?.name}"?`}
         confirmLabel="Continue"
         cancelLabel="Cancel"
@@ -433,12 +430,9 @@ export function BrandIndex({
       {/* Delete Confirmation Dialog */}
       <ConfirmDialog
         isOpen={!!brandToDelete}
-        title="Delete Record?"
-        message={`Are you sure you want to delete brand "${brandToDelete?.name}"? This action cannot be undone.`}
-        confirmLabel="Delete"
-        cancelLabel="Cancel"
-        confirmVariant="danger"
-        icon="alertTriangle"
+        entityType="brand"
+        entityName={brandToDelete?.name}
+        entityCode={brandToDelete?.code}
         onConfirm={handleConfirmDelete}
         onCancel={() => setBrandToDelete(null)}
       />
