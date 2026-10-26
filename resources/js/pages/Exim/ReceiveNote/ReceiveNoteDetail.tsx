@@ -3,6 +3,11 @@ import { Icon } from "../../../components/ui/Icon";
 import { Button } from "../../../components/ui/Button";
 import { initialReceiveNoteRecords } from "./receive-note-data";
 import type { ReceiveNoteRecord } from "./receive-note-types";
+import { ApprovalActionBar } from "../../../components/approval/ApprovalActionBar";
+import { ApprovalTimeline } from "../../../components/approval/ApprovalTimeline";
+import { ApprovalStatusBadge } from "../../../components/approval/ApprovalStatusBadge";
+import { getLocalApprovalState } from "../../../services/approvalApi";
+import { normalizeApprovalStatus, type DocumentApprovalState } from "../../../types/approval";
 
 interface ReceiveNoteDetailProps {
   code: string;
@@ -45,6 +50,18 @@ export function ReceiveNoteDetail({
     ) ||
     initialReceiveNoteRecords[0];
 
+  const [approvalState, setApprovalState] = useState<DocumentApprovalState>(() =>
+    getLocalApprovalState("receive_note", rnData.rnNumber, normalizeApprovalStatus(rnData.status))
+  );
+
+  useEffect(() => {
+    setApprovalState(
+      getLocalApprovalState("receive_note", rnData.rnNumber, normalizeApprovalStatus(rnData.status))
+    );
+  }, [rnData.rnNumber, rnData.status]);
+
+  const isApproved = approvalState.status === "APPROVED";
+
   const handlePrint = (mode: "job" | "po") => {
     setPrintMenuOpen(false);
     window.print();
@@ -52,21 +69,42 @@ export function ReceiveNoteDetail({
 
   return (
     <div className="rn-detail-page">
-      {/* Page Title */}
-      <div className="rn-detail-header">
-        <h1 className="rn-detail-title">
-          Detail Receive Note - {rnData.rnNumber}
-        </h1>
+      {/* Top Header with Navigation */}
+      <div className="rn-detail-header" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", marginBottom: "16px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+          <button type="button" className="btn-back-pill" onClick={onBack}>
+            <span>Back to Receive Notes</span>
+          </button>
+          <h1 className="rn-detail-title" style={{ margin: 0 }}>
+            Detail Receive Note - {rnData.rnNumber}
+          </h1>
+        </div>
+
+        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <ApprovalStatusBadge status={approvalState.status} />
+          {isApproved && (
+            <span className="badge badge--green" style={{ fontSize: "11px", fontWeight: 700 }}>
+              <Icon name="lock" size={12} style={{ marginRight: "3px" }} /> Locked
+            </span>
+          )}
+          <Button variant="secondary" icon="print" onClick={() => handlePrint("po")}>
+            Print Document
+          </Button>
+        </div>
       </div>
 
       {/* Main Content Card */}
       <div className="rn-detail-card">
-        {/* Status Badge in Upper Portion */}
-        <div className="rn-detail-status-bar">
-          <span className="rn-status-badge">
-            <Icon name="check" size={14} />
-            <span>{rnData.status}</span>
-          </span>
+        {/* Dynamic Two-Stage Approval Action Bar & Timeline */}
+        <div className="rn-detail-status-bar" style={{ display: "flex", flexDirection: "column", gap: "14px", padding: "16px", background: "rgba(0,0,0,0.01)", borderBottom: "1px solid var(--line)" }}>
+          <ApprovalActionBar
+            module="receive_note"
+            documentId={rnData.rnNumber}
+            documentNumber={rnData.rnNumber}
+            state={approvalState}
+            onStateChange={setApprovalState}
+          />
+          <ApprovalTimeline state={approvalState} />
         </div>
 
         {/* 3-Column Document Information */}

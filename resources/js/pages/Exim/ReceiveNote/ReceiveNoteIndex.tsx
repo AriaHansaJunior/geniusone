@@ -4,6 +4,7 @@ import { Icon } from "../../../components/ui/Icon";
 import { Button } from "../../../components/ui/Button";
 import { SearchField } from "../../../components/ui/SearchField";
 import { Pagination } from "../../../components/ui/Pagination";
+import { ApprovalStatusBadge } from "../../../components/approval/ApprovalStatusBadge";
 import {
   initialReceiveNoteRecords,
   suppliersList,
@@ -450,8 +451,9 @@ export function ReceiveNoteIndex({
                     <tr key={rn.id}>
                       <td className="rn-td-no text-center">{sequentialNumber}</td>
                       <td>
-                        <div className="font-semibold text-ink">
-                          {rn.rnNumber}
+                        <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
+                          <span className="font-semibold text-ink">{rn.rnNumber}</span>
+                          <ApprovalStatusBadge status={rn.status || "WAITING_APPROVE_1"} showIcon={false} />
                         </div>
                         <div className="text-xs text-muted">
                           Arrival Date: {rn.arrivalDate}

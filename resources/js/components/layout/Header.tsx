@@ -1,10 +1,12 @@
 import { useState, useRef, useEffect } from "react";
 import { Icon } from "../ui/Icon";
+import { useAuthPermission } from "../../context/AuthPermissionContext";
 
 interface HeaderProps {
   collapsed?: boolean;
   onToggleCollapse?: () => void;
   onNavigateProfile?: () => void;
+  onNavigateAdmin?: () => void;
   onLogoutRequest?: () => void;
   onToggleMobileSidebar?: () => void;
 }
@@ -13,11 +15,22 @@ export function Header({
   collapsed = false,
   onToggleCollapse,
   onNavigateProfile,
+  onNavigateAdmin,
   onLogoutRequest,
   onToggleMobileSidebar,
 }: HeaderProps) {
+  const { currentUser, isSuperAdmin, allUsers, switchUser } = useAuthPermission();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
+
+  const initials = currentUser?.name
+    ? currentUser.name
+        .split(" ")
+        .map((p) => p[0])
+        .slice(0, 2)
+        .join("")
+        .toUpperCase()
+    : "US";
 
   useEffect(() => {
     if (!isDropdownOpen) return;
@@ -140,10 +153,10 @@ export function Header({
             }
           }}
         >
-          <span>RA</span>
+          <span>{initials}</span>
           <div>
-            <strong>Rizky Aditya</strong>
-            <small>Procurement Manager</small>
+            <strong>{currentUser.name}</strong>
+            <small>{currentUser.role}</small>
           </div>
           <Icon
             name="chevronDown"
@@ -160,17 +173,33 @@ export function Header({
               aria-label="User options"
             >
               <div className="user-dropdown__header">
-                <div className="user-dropdown__avatar">RA</div>
+                <div className="user-dropdown__avatar">{initials}</div>
                 <div className="user-dropdown__info">
-                  <strong>Rizky Aditya</strong>
-                  <span className="user-dropdown__role">Procurement Manager</span>
-                  <span className="user-dropdown__email">rizky.aditya@geniusone.com</span>
+                  <strong>{currentUser.name}</strong>
+                  <span className="user-dropdown__role">{currentUser.role}</span>
+                  <span className="user-dropdown__email">{currentUser.email}</span>
                 </div>
               </div>
 
               <div className="user-dropdown__divider" />
 
               <div className="user-dropdown__menu">
+                {isSuperAdmin && onNavigateAdmin && (
+                  <button
+                    type="button"
+                    className="user-dropdown__item"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsDropdownOpen(false);
+                      onNavigateAdmin();
+                    }}
+                    role="menuitem"
+                  >
+                    <Icon name="lock" size={15} />
+                    <span>User & Permission Admin</span>
+                  </button>
+                )}
+
                 <button
                   type="button"
                   className="user-dropdown__item"
@@ -183,6 +212,28 @@ export function Header({
                   <Icon name="user" size={15} />
                   <span>Edit Profile</span>
                 </button>
+
+                {/* Persona Switcher Quick Widget */}
+                <div style={{ padding: "8px 12px", borderTop: "1px solid var(--line)", background: "rgba(0,0,0,0.02)" }}>
+                  <span style={{ fontSize: "10.5px", fontWeight: 700, color: "var(--muted)", display: "block", marginBottom: "4px", textTransform: "uppercase" }}>
+                    Switch Persona:
+                  </span>
+                  <select
+                    className="form-input"
+                    style={{ fontSize: "11px", padding: "4px 6px", width: "100%", background: "#fff" }}
+                    value={currentUser.id}
+                    onChange={(e) => {
+                      e.stopPropagation();
+                      switchUser(e.target.value);
+                    }}
+                  >
+                    {allUsers.map((u) => (
+                      <option key={u.id} value={u.id}>
+                        {u.name} ({u.role})
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
                 <div className="user-dropdown__divider" />
 

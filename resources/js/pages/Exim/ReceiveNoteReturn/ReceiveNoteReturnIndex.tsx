@@ -4,6 +4,7 @@ import { Icon } from "../../../components/ui/Icon";
 import { Button } from "../../../components/ui/Button";
 import { SearchField } from "../../../components/ui/SearchField";
 import { Pagination } from "../../../components/ui/Pagination";
+import { ApprovalStatusBadge } from "../../../components/approval/ApprovalStatusBadge";
 import {
   initialReceiveNoteReturnRecords,
   customerList,
@@ -529,10 +530,7 @@ export function ReceiveNoteReturnIndex({
                         )}
                       </td>
                       <td>
-                        <span className="rnr-status-badge">
-                          <Icon name="check" size={13} />
-                          <span>{rnr.approvalStatus}</span>
-                        </span>
+                        <ApprovalStatusBadge status={rnr.approvalStatus} />
                       </td>
                       <td>
                         <div className="font-medium text-ink text-xs">

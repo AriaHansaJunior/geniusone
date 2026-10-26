@@ -82,6 +82,7 @@ import {
   TypeOfRequestForm,
   DestinationLocationIndex,
   DestinationLocationForm,
+  UserPermissionAdmin,
 } from "../pages";
 import { initialRequestMaterialRecords } from "../pages/Warehouse/Request/RequestMaterial/request-material-data";
 import type { RequestMaterialRecord } from "../pages/Warehouse/Request/RequestMaterial/request-material-types";
@@ -602,6 +603,15 @@ function resolveViewStateFromPath(pathname: string, defaultPage: PageKey = "dash
   }
 
   // Existing Core List Routes & legacy aliases
+  if (
+    cleanPath === "/admin/user-permissions" ||
+    cleanPath === "/admin/users" ||
+    cleanPath === "/admin/permissions" ||
+    cleanPath === "/user-permission-admin"
+  ) {
+    return { type: "list", page: "user-permission-admin" };
+  }
+
   if (
     cleanPath === "/pr" ||
     cleanPath === "/purchase-requisitions" ||
@@ -2510,6 +2520,11 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
             }
             onNavigatePrCreate={handleNavigatePrCreate}
           />
+        )}
+
+        {/* SuperAdmin User & Permission Administration */}
+        {viewState.type === "list" && viewState.page === "user-permission-admin" && (
+          <UserPermissionAdmin />
         )}
 
         {/* Existing Core List Page Views */}

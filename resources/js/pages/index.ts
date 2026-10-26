@@ -97,3 +97,4 @@ export { TypeOfRequestIndex } from "./Warehouse/Master/TypeOfRequest/TypeOfReque
 export { TypeOfRequestForm } from "./Warehouse/Master/TypeOfRequest/TypeOfRequestForm";
 export { DestinationLocationIndex } from "./Warehouse/Master/DestinationLocation/DestinationLocationIndex";
 export { DestinationLocationForm } from "./Warehouse/Master/DestinationLocation/DestinationLocationForm";
+export { UserPermissionAdmin } from "./Admin/UserPermissionAdmin";

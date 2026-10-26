@@ -5,6 +5,11 @@ import { Badge } from "../../../components/ui/Badge";
 import { Material } from "../../../components/common/CommonCells";
 import { warehouseRows, findRowBySlug, docToSlug } from "../../../data/mockData";
 import { fetchDetail } from "../../../data/api";
+import { ApprovalStatusBadge } from "../../../components/approval/ApprovalStatusBadge";
+import { ApprovalActionBar } from "../../../components/approval/ApprovalActionBar";
+import { ApprovalTimeline } from "../../../components/approval/ApprovalTimeline";
+import { getLocalApprovalState } from "../../../services/approvalApi";
+import { normalizeApprovalStatus, type DocumentApprovalState } from "../../../types/approval";
 import type { TableRow } from "../../../types";
 
 interface WarehouseDetailProps {
@@ -57,6 +62,16 @@ export function WarehouseDetail({
   const materialName = String(row._rawMaterialName || "Mur Baut M 10 x 40 + ring pir");
   const materialCode = String(row._rawMaterialCode || "60.149.301.404");
 
+  const [approvalState, setApprovalState] = useState<DocumentApprovalState>(() =>
+    getLocalApprovalState("receive_note", docNumber, normalizeApprovalStatus(status))
+  );
+
+  useEffect(() => {
+    setApprovalState(getLocalApprovalState("receive_note", docNumber, normalizeApprovalStatus(status)));
+  }, [docNumber, status]);
+
+  const isApproved = approvalState.status === "APPROVED";
+
   return (
     <div className="full-page-detail">
       {/* Detail Navigation & Action Bar */}
@@ -75,7 +90,12 @@ export function WarehouseDetail({
         </div>
 
         <div className="detail-top-bar__right">
-          <Badge tone="orange">✓ {status}</Badge>
+          <ApprovalStatusBadge status={approvalState.status} />
+          {isApproved && (
+            <Badge tone="green">
+              <Icon name="lock" size={12} style={{ marginRight: "3px" }} /> Locked
+            </Badge>
+          )}
           <Badge tone="cyan">{bcType}</Badge>
           <Badge tone="blue">No Pen: {noPen}</Badge>
           <Badge tone="purple">{location}</Badge>
@@ -92,7 +112,7 @@ export function WarehouseDetail({
           <span className="detail-header-card__eyebrow">INVENTORY RECEIVING RECORD</span>
           <div className="detail-header-card__title-row">
             <h2 className="detail-header-card__title">{docNumber}</h2>
-            <Badge tone="orange">✓ {status}</Badge>
+            <ApprovalStatusBadge status={approvalState.status} />
             <Badge tone="purple">{bpbType}</Badge>
           </div>
           <span className="detail-header-card__meta">
@@ -105,6 +125,18 @@ export function WarehouseDetail({
             Download Delivery Note
           </Button>
         </div>
+      </div>
+
+      {/* Two-Stage Approval Action Bar & Timeline */}
+      <div style={{ display: "flex", flexDirection: "column", gap: "14px", marginBottom: "16px" }}>
+        <ApprovalActionBar
+          module="receive_note"
+          documentId={docNumber}
+          documentNumber={docNumber}
+          state={approvalState}
+          onStateChange={setApprovalState}
+        />
+        <ApprovalTimeline state={approvalState} />
       </div>
 
       {/* 6-Column Logistics & Customs Grid */}

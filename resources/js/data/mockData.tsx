@@ -351,6 +351,11 @@ export const pageMeta: Record<PageKey, PageMeta> = {
     title: "Outstanding Request Report",
     description: "Tracking unfulfilled and in-progress material issue requests.",
   },
+  "user-permission-admin": {
+    eyebrow: "SYSTEM ADMINISTRATION",
+    title: "User & Permission Management",
+    description: "Manage enterprise user accounts, security roles, and granular two-stage approval authorizations.",
+  },
 };
 
 export const prRows: TableRow[] = [

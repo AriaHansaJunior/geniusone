@@ -6,6 +6,11 @@ import { Material } from "../../../components/common/CommonCells";
 import { poRows, findRowBySlug, docToSlug } from "../../../data/mockData";
 import { fetchDetail } from "../../../data/api";
 import type { TableRow } from "../../../types";
+import { ApprovalActionBar } from "../../../components/approval/ApprovalActionBar";
+import { ApprovalTimeline } from "../../../components/approval/ApprovalTimeline";
+import { ApprovalStatusBadge } from "../../../components/approval/ApprovalStatusBadge";
+import { getLocalApprovalState } from "../../../services/approvalApi";
+import { normalizeApprovalStatus, type DocumentApprovalState } from "../../../types/approval";
 
 interface PurchaseOrderDetailProps {
   code: string;
@@ -41,7 +46,7 @@ export function PurchaseOrderDetail({
   const rmNumber = row._rawRn || "RM-1026-0018";
   const supplierName = row._rawSupplier || "[ASSL.0002] PT. Astra Otoparts, Tbk";
   const orderTotal = row._rawTotal || "IDR 260,112,910.68";
-  const status = row._rawStatus || "Approved 2";
+  const rawStatus = row._rawStatus || "Approved 2";
   const dateStr = row._rawDate || "08-Oct-2026";
   const dueDate = row._rawDueDate || "09-Nov-2026";
   const facility = String(row._rawFacility || "FASILITAS");
@@ -53,6 +58,18 @@ export function PurchaseOrderDetail({
   const releasedBy = String(row._rawReleasedBy || "08-10-2026 13:57 by YUSTINA");
   const approvedBy = String(row._rawApprovedBy || "08-10-2026 14:04 by AWI L");
   const remark = String(row._rawRemark || "U/ Proses BB");
+
+  const [approvalState, setApprovalState] = useState<DocumentApprovalState>(() =>
+    getLocalApprovalState("purchase_order", docNumber, normalizeApprovalStatus(rawStatus))
+  );
+
+  useEffect(() => {
+    setApprovalState(
+      getLocalApprovalState("purchase_order", docNumber, normalizeApprovalStatus(rawStatus))
+    );
+  }, [docNumber, rawStatus]);
+
+  const isApproved = approvalState.status === "APPROVED";
 
   const poItems =
     row._items && row._items.length > 0
@@ -112,7 +129,7 @@ export function PurchaseOrderDetail({
         </div>
 
         <div className="detail-top-bar__right">
-          <Badge tone={badgeTone}>✓ {status}</Badge>
+          <ApprovalStatusBadge status={approvalState.status} />
           <Badge tone="purple">{facility}</Badge>
           <Badge tone="gray">
             {currency} · Rate {rate}
@@ -130,7 +147,7 @@ export function PurchaseOrderDetail({
           <span className="detail-header-card__eyebrow">PURCHASE ORDER ORDER COCKPIT</span>
           <div className="detail-header-card__title-row">
             <h2 className="detail-header-card__title">{docNumber}</h2>
-            <Badge tone={badgeTone}>✓ {status}</Badge>
+            <ApprovalStatusBadge status={approvalState.status} />
             <Badge tone="purple">{facility}</Badge>
           </div>
           <span className="detail-header-card__meta">
@@ -139,11 +156,33 @@ export function PurchaseOrderDetail({
         </div>
 
         <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+          {isApproved && (
+            <Badge tone="green" style={{ padding: "6px 12px", fontSize: "12px", fontWeight: 700 }}>
+              <Icon name="lock" size={13} style={{ marginRight: "4px" }} /> Document Locked
+            </Badge>
+          )}
           <Button variant="secondary" icon="file">
             Download Attachments
           </Button>
         </div>
       </div>
+
+      {/* Dynamic Two-Stage Approval Action Bar */}
+      <div className="panel" style={{ padding: "14px 20px", marginBottom: "16px" }}>
+        <ApprovalActionBar
+          module="purchase_order"
+          documentId={docNumber}
+          documentNumber={docNumber}
+          state={approvalState}
+          onStateChange={(newState) => {
+            setApprovalState(newState);
+            setRow((prev) => ({ ...prev, _rawStatus: newState.status }));
+          }}
+        />
+      </div>
+
+      {/* Visual Two-Stage Approval Timeline */}
+      <ApprovalTimeline state={approvalState} style={{ marginBottom: "16px" }} />
 
       {/* 6-Column Hero Summary KPI Grid */}
       <div className="detail-kpi-grid">

@@ -5,6 +5,7 @@ import { SearchField } from "../../../../components/ui/SearchField";
 import { Icon } from "../../../../components/ui/Icon";
 import { Badge, type BadgeTone } from "../../../../components/ui/Badge";
 import { Pagination } from "../../../../components/ui/Pagination";
+import { ApprovalStatusBadge } from "../../../../components/approval/ApprovalStatusBadge";
 import {
   requestMaterialTypesList,
   requestMaterialCreatedByList,
@@ -558,9 +559,7 @@ export function RequestMaterialIndex({
                           {item.totalItems}
                         </td>
                         <td style={{ textAlign: "center" }}>
-                          <Badge tone={getApprovalBadgeTone(item.approval)}>
-                            {item.approval}
-                          </Badge>
+                          <ApprovalStatusBadge status={item.approval} />
                         </td>
                         <td>{item.projectType}</td>
                         <td style={{ fontSize: "11px", color: "var(--muted)" }}>

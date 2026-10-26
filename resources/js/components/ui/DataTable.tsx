@@ -4,6 +4,8 @@ import { Badge, type BadgeTone } from "./Badge";
 import { Pagination } from "./Pagination";
 import type { Column, TableRow } from "../../types";
 
+import { ApprovalStatusBadge } from "../approval/ApprovalStatusBadge";
+
 function formatCell(key: string, value: any) {
   if (React.isValidElement(value)) return value;
   if (value === null || value === undefined || value === "") return "—";
@@ -12,34 +14,10 @@ function formatCell(key: string, value: any) {
     key === "status" ||
     key === "statusPr" ||
     key === "statusPo" ||
-    key === "statusApprove"
+    key === "statusApprove" ||
+    key === "approval"
   ) {
-    const str = String(value);
-    let tone: BadgeTone = "gray";
-    let prefix = "";
-
-    if (str.includes("Approved 2") || str.includes("Complete")) {
-      tone = "blue";
-      prefix = "✓ ";
-    } else if (str.includes("Approved 1") || str.includes("Approved") || str.includes("Fully")) {
-      tone = "green";
-      prefix = "✓ ";
-    } else if (str.includes("Ready") || str.includes("Draft")) {
-      tone = "cyan";
-      prefix = "⏳ ";
-    } else if (str.includes("Outstanding")) {
-      tone = "orange";
-      prefix = "⌛ ";
-    } else if (str.includes("Rejected")) {
-      tone = "red";
-    }
-
-    return (
-      <Badge tone={tone}>
-        {prefix}
-        {str}
-      </Badge>
-    );
+    return <ApprovalStatusBadge status={String(value)} />;
   }
 
   if (key === "statusFacility" || key === "facility") {

@@ -17,6 +17,8 @@ export type IconName =
   | "chevron"
   | "chevronDown"
   | "chevronLeft"
+  | "chevronRight"
+  | "clock"
   | "close"
   | "download"
   | "edit"
@@ -120,7 +122,8 @@ export type PageKey =
   | "wh-rep-stock-transfer"
   | "wh-rep-delivery-order"
   | "wh-rep-stock-mutation"
-  | "wh-rep-outstanding-request";
+  | "wh-rep-outstanding-request"
+  | "user-permission-admin";
 
 export type ViewState =
   | { type: "dashboard" }

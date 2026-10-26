@@ -6,6 +6,11 @@ import { Material } from "../../../components/common/CommonCells";
 import { prRows, findRowBySlug } from "../../../data/mockData";
 import { fetchDetail } from "../../../data/api";
 import type { TableRow } from "../../../types";
+import { ApprovalActionBar } from "../../../components/approval/ApprovalActionBar";
+import { ApprovalTimeline } from "../../../components/approval/ApprovalTimeline";
+import { ApprovalStatusBadge } from "../../../components/approval/ApprovalStatusBadge";
+import { getLocalApprovalState } from "../../../services/approvalApi";
+import { normalizeApprovalStatus, type DocumentApprovalState } from "../../../types/approval";
 
 interface PurchaseRequisitionDetailProps {
   code: string;
@@ -35,7 +40,7 @@ export function PurchaseRequisitionDetail({
   }, [code]);
 
   const docNumber = row._rawNumber || "0026/PR-IMLI/X/2026";
-  const status = row._rawStatus || "Approved 1";
+  const rawStatus = row._rawStatus || "Approved 1";
   const reqDate = row._rawDate || "07-Oct-2026";
   const dueDate = row._rawDueDate || "21-Oct-2026";
   const dept = String(row._rawDept || "HSE");
@@ -43,12 +48,17 @@ export function PurchaseRequisitionDetail({
   const createdBy = row._rawCreatedBy || "Arsyeila 07-10-2026 15:08";
   const totalQty = String(row._totalQty || "15.0000 PCE");
 
-  const badgeTone =
-    status === "Approved 1" || status === "Approved"
-      ? "green"
-      : status === "Approved 2"
-      ? "blue"
-      : "gray";
+  const [approvalState, setApprovalState] = useState<DocumentApprovalState>(() =>
+    getLocalApprovalState("purchase_requisition", docNumber, normalizeApprovalStatus(rawStatus))
+  );
+
+  useEffect(() => {
+    setApprovalState(
+      getLocalApprovalState("purchase_requisition", docNumber, normalizeApprovalStatus(rawStatus))
+    );
+  }, [docNumber, rawStatus]);
+
+  const isApproved = approvalState.status === "APPROVED";
 
   return (
     <div className="full-page-detail">
@@ -68,7 +78,7 @@ export function PurchaseRequisitionDetail({
         </div>
 
         <div className="detail-top-bar__right">
-          <Badge tone={badgeTone}>✓ {status}</Badge>
+          <ApprovalStatusBadge status={approvalState.status} />
           <Badge tone="purple">{dept}</Badge>
           <Button variant="secondary" icon="print">
             Print PDF
@@ -83,19 +93,41 @@ export function PurchaseRequisitionDetail({
           <span className="detail-header-card__eyebrow">REQUISITION SPECIFICATION</span>
           <div className="detail-header-card__title-row">
             <h2 className="detail-header-card__title">{docNumber}</h2>
-            <Badge tone={badgeTone}>✓ {status}</Badge>
+            <ApprovalStatusBadge status={approvalState.status} />
           </div>
           <span className="detail-header-card__meta">
             Requested by <strong>{createdBy}</strong> · Department: <strong>{dept}</strong> · Required before <strong>{dueDate}</strong>
           </span>
         </div>
 
-        <div style={{ display: "flex", gap: "8px" }}>
+        <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+          {isApproved ? (
+            <Badge tone="green" style={{ padding: "6px 12px", fontSize: "12px", fontWeight: 700 }}>
+              <Icon name="lock" size={13} style={{ marginRight: "4px" }} /> Document Locked
+            </Badge>
+          ) : null}
           <Button variant="secondary" icon="file">
             Download Attachments
           </Button>
         </div>
       </div>
+
+      {/* Dynamic Two-Stage Approval Action Bar */}
+      <div className="panel" style={{ padding: "14px 20px", marginBottom: "16px" }}>
+        <ApprovalActionBar
+          module="purchase_requisition"
+          documentId={docNumber}
+          documentNumber={docNumber}
+          state={approvalState}
+          onStateChange={(newState) => {
+            setApprovalState(newState);
+            setRow((prev) => ({ ...prev, _rawStatus: newState.status }));
+          }}
+        />
+      </div>
+
+      {/* Visual Two-Stage Approval Timeline */}
+      <ApprovalTimeline state={approvalState} style={{ marginBottom: "16px" }} />
 
       {/* 4-Column Hero KPI Summary Grid */}
       <div className="detail-kpi-grid detail-kpi-grid--4">

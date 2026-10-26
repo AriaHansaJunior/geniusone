@@ -1,9 +1,14 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { Button } from "../../../../components/ui/Button";
 import { Icon } from "../../../../components/ui/Icon";
 import { Badge, type BadgeTone } from "../../../../components/ui/Badge";
 import { initialRequestMaterialRecords } from "./request-material-data";
 import type { RequestMaterialRecord } from "./request-material-types";
+import { ApprovalActionBar } from "../../../../components/approval/ApprovalActionBar";
+import { ApprovalTimeline } from "../../../../components/approval/ApprovalTimeline";
+import { ApprovalStatusBadge } from "../../../../components/approval/ApprovalStatusBadge";
+import { getLocalApprovalState } from "../../../../services/approvalApi";
+import { normalizeApprovalStatus, type DocumentApprovalState } from "../../../../types/approval";
 
 interface RequestMaterialDetailProps {
   id: string;
@@ -73,13 +78,19 @@ export function RequestMaterialDetail({
     );
   }
 
-  const getApprovalBadgeTone = (appr: string): BadgeTone => {
-    if (appr === "Approved 2") return "blue";
-    if (appr === "Approved 1") return "green";
-    if (appr === "Draft") return "cyan";
-    if (appr === "Rejected") return "red";
-    return "gray";
-  };
+  const [approvalState, setApprovalState] = useState<DocumentApprovalState>(() =>
+    getLocalApprovalState("request_material", record?.requestCode || id, normalizeApprovalStatus(record?.approval))
+  );
+
+  useEffect(() => {
+    if (record) {
+      setApprovalState(
+        getLocalApprovalState("request_material", record.requestCode, normalizeApprovalStatus(record.approval))
+      );
+    }
+  }, [record?.requestCode, record?.approval]);
+
+  const isApproved = approvalState.status === "APPROVED";
 
   const handlePrint = () => {
     try {
@@ -110,9 +121,12 @@ export function RequestMaterialDetail({
 
         <div className="detail-top-bar__right">
           {/* Approval Status Indicator */}
-          <Badge tone={getApprovalBadgeTone(record.approval)}>
-            {record.approval}
-          </Badge>
+          <ApprovalStatusBadge status={approvalState.status} />
+          {isApproved && (
+            <Badge tone="green" style={{ fontSize: "11px", fontWeight: 700 }}>
+              <Icon name="lock" size={12} style={{ marginRight: "3px" }} /> Locked
+            </Badge>
+          )}
           <Button variant="secondary" icon="print" onClick={handlePrint}>
             Print PDF
           </Button>
@@ -125,9 +139,7 @@ export function RequestMaterialDetail({
           <span className="detail-header-card__eyebrow">WAREHOUSE MATERIAL REQUISITION</span>
           <div className="detail-header-card__title-row">
             <h2 className="detail-header-card__title">{record.requestCode}</h2>
-            <Badge tone={getApprovalBadgeTone(record.approval)}>
-              {record.approval}
-            </Badge>
+            <ApprovalStatusBadge status={approvalState.status} />
             <Badge tone="purple">{record.department}</Badge>
           </div>
           <span className="detail-header-card__meta">
@@ -135,6 +147,20 @@ export function RequestMaterialDetail({
           </span>
         </div>
       </div>
+
+      {/* Dynamic Two-Stage Approval Action Bar */}
+      <div className="panel" style={{ padding: "14px 20px", marginBottom: "16px" }}>
+        <ApprovalActionBar
+          module="request_material"
+          documentId={record.requestCode}
+          documentNumber={record.requestCode}
+          state={approvalState}
+          onStateChange={setApprovalState}
+        />
+      </div>
+
+      {/* Visual Two-Stage Approval Timeline */}
+      <ApprovalTimeline state={approvalState} style={{ marginBottom: "16px" }} />
 
       {/* 2-Column Transaction Information Card */}
       <div className="panel" style={{ padding: "20px 24px" }}>

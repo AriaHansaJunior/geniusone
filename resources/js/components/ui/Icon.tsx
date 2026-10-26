@@ -100,6 +100,13 @@ export function Icon({
     chevron: <path d="m9 18 6-6-6-6" />,
     chevronDown: <path d="m6 9 6 6 6-6" />,
     chevronLeft: <path d="m15 18-6-6 6-6" />,
+    chevronRight: <path d="m9 18 6-6-6-6" />,
+    clock: (
+      <>
+        <circle cx="12" cy="12" r="10" />
+        <polyline points="12 6 12 12 16 14" />
+      </>
+    ),
     close: (
       <>
         <path d="M18 6 6 18" />
