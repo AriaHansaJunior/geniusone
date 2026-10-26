@@ -77,17 +77,40 @@ class ExchangeRateApiController extends Controller
                 $buyRate = round($middleRate - ($profile['volatility'] * 0.8), 2);
                 $sellRate = round($middleRate + ($profile['volatility'] * 0.8), 2);
 
-                $availableTypes = ['Bank Indonesia', 'Pajak (KMK)', 'Komersial / Transaksi'];
+                $availableTypes = ['Bank Indonesia (BI)', 'Pajak (KMK)', 'Commercial Bank (Counter)'];
 
                 foreach ($availableTypes as $type) {
-                    if ($rateType !== 'All Rate Types' && $rateType !== $type) {
-                        continue;
+                    // Normalize filter comparison
+                    if ($rateType !== 'All Rate Types') {
+                        $matchesFilter = false;
+                        if ($rateType === $type) {
+                            $matchesFilter = true;
+                        } elseif (str_contains($type, 'Bank Indonesia') && str_contains($rateType, 'Bank Indonesia')) {
+                            $matchesFilter = true;
+                        } elseif (str_contains($type, 'KMK') && str_contains($rateType, 'KMK')) {
+                            $matchesFilter = true;
+                        } elseif (
+                            (str_contains($type, 'Commercial') || str_contains($type, 'Komersial')) &&
+                            (str_contains($rateType, 'Commercial') || str_contains($rateType, 'Komersial'))
+                        ) {
+                            $matchesFilter = true;
+                        }
+
+                        if (!$matchesFilter) {
+                            continue;
+                        }
                     }
 
                     $effectiveRate = match ($type) {
                         'Pajak (KMK)' => $taxRate,
-                        'Komersial / Transaksi' => $sellRate,
+                        'Commercial Bank (Counter)' => $sellRate,
                         default => $middleRate,
+                    };
+
+                    $flag = match ($type) {
+                        'Pajak (KMK)' => 'KMK Valuation',
+                        'Bank Indonesia (BI)' => 'BI Reference',
+                        default => 'Commercial Counter',
                     };
 
                     $records[] = [
@@ -100,7 +123,12 @@ class ExchangeRateApiController extends Controller
                         'middle_rate' => $middleRate,
                         'tax_rate' => $taxRate,
                         'buy_rate' => $buyRate,
+                        'buying_rate' => $buyRate,
                         'sell_rate' => $sellRate,
+                        'selling_rate' => $sellRate,
+                        'flag' => $flag,
+                        'availability' => 'Available',
+                        'note' => "Published rate for {$code} on {$dateStr}",
                     ];
                 }
             }
