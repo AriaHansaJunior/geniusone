@@ -1,4 +1,69 @@
-/* Base Typography & Font Utilities */
+/* Base Typography & Font Utilities — GENIUSONE UI 2.0 */
 body, button, input, select, textarea {
   font-family: "Lato", "Noto Sans", sans-serif;
 }
+
+code, kbd, samp, pre {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+/* Headings Scale */
+h1, .h1 {
+  font-size: 22px;
+  line-height: 1.25;
+  font-weight: 800;
+  letter-spacing: -0.35px;
+  color: var(--ink);
+  margin: 0;
+}
+
+h2, .h2 {
+  font-size: 16px;
+  line-height: 1.35;
+  font-weight: 700;
+  letter-spacing: -0.2px;
+  color: var(--ink);
+  margin: 0;
+}
+
+h3, .h3 {
+  font-size: 13.5px;
+  line-height: 1.4;
+  font-weight: 700;
+  letter-spacing: -0.1px;
+  color: var(--ink);
+  margin: 0;
+}
+
+/* Eyebrow Label */
+.eyebrow {
+  color: var(--blue-600);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  display: block;
+  margin-bottom: 3px;
+}
+
+/* Monospace & Pill Data Display */
+.code-pill {
+  display: inline-flex;
+  align-items: center;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--blue-700);
+  background: var(--blue-50);
+  border: 1px solid var(--blue-100);
+  padding: 1px 6px;
+  border-radius: var(--radius-xs);
+  letter-spacing: 0.2px;
+}
+
+/* Focus Indicator Standards */
+:focus-visible {
+  outline: 2px solid var(--blue-600);
+  outline-offset: 1px;
+}
+

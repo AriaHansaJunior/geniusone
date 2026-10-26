@@ -1,11 +1,15 @@
-/* Collapsible Navigation Sidebar */
-/* Collapsible Sidebar with Independent Vertical Scrolling */
+/* ==========================================================================
+   Collapsible Navigation Sidebar — GENIUSONE UI 2.0 (Restrained Glassmorphism)
+   ========================================================================== */
+
 .sidebar {
   width: 238px;
   flex: 0 0 238px;
-  background: var(--white);
-  border-right: 1px solid var(--line);
-  padding: 16px 10px 12px;
+  background: var(--glass-sidebar-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border-right: 1px solid rgba(226, 232, 240, 0.85);
+  padding: 14px 10px 10px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -19,7 +23,7 @@
 .sidebar--collapsed {
   width: 72px;
   flex: 0 0 72px;
-  padding: 16px 8px 12px;
+  padding: 14px 8px 10px;
 }
 .sidebar__top {
   display: flex;
@@ -81,14 +85,14 @@
 .sidebar-nav-item {
   border: 0;
   background: transparent;
-  color: var(--muted);
+  color: var(--slate-600);
   display: flex;
   align-items: center;
   text-align: left;
   gap: 10px;
   min-height: 38px;
   padding: 0 10px;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-xs);
   font-size: 12.5px;
   font-weight: 700;
   width: 100%;
@@ -97,17 +101,18 @@
   user-select: none;
 }
 .sidebar-nav-item:hover {
-  background: var(--canvas);
+  background: rgba(0, 113, 227, 0.05);
   color: var(--ink);
 }
 .sidebar-nav-item.active {
   background: var(--blue-50);
   color: var(--blue-700);
   box-shadow: inset 3px 0 var(--blue-600);
+  font-weight: 700;
 }
 .sidebar-nav-item.parent-active {
   color: var(--blue-700);
-  background: rgba(0, 102, 204, 0.05);
+  background: rgba(0, 113, 227, 0.05);
 }
 .sidebar-nav-item.parent-expanded {
   color: var(--ink);
@@ -142,6 +147,7 @@
 }
 .sidebar-chevron--open {
   transform: rotate(180deg);
+  color: var(--blue-600);
 }
 
 /* Submenu Panel (Accordion) */
@@ -151,7 +157,7 @@
   padding-left: 10px;
   margin-left: 14px;
   border-left: 1.5px solid var(--line);
-  gap: 4px;
+  gap: 3px;
   margin-top: 2px;
   margin-bottom: 6px;
   animation: submenuSlideIn 0.16s ease-out;
@@ -169,12 +175,12 @@
 .sidebar-subgroup-header {
   border: 0;
   background: transparent;
-  color: var(--muted-2);
+  color: var(--muted);
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 5px 8px;
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
   font-size: 10.5px;
   font-weight: 800;
   text-transform: uppercase;
@@ -186,7 +192,7 @@
 }
 .sidebar-subgroup-header:hover {
   color: var(--ink);
-  background: rgba(0, 0, 0, 0.02);
+  background: rgba(0, 113, 227, 0.04);
 }
 .sidebar-subgroup-header.subgroup-open {
   color: var(--blue-700);
@@ -212,6 +218,10 @@
   transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   color: var(--muted);
 }
+.sidebar-chevron-sm.sidebar-chevron--open {
+  transform: rotate(180deg);
+  color: var(--blue-600);
+}
 
 .sidebar-subgroup-items {
   display: flex;
@@ -225,12 +235,12 @@
 .sidebar-leaf-item {
   border: 0;
   background: transparent;
-  color: var(--ink-soft);
+  color: var(--slate-700);
   display: flex;
   align-items: center;
   gap: 8px;
   padding: 5px 8px;
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
   font-size: 11.5px;
   font-weight: 600;
   cursor: pointer;
@@ -239,7 +249,7 @@
   transition: all 0.12s ease;
 }
 .sidebar-leaf-item:hover:not(:disabled) {
-  background: var(--canvas);
+  background: rgba(0, 113, 227, 0.05);
   color: var(--blue-600);
 }
 .sidebar-leaf-item.active {
@@ -301,7 +311,8 @@
 }
 .sidebar--collapsed .sidebar-nav-item.active {
   box-shadow: none;
-  border: 1px solid rgba(0, 113, 227, 0.3);
+  border: 1px solid var(--blue-400);
+  background: var(--blue-50);
 }
 
 .sidebar__bottom {
@@ -332,15 +343,15 @@
   position: fixed;
   left: 82px;
   transform: translateY(-50%);
-  background: var(--dark);
+  background: var(--slate-900);
   color: #ffffff;
   font-size: 11.5px;
   font-weight: 700;
   letter-spacing: 0.2px;
   white-space: nowrap;
   padding: 6px 12px;
-  border-radius: var(--radius-sm);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.24);
+  border-radius: var(--radius-xs);
+  box-shadow: var(--shadow-lg);
   pointer-events: none;
   z-index: 9999;
   animation: tooltipIn 0.12s ease-out;
@@ -353,10 +364,51 @@
   transform: translateY(-50%);
   border-width: 5px;
   border-style: solid;
-  border-color: transparent var(--dark) transparent transparent;
+  border-color: transparent var(--slate-900) transparent transparent;
 }
 @keyframes tooltipIn {
   from { opacity: 0; transform: translateY(-50%) translateX(-4px); }
   to { opacity: 1; transform: translateY(-50%) translateX(0); }
 }
+
+/* ==========================================================================
+   Mobile Responsive Off-Canvas Drawer
+   ========================================================================== */
+@media (max-width: 767px) {
+  .sidebar {
+    position: fixed;
+    top: 56px;
+    left: 0;
+    bottom: 0;
+    width: 280px;
+    max-width: 84vw;
+    z-index: 100;
+    transform: translateX(-100%);
+    transition: transform 0.22s cubic-bezier(0, 0, 0.2, 1);
+    box-shadow: none;
+    background: rgba(255, 255, 255, 0.96);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-right: 1px solid var(--line);
+  }
+  .sidebar.sidebar--mobile-open {
+    transform: translateX(0);
+    box-shadow: 0 10px 40px rgba(15, 23, 42, 0.2);
+  }
+  .sidebar-mobile-backdrop {
+    position: fixed;
+    inset: 0;
+    top: 56px;
+    background: rgba(15, 23, 42, 0.4);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    z-index: 90;
+    animation: backdropIn 0.18s ease-out;
+  }
+  @keyframes backdropIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+}
+
 

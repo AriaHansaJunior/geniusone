@@ -1,6 +1,5 @@
 /* ========================================================================= */
-/* GENIUSONE: DOCUMENT HISTORY PAGE STYLES                                   */
-/* Aligned with GeniusOne Enterprise Light Theme Reference                   */
+/* GENIUSONE: DOCUMENT HISTORY PAGE STYLES — UI 2.0                          */
 /* ========================================================================= */
 
 .dh-page,
@@ -20,10 +19,7 @@
   }
 }
 
-/* ------------------------------------------------------------------------- */
-/* Page Header & Title                                                       */
-/* ------------------------------------------------------------------------- */
-
+/* Page Header & Title */
 .dh-page-header,
 .dh-detail-header {
   display: flex;
@@ -37,30 +33,27 @@
 .dh-page-title,
 .dh-detail-title {
   margin: 0;
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--ink, #1e293b);
-  letter-spacing: -0.2px;
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--ink);
+  letter-spacing: -0.3px;
 }
 
-/* ------------------------------------------------------------------------- */
-/* Alert / Notice Messages                                                   */
-/* ------------------------------------------------------------------------- */
-
+/* Alert / Notice Messages */
 .dh-alert {
   display: flex;
   align-items: center;
   gap: 10px;
   padding: 10px 16px;
-  border-radius: var(--radius-sm, 6px);
+  border-radius: var(--radius-sm);
   margin-bottom: 16px;
-  font-size: 13px;
+  font-size: 12.5px;
 }
 
 .dh-alert--info {
-  background: #eff6ff;
-  border: 1px solid #bfdbfe;
-  color: #1e40af;
+  background: var(--blue-50);
+  border: 1px solid rgba(0, 113, 227, 0.2);
+  color: var(--blue-700);
 }
 
 .dh-alert--warning {
@@ -70,9 +63,9 @@
 }
 
 .dh-alert--success {
-  background: #ecfdf5;
-  border: 1px solid #a7f3d0;
-  color: #065f46;
+  background: var(--green-50);
+  border: 1px solid rgba(22, 163, 74, 0.25);
+  color: var(--green-700);
 }
 
 .dh-alert__content {
@@ -99,650 +92,93 @@
   opacity: 1;
 }
 
-/* ------------------------------------------------------------------------- */
-/* Content Cards                                                             */
-/* ------------------------------------------------------------------------- */
-
-.dh-table-card,
-.dh-detail-meta-card {
-  background: #ffffff;
-  border: 1px solid var(--line, #e2e8f0);
-  border-radius: var(--radius-sm, 6px);
-  padding: 16px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+/* Table Panel & Toolbar */
+.dh-table-panel {
+  background: var(--glass-card-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-glass);
+  overflow: hidden;
   margin-bottom: 16px;
 }
 
-/* ------------------------------------------------------------------------- */
-/* Filters Bar (Matching Screenshot 1)                                       */
-/* ------------------------------------------------------------------------- */
-
-.dh-filter-bar {
-  display: flex;
-  align-items: flex-end;
-  gap: 24px;
-  flex-wrap: wrap;
-  margin-bottom: 16px;
-  padding-bottom: 14px;
-  border-bottom: 1px solid var(--line, #e2e8f0);
-}
-
-.dh-filter-item {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
-
-.dh-filter-search {
-  min-width: 260px;
-  max-width: 340px;
-  flex: 1;
-}
-
-.dh-filter-label {
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--muted, #64748b);
-  letter-spacing: 0.2px;
-  margin: 0;
-}
-
-.dh-date-inputs {
+.dh-table-toolbar {
   display: flex;
   align-items: center;
-  gap: 8px;
+  justify-content: space-between;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.65);
+  gap: 16px;
+  flex-wrap: wrap;
 }
 
-.dh-date-input {
-  height: 34px;
-  padding: 0 10px;
-  font-size: 12px;
-  font-family: inherit;
-  color: var(--ink, #1e293b);
-  background: #ffffff;
-  border: 1px solid var(--line, #cbd5e1);
-  border-radius: var(--radius-sm, 4px);
-  outline: none;
-  transition: border-color 0.15s, box-shadow 0.15s;
-}
-
-.dh-date-input:focus {
-  border-color: var(--primary, #0284c7);
-  box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.15);
-}
-
-.dh-date-sep {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--muted, #64748b);
-  padding: 0 2px;
-}
-
-/* ------------------------------------------------------------------------- */
-/* Listing Table Styles (Dark Header matching Screenshot 1)                  */
-/* ------------------------------------------------------------------------- */
-
-.dh-table-wrapper {
+/* Table Frame & Data Table */
+.dh-table-frame {
   width: 100%;
   overflow-x: auto;
-  border: 1px solid var(--line, #e2e8f0);
-  border-radius: var(--radius-sm, 4px);
+  -webkit-overflow-scrolling: touch;
 }
 
-.dh-table {
+.dh-data-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 13px;
-  line-height: 1.4;
-  white-space: nowrap;
+  font-size: 12px;
 }
 
-.dh-table thead th {
-  background: #374151; /* Dark slate header matching Smartone reference */
-  color: #ffffff;
-  font-weight: 700;
-  font-size: 12px;
-  padding: 9px 12px;
+.dh-data-table thead tr {
+  background: var(--slate-50);
+  border-bottom: 1px solid var(--line);
+}
+
+.dh-data-table th {
+  padding: 10px 14px;
+  font-size: 10.5px;
+  font-weight: 800;
+  color: var(--slate-600);
   text-align: left;
-  border: 1px solid #4b5563;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  white-space: nowrap;
   user-select: none;
 }
 
-.dh-table thead th.text-center {
-  text-align: center;
-}
-
-.dh-table thead th.text-right {
-  text-align: right;
-}
-
-.dh-th-no {
-  width: 48px;
-  text-align: center;
-}
-
-.dh-th-sortable {
+.dh-data-table th.sortable-th {
   cursor: pointer;
-  transition: background-color 0.15s;
+  transition: background-color 0.15s ease, color 0.15s ease;
 }
 
-.dh-th-sortable:hover {
-  background: #1f2937;
+.dh-data-table th.sortable-th:hover {
+  background: var(--slate-100);
+  color: var(--blue-700);
 }
 
-.dh-th-content {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.dh-sort-icon {
-  display: inline-flex;
-  opacity: 0.7;
-}
-
-.dh-th-sortable:hover .dh-sort-icon {
-  opacity: 1;
-}
-
-.dh-table tbody td {
-  padding: 8px 12px;
-  border: 1px solid var(--line, #e2e8f0);
-  color: var(--ink, #1e293b);
+.dh-data-table td {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line);
+  color: var(--ink);
   vertical-align: middle;
 }
 
-.dh-table tbody tr:nth-child(even) {
-  background-color: #fafbfc;
+.dh-data-table tbody tr {
+  transition: background-color 0.12s ease;
 }
 
-.dh-table tbody tr:hover {
-  background-color: #f1f5f9;
-}
-
-.dh-td-no {
-  font-weight: 600;
-  color: var(--muted, #64748b);
-}
-
-.dh-table-empty {
-  text-align: center;
-  padding: 36px 16px !important;
-  color: var(--muted, #64748b);
-  font-style: italic;
-}
-
-/* Yellow Mutation Badge (Sales) */
-.dh-badge-mutation {
-  display: inline-block;
-  background-color: #fef3c7;
-  color: #92400e;
-  border: 1px solid #fde68a;
-  font-size: 10px;
-  font-weight: 700;
-  padding: 1px 6px;
-  border-radius: 3px;
-  margin-top: 3px;
-  text-transform: capitalize;
-  letter-spacing: 0.2px;
-}
-
-/* ------------------------------------------------------------------------- */
-/* Row Action Buttons                                                        */
-/* ------------------------------------------------------------------------- */
-
-.dh-row-actions {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-/* Orange list-style view detail button */
-.dh-btn-view-detail {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  background-color: #f97316;
-  color: #ffffff;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background-color 0.15s, transform 0.1s;
-}
-
-.dh-btn-view-detail:hover {
-  background-color: #ea580c;
-}
-
-.dh-btn-view-detail:active {
-  transform: scale(0.96);
-}
-
-/* Blue paper-plane dropdown button */
-.dh-send-dropdown-wrapper {
-  position: relative;
-  display: inline-block;
-}
-
-.dh-btn-send-action {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 3px;
-  height: 28px;
-  padding: 0 6px;
-  background-color: #0284c7;
-  color: #ffffff;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background-color 0.15s, transform 0.1s;
-}
-
-.dh-btn-send-action:hover {
-  background-color: #0369a1;
-}
-
-.dh-btn-send-action:active {
-  transform: scale(0.96);
-}
-
-.dh-send-menu {
-  position: absolute;
-  right: 0;
-  top: 100%;
-  margin-top: 4px;
-  z-index: 50;
-  background: #ffffff;
-  border: 1px solid var(--line, #e2e8f0);
-  border-radius: 6px;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1);
-  min-width: 170px;
-  padding: 4px 0;
-}
-
-.dh-send-menu-item {
-  width: 100%;
-  text-align: left;
-  padding: 7px 12px;
-  font-size: 12px;
-  color: var(--ink, #1e293b);
-  background: none;
-  border: none;
-  cursor: pointer;
-  transition: background-color 0.15s;
-}
-
-.dh-send-menu-item:hover {
-  background-color: #f1f5f9;
-  color: var(--primary, #0284c7);
-}
-
-/* ------------------------------------------------------------------------- */
-/* Document History Detail: Meta Information Card                            */
-/* ------------------------------------------------------------------------- */
-
-.dh-detail-meta-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 20px 40px;
-  padding: 6px 4px 16px 4px;
-  margin-bottom: 8px;
+.dh-data-table tbody tr:hover {
+  background: rgba(0, 113, 227, 0.03);
 }
 
 @media (max-width: 768px) {
-  .dh-detail-meta-grid {
-    grid-template-columns: 1fr;
-    gap: 16px;
+  .dh-page-header,
+  .dh-detail-header {
+    flex-direction: column;
+    align-items: flex-start;
   }
-}
-
-.dh-meta-col {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.dh-meta-item {
-  display: flex;
-  align-items: baseline;
-  font-size: 13px;
-  line-height: 1.5;
-}
-
-.dh-meta-label {
-  width: 160px;
-  flex-shrink: 0;
-  font-weight: 600;
-  color: var(--muted, #64748b);
-  font-size: 12px;
-}
-
-.dh-meta-value {
-  flex: 1;
-  color: var(--ink, #1e293b);
-  word-break: break-word;
-}
-
-/* ------------------------------------------------------------------------- */
-/* Detail Main Item Table                                                    */
-/* ------------------------------------------------------------------------- */
-
-.dh-detail-table-wrapper {
-  width: 100%;
-  overflow-x: auto;
-  border: 1px solid var(--line, #e2e8f0);
-  border-radius: var(--radius-sm, 4px);
-  margin-bottom: 20px;
-}
-
-.dh-detail-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 12.5px;
-  line-height: 1.4;
-  white-space: nowrap;
-}
-
-.dh-detail-table thead th {
-  background: #4b5563; /* Slate grey header matching Smartone reference */
-  color: #ffffff;
-  font-weight: 700;
-  font-size: 12px;
-  padding: 8px 10px;
-  border: 1px solid #374151;
-  text-align: left;
-  vertical-align: middle;
-}
-
-.dh-detail-th-no {
-  width: 44px;
-  text-align: center !important;
-}
-
-.dh-detail-th-grouped {
-  border-bottom: 1px solid #374151 !important;
-}
-
-.dh-detail-th-sub {
-  background: #374151 !important;
-  font-size: 11px !important;
-  padding: 5px 8px !important;
-}
-
-.dh-detail-th-history {
-  width: 80px;
-  text-align: center !important;
-}
-
-.dh-detail-table tbody td {
-  padding: 8px 10px;
-  border: 1px solid var(--line, #e2e8f0);
-  color: var(--ink, #1e293b);
-  vertical-align: top;
-}
-
-.dh-row--expanded {
-  background-color: #f0fdf4 !important;
-}
-
-.dh-link-code {
-  color: #0284c7;
-  font-weight: 600;
-  text-decoration: none;
-  cursor: pointer;
-}
-
-.dh-link-code:hover {
-  text-decoration: underline;
-}
-
-/* Show / Hide History Button */
-.dh-btn-history-toggle {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  padding: 4px 10px;
-  font-size: 11px;
-  font-weight: 700;
-  color: #ffffff;
-  background-color: #16a34a; /* Green for Show */
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background-color 0.15s, transform 0.1s;
-}
-
-.dh-btn-history-toggle:hover {
-  background-color: #15803d;
-}
-
-.dh-btn-history-toggle:active {
-  transform: scale(0.96);
-}
-
-.dh-btn-history-toggle--hide {
-  background-color: #dc2626; /* Red for Hide */
-}
-
-.dh-btn-history-toggle--hide:hover {
-  background-color: #b91c1c;
-}
-
-/* TOTAL Summary Row */
-.dh-table-total-row td {
-  background-color: #f1f5f9 !important;
-  font-weight: 700 !important;
-  border-top: 2px solid #cbd5e1 !important;
-  border-bottom: 2px solid #cbd5e1 !important;
-  padding: 8px 10px !important;
-}
-
-/* ------------------------------------------------------------------------- */
-/* Expanded Item History Nested Table                                        */
-/* ------------------------------------------------------------------------- */
-
-.dh-expanded-row {
-  background-color: transparent !important;
-}
-
-.dh-expanded-cell {
-  padding: 0 !important;
-  background-color: #f8fafc;
-  border: 1px solid #cbd5e1 !important;
-}
-
-.dh-expanded-table-container {
-  display: flex;
-  position: relative;
-  background-color: #f8fafc;
-  overflow: hidden;
-}
-
-/* Sky-blue accent left column matching reference Screenshot 4 & 5 */
-.dh-expanded-accent-bar {
-  width: 44px;
-  flex-shrink: 0;
-  background-color: #bae6fd; /* Light sky blue vertical strip */
-  border-right: 1px solid #7dd3fc;
-}
-
-.dh-expanded-scroll-wrapper {
-  flex: 1;
-  overflow-x: auto;
-}
-
-.dh-expanded-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 12px;
-  line-height: 1.35;
-  white-space: nowrap;
-}
-
-.dh-expanded-table thead th {
-  background: #4b5563; /* Dark grey header for nested table */
-  color: #ffffff;
-  font-weight: 700;
-  font-size: 11.5px;
-  padding: 7px 10px;
-  border: 1px solid #374151;
-  text-align: left;
-}
-
-.dh-expanded-th-lead {
-  width: 10px;
-  padding: 0 !important;
-  border-right: none !important;
-}
-
-.dh-expanded-td-lead {
-  width: 10px;
-  padding: 0 !important;
-  border-right: none !important;
-}
-
-.dh-expanded-table tbody td {
-  padding: 7px 10px;
-  border: 1px solid var(--line, #e2e8f0);
-  color: var(--ink, #1e293b);
-  background-color: #ffffff;
-  vertical-align: top;
-}
-
-.dh-expanded-table tbody tr:hover td {
-  background-color: #f8fafc;
-}
-
-.dh-expanded-empty {
-  padding: 16px;
-  text-align: center;
-  color: var(--muted, #64748b);
-  font-style: italic;
-  font-size: 12px;
-}
-
-/* ------------------------------------------------------------------------- */
-/* Bottom Action Buttons (Generate History, Export To Excel, Back)           */
-/* ------------------------------------------------------------------------- */
-
-.dh-detail-actions {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 10px;
-  margin-top: 20px;
-  margin-bottom: 12px;
-}
-
-/* Generate History Dropdown */
-.dh-generate-dropdown-container {
-  position: relative;
-  display: inline-block;
-}
-
-.dh-btn-generate {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: 34px;
-  padding: 0 14px;
-  font-size: 12.5px;
-  font-weight: 700;
-  color: #ffffff;
-  background-color: #0284c7;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background-color 0.15s, transform 0.1s;
-}
-
-.dh-btn-generate:hover {
-  background-color: #0369a1;
-}
-
-.dh-btn-generate:active {
-  transform: scale(0.98);
-}
-
-.dh-generate-menu {
-  position: absolute;
-  right: 0;
-  bottom: 100%;
-  margin-bottom: 6px;
-  z-index: 50;
-  background: #ffffff;
-  border: 1px solid var(--line, #e2e8f0);
-  border-radius: 6px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
-  min-width: 180px;
-  padding: 4px 0;
-}
-
-.dh-generate-menu-item {
-  width: 100%;
-  text-align: left;
-  padding: 8px 14px;
-  font-size: 12.5px;
-  color: var(--ink, #1e293b);
-  background: none;
-  border: none;
-  cursor: pointer;
-  transition: background-color 0.15s, color 0.15s;
-}
-
-.dh-generate-menu-item:hover {
-  background-color: #f0fdf4;
-  color: #16a34a;
-  font-weight: 600;
-}
-
-/* Export To Excel Button */
-.dh-btn-export-excel {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: 34px;
-  padding: 0 14px;
-  font-size: 12.5px;
-  font-weight: 600;
-  color: var(--ink, #334155);
-  background-color: #ffffff;
-  border: 1px solid var(--line, #cbd5e1);
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background-color 0.15s, border-color 0.15s;
-}
-
-.dh-btn-export-excel:hover {
-  background-color: #f8fafc;
-  border-color: #94a3b8;
-}
-
-/* Back Button */
-.dh-btn-back {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: 34px;
-  padding: 0 16px;
-  font-size: 12.5px;
-  font-weight: 700;
-  color: #ffffff;
-  background-color: #dc2626;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background-color 0.15s, transform 0.1s;
-}
-
-.dh-btn-back:hover {
-  background-color: #b91c1c;
-}
-
-.dh-btn-back:active {
-  transform: scale(0.98);
+  .dh-table-toolbar {
+    padding: 10px 14px;
+    flex-direction: column;
+    align-items: stretch;
+  }
 }

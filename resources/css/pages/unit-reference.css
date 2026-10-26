@@ -1,5 +1,5 @@
 /* ========================================================================= */
-/* EXIM MASTER: UNIT REFERENCE STYLES                                        */
+/* EXIM MASTER: UNIT REFERENCE STYLES — UI 2.0                               */
 /* ========================================================================= */
 
 .unit-reference-page {
@@ -8,20 +8,22 @@
 }
 
 .unit-reference-panel {
-  background: var(--white);
-  border: 1px solid var(--line);
+  background: var(--glass-card-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius-sm);
   overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  box-shadow: var(--shadow-glass);
 }
 
 .unit-reference-toolbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 18px;
+  padding: 12px 20px;
   border-bottom: 1px solid var(--line);
-  background: var(--white);
+  background: rgba(255, 255, 255, 0.65);
   gap: 16px;
   flex-wrap: wrap;
 }
@@ -35,8 +37,8 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  font-size: 12px;
-  color: var(--muted);
+  font-size: 11.5px;
+  color: var(--slate-500);
   font-weight: 600;
   user-select: none;
 }
@@ -46,7 +48,7 @@
   padding: 0 10px;
   border: 1px solid var(--line-strong);
   border-radius: var(--radius-sm);
-  background: var(--white);
+  background: #ffffff;
   color: var(--ink);
   font-size: 12px;
   font-weight: 700;
@@ -57,7 +59,7 @@
 
 .unit-reference-page-size select:focus {
   border-color: var(--blue-600);
-  box-shadow: 0 0 0 2px rgba(0, 113, 227, 0.12);
+  box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.18);
 }
 
 .unit-reference-table {
@@ -66,40 +68,43 @@
 }
 
 .unit-reference-table th {
-  height: 40px;
-  padding: 0 18px;
-  text-align: left;
-  color: var(--muted);
-  background: #fafafa;
-  border-bottom: 1px solid var(--line);
+  padding: 10px 18px;
   font-size: 10.5px;
+  font-weight: 800;
+  color: var(--slate-600);
+  text-align: left;
   letter-spacing: 0.4px;
   text-transform: uppercase;
-  font-weight: 800;
   white-space: nowrap;
   user-select: none;
+  background: var(--slate-50);
+  border-bottom: 1px solid var(--line);
 }
 
 .unit-reference-table th.sortable-th {
   cursor: pointer;
-  transition: color 0.15s ease;
+  transition: background-color 0.15s ease, color 0.15s ease;
 }
 
 .unit-reference-table th.sortable-th:hover {
-  color: var(--blue-600);
+  background: var(--slate-100);
+  color: var(--blue-700);
 }
 
 .unit-reference-table td {
-  height: 48px;
-  padding: 8px 18px;
+  padding: 10px 18px;
   border-bottom: 1px solid var(--line);
-  color: var(--ink-soft);
-  font-size: 12px;
+  color: var(--ink);
   vertical-align: middle;
+  font-size: 12px;
+}
+
+.unit-reference-table tbody tr {
+  transition: background-color 0.12s ease;
 }
 
 .unit-reference-table tbody tr:hover {
-  background: #f8fbff;
+  background: rgba(0, 113, 227, 0.03);
 }
 
 .unit-reference-table tbody tr:last-child td {
@@ -108,7 +113,7 @@
 
 .unit-reference-num {
   text-align: center;
-  color: var(--muted);
+  color: var(--slate-500);
   font-weight: 600;
   font-size: 12px;
 }

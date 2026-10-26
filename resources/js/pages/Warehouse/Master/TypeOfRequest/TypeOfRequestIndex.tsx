@@ -5,6 +5,7 @@ import { SearchField } from "../../../../components/ui/SearchField";
 import { Pagination } from "../../../../components/ui/Pagination";
 import { Badge } from "../../../../components/ui/Badge";
 import { Icon } from "../../../../components/ui/Icon";
+import { StatusToggle } from "../../../../components/ui/StatusToggle";
 import { ConfirmDialog } from "../../../../components/ui/ConfirmDialog";
 import { initialTypeOfRequestRecords } from "./type-of-request-data";
 import type { TypeOfRequestRecord, TypeOfRequestSortField } from "./type-of-request-types";
@@ -284,25 +285,10 @@ export function TypeOfRequestIndex({
                         )}
                       </td>
                       <td className="text-center">
-                        <button
-                          type="button"
-                          className="wh-status-toggle"
-                          onClick={() => handleToggleStatus(item)}
-                          title={`Click to toggle status (${
-                            item.status === "Active" ? "Active" : "Inactive"
-                          })`}
-                          aria-label={`Toggle status for ${item.name}`}
-                        >
-                          <span
-                            className={`wh-status-checkbox ${
-                              item.status === "Active"
-                                ? "wh-status-checkbox--checked"
-                                : "wh-status-checkbox--unchecked"
-                            }`}
-                          >
-                            {item.status === "Active" && <Icon name="check" size={13} />}
-                          </span>
-                        </button>
+                        <StatusToggle
+                          active={item.status === "Active"}
+                          onToggle={() => handleToggleStatus(item)}
+                        />
                       </td>
                       <td className="text-center">
                         <div className="wh-row-actions">

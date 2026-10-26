@@ -1,84 +1,216 @@
-/* Table Pagination Controls */
+/* ==========================================================================
+   Table Pagination Controls — GENIUSONE UI 2.0 (iOS Glass Aesthetic)
+   ========================================================================== */
+
 .pagination {
-  min-height: 54px;
-  border-top: 1px solid var(--line);
+  min-height: 56px;
+  border-top: 1px solid rgba(255, 255, 255, 0.85);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.75) 0%, rgba(255, 255, 255, 0.58) 100%);
+  backdrop-filter: blur(20px) saturate(190%);
+  -webkit-backdrop-filter: blur(20px) saturate(190%);
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.95);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 18px;
-  color: var(--muted);
-  font-size: 11px;
+  padding: 10px 20px;
+  color: var(--slate-600);
+  font-size: 11.5px;
+  box-sizing: border-box;
+  flex-wrap: wrap;
+  gap: 12px;
 }
+
+/* Entry Summary Pill Badge */
 .pagination__summary,
 .pagination > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 14px;
+  background: rgba(255, 255, 255, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  border-radius: 9999px;
   font-weight: 500;
-  color: var(--muted);
+  font-size: 11.5px;
+  color: var(--slate-600);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.02), inset 0 1px 1px #ffffff;
+  white-space: nowrap;
 }
+
 .pagination__summary strong,
 .pagination > span strong {
   font-weight: 700;
-  color: var(--ink);
+  color: var(--blue-700);
 }
+
 .pagination__right {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
   margin-left: auto;
+  flex-wrap: wrap;
 }
+
+/* Frosted Glass Page Button Capsule */
 .pagination__pages {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 3px;
+  padding: 4px;
+  background: rgba(255, 255, 255, 0.68);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  border-radius: 12px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03), inset 0 1px 1px #ffffff;
 }
-.pagination__pages button {
-  min-width: 28px;
-  height: 28px;
-  border: 0;
-  border-radius: var(--radius-sm);
+
+.pagination__pages button,
+.pagination__page-btn,
+.pagination__arrow-btn {
+  min-width: 30px;
+  height: 30px;
+  padding: 0 6px;
+  border: 1px solid transparent;
+  border-radius: 8px;
   background: transparent;
-  color: var(--muted);
-  display: grid;
-  place-items: center;
-  font-size: 11px;
-  font-weight: 700;
+  color: var(--slate-600);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 600;
   cursor: pointer;
-  transition: 0.15s ease;
+  user-select: none;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-sizing: border-box;
 }
-.pagination__pages button:hover:not(:disabled):not(.active) {
-  background: var(--canvas-alt);
-  color: var(--ink);
+
+.pagination__pages button:hover:not(:disabled):not(.active),
+.pagination__page-btn:hover:not(:disabled):not(.active),
+.pagination__arrow-btn:hover:not(:disabled) {
+  background: #ffffff;
+  color: var(--blue-700);
+  box-shadow: 0 2px 6px rgba(0, 113, 227, 0.1);
+  transform: translateY(-1px);
 }
-.pagination__pages button:disabled {
-  opacity: 0.35;
+
+.pagination__pages button:disabled,
+.pagination__arrow-btn:disabled {
+  opacity: 0.3;
   cursor: not-allowed;
+  pointer-events: none;
+  transform: none;
 }
-.pagination__pages button.active {
-  background: var(--blue-600);
-  color: white;
+
+/* Radiant Active Page Button */
+.pagination__pages button.active,
+.pagination__page-btn.active {
+  background: linear-gradient(135deg, #0071e3 0%, #6366f1 100%) !important;
+  border: none !important;
+  color: #ffffff !important;
+  font-weight: 700;
   cursor: default;
+  box-shadow: 0 4px 12px rgba(0, 113, 227, 0.38), inset 0 1px 1px rgba(255, 255, 255, 0.35);
+  transform: none;
 }
+
+.pagination__ellipsis {
+  width: 20px;
+  text-align: center;
+  color: var(--slate-400);
+  font-weight: 700;
+  font-size: 12px;
+  user-select: none;
+}
+
+/* Rows Selector Frosted Capsule */
 .pagination__rows,
 .pagination > label {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
+  padding: 4px 10px 4px 12px;
+  background: rgba(255, 255, 255, 0.68);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  border-radius: 12px;
+  font-size: 11.5px;
   font-weight: 600;
-  color: var(--muted);
+  color: var(--slate-600);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03), inset 0 1px 1px #ffffff;
   margin: 0;
+  white-space: nowrap;
 }
-.pagination select {
-  margin-left: 2px;
-  border: 1px solid var(--line-strong);
-  border-radius: var(--radius-sm);
-  padding: 4px 8px;
-  font-size: 11px;
-  background: white;
-  color: var(--ink);
+
+.pagination select,
+.pagination__rows select {
+  background: transparent;
+  border: none;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--slate-800);
   outline: none;
+  cursor: pointer;
+  padding-right: 4px;
+  transition: color 0.15s ease;
 }
 
-.empty { height: 220px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; }
-.empty__icon { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 50%; background: var(--canvas); color: var(--muted); }
-.empty strong { font-size: 13px; color: var(--ink); }
-.empty span { color: var(--muted); font-size: 11px; }
+.pagination select:hover,
+.pagination__rows select:hover {
+  color: var(--blue-700);
+}
 
+.pagination select:focus,
+.pagination__rows select:focus {
+  color: var(--blue-600);
+}
+
+/* Empty State Box */
+.empty {
+  height: 220px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 24px;
+  text-align: center;
+}
+
+.empty__icon {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: rgba(0, 113, 227, 0.1);
+  color: var(--blue-600);
+  margin-bottom: 4px;
+}
+
+.empty strong {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.empty span {
+  color: var(--muted);
+  font-size: 11.5px;
+  max-width: 320px;
+}
+
+/* Responsive Pagination (< 640px) */
+@media (max-width: 640px) {
+  .pagination {
+    flex-direction: column;
+    align-items: center;
+    padding: 12px;
+    gap: 10px;
+  }
+  .pagination__right {
+    margin-left: 0;
+    justify-content: center;
+    width: 100%;
+  }
+}

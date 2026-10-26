@@ -3,6 +3,7 @@ import { Button } from "../../../../components/ui/Button";
 import { SearchField } from "../../../../components/ui/SearchField";
 import { Pagination } from "../../../../components/ui/Pagination";
 import { Icon } from "../../../../components/ui/Icon";
+import { StatusToggle } from "../../../../components/ui/StatusToggle";
 import { ConfirmDialog } from "../../../../components/ui/ConfirmDialog";
 import { JobNumberForm } from "./JobNumberForm";
 import {
@@ -379,23 +380,10 @@ export function JobNumberIndex({
                           </span>
                         </td>
                         <td style={{ textAlign: "center" }}>
-                          <button
-                            type="button"
-                            onClick={() => handleToggleStatus(item.id)}
-                            style={{
-                              border: 0,
-                              background: item.status ? "#dcfce7" : "#f1f5f9",
-                              color: item.status ? "#15803d" : "#64748b",
-                              padding: "3px 8px",
-                              borderRadius: "999px",
-                              fontSize: "11px",
-                              fontWeight: 700,
-                              cursor: "pointer",
-                            }}
-                            title="Click to toggle status"
-                          >
-                            {item.status ? "Active" : "Inactive"}
-                          </button>
+                          <StatusToggle
+                            active={item.status}
+                            onToggle={() => handleToggleStatus(item.id)}
+                          />
                         </td>
                         <td style={{ textAlign: "center" }}>
                           <div style={{ display: "inline-flex", gap: "6px" }}>

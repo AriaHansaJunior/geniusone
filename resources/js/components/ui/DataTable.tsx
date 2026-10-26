@@ -95,17 +95,19 @@ export function DataTable({
   return (
     <div className="table-frame">
       <div className="table-scroll">
-        <table>
+        <table role="table" aria-label="Data Table">
           <thead>
             <tr>
               {columns.map((col) => (
                 <th
                   key={col.key}
-                  className={col.align === "right" ? "align-right" : ""}
+                  className={col.align === "right" ? "align-right" : col.key === "no" || col.key === "num" ? "cell-center" : ""}
                   style={{ minWidth: col.min }}
                 >
                   {col.label}
-                  <Icon name="arrowDown" size={12} />
+                  {col.key !== "actions" && col.key !== "no" && col.key !== "num" && (
+                    <Icon name="arrowDown" size={12} />
+                  )}
                 </th>
               ))}
             </tr>
@@ -117,17 +119,22 @@ export function DataTable({
                   {columns.map((col) => (
                     <td
                       key={col.key}
-                      className={col.align === "right" ? "align-right" : ""}
+                      className={col.align === "right" ? "align-right" : col.key === "no" || col.key === "num" ? "cell-center" : ""}
                     >
                       {col.key === "actions" ? (
                         <button
                           type="button"
                           className="icon-action"
                           aria-label="View details"
+                          title="View details"
                           onClick={() => onDetail(row)}
                         >
                           <Icon name="eye" size={17} />
                         </button>
+                      ) : col.key === "no" || col.key === "num" ? (
+                        <span className="cell-num">
+                          {(safeCurrentPage - 1) * pageSize + index + 1}
+                        </span>
                       ) : (
                         formatCell(col.key, row[col.key])
                       )}
@@ -164,3 +171,5 @@ export function DataTable({
     </div>
   );
 }
+
+export default DataTable;

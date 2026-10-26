@@ -1,12 +1,14 @@
-/* Placeholder Module Page Styles */
 /* ==========================================================================
-   Lightweight Placeholder Pages
+   Placeholder Module Page Styles — GENIUSONE UI 2.0
    ========================================================================== */
+
 .placeholder-module-card {
-  background: var(--white);
-  border: 1px solid var(--line);
+  background: var(--glass-card-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius-sm);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+  box-shadow: var(--shadow-glass);
   padding: 48px 32px;
   display: flex;
   align-items: center;
@@ -27,6 +29,7 @@
   height: 56px;
   border-radius: 50%;
   background: var(--blue-50);
+  border: 1px solid rgba(0, 113, 227, 0.2);
   color: var(--blue-600);
   display: grid;
   place-items: center;
@@ -38,6 +41,7 @@
   font-size: 17px;
   font-weight: 800;
   color: var(--ink);
+  letter-spacing: -0.2px;
 }
 
 .placeholder-empty-desc {
@@ -50,13 +54,12 @@
 .placeholder-empty-badge {
   display: inline-flex;
   align-items: center;
-  padding: 4px 10px;
-  border-radius: 999px;
-  background: var(--canvas);
-  border: 1px solid var(--line-strong);
-  font-size: 10.5px;
+  padding: 4px 12px;
+  border-radius: var(--radius-pill);
+  background: var(--slate-100);
+  border: 1px solid var(--line);
+  font-size: 11px;
   font-weight: 700;
-  color: var(--muted-2);
+  color: var(--slate-600);
   letter-spacing: 0.3px;
 }
-

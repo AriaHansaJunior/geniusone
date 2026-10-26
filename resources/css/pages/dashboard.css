@@ -1,7 +1,7 @@
-/* Dashboard Page Styles */
 /* ==========================================================================
-   Dashboard View & Exchange Rates Card
+   Dashboard Page Styles — GENIUSONE UI 2.0
    ========================================================================== */
+
 .dashboard-view {
   width: 100%;
   min-width: 0;
@@ -10,11 +10,14 @@
   gap: 16px;
 }
 
+/* Stock Buffer Alert Card */
 .dashboard-stock-alert-card {
-  background: var(--white);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  background: var(--glass-card-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 10px 25px -5px rgba(245, 158, 11, 0.08), 0 2px 6px rgba(0, 0, 0, 0.02), inset 0 1px 1px rgba(255, 255, 255, 0.95);
   width: 100%;
   min-width: 0;
   display: flex;
@@ -22,11 +25,14 @@
   overflow: hidden;
 }
 
+/* Exchange Rates Card */
 .dashboard-rate-card {
-  background: var(--white);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  background: var(--glass-card-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-glass);
   width: 100%;
   overflow: hidden;
   display: flex;
@@ -37,9 +43,9 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 20px;
-  background: #f8fafc;
-  border-bottom: 1px solid var(--line);
+  padding: 16px 22px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.82) 0%, rgba(255, 255, 255, 0.62) 100%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.85);
   flex-wrap: wrap;
   gap: 12px;
 }
@@ -47,10 +53,11 @@
 .dashboard-rate-card__title {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 14px;
+  gap: 10px;
+  font-size: 15px;
   font-weight: 800;
   color: var(--ink);
+  letter-spacing: -0.2px;
 }
 
 .dashboard-rate-card__title svg {
@@ -58,65 +65,67 @@
 }
 
 .dashboard-rate-card__header .button {
-  min-height: 32px;
+  min-height: 34px;
   padding: 0 14px;
   font-size: 12px;
 }
 
-/* Tabs Navigation */
+/* Tabs Navigation (iOS Pill Capsule Style) */
 .dashboard-tabs {
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 0 20px;
-  background: #f8fafc;
-  border-bottom: 1px solid var(--line);
+  gap: 8px;
+  padding: 10px 22px;
+  background: rgba(248, 250, 252, 0.55);
+  border-bottom: 1px solid rgba(226, 232, 240, 0.7);
 }
 
 .dashboard-tab {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 11px 16px;
-  font-size: 12.5px;
-  font-weight: 600;
-  color: var(--muted);
-  border: none;
+  padding: 7px 16px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--slate-600);
+  border: 1px solid transparent;
+  border-radius: 9999px;
   background: transparent;
-  border-bottom: 2px solid transparent;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .dashboard-tab:hover {
+  background: rgba(255, 255, 255, 0.7);
   color: var(--ink);
 }
 
 .dashboard-tab--active {
-  color: var(--blue-600);
-  border-bottom-color: var(--blue-600);
-  font-weight: 700;
+  background: #ffffff;
+  color: var(--blue-700);
+  border-color: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 2px 8px rgba(0, 113, 227, 0.12), inset 0 1px 1px #ffffff;
 }
 
 .dashboard-tab__pill {
   font-size: 10.5px;
-  padding: 1px 6px;
-  border-radius: 10px;
-  background: #e2e8f0;
-  color: var(--ink);
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--slate-100);
+  color: var(--slate-600);
   font-weight: 700;
 }
 
 .dashboard-tab--active .dashboard-tab__pill {
-  background: #dbeafe;
+  background: rgba(0, 113, 227, 0.12);
   color: var(--blue-700);
 }
 
 /* Filter Bar */
 .dashboard-filters-bar {
-  padding: 16px 20px;
-  background: #ffffff;
-  border-bottom: 1px solid var(--line);
+  padding: 16px 22px;
+  background: rgba(255, 255, 255, 0.58);
+  border-bottom: 1px solid rgba(226, 232, 240, 0.7);
 }
 
 .dashboard-filters-grid {
@@ -134,11 +143,11 @@
 
 /* Table Toolbar */
 .dashboard-table-toolbar {
-  padding: 12px 20px;
-  background: #ffffff;
-  border-bottom: 1px solid var(--line);
+  padding: 12px 22px;
+  background: rgba(255, 255, 255, 0.5);
+  border-bottom: 1px solid rgba(226, 232, 240, 0.7);
   display: flex;
-  justifyContent: space-between;
+  justify-content: space-between;
   align-items: center;
   flex-wrap: wrap;
   gap: 10px;
@@ -147,44 +156,56 @@
 .dashboard-rate-table-wrapper {
   padding: 0;
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
+/* Exchange Rate Table */
 .dashboard-rate-table {
   width: 100%;
   border-collapse: collapse;
   text-align: left;
+  font-size: 12px;
 }
 
 .dashboard-rate-table thead th {
-  background: #505054;
-  color: #ffffff;
-  padding: 10px 16px;
-  font-size: 11.5px;
-  font-weight: 700;
-  letter-spacing: 0.3px;
+  background: linear-gradient(180deg, rgba(248, 250, 252, 0.94) 0%, rgba(241, 245, 249, 0.84) 100%);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  color: var(--slate-600);
+  padding: 12px 16px;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
   text-transform: uppercase;
   white-space: nowrap;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.85);
 }
 
 .dashboard-rate-table thead th.sortable {
   cursor: pointer;
   user-select: none;
+  transition: all 0.15s ease;
 }
 
 .dashboard-rate-table thead th.sortable:hover {
-  background: #3f3f46;
+  background: rgba(241, 245, 249, 0.95);
+  color: var(--blue-700);
 }
 
 .dashboard-rate-table tbody td {
   padding: 12px 16px;
-  font-size: 12.5px;
-  border-bottom: 1px solid var(--line);
+  font-size: 12px;
+  border-bottom: 1px solid rgba(226, 232, 240, 0.7);
   color: var(--ink);
   vertical-align: middle;
 }
 
+.dashboard-rate-table tbody tr {
+  transition: background-color 0.15s ease;
+}
+
 .dashboard-rate-table tbody tr:hover {
-  background: #f8fafc;
+  background: rgba(0, 113, 227, 0.04);
 }
 
 .dashboard-rate-table tbody td.numeric,
@@ -207,9 +228,9 @@
 .rate-unavailable {
   display: inline-flex;
   align-items: center;
-  padding: 2px 7px;
-  background: var(--canvas);
-  border: 1px solid var(--line-strong);
+  padding: 3px 8px;
+  background: rgba(241, 245, 249, 0.8);
+  border: 1px solid rgba(226, 232, 240, 0.8);
   border-radius: var(--radius-sm);
   font-size: 11px;
   font-weight: 600;
@@ -231,18 +252,25 @@
 }
 
 .dashboard-rate-card__footer {
-  padding: 14px 20px;
-  background: #fafafc;
-  border-top: 1px solid var(--line);
+  padding: 16px 20px;
+  background: transparent;
+  border-top: none;
 }
 
 .dashboard-rate-source-info {
   display: flex;
   align-items: flex-start;
-  gap: 10px;
+  gap: 12px;
+  padding: 14px 18px;
+  background: rgba(255, 255, 255, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  border-radius: var(--radius-md);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02), inset 0 1px 1px #ffffff;
   font-size: 11.5px;
   color: var(--muted);
-  line-height: 1.45;
+  line-height: 1.5;
 }
 
 .dashboard-rate-source-info svg {
@@ -259,4 +287,24 @@
 
 .dashboard-rate-source-info p {
   margin: 0;
+}
+
+/* Responsive Dashboard (< 768px) */
+@media (max-width: 768px) {
+  .dashboard-rate-card__header {
+    padding: 12px 14px;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .dashboard-filters-bar {
+    padding: 12px 14px;
+  }
+  .dashboard-filters-grid {
+    grid-template-columns: 1fr;
+  }
+  .dashboard-table-toolbar {
+    padding: 10px 14px;
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }

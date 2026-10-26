@@ -11,6 +11,8 @@ interface SidebarProps {
   onNavigate: (page: PageKey, path?: string) => void;
   collapsed: boolean;
   onToggleCollapse?: () => void;
+  isMobileOpen?: boolean;
+  onCloseMobile?: () => void;
 }
 
 export function Sidebar({
@@ -18,6 +20,8 @@ export function Sidebar({
   onNavigate,
   collapsed,
   onToggleCollapse,
+  isMobileOpen = false,
+  onCloseMobile,
 }: SidebarProps) {
   // Track open state of top-level sections (e.g. procurement, exim, warehouse)
   const [openSections, setOpenSections] = useState<Record<string, boolean>>(() => {
@@ -223,7 +227,9 @@ export function Sidebar({
   return (
     <>
       <aside
-        className={`sidebar ${collapsed ? "sidebar--collapsed" : ""}`}
+        className={`sidebar ${collapsed ? "sidebar--collapsed" : ""} ${
+          isMobileOpen ? "sidebar--mobile-open" : ""
+        }`}
         aria-label="Main Navigation"
         onMouseLeave={handleMouseLeave}
       >
@@ -255,6 +261,7 @@ export function Sidebar({
                       onClick={() => {
                         setHoveredNav(null);
                         onNavigate(section.id as PageKey, section.path);
+                        onCloseMobile?.();
                       }}
                       onMouseEnter={(e) => handleMouseEnter(section.label, e)}
                       onMouseLeave={handleMouseLeave}
@@ -407,6 +414,7 @@ export function Sidebar({
                                               e.stopPropagation();
                                               if (!leaf.isPlaceholder) {
                                                 onNavigate(leaf.id as PageKey, leaf.path);
+                                                onCloseMobile?.();
                                               }
                                             }}
                                             disabled={leaf.isPlaceholder}
@@ -447,6 +455,7 @@ export function Sidebar({
                               e.stopPropagation();
                               if (!leaf.isPlaceholder) {
                                 onNavigate(leaf.id as PageKey, leaf.path);
+                                onCloseMobile?.();
                               }
                             }}
                             disabled={leaf.isPlaceholder}
@@ -474,14 +483,23 @@ export function Sidebar({
             {!collapsed ? (
               <>
                 <strong>GENIUSONE</strong>
-                <span>v1.0</span>
+                <span>v2.0</span>
               </>
             ) : (
-              <span>v1.0</span>
+              <span>v2.0</span>
             )}
           </div>
         </div>
       </aside>
+
+      {/* Mobile Backdrop Overlay */}
+      {isMobileOpen && (
+        <div
+          className="sidebar-mobile-backdrop"
+          onClick={onCloseMobile}
+          aria-hidden="true"
+        />
+      )}
 
       {/* Floating Tooltip in Collapsed Sidebar Mode */}
       {collapsed && hoveredNav && (

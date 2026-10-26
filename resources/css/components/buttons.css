@@ -1,56 +1,264 @@
-/* Buttons & Interactive Action Triggers */
-/* Buttons */
+/* ==========================================================================
+   Buttons & Interactive Action Triggers — GENIUSONE UI 2.0
+   ========================================================================== */
+
+/* Base Button */
 .button {
-  min-height: 36px;
-  border-radius: var(--radius-sm);
-  padding: 0 14px;
+  min-height: 38px;
+  border-radius: var(--radius-md);
+  padding: 0 16px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
   border: 1px solid transparent;
+  font-family: inherit;
   font-size: 12px;
   font-weight: 700;
   white-space: nowrap;
-  transition: .15s ease;
   text-decoration: none;
+  cursor: pointer;
+  user-select: none;
+  box-sizing: border-box;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
-.button--primary { background: var(--blue-600); color: white; }
-.button--primary:hover { background: var(--blue-700); }
-.button--secondary { background: white; border-color: var(--line-strong); color: var(--ink-soft); }
-.button--secondary:hover, .button--ghost:hover { border-color: var(--blue-400); color: var(--blue-700); }
-.button--ghost { background: transparent; color: var(--muted); }
-.button--danger { background: var(--red-600); color: white; }
-.button--warning { background: var(--orange-500); color: white; }
-.button--success { background: #16a34a; border-color: #15803d; color: white; }
-.button--success:hover { background: #15803d; color: white; }
+
+.button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.25);
+}
+
+.button:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  pointer-events: none;
+  box-shadow: none;
+  transform: none;
+}
+
+/* Button Sizing */
+.button--sm {
+  min-height: 30px;
+  padding: 0 12px;
+  font-size: 11px;
+  border-radius: var(--radius-sm);
+  gap: 6px;
+}
+
+.button--lg {
+  min-height: 44px;
+  padding: 0 22px;
+  font-size: 13.5px;
+  border-radius: var(--radius-lg);
+  gap: 10px;
+}
+
+/* Button Spinner for Loading State */
+.button__spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: buttonSpin 0.65s linear infinite;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+@keyframes buttonSpin {
+  to { transform: rotate(360deg); }
+}
+
+.button--loading {
+  position: relative;
+  cursor: wait;
+}
+
+/* ==========================================================================
+   Button Variants
+   ========================================================================== */
+
+/* Primary Button: Radiant Indigo-Blue with Glass Specular Edge */
+.button--primary {
+  background: linear-gradient(135deg, #0071e3 0%, #4f46e5 100%);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+  box-shadow: 0 4px 14px rgba(79, 70, 229, 0.35), inset 0 1px 1px rgba(255, 255, 255, 0.35);
+}
+
+.button--primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, #0066cc 0%, #4338ca 100%);
+  color: #ffffff;
+  box-shadow: 0 6px 20px rgba(79, 70, 229, 0.45), inset 0 1px 1px rgba(255, 255, 255, 0.4);
+  transform: translateY(-1px);
+}
+
+.button--primary:active:not(:disabled) {
+  transform: translateY(1px);
+  box-shadow: 0 2px 6px rgba(79, 70, 229, 0.3);
+}
+
+.button--primary:focus-visible {
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.35);
+}
+
+/* Secondary Button: Frosted Glass Panel */
+.button--secondary {
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  color: var(--slate-700);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03), inset 0 1px 1px #ffffff;
+}
+
+.button--secondary:hover:not(:disabled) {
+  background: #ffffff;
+  border-color: rgba(0, 113, 227, 0.2);
+  color: var(--blue-700);
+  box-shadow: 0 4px 12px rgba(0, 113, 227, 0.12), inset 0 1px 1px #ffffff;
+  transform: translateY(-1px);
+}
+
+.button--secondary:active:not(:disabled) {
+  background: rgba(255, 255, 255, 0.9);
+  transform: translateY(1px);
+}
+
+.button--secondary:focus-visible {
+  box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.2);
+}
+
+/* Ghost Button: Restrained Subtle Action */
+.button--ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--slate-600);
+}
+
+.button--ghost:hover:not(:disabled) {
+  background: var(--blue-50);
+  color: var(--blue-700);
+  border-color: rgba(0, 113, 227, 0.15);
+}
+
+.button--ghost:active:not(:disabled) {
+  background: rgba(0, 113, 227, 0.12);
+  transform: translateY(1px);
+}
+
+.button--ghost:focus-visible {
+  box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.2);
+}
+
+/* Danger Button: Destructive Action */
+.button--danger {
+  background: linear-gradient(180deg, var(--red-600) 0%, #b91c1c 100%);
+  border-color: #b91c1c;
+  color: #ffffff;
+  box-shadow: 0 1px 2px rgba(220, 38, 38, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.16);
+}
+
+.button--danger:hover:not(:disabled) {
+  background: #b91c1c;
+  border-color: #991b1b;
+  box-shadow: 0 3px 8px rgba(220, 38, 38, 0.35);
+  transform: translateY(-1px);
+}
+
+.button--danger:active:not(:disabled) {
+  background: #991b1b;
+  transform: translateY(1px);
+}
+
+.button--danger:focus-visible {
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.25);
+}
+
+/* Warning Button: Attention / Notice Action */
+.button--warning {
+  background: linear-gradient(180deg, var(--orange-500) 0%, #d97706 100%);
+  border-color: #d97706;
+  color: #ffffff;
+  box-shadow: 0 1px 2px rgba(245, 158, 11, 0.25);
+}
+
+.button--warning:hover:not(:disabled) {
+  background: #d97706;
+  border-color: #b45309;
+  box-shadow: 0 3px 8px rgba(245, 158, 11, 0.35);
+  transform: translateY(-1px);
+}
+
+.button--warning:active:not(:disabled) {
+  background: #b45309;
+  transform: translateY(1px);
+}
+
+.button--warning:focus-visible {
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.25);
+}
+
+/* Success Button: Affirmative Action */
+.button--success {
+  background: linear-gradient(180deg, var(--green-600) 0%, #15803d 100%);
+  border-color: #15803d;
+  color: #ffffff;
+  box-shadow: 0 1px 2px rgba(22, 163, 74, 0.25);
+}
+
+.button--success:hover:not(:disabled) {
+  background: #15803d;
+  border-color: #166534;
+  color: #ffffff;
+  box-shadow: 0 3px 8px rgba(22, 163, 74, 0.35);
+  transform: translateY(-1px);
+}
+
+.button--success:active:not(:disabled) {
+  background: #166534;
+  transform: translateY(1px);
+}
+
+.button--success:focus-visible {
+  box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.25);
+}
+
+/* Excel Export Button: Recognized Enterprise Export Action */
 .button--excel,
 .btn-export-excel,
 .wh-btn-export-excel,
 .dh-btn-export-excel {
-  background-color: #16a34a !important;
+  background: linear-gradient(180deg, #16a34a 0%, #15803d 100%) !important;
   border-color: #15803d !important;
   color: #ffffff !important;
   font-weight: 700 !important;
-  box-shadow: 0 1px 2px rgba(22, 163, 74, 0.22);
+  box-shadow: 0 1px 2px rgba(22, 163, 74, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.16) !important;
 }
-.button--excel:hover,
+
+.button--excel:hover:not(:disabled),
 .btn-export-excel:hover:not(:disabled),
 .wh-btn-export-excel:hover,
 .dh-btn-export-excel:hover {
-  background-color: #15803d !important;
+  background: #15803d !important;
   border-color: #166534 !important;
   color: #ffffff !important;
   transform: translateY(-1px);
-  box-shadow: 0 2px 6px rgba(22, 163, 74, 0.35);
+  box-shadow: 0 3px 8px rgba(22, 163, 74, 0.35) !important;
 }
-.button--excel:active,
+
+.button--excel:active:not(:disabled),
 .btn-export-excel:active:not(:disabled),
 .wh-btn-export-excel:active,
 .dh-btn-export-excel:active {
-  background-color: #166534 !important;
-  transform: translateY(0);
+  background: #166534 !important;
+  transform: translateY(1px);
 }
+
 .button--excel svg,
 .btn-export-excel svg,
 .wh-btn-export-excel svg,
@@ -58,9 +266,11 @@
   color: #ffffff !important;
 }
 
+/* ==========================================================================
+   Specific Action & Utility Buttons
+   ========================================================================== */
 
-
-/* SmartOne Orange Option Button */
+/* SmartOne Option Button */
 .btn-option-orange {
   width: 28px;
   height: 28px;
@@ -81,7 +291,6 @@
   box-shadow: 0 2px 6px rgba(217, 119, 6, 0.35);
 }
 
-
 /* SmartOne Action Buttons */
 .pr-btn-dark {
   background: #475569;
@@ -99,6 +308,7 @@
 }
 .pr-btn-dark:hover {
   background: #334155;
+  transform: translateY(-1px);
 }
 
 .pr-btn-outline {
@@ -118,6 +328,7 @@
 .pr-btn-outline:hover {
   background: var(--canvas);
   border-color: #94a3b8;
+  color: var(--blue-700);
 }
 
 .pr-btn-back {
@@ -137,6 +348,7 @@
 .pr-btn-back:hover {
   background: #7e22ce;
   box-shadow: 0 2px 8px rgba(147, 51, 234, 0.35);
+  transform: translateY(-1px);
 }
 
 .pr-dropdown-container {
@@ -154,6 +366,7 @@
   min-width: 160px;
   z-index: 40;
   overflow: hidden;
+  animation: dropdownIn 0.15s ease-out;
 }
 .pr-action-menu button {
   width: 100%;
@@ -167,20 +380,21 @@
   font-weight: 600;
   color: var(--ink);
   text-align: left;
+  cursor: pointer;
+  transition: background 0.12s ease, color 0.12s ease;
 }
 .pr-action-menu button:hover {
-  background: var(--canvas);
+  background: var(--blue-50);
   color: var(--blue-600);
 }
 
-
-/* Back Button */
+/* Back Button Pill */
 .btn-back-pill {
   display: inline-flex;
   align-items: center;
   gap: 8px;
   padding: 6px 14px;
-  background: var(--canvas);
+  background: var(--white);
   border: 1px solid var(--line-strong);
   border-radius: var(--radius-sm);
   font-size: 11.5px;
@@ -190,12 +404,15 @@
   transition: all 0.15s ease;
 }
 .btn-back-pill:hover {
-  background: #edeef2;
-  border-color: #cbd5e1;
+  background: var(--slate-50);
+  border-color: var(--slate-400);
   color: var(--blue-600);
+  transform: translateY(-1px);
 }
 
-/* Standardized Dimensions & Styles for Table Action Buttons */
+/* ==========================================================================
+   Standardized Table Action Buttons
+   ========================================================================== */
 [class*="-action-btn"],
 .btn-action-edit,
 .btn-action-delete {
@@ -218,7 +435,20 @@
   display: block;
 }
 
-/* Persistent Semantic Colors for Action Buttons */
+[class*="-action-btn"]:hover,
+.btn-action-edit:hover,
+.btn-action-delete:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08);
+}
+
+[class*="-action-btn"]:active,
+.btn-action-edit:active,
+.btn-action-delete:active {
+  transform: translateY(0);
+}
+
+/* Semantic Colors for Table Action Buttons */
 [class*="-action-btn--edit"],
 .btn-action-edit {
   border-color: #0284c7 !important;
@@ -261,4 +491,18 @@
   color: #b91c1c !important;
 }
 
-
+/* Reduced Motion Override */
+@media (prefers-reduced-motion: reduce) {
+  .button,
+  .btn-option-orange,
+  .pr-btn-dark,
+  .pr-btn-outline,
+  .pr-btn-back,
+  .btn-back-pill,
+  [class*="-action-btn"],
+  .btn-action-edit,
+  .btn-action-delete {
+    transform: none !important;
+    transition: none !important;
+  }
+}

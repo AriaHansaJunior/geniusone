@@ -3,6 +3,7 @@ import { Button } from "../../../../components/ui/Button";
 import { Icon } from "../../../../components/ui/Icon";
 import { SearchField } from "../../../../components/ui/SearchField";
 import { Pagination } from "../../../../components/ui/Pagination";
+import { StatusToggle } from "../../../../components/ui/StatusToggle";
 import {
   initialSupplierRecords,
   type SupplierRecord,
@@ -348,19 +349,11 @@ export function SupplierIndex({
                         <span className="supplier-timestamp">{item.createdAt}</span>
                       </td>
                       <td style={{ textAlign: "center" }}>
-                        <label
-                          className="status-hide-checklist"
-                          title={item.hidden ? "Checked: Hidden from PO, transactions, and reports" : "Unchecked: Active and selectable"}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={!!item.hidden}
-                            onChange={() => handleToggleHide(item.id)}
-                          />
-                          <span className={item.hidden ? "status-text status-text--hidden" : "status-text status-text--active"}>
-                            {item.hidden ? "Hidden" : "Active"}
-                          </span>
-                        </label>
+                        <StatusToggle
+                          hidden={item.hidden}
+                          onToggle={() => handleToggleHide(item.id)}
+                          ariaLabel={`Toggle status for ${item.supplierName}`}
+                        />
                       </td>
                     </tr>
                     );

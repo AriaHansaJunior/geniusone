@@ -1,13 +1,15 @@
-/* Application Master Shell Layout */
+/* ==========================================================================
+   Application Master Shell Layout — GENIUSONE UI 2.0
+   ========================================================================== */
+
 .app-shell {
   height: 100vh;
   height: 100dvh;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: var(--canvas);
+  background: var(--canvas-ambient), var(--canvas);
 }
-
 
 /* Workspace Layout */
 .workspace {
@@ -17,7 +19,6 @@
   position: relative;
   overflow: hidden;
 }
-
 
 /* Main Content Area */
 main {
@@ -31,18 +32,83 @@ main {
   overflow-x: hidden;
   transition: all 0.22s ease;
 }
+
 .page-header {
-  min-height: 104px;
-  background: var(--white);
-  border-bottom: 1px solid var(--line);
-  padding: 18px 24px;
+  min-height: 76px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.82) 0%, rgba(255, 255, 255, 0.62) 100%);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.85);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.02), inset 0 1px 1px #ffffff;
+  padding: 14px 24px;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 16px;
+  box-sizing: border-box;
 }
-.eyebrow { color: var(--blue-600); font-size: 10px; font-weight: 900; letter-spacing: 1.2px; text-transform: uppercase; }
-.page-header h1 { margin: 4px 0 3px; font-size: 22px; line-height: 1.25; font-weight: 800; letter-spacing: -.35px; color: var(--ink); }
-.page-header p { margin: 0; color: var(--muted); font-size: 12.5px; }
-.page-header__actions, .button-row { display: flex; align-items: center; gap: 8px; }
-.content { flex: 1; padding: 20px 24px 28px; max-width: 2400px; margin: 0; width: 100%; box-sizing: border-box; min-width: 0; }
+
+.eyebrow {
+  color: var(--blue-600);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+}
+
+.page-header h1 {
+  margin: 3px 0 2px;
+  font-size: 20px;
+  line-height: 1.25;
+  font-weight: 800;
+  letter-spacing: -0.3px;
+  color: var(--ink);
+}
+
+.page-header p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.page-header__actions,
+.button-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.content {
+  flex: 1;
+  padding: 20px 24px 28px;
+  max-width: 2400px;
+  margin: 0;
+  width: 100%;
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+/* ==========================================================================
+   Responsive Shell Rules (< 768px Phone Viewports)
+   ========================================================================== */
+@media (max-width: 767px) {
+  .page-header {
+    padding: 12px 14px;
+    min-height: auto;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .page-header h1 {
+    font-size: 17px;
+  }
+  .page-header p {
+    font-size: 11.5px;
+  }
+  .content {
+    padding: 12px 12px 20px;
+  }
+}
+
 

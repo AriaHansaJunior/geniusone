@@ -3,6 +3,7 @@ import { Button } from "../../../../components/ui/Button";
 import { SearchField } from "../../../../components/ui/SearchField";
 import { Pagination } from "../../../../components/ui/Pagination";
 import { Icon } from "../../../../components/ui/Icon";
+import { StatusToggle } from "../../../../components/ui/StatusToggle";
 import {
   initialPphRecords,
   type PphRecord,
@@ -203,19 +204,10 @@ export function PphIndex({ records = initialPphRecords, onAddNew, onToggleHide }
                           {item.deduction}
                         </td>
                         <td style={{ textAlign: "center" }}>
-                          <label
-                            className="status-hide-checklist"
-                            title={item.hidden ? "Checked: Hidden from PO, transactions, and reports" : "Unchecked: Active and selectable"}
-                          >
-                            <input
-                              type="checkbox"
-                              checked={!!item.hidden}
-                              onChange={() => handleToggleHide(item.id)}
-                            />
-                            <span className={item.hidden ? "status-text status-text--hidden" : "status-text status-text--active"}>
-                              {item.hidden ? "Hidden" : "Active"}
-                            </span>
-                          </label>
+                          <StatusToggle
+                            hidden={item.hidden}
+                            onToggle={() => handleToggleHide(item.id)}
+                          />
                         </td>
                       </tr>
                     );

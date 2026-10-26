@@ -34,6 +34,9 @@ export function AppLayout({
     return false;
   });
 
+  // Mobile off-canvas drawer state for phone screens
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+
   const handleToggleCollapse = () => {
     setCollapsed((prev) => {
       const next = !prev;
@@ -52,22 +55,28 @@ export function AppLayout({
 
   return (
     <div className={`app-shell ${collapsed ? "app-shell--collapsed" : ""}`}>
-      {/* Topbar Header with Logo and Collapse Toggle */}
+      {/* Topbar Header with Logo, Collapse Toggle, and Mobile Trigger */}
       <Header
         collapsed={collapsed}
         onToggleCollapse={handleToggleCollapse}
         onNavigateProfile={onNavigateProfile}
         onLogoutRequest={onRequestLogout}
+        onToggleMobileSidebar={() => setIsMobileSidebarOpen((prev) => !prev)}
       />
 
       {/* Main Workspace */}
       <div className="workspace">
-        {/* Collapsible Sidebar */}
+        {/* Collapsible Sidebar with Mobile Drawer Support */}
         <Sidebar
           activePage={activePage}
-          onNavigate={onNavigate}
+          onNavigate={(page, path) => {
+            setIsMobileSidebarOpen(false);
+            onNavigate(page, path);
+          }}
           collapsed={collapsed}
           onToggleCollapse={handleToggleCollapse}
+          isMobileOpen={isMobileSidebarOpen}
+          onCloseMobile={() => setIsMobileSidebarOpen(false)}
         />
 
         {/* Main Content Area */}

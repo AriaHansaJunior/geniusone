@@ -11,6 +11,7 @@ import {
 } from "./dashboard-rate-data";
 import { DashboardRateChart } from "./DashboardRateChart";
 import { DashboardStockAlert } from "./DashboardStockAlert";
+import { ErrorBoundary } from "../../components/ui/ErrorBoundary";
 import type {
   ExchangeRateRecord,
   RateSortField,
@@ -22,6 +23,34 @@ interface DashboardProps {
   onManageBufferRules?: () => void;
   onNavigatePrCreate?: () => void;
 }
+
+const mapApiExchangeRateRecord = (r: any, idx: number): ExchangeRateRecord => {
+  const buy = r.buyingRate ?? r.buying_rate ?? r.buy_rate ?? r.buyRate ?? null;
+  const sell = r.sellingRate ?? r.selling_rate ?? r.sell_rate ?? r.sellRate ?? null;
+  const rateVal = r.rate ?? r.middleRate ?? r.middle_rate ?? null;
+
+  return {
+    id: String(r.id || `rate-${idx + 1}`),
+    no: typeof r.no === "number" ? r.no : idx + 1,
+    rateDate: String(r.rateDate || r.rate_date || ""),
+    currencyCode: String(r.currencyCode || r.currency_code || ""),
+    currencyName: String(r.currencyName || r.currency_name || ""),
+    rateType: (r.rateType || r.rate_type || "Bank Indonesia (BI)") as any,
+    buyingRate: buy !== null && buy !== undefined && !isNaN(Number(buy)) ? Number(buy) : null,
+    sellingRate: sell !== null && sell !== undefined && !isNaN(Number(sell)) ? Number(sell) : null,
+    rate: rateVal !== null && rateVal !== undefined && !isNaN(Number(rateVal)) ? Number(rateVal) : null,
+    flag: String(
+      r.flag ||
+        (r.rate_type === "Pajak (KMK)"
+          ? "KMK Valuation"
+          : String(r.rate_type || "").includes("Bank Indonesia")
+          ? "BI Reference"
+          : "Commercial Counter")
+    ),
+    availability: (r.availability || (rateVal !== null ? "Available" : "Unavailable")) as any,
+    note: r.note ? String(r.note) : undefined,
+  };
+};
 
 export function Dashboard({
   onAddNewBufferRule,
@@ -64,8 +93,10 @@ export function Dashboard({
   } | null>(null);
 
   // Apply filters (Show action)
-  const handleApplyFilters = (e?: React.FormEvent) => {
-    e?.preventDefault();
+  const handleApplyFilters = (e?: React.FormEvent | React.MouseEvent) => {
+    if (e && typeof e.preventDefault === "function") {
+      e.preventDefault();
+    }
     try {
       if (startDate && endDate && startDate > endDate) {
         setNotification({
@@ -119,18 +150,9 @@ export function Dashboard({
       .then((r) => r.json())
       .then((json) => {
         if (json?.status === "success" && Array.isArray(json.data)) {
-          const mapped: ExchangeRateRecord[] = json.data.map((r: any) => ({
-            id: String(r.id),
-            rateDate: r.rate_date,
-            currencyCode: r.currency_code,
-            currencyName: r.currency_name,
-            rateType: r.rate_type,
-            rate: Number(r.rate) || 0,
-            middleRate: Number(r.middle_rate) || 0,
-            taxRate: Number(r.tax_rate) || 0,
-            buyRate: Number(r.buy_rate) || 0,
-            sellRate: Number(r.sell_rate) || 0,
-          }));
+          const mapped: ExchangeRateRecord[] = json.data.map((r: any, idx: number) =>
+            mapApiExchangeRateRecord(r, idx)
+          );
           setRateRecords(mapped);
           setNotification({
             type: "success",
@@ -166,20 +188,15 @@ export function Dashboard({
       .then((res) => res.json())
       .then((json) => {
         if (!isMounted) return;
-        if (json?.status === "success" && Array.isArray(json.data) && json.data.length > 0) {
-          const mapped: ExchangeRateRecord[] = json.data.map((r: any) => ({
-            id: String(r.id),
-            rateDate: r.rate_date,
-            currencyCode: r.currency_code,
-            currencyName: r.currency_name,
-            rateType: r.rate_type,
-            rate: Number(r.rate) || 0,
-            middleRate: Number(r.middle_rate) || 0,
-            taxRate: Number(r.tax_rate) || 0,
-            buyRate: Number(r.buy_rate) || 0,
-            sellRate: Number(r.sell_rate) || 0,
-          }));
-          setRateRecords(mapped);
+        if (json?.status === "success" && Array.isArray(json.data)) {
+          if (json.data.length > 0) {
+            const mapped: ExchangeRateRecord[] = json.data.map((r: any, idx: number) =>
+              mapApiExchangeRateRecord(r, idx)
+            );
+            setRateRecords(mapped);
+          } else {
+            setRateRecords([]);
+          }
         }
       })
       .catch((err) => {
@@ -205,7 +222,9 @@ export function Dashboard({
       // Rate Type filter
       if (
         appliedFilters.rateType !== "All Rate Types" &&
-        rec.rateType !== appliedFilters.rateType
+        rec.rateType !== appliedFilters.rateType &&
+        !String(rec.rateType || "").toLowerCase().includes(appliedFilters.rateType.toLowerCase().replace(/[\(\)]/g, "").trim()) &&
+        !appliedFilters.rateType.toLowerCase().includes(String(rec.rateType || "").toLowerCase().replace(/[\(\)]/g, "").trim())
       ) {
         return false;
       }
@@ -221,11 +240,11 @@ export function Dashboard({
       // Search query filter
       if (search.trim()) {
         const query = search.toLowerCase().trim();
-        const matchesCode = rec.currencyCode.toLowerCase().includes(query);
-        const matchesName = rec.currencyName.toLowerCase().includes(query);
-        const matchesType = rec.rateType.toLowerCase().includes(query);
-        const matchesFlag = rec.flag.toLowerCase().includes(query);
-        const matchesDate = rec.rateDate.includes(query);
+        const matchesCode = (rec.currencyCode || "").toLowerCase().includes(query);
+        const matchesName = (rec.currencyName || "").toLowerCase().includes(query);
+        const matchesType = (rec.rateType || "").toLowerCase().includes(query);
+        const matchesFlag = (rec.flag || "").toLowerCase().includes(query);
+        const matchesDate = (rec.rateDate || "").includes(query);
         if (
           !matchesCode &&
           !matchesName &&
@@ -239,7 +258,7 @@ export function Dashboard({
 
       return true;
     });
-  }, [appliedFilters, search]);
+  }, [rateRecords, appliedFilters, search]);
 
   // Sort records
   const sortedRecords = useMemo(() => {
@@ -295,7 +314,8 @@ export function Dashboard({
       />
 
       {/* Exchange Rates Master Card */}
-      <div className="dashboard-rate-card">
+      <ErrorBoundary fallbackTitle="Exchange Rates View Error" onReset={handleResetFilters}>
+        <div className="dashboard-rate-card">
         {/* Card Header with Refresh Action */}
         <div className="dashboard-rate-card__header">
           <div className="dashboard-rate-card__title">
@@ -431,7 +451,11 @@ export function Dashboard({
 
             {/* Action Buttons: Show & Reset */}
             <div className="dashboard-filters-actions">
-              <Button type="submit" variant="primary" icon="filter">
+              <Button
+                type="submit"
+                variant="primary"
+                onClick={handleApplyFilters}
+              >
                 Show
               </Button>
               <Button
@@ -587,12 +611,12 @@ export function Dashboard({
                             </div>
                           </td>
                           <td>
-                            <Badge tone="purple">{item.rateType}</Badge>
+                            <Badge tone="purple">{item.rateType || "Bank Indonesia"}</Badge>
                           </td>
                           <td className="numeric">
-                            {item.buyingRate !== null ? (
+                            {item.buyingRate != null && !isNaN(Number(item.buyingRate)) ? (
                               <span className="rate-value">
-                                {item.buyingRate.toLocaleString("en-US", {
+                                {Number(item.buyingRate).toLocaleString("en-US", {
                                   minimumFractionDigits: 2,
                                   maximumFractionDigits: 2,
                                 })}
@@ -602,9 +626,9 @@ export function Dashboard({
                             )}
                           </td>
                           <td className="numeric">
-                            {item.sellingRate !== null ? (
+                            {item.sellingRate != null && !isNaN(Number(item.sellingRate)) ? (
                               <span className="rate-value">
-                                {item.sellingRate.toLocaleString("en-US", {
+                                {Number(item.sellingRate).toLocaleString("en-US", {
                                   minimumFractionDigits: 2,
                                   maximumFractionDigits: 2,
                                 })}
@@ -614,9 +638,9 @@ export function Dashboard({
                             )}
                           </td>
                           <td className="numeric">
-                            {item.rate !== null ? (
+                            {item.rate != null && !isNaN(Number(item.rate)) ? (
                               <span className="rate-value--highlight">
-                                {item.rate.toLocaleString("en-US", {
+                                {Number(item.rate).toLocaleString("en-US", {
                                   minimumFractionDigits: 2,
                                   maximumFractionDigits: 2,
                                 })}
@@ -633,14 +657,14 @@ export function Dashboard({
                                 fontWeight: 600,
                               }}
                             >
-                              {item.flag}
+                              {item.flag || "—"}
                             </span>
                           </td>
                           <td style={{ textAlign: "center" }}>
                             {item.availability === "Available" ? (
                               <Badge tone="green">Available</Badge>
                             ) : (
-                              <Badge tone="gray">Pending Feed</Badge>
+                              <Badge tone="gray">{item.availability || "Pending Feed"}</Badge>
                             )}
                           </td>
                         </tr>
@@ -707,6 +731,7 @@ export function Dashboard({
           </div>
         </div>
       </div>
+      </ErrorBoundary>
     </div>
   );
 }

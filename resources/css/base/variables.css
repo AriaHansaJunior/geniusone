@@ -1,33 +1,136 @@
-/* Base CSS Variables & Design Tokens */
+/* ==========================================================================
+   GENIUSONE UI 2.0 — Base CSS Variables & Design Tokens
+   ========================================================================== */
 :root {
-  --blue-700: #0066cc;
-  --blue-600: #0071e3;
+  /* ------------------------------------------------------------------------
+     1. Primary & Supporting Blue Identity
+     ------------------------------------------------------------------------ */
+  --blue-700: #005bb5;
+  --blue-650: #0066cc;
+  --blue-600: #0071e3; /* Core GeniusOne Brand Blue */
   --blue-550: #006edb;
   --blue-500: #0076df;
   --blue-400: #2997ff;
-  --blue-50: #eef7ff;
+  --blue-300: #70b4ff;
+  --blue-200: #bae6fd;
+  --blue-100: #dbeafe;
+  --blue-50:  #eff6ff;
+  --blue-25:  #f5f9ff;
+
+  /* ------------------------------------------------------------------------
+     2. Accent & Functional Status Colors
+     ------------------------------------------------------------------------ */
   --orange-700: #b64400;
-  --orange-50: #fff4eb;
   --orange-500: #ff791b;
+  --orange-50:  #fff4eb;
+
+  --red-700: #be123c;
   --red-600: #e30000;
-  --red-50: #fff0f0;
+  --red-500: #f43f5e;
+  --red-50:  #fff0f0;
+
+  --green-700: #0f766e;
   --green-600: #118645;
-  --green-50: #eaf8f0;
+  --green-500: #10b981;
+  --green-50:  #eaf8f0;
+
+  --purple-700: #6d28d9;
   --purple-600: #7251b5;
-  --purple-50: #f4f0ff;
-  --white: #ffffff;
-  --ink: #1d1d1f;
-  --ink-soft: #333336;
-  --muted: #6e6e73;
-  --muted-2: #86868b;
-  --canvas: #f5f5f7;
-  --line: #e8e8ed;
-  --line-strong: #d5d5da;
-  --dark: #0b2a6b;
-  --dark-gradient: linear-gradient(90deg, #0a2463 0%, #1e40af 55%, #c8102e 100%);
-  --radius-sm: 4px;
-  --radius-md: 12px;
-  --radius-pill: 100px;
+  --purple-500: #8b5cf6;
+  --purple-50:  #f4f0ff;
+
+  /* ------------------------------------------------------------------------
+     3. Neutral & Slate Palette
+     ------------------------------------------------------------------------ */
+  --white:      #ffffff;
+  --slate-25:   #fcfdfe;
+  --slate-50:   #f8fafc;
+  --slate-100:  #f1f5f9;
+  --slate-200:  #e2e8f0;
+  --slate-300:  #cbd5e1;
+  --slate-400:  #94a3b8;
+  --slate-500:  #64748b;
+  --slate-600:  #475569;
+  --slate-700:  #334155;
+  --slate-800:  #1e293b;
+  --slate-900:  #0f172a;
+  --slate-950:  #020617;
+
+  /* Legacy aliases for backward compatibility */
+  --ink:        var(--slate-900);
+  --ink-soft:   var(--slate-600);
+  --muted:      var(--slate-500);
+  --muted-2:    var(--slate-400);
+  --canvas:     #f0f5fb;
+  --line:       #e2e8f0;
+  --line-strong:#cbd5e1;
+  --dark:       #0b2a6b;
+  --dark-gradient: linear-gradient(135deg, #0a2463 0%, #1e40af 100%);
+
+  /* ------------------------------------------------------------------------
+     4. Semantic Surface & Canvas Tokens
+     ------------------------------------------------------------------------ */
+  --canvas-subtle:    #f8faff;
+  --canvas-ambient:   radial-gradient(1000px 650px at 5% -5%, rgba(147, 197, 253, 0.38) 0%, transparent 60%),
+                      radial-gradient(950px 600px at 95% 5%, rgba(192, 132, 252, 0.28) 0%, transparent 55%),
+                      radial-gradient(1100px 750px at 50% 105%, rgba(165, 180, 252, 0.26) 0%, transparent 60%),
+                      linear-gradient(180deg, #f8faff 0%, #f0f4ff 50%, #f5f3ff 100%);
+  --surface-ground:    #f4f6fc;
+  --surface-card:      rgba(255, 255, 255, 0.75);
+  --surface-card-sub:  rgba(255, 255, 255, 0.55);
+  --surface-elevated:  rgba(255, 255, 255, 0.88);
+
+  /* ------------------------------------------------------------------------
+     5. Glassmorphism Design Tokens (iOS Glass Aesthetic)
+     ------------------------------------------------------------------------ */
+  --glass-header-bg:     rgba(255, 255, 255, 0.78);
+  --glass-sidebar-bg:    linear-gradient(180deg, rgba(255, 255, 255, 0.82) 0%, rgba(255, 255, 255, 0.65) 100%);
+  --glass-card-bg:       linear-gradient(135deg, rgba(255, 255, 255, 0.78) 0%, rgba(255, 255, 255, 0.58) 100%);
+  --glass-card-sub:      linear-gradient(135deg, rgba(255, 255, 255, 0.65) 0%, rgba(255, 255, 255, 0.45) 100%);
+  --glass-elevated-bg:   linear-gradient(135deg, rgba(255, 255, 255, 0.92) 0%, rgba(255, 255, 255, 0.78) 100%);
+  --glass-modal-bg:      linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.88) 100%);
+
+  --glass-blur:          blur(20px) saturate(190%);
+  --glass-blur-deep:     blur(28px) saturate(200%);
+
+  --glass-border:        1px solid rgba(255, 255, 255, 0.85);
+  --glass-border-light:  1px solid rgba(255, 255, 255, 0.95);
+  --glass-border-subtle: 1px solid rgba(226, 232, 240, 0.65);
+
+  /* ------------------------------------------------------------------------
+     6. Elevation & Controlled Shadows with Specular Gloss Edge
+     ------------------------------------------------------------------------ */
+  --shadow-xs:           0 1px 2px 0 rgba(15, 23, 42, 0.04);
+  --shadow-sm:           0 2px 8px 0 rgba(15, 23, 42, 0.04), 0 1px 2px -1px rgba(15, 23, 42, 0.03);
+  --shadow-md:           0 8px 20px -2px rgba(15, 23, 42, 0.06), 0 2px 6px -1px rgba(15, 23, 42, 0.03);
+  --shadow-lg:           0 16px 36px -4px rgba(15, 23, 42, 0.08), 0 4px 12px -2px rgba(15, 23, 42, 0.04);
+  --shadow-glass:        0 12px 32px -4px rgba(99, 102, 241, 0.08), 0 4px 12px -2px rgba(15, 23, 42, 0.03), inset 0 1px 1px 0 rgba(255, 255, 255, 0.95);
+  --shadow-glass-strong: 0 20px 48px -8px rgba(99, 102, 241, 0.12), 0 8px 20px -4px rgba(15, 23, 42, 0.05), inset 0 1.5px 1.5px 0 rgba(255, 255, 255, 0.98);
+
+  /* ------------------------------------------------------------------------
+     7. Corner Radii Scale (Modern iOS Curvature)
+     ------------------------------------------------------------------------ */
+  --radius-xs:   6px;
+  --radius-sm:   8px;
+  --radius-md:   12px;
+  --radius-lg:   18px;
+  --radius-xl:   24px;
+  --radius-pill: 9999px;
+
+  /* ------------------------------------------------------------------------
+     8. Motion & Transitions
+     ------------------------------------------------------------------------ */
+  --ease-standard:   cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-decelerate: cubic-bezier(0, 0, 0.2, 1);
+  --ease-accelerate: cubic-bezier(0.4, 0, 1, 1);
+
+  --duration-fast:   120ms;
+  --duration-normal: 180ms;
+  --duration-expand: 240ms;
+
+  /* ------------------------------------------------------------------------
+     9. Global Typography & Canvas
+     ------------------------------------------------------------------------ */
   font-family: "Lato", "Noto Sans", sans-serif;
   color: var(--ink);
   background: var(--canvas);

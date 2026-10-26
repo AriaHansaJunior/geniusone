@@ -1,22 +1,259 @@
-/* Form Controls, Filters & Field Grid Layouts */
-/* Filters Grid */
-.filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; padding: 14px 18px 12px; }
-.filters--report { display: grid; grid-template-columns: repeat(5, minmax(148px, 1fr)); gap: 12px; padding: 14px 18px 12px; }
-.field { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
-.field > span { font-size: 10px; font-weight: 700; color: var(--muted); letter-spacing: 0.2px; }
-.field__control { height: 36px; display: flex; align-items: center; gap: 8px; padding: 0 10px; border: 1px solid var(--line-strong); border-radius: var(--radius-sm); color: var(--ink-soft); background: white; font-size: 11.5px; transition: border-color 0.15s ease; }
-.field__control:hover { border-color: var(--blue-400); }
-.field__control > span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.field__control > svg { color: var(--muted-2); flex-shrink: 0; }
-.filter-actions { display: flex; align-items: center; gap: 10px; padding: 4px 18px 14px; }
-.search-field { width: min(440px, 40%); height: 36px; display: flex; align-items: center; gap: 8px; padding: 0 12px; border: 1px solid var(--line-strong); border-radius: var(--radius-sm); background: white; transition: 0.15s ease; }
-.search-field:focus-within { border-color: var(--blue-600); box-shadow: 0 0 0 3px rgba(0,113,227,.1); }
-.search-field svg { color: var(--muted-2); flex: 0 0 auto; }
-.search-field input { width: 100%; border: 0; outline: 0; font-size: 11.5px; color: var(--ink); }
-.search-field input::placeholder { color: var(--muted-2); }
-.search-field button { border: 0; padding: 0; color: var(--muted); background: transparent; display: grid; place-items: center; }
-.filter-actions .button--primary { margin-left: auto; }
+/* ==========================================================================
+   Form Controls, Filters & Field Grid Layouts — GENIUSONE UI 2.0
+   ========================================================================== */
 
+/* Field Label & Wrapper */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.field > span,
+.form-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--slate-700);
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
+
+/* Field Control Pill (Filter Dropdown Trigger) */
+.field__control {
+  height: 38px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 14px;
+  border: 1px solid rgba(226, 232, 240, 0.85);
+  border-radius: var(--radius-md);
+  color: var(--ink-soft);
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  font-size: 12px;
+  cursor: pointer;
+  user-select: none;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.02), inset 0 1px 1px rgba(255, 255, 255, 0.85);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.field__control:hover {
+  border-color: rgba(0, 113, 227, 0.3);
+  background: #ffffff;
+  box-shadow: 0 4px 12px rgba(0, 113, 227, 0.08);
+}
+
+.field__control:focus-within {
+  border-color: var(--blue-600);
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.18), inset 0 1px 1px #ffffff;
+}
+
+.field__control > span {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.field__control > svg {
+  color: var(--slate-400);
+  flex-shrink: 0;
+  transition: color 0.15s ease;
+}
+
+.field__control:hover > svg {
+  color: var(--blue-600);
+}
+
+/* Search Field (Frosted Glass Capsule) */
+.search-field {
+  width: min(440px, 100%);
+  height: 38px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 16px;
+  border: 1px solid rgba(255, 255, 255, 0.9);
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03), inset 0 1px 1px #ffffff;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-sizing: border-box;
+}
+
+.search-field:hover {
+  border-color: rgba(0, 113, 227, 0.3);
+  background: #ffffff;
+  box-shadow: 0 4px 14px rgba(0, 113, 227, 0.08);
+}
+
+.search-field:focus-within {
+  border-color: var(--blue-600);
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.18), inset 0 1px 1px #ffffff;
+}
+
+.search-field svg {
+  color: var(--slate-400);
+  flex: 0 0 auto;
+  transition: color 0.15s ease;
+}
+
+.search-field:focus-within svg {
+  color: var(--blue-600);
+}
+
+.search-field input {
+  width: 100%;
+  border: 0;
+  outline: 0;
+  font-size: 12px;
+  color: var(--ink);
+  background: transparent;
+  font-family: inherit;
+}
+
+.search-field input::placeholder {
+  color: var(--slate-400);
+}
+
+.search-field button {
+  border: 0;
+  padding: 2px;
+  color: var(--slate-400);
+  background: transparent;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  border-radius: var(--radius-xs);
+  transition: all 0.12s ease;
+}
+
+.search-field button:hover {
+  color: var(--red-600);
+  background: var(--red-50);
+}
+
+/* Standard Inputs, Selects & Textareas */
+.form-input,
+.form-select,
+.form-textarea,
+.master-form-input,
+.master-form-select,
+.input-text {
+  height: 38px;
+  padding: 0 14px;
+  border: 1px solid rgba(226, 232, 240, 0.85);
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  color: var(--ink);
+  font-size: 12px;
+  font-family: inherit;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.02), inset 0 1px 1px rgba(255, 255, 255, 0.85);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-sizing: border-box;
+  width: 100%;
+  outline: none;
+}
+
+.form-textarea {
+  height: auto;
+  min-height: 74px;
+  padding: 10px 14px;
+  resize: vertical;
+}
+
+.form-input:hover,
+.form-select:hover,
+.form-textarea:hover,
+.master-form-input:hover,
+.master-form-select:hover,
+.input-text:hover {
+  border-color: rgba(0, 113, 227, 0.3);
+  background: #ffffff;
+}
+
+.form-input:focus,
+.form-select:focus,
+.form-textarea:focus,
+.master-form-input:focus,
+.master-form-select:focus,
+.input-text:focus {
+  border-color: var(--blue-600);
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.18), inset 0 1px 1px #ffffff;
+}
+
+/* Disabled & Readonly Input States */
+.form-input:disabled,
+.form-select:disabled,
+.form-textarea:disabled,
+.master-form-input:disabled,
+.master-form-select:disabled,
+.input-text:disabled,
+.form-input[readonly],
+.master-form-input[readonly] {
+  background: var(--slate-100);
+  color: var(--slate-500);
+  border-color: var(--line);
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+/* Error & Validation States */
+.form-input.has-error,
+.form-select.has-error,
+.form-textarea.has-error,
+.master-form-input.has-error,
+.master-form-select.has-error,
+.input-text.has-error,
+[aria-invalid="true"] {
+  border-color: var(--red-600) !important;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.18) !important;
+}
+
+.form-error-msg {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--red-600);
+  margin-top: 3px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Filter Grids */
+.filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 12px;
+  padding: 14px 18px 12px;
+}
+
+.filters--report {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(148px, 1fr));
+  gap: 12px;
+  padding: 14px 18px 12px;
+}
+
+.filter-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 18px 14px;
+}
+
+.filter-actions .button--primary {
+  margin-left: auto;
+}
 
 /* Note Section */
 .pr-note-card {
@@ -24,19 +261,22 @@
   flex-direction: column;
   gap: 6px;
 }
+
 .pr-note-label {
   font-size: 11.5px;
   font-weight: 700;
   color: var(--ink);
 }
+
 .pr-note-box {
-  background: var(--white);
+  background: #ffffff;
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
   padding: 12px 14px;
   min-height: 48px;
   font-size: 12px;
   color: var(--ink-soft);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.02);
 }
 
 /* Footer Actions */
@@ -46,7 +286,6 @@
   padding-top: 4px;
 }
 
-
 /* Full Page Creation Form Layout */
 .create-page-grid {
   display: flex;
@@ -55,12 +294,15 @@
 }
 
 .create-form-card {
-  background: var(--white);
+  background: var(--glass-card-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
   padding: 22px 24px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+  box-shadow: var(--shadow-sm);
 }
+
 .create-form-card__header {
   margin-bottom: 16px;
   padding-bottom: 10px;
@@ -69,15 +311,17 @@
   align-items: center;
   justify-content: space-between;
 }
+
 .create-form-card__header h3 {
   margin: 0;
-  font-size: 13.5px;
+  font-size: 14px;
   font-weight: 800;
   color: var(--ink);
   display: flex;
   align-items: center;
   gap: 8px;
 }
+
 .create-form-card__header span {
   font-size: 11px;
   color: var(--muted);
@@ -88,19 +332,9 @@
   grid-template-columns: repeat(4, 1fr);
   gap: 16px;
 }
-@media (max-width: 1100px) {
-  .form-grid-4 {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-@media (max-width: 600px) {
-  .form-grid-4 {
-    grid-template-columns: 1fr;
-  }
-}
 
 .create-actions-footer {
-  background: var(--white);
+  background: #ffffff;
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
   padding: 16px 24px;
@@ -108,6 +342,51 @@
   align-items: center;
   justify-content: flex-end;
   gap: 12px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+  box-shadow: var(--shadow-sm);
 }
 
+/* ==========================================================================
+   Responsive Form Layouts
+   ========================================================================== */
+@media (max-width: 1200px) {
+  .filters--report {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 900px) {
+  .form-grid-4 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .filters--report {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .form-grid-4,
+  .filters,
+  .filters--report {
+    grid-template-columns: 1fr;
+    padding: 10px 12px;
+  }
+  .filter-actions {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 6px 12px 12px;
+  }
+  .filter-actions .button--primary {
+    margin-left: 0;
+  }
+  .search-field {
+    width: 100%;
+  }
+  .create-form-card {
+    padding: 16px;
+  }
+  .create-actions-footer {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 12px 16px;
+  }
+}

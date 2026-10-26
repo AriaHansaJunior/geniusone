@@ -1,12 +1,12 @@
 import { useState, useRef, useEffect } from "react";
 import { Icon } from "../ui/Icon";
-import { FluidWaveHeader } from "./FluidWaveHeader";
 
 interface HeaderProps {
   collapsed?: boolean;
   onToggleCollapse?: () => void;
   onNavigateProfile?: () => void;
   onLogoutRequest?: () => void;
+  onToggleMobileSidebar?: () => void;
 }
 
 export function Header({
@@ -14,6 +14,7 @@ export function Header({
   onToggleCollapse,
   onNavigateProfile,
   onLogoutRequest,
+  onToggleMobileSidebar,
 }: HeaderProps) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
@@ -54,8 +55,20 @@ export function Header({
 
   return (
     <header className="topbar">
-      {/* Dynamic Fluid Wave Canvas (Seamless Infinity Loop & Wall Reflection) */}
-      <FluidWaveHeader />
+      {/* Mobile Drawer Hamburger Button */}
+      {onToggleMobileSidebar && (
+        <button
+          type="button"
+          className="topbar__mobile-toggle"
+          onClick={onToggleMobileSidebar}
+          aria-label="Open navigation menu"
+          title="Open navigation menu"
+        >
+          <span className="topbar__hamburger-bar" />
+          <span className="topbar__hamburger-bar" />
+          <span className="topbar__hamburger-bar" />
+        </button>
+      )}
 
       <div className={`brand ${collapsed ? "brand--collapsed" : ""}`}>
         <div
