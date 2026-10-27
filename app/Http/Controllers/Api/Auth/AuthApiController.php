@@ -7,6 +7,7 @@ use App\Models\System\Auth\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 
@@ -46,15 +47,23 @@ class AuthApiController extends Controller
             ], 401);
         }
 
-        if (isset($user->status) && $user->status == 0) {
+        if (isset($user->status) && (int)$user->status === 0) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'This account has been deactivated. Please contact your administrator.',
             ], 403);
         }
 
-        // Generate session/token identifier
+        // Establish real authenticated session
+        Auth::login($user, true);
+        if ($request->hasSession()) {
+            $request->session()->regenerate();
+        }
+
+        // Generate stateless API Bearer token
         $token = Str::random(60);
+        Cache::put("api_token:{$token}", $user->id, now()->addDays(30));
+        $user->update(['remember_token' => $token]);
 
         return response()->json([
             'status' => 'success',
@@ -67,7 +76,10 @@ class AuthApiController extends Controller
                     'username' => $user->username,
                     'email' => $user->email,
                     'role' => $user->role ?? User::ROLE_ADMIN,
-                    'permissions' => User::ROLE_PERMISSIONS[$user->role ?? User::ROLE_ADMIN] ?? ['*'],
+                    'role_label' => $user->roleModel?->label ?? ucfirst($user->role),
+                    'is_super_admin' => $user->isSuperAdmin(),
+                    'permissions' => $user->getAllPermissions(),
+                    'sidebar_permissions' => $user->sidebar_permissions,
                     'photo' => $user->photo,
                 ],
             ],
@@ -75,10 +87,27 @@ class AuthApiController extends Controller
     }
 
     /**
-     * Terminate user session.
+     * Terminate user session and revoke token.
      */
-    public function logout(): JsonResponse
+    public function logout(Request $request): JsonResponse
     {
+        $token = $request->bearerToken() ?: $request->header('X-Auth-Token');
+        if ($token) {
+            Cache::forget("api_token:{$token}");
+        }
+
+        $user = $request->user() ?: Auth::user();
+        if ($user) {
+            $user->update(['remember_token' => null]);
+        }
+
+        Auth::logout();
+
+        if ($request->hasSession()) {
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+        }
+
         return response()->json([
             'status' => 'success',
             'message' => 'Logged out successfully',
@@ -88,15 +117,15 @@ class AuthApiController extends Controller
     /**
      * Get current authenticated user details.
      */
-    public function me(): JsonResponse
+    public function me(Request $request): JsonResponse
     {
-        $user = User::first();
+        $user = $request->user() ?: Auth::user();
 
         if (!$user) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'No active user found.',
-            ], 404);
+                'message' => 'Unauthenticated.',
+            ], 401);
         }
 
         return response()->json([
@@ -107,9 +136,37 @@ class AuthApiController extends Controller
                 'username' => $user->username,
                 'email' => $user->email,
                 'role' => $user->role ?? User::ROLE_ADMIN,
-                'permissions' => User::ROLE_PERMISSIONS[$user->role ?? User::ROLE_ADMIN] ?? ['*'],
+                'role_label' => $user->roleModel?->label ?? ucfirst($user->role),
+                'is_super_admin' => $user->isSuperAdmin(),
+                'permissions' => $user->getAllPermissions(),
+                'sidebar_permissions' => $user->sidebar_permissions,
                 'photo' => $user->photo,
             ],
+        ]);
+    }
+
+    /**
+     * List active users for assignment and administration.
+     */
+    public function users(): JsonResponse
+    {
+        $users = User::where('status', 1)
+            ->with('roleModel')
+            ->select('id', 'name', 'username', 'email', 'role', 'status')
+            ->get()
+            ->map(fn($u) => [
+                'id' => $u->id,
+                'name' => $u->name,
+                'username' => $u->username,
+                'email' => $u->email,
+                'role' => $u->roleModel?->label ?? ucfirst($u->role),
+                'role_code' => $u->role,
+                'is_super_admin' => $u->isSuperAdmin(),
+            ]);
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $users,
         ]);
     }
 }

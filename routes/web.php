@@ -20,9 +20,9 @@ use App\Http\Controllers\WarehouseController;
 |
 */
 
-// Default route -> Dashboard
+// Default route -> Login (so users authenticate first)
 Route::get('/', function () {
-    return view('app', ['page' => 'dashboard']);
+    return view('app', ['page' => 'login']);
 })->name('home');
 
 Route::get('/dashboard', function () {

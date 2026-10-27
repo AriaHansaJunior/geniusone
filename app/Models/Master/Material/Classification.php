@@ -26,4 +26,14 @@ class Classification extends Model
     {
         return $this->hasMany(Item::class, 'classifications_id');
     }
+
+    public function reportingType(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(\App\Models\Master\Organization\ReportingType::class, 'reporting_types_id');
+    }
+
+    public function account(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(\App\Models\Master\Finance\Account::class, 'accounts_id');
+    }
 }

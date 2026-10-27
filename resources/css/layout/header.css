@@ -282,13 +282,11 @@
   top: calc(100% + 8px);
   right: 0;
   width: 250px;
-  background: var(--glass-elevated-bg);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
+  background: #ffffff;
   color: var(--ink);
-  border: 1px solid var(--line);
+  border: 1px solid var(--line-strong);
   border-radius: var(--radius-md);
-  box-shadow: var(--shadow-lg), 0 0 0 1px rgba(0, 0, 0, 0.02);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
   z-index: 1000;
   animation: dropdownIn 0.15s ease-out;
   overflow: hidden;
@@ -351,6 +349,7 @@
 }
 .user-dropdown__menu {
   padding: 6px;
+  background: #ffffff;
   display: flex;
   flex-direction: column;
   gap: 2px;

@@ -148,11 +148,27 @@ class GeniusOneBackend
     }
 
     /**
-     * Enterprise Activity & Workflow Audit Logger.
+     * Unified Document Approval & Workflow State Machine Engine (BE-03, BE-04, BE-05, BE-06).
      */
-    public static function audit(): AuditLogger
+    public static function workflow(): \App\Services\Workflow\DocumentApprovalWorkflowService
     {
-        return app(AuditLogger::class);
+        return app(\App\Services\Workflow\DocumentApprovalWorkflowService::class);
+    }
+
+    /**
+     * SuperAdmin User Account Management Service (BE-01).
+     */
+    public static function userManagement(): \App\Services\Governance\UserManagementService
+    {
+        return app(\App\Services\Governance\UserManagementService::class);
+    }
+
+    /**
+     * Granular Permission & Role Management Service (BE-02).
+     */
+    public static function permissionManagement(): \App\Services\Governance\PermissionManagementService
+    {
+        return app(\App\Services\Governance\PermissionManagementService::class);
     }
 
     /**

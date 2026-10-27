@@ -31,7 +31,12 @@ class PurchaseOrderService
         array $additionalCosts = [],
         int $userId = 1
     ): PurchaseOrder {
-        $pr = \App\Models\PurchaseRequisition::with('items.item')->findOrFail($prId);
+        $pr = \App\Models\Procurement\PurchaseRequest\PurchaseRequisition::with('items.item')->findOrFail($prId);
+
+        // BE-05: Strict Downstream Gating (PR must be Approved before PO generation)
+        if (!in_array($pr->status, ['Approved', 'Approved 2'], true)) {
+            throw new InvalidArgumentException("Cannot create Purchase Order: Purchase Requisition '{$pr->pr_number}' must be fully Approved first (Current status: {$pr->status}).");
+        }
 
         // If items are not customized, convert all PR items directly
         if (empty($itemsData)) {
@@ -73,6 +78,16 @@ class PurchaseOrderService
             throw new InvalidArgumentException("A Purchase Order must contain at least one item.");
         }
 
+        // BE-05: Enforce that any explicitly linked PR items belong to an Approved PR
+        foreach ($items as $it) {
+            if (!empty($it['pr_has_items_id'])) {
+                $prItem = \App\Models\Procurement\PurchaseRequest\PurchaseRequisitionItem::with('purchaseRequisition')->find($it['pr_has_items_id']);
+                if ($prItem && !in_array($prItem->purchaseRequisition?->status, ['Approved', 'Approved 2'], true)) {
+                    throw new InvalidArgumentException("Cannot create Purchase Order: Linked PR '{$prItem->purchaseRequisition?->pr_number}' is not fully Approved.");
+                }
+            }
+        }
+
         return DB::transaction(function () use ($headerData, $items, $additionalCosts, $userId) {
             $poNumber = $headerData['po_number'] ?? DocumentNumberGenerator::generatePoNumber();
 
@@ -100,6 +115,7 @@ class PurchaseOrderService
                 'facility_status' => $headerData['facility_status'] ?? 'FASILITAS',
                 'delivery_terms_id' => $delivTermId,
                 'latest_delivery' => $latestDeliv,
+                'status' => $headerData['status'] ?? 'Waiting for Approve 1',
                 'remark' => $headerData['remark'] ?? null,
                 'revision' => $headerData['revision'] ?? 0,
             ]);
@@ -245,6 +261,9 @@ class PurchaseOrderService
         return DB::transaction(function () use ($id, $userId) {
             $order = PurchaseOrder::findOrFail($id);
 
+            // BE-05: Locking check
+            $this->assertNotLocked($order);
+
             if ($userId) {
                 $order->update(['updated_by' => $userId]);
             }
@@ -254,5 +273,15 @@ class PurchaseOrderService
 
             return (bool) $order->delete();
         });
+    }
+
+    /**
+     * BE-05: Assert that document is not immutable/locked.
+     */
+    public function assertNotLocked(PurchaseOrder $order): void
+    {
+        if (in_array($order->status, ['Approved', 'Approved 2'], true)) {
+            throw new InvalidArgumentException("Purchase Order '{$order->po_number}' is fully Approved and locked from modifications.");
+        }
     }
 }

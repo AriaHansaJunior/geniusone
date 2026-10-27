@@ -20,11 +20,23 @@ class ReceiveNoteService
             throw new InvalidArgumentException("A Receive Note must link to at least one PO item.");
         }
 
+        // BE-05: Strict Downstream Gating (PO must be Approved before receiving materials)
+        foreach ($receivedItems as $item) {
+            $poId = $item['purchase_order_id'] ?? null;
+            if ($poId) {
+                $po = \App\Models\Procurement\PurchaseOrder\PurchaseOrder::find($poId);
+                if ($po && !in_array($po->status, ['Approved', 'Approved 2'], true)) {
+                    throw new InvalidArgumentException("Cannot create Receive Note: Linked Purchase Order '{$po->po_number}' must be fully Approved first (Current status: {$po->status}).");
+                }
+            }
+        }
+
         return DB::transaction(function () use ($headerData, $receivedItems, $userId) {
             $rnNumber = $headerData['rn_number'] ?? DocumentNumberGenerator::generateRnNumber();
 
             $receiveNote = ReceiveNote::create([
                 'rn_number' => $rnNumber,
+                'status' => $headerData['status'] ?? 'Waiting for Approve 1',
                 'supliers_id' => $headerData['supliers_id'],
                 'currencies_id' => $headerData['currencies_id'],
                 'rate' => (float) ($headerData['rate'] ?? 1.0),
@@ -117,5 +129,15 @@ class ReceiveNoteService
         $query->orderBy($sortField, $sortOrder);
 
         return $query->paginate($perPage);
+    }
+
+    /**
+     * BE-05: Assert that Receive Note is not immutable/locked.
+     */
+    public function assertNotLocked(ReceiveNote $rn): void
+    {
+        if (in_array($rn->status, ['Approved', 'Approved 2'], true)) {
+            throw new InvalidArgumentException("Receive Note '{$rn->rn_number}' is fully Approved and locked from modifications.");
+        }
     }
 }

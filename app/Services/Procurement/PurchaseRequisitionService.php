@@ -191,6 +191,9 @@ class PurchaseRequisitionService
         return DB::transaction(function () use ($id, $userId) {
             $requisition = PurchaseRequisition::findOrFail($id);
 
+            // BE-05: Locking check
+            $this->assertNotLocked($requisition);
+
             if ($userId) {
                 $requisition->update(['updated_by' => $userId]);
             }
@@ -198,5 +201,15 @@ class PurchaseRequisitionService
             PurchaseRequisitionItem::where('purchase_requisitions_id', $requisition->id)->delete();
             return (bool) $requisition->delete();
         });
+    }
+
+    /**
+     * BE-05: Assert that PR is not immutable/locked.
+     */
+    public function assertNotLocked(PurchaseRequisition $pr): void
+    {
+        if (in_array($pr->status, ['Approved', 'Approved 2'], true)) {
+            throw new InvalidArgumentException("Purchase Requisition '{$pr->pr_number}' is fully Approved and locked from modifications.");
+        }
     }
 }

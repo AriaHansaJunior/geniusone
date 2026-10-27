@@ -15,6 +15,9 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        $this->call(GeniusOneDemoSeeder::class);
+        $this->call([
+            GeniusOneDemoSeeder::class,
+            GovernanceAndRbacSeeder::class,
+        ]);
     }
 }

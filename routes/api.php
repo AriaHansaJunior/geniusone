@@ -51,6 +51,14 @@ use App\Http\Controllers\Api\Common\ExchangeRateApiController;
 // Reporting Domain Controllers
 use App\Http\Controllers\Api\Reporting\TraceabilityReportApiController;
 
+// Governance & Admin Controllers (BE-01, BE-02, BE-06)
+use App\Http\Controllers\Api\Admin\UserManagementApiController;
+use App\Http\Controllers\Api\Admin\RolePermissionApiController;
+use App\Http\Controllers\Api\Admin\AuditLogApiController;
+
+// Workflow & Approval Engine Controllers (BE-03, BE-04, BE-05, BE-06)
+use App\Http\Controllers\Api\Workflow\ApprovalWorkflowApiController;
+
 /*
 |--------------------------------------------------------------------------
 | Modular ERP API Routes
@@ -180,6 +188,7 @@ Route::prefix('auth')->group(function () {
     Route::post('/login', [AuthApiController::class, 'login']);
     Route::post('/logout', [AuthApiController::class, 'logout']);
     Route::get('/me', [AuthApiController::class, 'me']);
+    Route::get('/users', [AuthApiController::class, 'users']);
 });
 
 Route::prefix('user')->group(function () {
@@ -194,6 +203,7 @@ Route::prefix('user')->group(function () {
 Route::prefix('dashboard')->group(function () {
     Route::get('/exchange-rates', [ExchangeRateApiController::class, 'index']);
 });
+
 
 // =========================================================================
 // 7. BACKWARD-COMPATIBILITY ALIASES (Direct Routes for Existing Frontend)
@@ -216,4 +226,85 @@ Route::get('/report/{code}', [TraceabilityReportApiController::class, 'show']);
 Route::get('/warehouse', [WarehouseApiController::class, 'index']);
 Route::get('/warehouse/{code}', [WarehouseApiController::class, 'show']);
 Route::post('/warehouse', [WarehouseApiController::class, 'store']);
+
+// =========================================================================
+// 8. GOVERNANCE & SUPERADMIN API (BE-01, BE-02, BE-06)
+// =========================================================================
+Route::prefix('admin')->group(function () {
+    // User Account Management (BE-01)
+    Route::get('/users', [UserManagementApiController::class, 'index']);
+    Route::post('/users', [UserManagementApiController::class, 'store']);
+    Route::get('/users/{id}', [UserManagementApiController::class, 'show']);
+    Route::put('/users/{id}', [UserManagementApiController::class, 'update']);
+    Route::patch('/users/{id}/toggle-status', [UserManagementApiController::class, 'toggleStatus']);
+    Route::post('/users/{id}/reset-password', [UserManagementApiController::class, 'resetPassword']);
+    Route::post('/users/{id}/permissions', [UserManagementApiController::class, 'updatePermissions']);
+    Route::delete('/users/{id}', [UserManagementApiController::class, 'destroy']);
+
+    // Role & Granular Permission Management (BE-02)
+    Route::get('/roles', [RolePermissionApiController::class, 'listRoles']);
+    Route::post('/roles', [RolePermissionApiController::class, 'storeRole']);
+    Route::put('/roles/{id}', [RolePermissionApiController::class, 'updateRole']);
+    Route::delete('/roles/{id}', [RolePermissionApiController::class, 'destroyRole']);
+    Route::get('/permissions', [RolePermissionApiController::class, 'listPermissions']);
+    Route::get('/permission-matrix', [RolePermissionApiController::class, 'permissionMatrix']);
+    Route::post('/roles/{id}/permissions', [RolePermissionApiController::class, 'updateRolePermissions']);
+
+    // Centralized Audit Trail & History (BE-06)
+    Route::get('/audit-logs', [AuditLogApiController::class, 'index']);
+    Route::get('/approval-histories', [AuditLogApiController::class, 'approvalHistories']);
+});
+
+// Versioned /v1/admin aliases
+Route::prefix('v1/admin')->group(function () {
+    Route::get('/users', [UserManagementApiController::class, 'index']);
+    Route::post('/users', [UserManagementApiController::class, 'store']);
+    Route::get('/users/{id}', [UserManagementApiController::class, 'show']);
+    Route::put('/users/{id}', [UserManagementApiController::class, 'update']);
+    Route::patch('/users/{id}/toggle-status', [UserManagementApiController::class, 'toggleStatus']);
+    Route::post('/users/{id}/reset-password', [UserManagementApiController::class, 'resetPassword']);
+    Route::post('/users/{id}/permissions', [UserManagementApiController::class, 'updatePermissions']);
+    Route::delete('/users/{id}', [UserManagementApiController::class, 'destroy']);
+
+    Route::get('/roles', [RolePermissionApiController::class, 'listRoles']);
+    Route::post('/roles', [RolePermissionApiController::class, 'storeRole']);
+    Route::put('/roles/{id}', [RolePermissionApiController::class, 'updateRole']);
+    Route::delete('/roles/{id}', [RolePermissionApiController::class, 'destroyRole']);
+    Route::get('/permissions', [RolePermissionApiController::class, 'listPermissions']);
+    Route::get('/permission-matrix', [RolePermissionApiController::class, 'permissionMatrix']);
+    Route::post('/roles/{id}/permissions', [RolePermissionApiController::class, 'updateRolePermissions']);
+
+    Route::get('/audit-logs', [AuditLogApiController::class, 'index']);
+    Route::get('/approval-histories', [AuditLogApiController::class, 'approvalHistories']);
+});
+
+// =========================================================================
+// 9. UNIFIED WORKFLOW APPROVAL ENGINE API (BE-03, BE-04, BE-05, BE-06)
+// =========================================================================
+Route::prefix('approval')->group(function () {
+    Route::post('/{module}/{id}/approve', [ApprovalWorkflowApiController::class, 'approve']);
+    Route::post('/{module}/{id}/unapprove', [ApprovalWorkflowApiController::class, 'unapprove']);
+    Route::post('/{module}/{id}/reject', [ApprovalWorkflowApiController::class, 'reject']);
+    Route::post('/{module}/{id}/resubmit', [ApprovalWorkflowApiController::class, 'resubmit']);
+    Route::get('/{module}/{id}/history', [ApprovalWorkflowApiController::class, 'history']);
+});
+
+Route::prefix('v1/approval')->group(function () {
+    Route::post('/{module}/{id}/approve', [ApprovalWorkflowApiController::class, 'approve']);
+    Route::post('/{module}/{id}/unapprove', [ApprovalWorkflowApiController::class, 'unapprove']);
+    Route::post('/{module}/{id}/reject', [ApprovalWorkflowApiController::class, 'reject']);
+    Route::post('/{module}/{id}/resubmit', [ApprovalWorkflowApiController::class, 'resubmit']);
+    Route::get('/{module}/{id}/history', [ApprovalWorkflowApiController::class, 'history']);
+});
+
+// Direct Per-Module Approval Routes (For Seamless Frontend Consumption)
+$workflowModules = ['pr', 'po', 'rn', 'bpb', 'warehouse', 'request-materials', 'returns'];
+foreach ($workflowModules as $mod) {
+    Route::post("{$mod}/{id}/approve", [ApprovalWorkflowApiController::class, 'approve'])->defaults('module', $mod);
+    Route::post("{$mod}/{id}/unapprove", [ApprovalWorkflowApiController::class, 'unapprove'])->defaults('module', $mod);
+    Route::post("{$mod}/{id}/reject", [ApprovalWorkflowApiController::class, 'reject'])->defaults('module', $mod);
+    Route::post("{$mod}/{id}/resubmit", [ApprovalWorkflowApiController::class, 'resubmit'])->defaults('module', $mod);
+    Route::get("{$mod}/{id}/approval-history", [ApprovalWorkflowApiController::class, 'history'])->defaults('module', $mod);
+}
+
 

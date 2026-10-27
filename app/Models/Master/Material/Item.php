@@ -69,6 +69,16 @@ class Item extends Model
         return $this->belongsTo(UnitOfMeasurement::class, 'units_of_measurements_id');
     }
 
+    public function unit(): BelongsTo
+    {
+        return $this->belongsTo(UnitOfMeasurement::class, 'units_of_measurements_id');
+    }
+
+    public function brand(): BelongsTo
+    {
+        return $this->belongsTo(Brand::class, 'brands_id');
+    }
+
     public function smallestUnit(): BelongsTo
     {
         return $this->belongsTo(UnitOfMeasurement::class, 'smallest_unit_id');

@@ -213,28 +213,6 @@ export function Header({
                   <span>Edit Profile</span>
                 </button>
 
-                {/* Persona Switcher Quick Widget */}
-                <div style={{ padding: "8px 12px", borderTop: "1px solid var(--line)", background: "rgba(0,0,0,0.02)" }}>
-                  <span style={{ fontSize: "10.5px", fontWeight: 700, color: "var(--muted)", display: "block", marginBottom: "4px", textTransform: "uppercase" }}>
-                    Switch Persona:
-                  </span>
-                  <select
-                    className="form-input"
-                    style={{ fontSize: "11px", padding: "4px 6px", width: "100%", background: "#fff" }}
-                    value={currentUser.id}
-                    onChange={(e) => {
-                      e.stopPropagation();
-                      switchUser(e.target.value);
-                    }}
-                  >
-                    {allUsers.map((u) => (
-                      <option key={u.id} value={u.id}>
-                        {u.name} ({u.role})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
                 <div className="user-dropdown__divider" />
 
                 <button

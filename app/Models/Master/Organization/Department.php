@@ -2,6 +2,8 @@
 
 namespace App\Models\Master\Organization;
 
+use App\Models\Master\Material\Unit;
+use App\Models\Procurement\PurchaseRequest\PurchaseRequisition;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;

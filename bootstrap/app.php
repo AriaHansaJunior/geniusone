@@ -13,6 +13,10 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->api(prepend: [
+            \App\Http\Middleware\AuthenticateApiRequest::class,
+        ]);
+
         $middleware->alias([
             'auth' => \App\Http\Middleware\EnsureAuthenticated::class,
             'active' => \App\Http\Middleware\EnsureUserIsActive::class,

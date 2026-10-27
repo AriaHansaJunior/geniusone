@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Icon } from "../../components/ui/Icon";
 import { Button } from "../../components/ui/Button";
+import { useAuthPermission } from "../../context/AuthPermissionContext";
 
 interface LoginProps {
   onNavigateHome?: () => void;
@@ -8,8 +9,9 @@ interface LoginProps {
 }
 
 export function Login({ onNavigateHome, onLoginSuccess }: LoginProps) {
-  const [username, setUsername] = useState("rizky.aditya");
-  const [password, setPassword] = useState("••••••••••••");
+  const { loginUser } = useAuthPermission();
+  const [username, setUsername] = useState("superadmin");
+  const [password, setPassword] = useState("secret123");
   const [showPassword, setShowPassword] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -27,6 +29,7 @@ export function Login({ onNavigateHome, onLoginSuccess }: LoginProps) {
       const response = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json", Accept: "application/json" },
+        credentials: "include",
         body: JSON.stringify({ username, password }),
       });
       const data = await response.json();
@@ -36,11 +39,12 @@ export function Login({ onNavigateHome, onLoginSuccess }: LoginProps) {
           try {
             sessionStorage.removeItem("geniusone_sidebar_sections");
             sessionStorage.removeItem("geniusone_sidebar_groups");
-            if (data.data?.user) sessionStorage.setItem("geniusone_user", JSON.stringify(data.data.user));
-            if (data.data?.token) sessionStorage.setItem("geniusone_token", data.data.token);
           } catch {
             // ignore
           }
+        }
+        if (data.data?.user) {
+          loginUser(data.data.user, data.data.token);
         }
         if (onLoginSuccess) {
           onLoginSuccess();
@@ -48,17 +52,10 @@ export function Login({ onNavigateHome, onLoginSuccess }: LoginProps) {
           onNavigateHome();
         }
       } else {
-        // Allow demo login fallback
-        if (username === "rizky.aditya" || username === "admin") {
-          if (onLoginSuccess) onLoginSuccess();
-          else if (onNavigateHome) onNavigateHome();
-          return;
-        }
         setStatusMessage(data?.message || "Invalid username or password.");
       }
-    } catch {
-      if (onLoginSuccess) onLoginSuccess();
-      else if (onNavigateHome) onNavigateHome();
+    } catch (err) {
+      setStatusMessage("Unable to connect to the authentication service. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -95,7 +92,7 @@ export function Login({ onNavigateHome, onLoginSuccess }: LoginProps) {
               <span className="login-card__eyebrow">ENTERPRISE PORTAL</span>
               <h1 className="login-card__title">Sign In to GeniusOne</h1>
               <p className="login-card__subtitle">
-                Enter your procurement and operations credentials to access the system.
+                Enter your operational credentials to authenticate against the enterprise governance system.
               </p>
             </div>
 
@@ -108,14 +105,14 @@ export function Login({ onNavigateHome, onLoginSuccess }: LoginProps) {
 
             <form onSubmit={handleSubmit} className="login-form">
               <div className="form-group">
-                <label htmlFor="login-username">Username</label>
+                <label htmlFor="login-username">Username or Email</label>
                 <div className="input-with-icon">
                   <Icon name="user" size={16} className="input-icon" />
                   <input
                     id="login-username"
                     type="text"
                     className="form-input form-input--icon-left"
-                    placeholder="Enter your username"
+                    placeholder="Enter username or email"
                     value={username}
                     onChange={(e) => {
                       setUsername(e.target.value);
@@ -135,7 +132,7 @@ export function Login({ onNavigateHome, onLoginSuccess }: LoginProps) {
                     className="login-forgot-link"
                     onClick={(e) => {
                       e.preventDefault();
-                      setStatusMessage("Password recovery will be available with backend authentication integration.");
+                      setStatusMessage("Please contact your IT System Administrator to reset your enterprise password.");
                     }}
                   >
                     Forgot password?
@@ -179,36 +176,52 @@ export function Login({ onNavigateHome, onLoginSuccess }: LoginProps) {
                 type="submit"
                 variant="primary"
                 className="login-submit-btn"
+                disabled={isLoading}
               >
-                Sign In
+                {isLoading ? "Signing In..." : "Sign In"}
               </Button>
             </form>
 
-            {(onLoginSuccess || onNavigateHome) && (
-              <div className="login-card__nav-helper">
-                <button
-                  type="button"
-                  className="login-back-link"
-                  onClick={() => {
-                    if (typeof window !== "undefined") {
-                      try {
-                        sessionStorage.removeItem("geniusone_sidebar_sections");
-                        sessionStorage.removeItem("geniusone_sidebar_groups");
-                      } catch {
-                        // ignore
-                      }
-                    }
-                    if (onLoginSuccess) {
-                      onLoginSuccess();
-                    } else if (onNavigateHome) {
-                      onNavigateHome();
-                    }
-                  }}
-                >
-                  <span>Return to Workspace (Preview Navigation)</span>
-                </button>
+            {/* Quick Fill Test Personas */}
+            <div style={{ marginTop: "18px", paddingTop: "14px", borderTop: "1px solid var(--line)" }}>
+              <span style={{ fontSize: "10.5px", fontWeight: 700, color: "var(--muted)", display: "block", marginBottom: "8px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                Select Role to Test (Pass: secret123)
+              </span>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
+                {[
+                  { label: "SuperAdmin", user: "superadmin" },
+                  { label: "Procurement Mgr", user: "rizky.aditya" },
+                  { label: "Purchasing Staff", user: "arsyeila" },
+                  { label: "Finance Approver 1", user: "yustina" },
+                  { label: "Director Approver 2", user: "awi.l" },
+                  { label: "Warehouse Head", user: "bambang.s" },
+                  { label: "Warehouse Staff", user: "budi.s" },
+                ].map((acc) => (
+                  <button
+                    key={acc.user}
+                    type="button"
+                    style={{
+                      fontSize: "11px",
+                      padding: "4px 8px",
+                      background: username === acc.user ? "var(--blue-50)" : "#f8fafc",
+                      border: `1px solid ${username === acc.user ? "var(--blue-500)" : "var(--line)"}`,
+                      borderRadius: "var(--radius-xs)",
+                      color: username === acc.user ? "var(--blue-700)" : "var(--ink-soft)",
+                      cursor: "pointer",
+                      fontWeight: username === acc.user ? 700 : 500,
+                      transition: "all 0.15s ease",
+                    }}
+                    onClick={() => {
+                      setUsername(acc.user);
+                      setPassword("secret123");
+                      setStatusMessage(null);
+                    }}
+                  >
+                    {acc.label}
+                  </button>
+                ))}
               </div>
-            )}
+            </div>
           </div>
         </div>
       </main>

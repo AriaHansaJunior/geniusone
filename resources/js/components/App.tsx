@@ -225,14 +225,28 @@ interface AppProps {
 function resolveViewStateFromPath(pathname: string, defaultPage: PageKey = "dashboard"): ViewState {
   const cleanPath = decodeURIComponent(pathname).replace(/\/$/, "");
 
-  // Root or Dashboard
-  if (cleanPath === "" || cleanPath === "/dashboard") {
+  // Authentication routes
+  if (cleanPath === "/login") {
+    return { type: "login" };
+  }
+
+  // Authentication gate: if unauthenticated, strictly direct to Login page!
+  const isAuth =
+    typeof window !== "undefined" &&
+    Boolean(sessionStorage.getItem("geniusone_user") || localStorage.getItem("geniusone_user"));
+
+  if (!isAuth) {
+    return { type: "login" };
+  }
+
+  // Root entry path ("")
+  if (cleanPath === "") {
     return { type: "dashboard" };
   }
 
-  // Authentication & User Profile routes
-  if (cleanPath === "/login") {
-    return { type: "login" };
+  // Dashboard
+  if (cleanPath === "/dashboard") {
+    return { type: "dashboard" };
   }
   if (cleanPath === "/profile/edit" || cleanPath === "/edit-profile") {
     return { type: "edit-profile" };
@@ -2430,6 +2444,10 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
     setShowLogoutDialog(false);
     if (typeof window !== "undefined") {
       try {
+        sessionStorage.removeItem("geniusone_user");
+        sessionStorage.removeItem("geniusone_token");
+        localStorage.removeItem("geniusone_user");
+        localStorage.removeItem("geniusone_token");
         sessionStorage.removeItem("geniusone_sidebar_sections");
         sessionStorage.removeItem("geniusone_sidebar_groups");
       } catch {

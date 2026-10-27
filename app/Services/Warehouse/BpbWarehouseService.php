@@ -28,17 +28,28 @@ class BpbWarehouseService
      * @param array $headerData ['receive_date', 'note', 'bpb_number']
      * @param array $mappings Array of ['po_has_rn_id', 'warehouses_id', 'item_id' => optional]
      * @param int $userId
-     * @param bool $autoUpdateStock Whether to automatically increment physical item stock
+     * @param bool $autoUpdateStock Whether to automatically increment physical item stock (default false for BE-05 workflow)
      * @return BpbReceiveMaterial
      */
     public function createBpb(
         array $headerData,
         array $mappings,
         int $userId = 1,
-        bool $autoUpdateStock = true
+        bool $autoUpdateStock = false
     ): BpbReceiveMaterial {
         if (empty($mappings)) {
             throw new InvalidArgumentException("A BPB must contain at least one warehouse item allocation.");
+        }
+
+        // BE-05: Strict Downstream Gating (RN must be Approved before warehouse allocation)
+        foreach ($mappings as $map) {
+            $poRnId = $map['po_has_rn_id'] ?? null;
+            if ($poRnId) {
+                $poRn = PurchaseOrderReceiveNote::with('receiveNote')->find($poRnId);
+                if ($poRn && $poRn->receiveNote && !in_array($poRn->receiveNote->status, ['Approved', 'Approved 2'], true)) {
+                    throw new InvalidArgumentException("Cannot create BPB: Referenced Receive Note '{$poRn->receiveNote->rn_number}' must be fully Approved first (Current status: {$poRn->receiveNote->status}).");
+                }
+            }
         }
 
         return DB::transaction(function () use ($headerData, $mappings, $userId, $autoUpdateStock) {
@@ -46,6 +57,7 @@ class BpbWarehouseService
 
             $bpb = BpbReceiveMaterial::create([
                 'bpb_number' => $bpbNumber,
+                'status' => $headerData['status'] ?? 'Waiting for Approve 1',
                 'note' => $headerData['note'] ?? null,
                 'receive_date' => $headerData['receive_date'] ?? now(),
                 'creator_id' => $userId,

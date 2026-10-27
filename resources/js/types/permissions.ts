@@ -73,18 +73,22 @@ export type ModulePermissions = Record<PermissionAction, boolean>;
 export type UserPermissionMap = Record<ApprovalModule, ModulePermissions>;
 
 export interface UserAccount {
-  id: string;
+  id: string | number;
   name: string;
   username: string;
   email: string;
   role: string;
-  department: string;
+  role_label?: string;
+  department?: string;
   avatar?: string;
-  status: "active" | "inactive";
+  photo?: string | null;
+  status?: "active" | "inactive" | number;
   isSuperAdmin?: boolean;
-  permissions: UserPermissionMap;
-  createdAt: string;
-  updatedAt: string;
+  is_super_admin?: boolean;
+  permissions?: UserPermissionMap | string[];
+  sidebar_permissions?: string[] | null;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 /**

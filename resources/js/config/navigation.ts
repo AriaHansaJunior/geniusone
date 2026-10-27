@@ -198,3 +198,99 @@ export const navigationConfig: NavSection[] = [
     isUnpopulated: true,
   },
 ];
+
+export interface SidebarMenuItemDescriptor {
+  id: string;
+  label: string;
+  section: string;
+  group?: string;
+}
+
+export const ALL_SIDEBAR_MENU_ITEMS: SidebarMenuItemDescriptor[] = [
+  // Dashboard & Overview
+  { id: "dashboard", label: "Dashboard", section: "Dashboard" },
+  { id: "stock-notification-master", label: "Stock Notification Master", section: "Dashboard" },
+
+  // Procurement - Purchase Master
+  { id: "supplier", label: "Supplier", section: "Procurement", group: "Purchase Master" },
+  { id: "payment-term", label: "Payment Term", section: "Procurement", group: "Purchase Master" },
+  { id: "purchase-category", label: "Purchase Category", section: "Procurement", group: "Purchase Master" },
+  { id: "delivery-terms", label: "Delivery Terms", section: "Procurement", group: "Purchase Master" },
+  { id: "additional-costs", label: "Additional Costs", section: "Procurement", group: "Purchase Master" },
+  { id: "pph", label: "PPH", section: "Procurement", group: "Purchase Master" },
+  { id: "rafaksi-type", label: "Rafaksi Type", section: "Procurement", group: "Purchase Master" },
+  { id: "job-number", label: "Job Number", section: "Procurement", group: "Purchase Master" },
+
+  // Procurement - Transactions
+  { id: "pr", label: "Purchase Requisition", section: "Procurement", group: "Transactions" },
+  { id: "po", label: "Purchase Order", section: "Procurement", group: "Transactions" },
+
+  // Procurement - Reports
+  { id: "report", label: "Report PR-PO", section: "Procurement", group: "Reports" },
+  { id: "pr-report", label: "Purchase Requisition Report", section: "Procurement", group: "Reports" },
+  { id: "po-report", label: "Purchase Order Report", section: "Procurement", group: "Reports" },
+
+  // Exim - Master
+  { id: "unit", label: "Unit", section: "Exim", group: "Exim Master" },
+  { id: "satuan", label: "Unit Reference", section: "Exim", group: "Exim Master" },
+  { id: "item", label: "Item", section: "Exim", group: "Exim Master" },
+  { id: "brand", label: "Brand", section: "Exim", group: "Exim Master" },
+  { id: "classification", label: "Classification", section: "Exim", group: "Exim Master" },
+  { id: "department", label: "Department", section: "Exim", group: "Exim Master" },
+  { id: "facility", label: "Facility", section: "Exim", group: "Exim Master" },
+  { id: "hs", label: "HS", section: "Exim", group: "Exim Master" },
+  { id: "category", label: "Category", section: "Exim", group: "Exim Master" },
+  { id: "style", label: "Style", section: "Exim", group: "Exim Master" },
+  { id: "colour", label: "Colour", section: "Exim", group: "Exim Master" },
+  { id: "country", label: "Country", section: "Exim", group: "Exim Master" },
+  { id: "currency", label: "Currency", section: "Exim", group: "Exim Master" },
+  { id: "account", label: "Account", section: "Exim", group: "Exim Master" },
+
+  // Exim - Operations
+  { id: "receive-note", label: "Receive Note", section: "Exim", group: "Operations" },
+  { id: "receive-note-return", label: "Receive Note Return", section: "Exim", group: "Operations" },
+  { id: "document-history", label: "Document History", section: "Exim", group: "Operations" },
+
+  // Warehouse - Master
+  { id: "warehouse-master", label: "Warehouse", section: "Warehouse", group: "Warehouse Master" },
+  { id: "type-of-mutation", label: "Type of Mutation", section: "Warehouse", group: "Warehouse Master" },
+  { id: "wh-type-of-request", label: "Type of Request", section: "Warehouse", group: "Warehouse Master" },
+  { id: "wh-destination-location", label: "Destination Location", section: "Warehouse", group: "Warehouse Master" },
+
+  // Warehouse - Adjustment
+  { id: "wh-adj-prod", label: "Adjustment Production", section: "Warehouse", group: "Adjustment" },
+  { id: "wh-adj-bc", label: "Adjustment Stock BC", section: "Warehouse", group: "Adjustment" },
+  { id: "wh-opname-material", label: "Opname Material", section: "Warehouse", group: "Adjustment" },
+  { id: "wh-adj-stock", label: "Adjustment Stock", section: "Warehouse", group: "Adjustment" },
+
+  // Warehouse - Incoming
+  { id: "transfer-stock-return", label: "Transfer Stock Return", section: "Warehouse", group: "Incoming" },
+  { id: "transfer-stock-result", label: "Transfer Stock Result", section: "Warehouse", group: "Incoming" },
+  { id: "receive-material-non-fasilitas", label: "Receive Material (Non-Fasilitas)", section: "Warehouse", group: "Incoming" },
+  { id: "warehouse", label: "Receive Material (BPB)", section: "Warehouse", group: "Incoming" },
+  { id: "purchase-return", label: "Purchase Return", section: "Warehouse", group: "Incoming" },
+  { id: "sales-return", label: "Sales Return", section: "Warehouse", group: "Incoming" },
+
+  // Warehouse - Outcoming
+  { id: "wh-out-do", label: "Delivery Order (Surat Jalan)", section: "Warehouse", group: "Outcoming" },
+  { id: "wh-out-issue", label: "Issue Material", section: "Warehouse", group: "Outcoming" },
+  { id: "wh-out-disposal", label: "Disposal", section: "Warehouse", group: "Outcoming" },
+
+  // Warehouse - Request
+  { id: "wh-req-weight-note", label: "Weight Note", section: "Warehouse", group: "Request" },
+  { id: "wh-req-material", label: "Request Material", section: "Warehouse", group: "Request" },
+  { id: "wh-req-weight-note-fg", label: "Weight Note Multiple FG", section: "Warehouse", group: "Request" },
+  { id: "wh-req-shipping", label: "Shipping Instruction", section: "Warehouse", group: "Request" },
+
+  // Warehouse - Report
+  { id: "wh-rep-receive-material", label: "Receive Material", section: "Warehouse", group: "Report" },
+  { id: "wh-rep-stock-item", label: "Stock Item", section: "Warehouse", group: "Report" },
+  { id: "wh-rep-stock-card", label: "Stock Card", section: "Warehouse", group: "Report" },
+  { id: "wh-rep-stock-transfer", label: "Stock Transfer Report", section: "Warehouse", group: "Report" },
+  { id: "wh-rep-delivery-order", label: "Delivery Order Report", section: "Warehouse", group: "Report" },
+  { id: "wh-rep-stock-mutation", label: "Stock Mutation Report", section: "Warehouse", group: "Report" },
+  { id: "wh-rep-outstanding-request", label: "Outstanding Request", section: "Warehouse", group: "Report" },
+
+  // Production
+  { id: "production", label: "Production", section: "Production" },
+];

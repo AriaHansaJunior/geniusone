@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { Icon } from "../ui/Icon";
 import { navigationConfig, type NavSection, type NavGroupItem, type NavLeafItem } from "../../config/navigation";
 import type { PageKey } from "../../types";
+import { useAuthPermission } from "../../context/AuthPermissionContext";
 
 const STORAGE_KEY_SECTIONS = "geniusone_sidebar_sections";
 const STORAGE_KEY_GROUPS = "geniusone_sidebar_groups";
@@ -23,6 +24,51 @@ export function Sidebar({
   isMobileOpen = false,
   onCloseMobile,
 }: SidebarProps) {
+  const { canAccessSidebarItem } = useAuthPermission();
+
+  const filteredNavigation = React.useMemo(() => {
+    return navigationConfig
+      .map((section) => {
+        // Direct leaf section
+        if (section.path && !section.groups && !section.directItems) {
+          if (!canAccessSidebarItem(section.id)) return null;
+          return section;
+        }
+
+        // Unpopulated section (e.g. production)
+        if (section.isUnpopulated) {
+          if (!canAccessSidebarItem(section.id)) return null;
+          return section;
+        }
+
+        // Section with groups or directItems
+        const visibleGroups = (section.groups || [])
+          .map((group) => {
+            if (group.isDirectLeaf) {
+              return canAccessSidebarItem(group.id) ? group : null;
+            }
+            const visibleItems = (group.items || []).filter((item) => canAccessSidebarItem(item.id));
+            if (visibleItems.length === 0) return null;
+            return { ...group, items: visibleItems };
+          })
+          .filter(Boolean) as NavGroupItem[];
+
+        const visibleDirectItems = (section.directItems || []).filter((item) =>
+          canAccessSidebarItem(item.id)
+        );
+
+        if (visibleGroups.length === 0 && visibleDirectItems.length === 0) {
+          return null;
+        }
+
+        return {
+          ...section,
+          groups: visibleGroups.length > 0 ? visibleGroups : undefined,
+          directItems: visibleDirectItems.length > 0 ? visibleDirectItems : undefined,
+        };
+      })
+      .filter(Boolean) as NavSection[];
+  }, [canAccessSidebarItem]);
   // Track open state of top-level sections (e.g. procurement, exim, warehouse)
   const [openSections, setOpenSections] = useState<Record<string, boolean>>(() => {
     if (typeof window !== "undefined") {
@@ -242,7 +288,7 @@ export function Sidebar({
 
           {/* Independent Vertical Scroll Area */}
           <nav className="sidebar-nav-scroll">
-            {navigationConfig.map((section) => {
+            {filteredNavigation.map((section) => {
               const hasSubmenu = Boolean(
                 (section.groups && section.groups.length > 0) ||
                 (section.directItems && section.directItems.length > 0)

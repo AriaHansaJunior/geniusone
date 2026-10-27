@@ -17,14 +17,16 @@ class UserProfileApiController extends Controller
      */
     public function show(Request $request): JsonResponse
     {
-        $userId = $request->query('user_id');
-        $user = $userId ? User::find($userId) : User::first();
+        $user = $request->user() ?: Auth::user();
+        if (!$user && $request->query('user_id')) {
+            $user = User::find($request->query('user_id'));
+        }
 
         if (!$user) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'User profile not found.',
-            ], 404);
+                'message' => 'Unauthenticated: User profile not found.',
+            ], 401);
         }
 
         return response()->json([
@@ -46,14 +48,16 @@ class UserProfileApiController extends Controller
      */
     public function update(Request $request): JsonResponse
     {
-        $userId = $request->input('user_id');
-        $user = $userId ? User::find($userId) : User::first();
+        $user = $request->user() ?: Auth::user();
+        if (!$user && $request->input('user_id')) {
+            $user = User::find($request->input('user_id'));
+        }
 
         if (!$user) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'User profile not found to update.',
-            ], 404);
+                'message' => 'Unauthenticated: User profile not found to update.',
+            ], 401);
         }
 
         $validated = $request->validate([
