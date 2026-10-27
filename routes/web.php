@@ -341,9 +341,11 @@ Route::get('/warehouse/report/outstanding-request', fn() => view('app', ['page' 
 // User Authentication (Frontend UI)
 Route::get('/login', fn() => view('app', ['page' => 'login']))->name('login');
 
-// Edit Profile Page
-Route::get('/profile/edit', fn() => view('app', ['page' => 'edit-profile']))->name('profile.edit');
-Route::get('/edit-profile', fn() => view('app', ['page' => 'edit-profile']));
+// SuperAdmin User & Permission Management
+Route::get('/admin/user-permissions', fn() => view('app', ['page' => 'user-permission-admin']))->name('admin.user-permissions');
+Route::get('/admin/users', fn() => view('app', ['page' => 'user-permission-admin']))->name('admin.users');
+Route::get('/admin/permissions', fn() => view('app', ['page' => 'user-permission-admin']))->name('admin.permissions');
+Route::get('/user-permission-admin', fn() => view('app', ['page' => 'user-permission-admin']));
 
 // Fallback Route for Unknown URLs (Requirement 5.3)
 Route::fallback(function () {

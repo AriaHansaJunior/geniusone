@@ -2934,6 +2934,7 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
           viewState.page !== "job-number" &&
           viewState.page !== "rafaksi-type" &&
           viewState.page !== "currency" &&
+          viewState.page !== "user-permission-admin" &&
           viewState.page !== "dashboard" && (
             <PlaceholderPage
               eyebrow={currentMeta.eyebrow}

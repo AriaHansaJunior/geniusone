@@ -1,0 +1,574 @@
+/* ==========================================================================
+   SuperAdmin User & Access Administration — GENIUSONE UI 2.0
+   ========================================================================== */
+
+.user-admin-page {
+  width: 100%;
+  animation: fadeIn 0.15s ease-out;
+}
+
+/* User Admin Table Toolbar */
+.user-admin-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 18px;
+  background: var(--glass-card-bg);
+  border-bottom: 1px solid var(--line);
+}
+
+.user-admin-toolbar__search {
+  flex: 1;
+  max-width: 480px;
+}
+
+.user-admin-toolbar__actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Feedback Notification */
+.user-admin-feedback {
+  margin-bottom: 16px;
+  padding: 10px 16px;
+  border-radius: var(--radius-md, 8px);
+  font-size: 13px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.user-admin-feedback--success {
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.28);
+  color: #047857;
+}
+
+.user-admin-feedback--error {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.28);
+  color: #b91c1c;
+}
+
+.user-admin-feedback__close {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: currentColor;
+  padding: 2px;
+  display: grid;
+  place-items: center;
+  opacity: 0.7;
+}
+.user-admin-feedback__close:hover {
+  opacity: 1;
+}
+
+/* User Avatar & Identity Cell */
+.user-cell {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.user-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #0071e3 0%, #3b82f6 100%);
+  color: #ffffff;
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  font-weight: 800;
+  flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(0, 113, 227, 0.2);
+}
+
+.user-avatar--super {
+  background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%);
+  box-shadow: 0 2px 6px rgba(124, 58, 237, 0.25);
+}
+
+.user-identity {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.user-name-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.user-full-name {
+  font-weight: 700;
+  color: var(--ink);
+  font-size: 13px;
+}
+
+.user-username-badge {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--blue-700);
+}
+
+.user-email-text {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.user-role-text {
+  font-weight: 600;
+  color: var(--ink);
+  font-size: 12px;
+}
+
+.user-dept-text {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+/* Row Action Buttons Container */
+.user-row-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ==========================================================================
+   Permission & Sidebar Management Modal (Modal 2)
+   ========================================================================== */
+
+.perm-dialog-card {
+  width: 980px;
+  max-width: 95vw;
+  height: 88vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.perm-header-user-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.perm-header-title {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.perm-header-title h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.perm-header-title p {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* Modal Tabs Navigation */
+.perm-modal-tabs {
+  display: flex;
+  background: #f8fafc;
+  border-bottom: 1px solid var(--line);
+  padding: 0 20px;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.perm-modal-tab {
+  padding: 12px 18px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--slate-600);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.perm-modal-tab:hover {
+  color: var(--blue-700);
+  background: rgba(241, 245, 249, 0.6);
+}
+
+.perm-modal-tab.active {
+  color: var(--blue-700);
+  font-weight: 700;
+  border-bottom-color: var(--blue-600);
+  background: transparent;
+}
+
+.perm-modal-tab__badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 7px;
+  border-radius: 9999px;
+  background: var(--slate-200);
+  color: var(--slate-700);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.perm-modal-tab.active .perm-modal-tab__badge {
+  background: var(--blue-100);
+  color: var(--blue-800);
+}
+
+/* Modal Body Scroll Area */
+.perm-modal-body {
+  overflow-y: auto;
+  flex: 1;
+  padding: 18px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  background: #fbfcfe;
+}
+
+/* SuperAdmin Banner */
+.perm-superadmin-banner {
+  padding: 10px 14px;
+  border-radius: var(--radius-md, 8px);
+  background: rgba(124, 58, 237, 0.08);
+  border: 1px solid rgba(124, 58, 237, 0.25);
+  color: #6d28d9;
+  font-size: 12px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Tab 1: Navigation Access Preset Toolbar */
+.sidebar-preset-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 10px 14px;
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md, 8px);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+.sidebar-preset-bar__label {
+  font-size: 12px;
+  color: var(--slate-600);
+  font-weight: 600;
+}
+
+.sidebar-preset-bar__buttons {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.perm-preset-btn {
+  padding: 5px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--slate-700);
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm, 6px);
+  cursor: pointer;
+  transition: all 0.12s ease;
+  user-select: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.perm-preset-btn:hover {
+  background: var(--slate-50);
+  border-color: var(--blue-300);
+  color: var(--blue-700);
+  transform: translateY(-1px);
+}
+
+.perm-preset-btn--active {
+  background: var(--blue-50);
+  border-color: var(--blue-400);
+  color: var(--blue-700);
+  font-weight: 700;
+}
+
+/* Section Card for Sidebar Navigation */
+.perm-section-card {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md, 8px);
+  overflow: hidden;
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+.perm-section-header {
+  padding: 10px 14px;
+  background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.perm-section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--ink);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.perm-section-grid {
+  padding: 12px 14px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 8px 10px;
+}
+
+.perm-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border-radius: var(--radius-sm, 6px);
+  border: 1px solid var(--line);
+  background: #ffffff;
+  cursor: pointer;
+  transition: all 0.12s ease;
+  user-select: none;
+}
+
+.perm-menu-item:hover {
+  border-color: rgba(0, 113, 227, 0.3);
+  background: rgba(0, 113, 227, 0.02);
+}
+
+.perm-menu-item--checked {
+  background: rgba(0, 113, 227, 0.05);
+  border-color: rgba(0, 113, 227, 0.35);
+}
+
+.perm-menu-item input[type="checkbox"] {
+  accent-color: var(--blue-600);
+  width: 15px;
+  height: 15px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.perm-menu-item__details {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.perm-menu-item__name {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--slate-700);
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.perm-menu-item--checked .perm-menu-item__name {
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.perm-menu-item__group {
+  font-size: 10px;
+  color: var(--muted);
+  line-height: 1.2;
+}
+
+/* ==========================================================================
+   Tab 2: Document Action Permissions (CRUD & 2-Tier Approvals)
+   ========================================================================== */
+
+.perm-workflow-module {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md, 8px);
+  overflow: hidden;
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+.perm-workflow-header {
+  padding: 10px 16px;
+  background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.perm-workflow-header__title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.perm-workflow-header__title strong {
+  font-size: 13.5px;
+  font-weight: 800;
+  color: var(--ink);
+}
+
+.perm-workflow-header__presets {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.perm-workflow-body {
+  padding: 14px 16px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  background: #ffffff;
+}
+
+@media (max-width: 768px) {
+  .perm-workflow-body {
+    grid-template-columns: 1fr;
+  }
+}
+
+.perm-group-box {
+  background: #f8fafc;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm, 6px);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.perm-group-box__title {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--slate-500);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 2px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.perm-group-box__items {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.perm-action-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 10px;
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm, 6px);
+  cursor: pointer;
+  transition: all 0.12s ease;
+  user-select: none;
+}
+
+.perm-action-card:hover {
+  border-color: rgba(0, 113, 227, 0.3);
+  transform: translateY(-1px);
+}
+
+.perm-action-card--checked {
+  background: rgba(0, 113, 227, 0.05);
+  border-color: rgba(0, 113, 227, 0.35);
+}
+
+.perm-action-card--approval.perm-action-card--checked {
+  background: rgba(124, 58, 237, 0.06);
+  border-color: rgba(124, 58, 237, 0.35);
+}
+
+.perm-action-card input[type="checkbox"] {
+  accent-color: var(--blue-600);
+  margin-top: 2px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.perm-action-card--approval input[type="checkbox"] {
+  accent-color: #7c3aed;
+}
+
+.perm-action-card__label {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1.25;
+}
+
+.perm-action-card__desc {
+  font-size: 10px;
+  color: var(--muted);
+  line-height: 1.25;
+  margin-top: 2px;
+}
+
+/* Modal Footer */
+.perm-modal-footer {
+  padding: 14px 24px;
+  background: #ffffff;
+  border-top: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  gap: 12px;
+}
+
+.perm-modal-footer__summary {
+  font-size: 12px;
+  color: var(--slate-600);
+}
+
+.perm-modal-footer__actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}

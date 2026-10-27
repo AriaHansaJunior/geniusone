@@ -472,60 +472,102 @@
    Modals & Confirmation Dialogs
    ========================================================================== */
 
-/* Standard Modal */
+/* Standard Modal & Dialog System */
+.dialog-overlay,
 .modal-backdrop {
   position: fixed;
   inset: 0;
   background: rgba(15, 23, 42, 0.45);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 999;
+  z-index: 10000;
   animation: fadeIn 0.15s ease-out;
-  padding: 16px;
+  padding: 20px;
   box-sizing: border-box;
 }
 
+.dialog-card,
 .modal-content {
   background: #ffffff;
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--line);
-  box-shadow: 0 20px 45px rgba(15, 23, 42, 0.2);
-  width: 520px;
-  max-width: 100%;
+  border-radius: var(--radius-lg, 12px);
+  border: 1px solid rgba(226, 232, 240, 0.85);
+  box-shadow: 0 25px 60px -10px rgba(15, 23, 42, 0.25), 0 0 0 1px rgba(255, 255, 255, 0.8);
+  width: 560px;
+  max-width: 95vw;
+  max-height: 90vh;
   overflow: hidden;
-  animation: modalPop 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: modalPop 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
 }
 
+.dialog-card--lg,
+.modal-content--large {
+  width: 960px;
+  max-width: 95vw;
+}
+
+.dialog-card__header,
 .modal-header {
-  padding: 16px 20px;
+  padding: 16px 24px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   border-bottom: 1px solid var(--line);
-  background: var(--glass-card-bg);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(248, 250, 252, 0.88) 100%);
+  flex-shrink: 0;
 }
 
+.dialog-card__header h3,
 .modal-header h3 {
   margin: 0;
-  font-size: 14.5px;
+  font-size: 15px;
   font-weight: 800;
   color: var(--ink);
 }
 
+.dialog-card__body,
 .modal-body {
-  padding: 20px;
+  padding: 20px 24px;
+  overflow-y: auto;
+  flex: 1;
 }
 
+.dialog-card__footer,
 .modal-footer {
-  padding: 12px 20px;
+  padding: 14px 24px;
   background: var(--slate-50);
   display: flex;
+  align-items: center;
   justify-content: flex-end;
-  gap: 10px;
+  gap: 12px;
   border-top: 1px solid var(--line);
+  flex-shrink: 0;
+}
+
+.dialog-close-btn {
+  width: 30px;
+  height: 30px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm, 6px);
+  background: transparent;
+  color: var(--slate-400);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+  padding: 0;
+}
+
+.dialog-close-btn:hover {
+  background: var(--slate-100);
+  color: var(--ink);
+  border-color: var(--line);
 }
 
 .timeline-point {
