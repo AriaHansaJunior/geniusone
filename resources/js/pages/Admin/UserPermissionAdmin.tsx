@@ -44,7 +44,7 @@ export function UserPermissionAdmin() {
     name: "",
     username: "",
     email: "",
-    password: "secret123",
+    password: "",
     role: "procurement",
     department: "Purchasing",
     isSuperAdmin: false,
@@ -205,6 +205,19 @@ export function UserPermissionAdmin() {
         return Array.from(set);
       } else {
         return prev.filter((id) => !sectionItemIds.includes(id));
+      }
+    });
+  };
+
+  // Toggle all items within a subgroup
+  const handleToggleSubgroupSidebar = (items: SidebarMenuItemDescriptor[], selectAll: boolean) => {
+    const itemIds = items.map((i) => i.id);
+    setSidebarDraft((prev) => {
+      if (selectAll) {
+        const set = new Set([...prev, ...itemIds]);
+        return Array.from(set);
+      } else {
+        return prev.filter((id) => !itemIds.includes(id));
       }
     });
   };
@@ -392,7 +405,7 @@ export function UserPermissionAdmin() {
           name: newUserData.name.trim(),
           username: newUserData.username.trim(),
           email: newUserData.email.trim(),
-          password: newUserData.password || "secret123",
+          password: newUserData.password.trim() || "GeniusOne2026!",
           role: newUserData.isSuperAdmin ? "superadmin" : newUserData.role,
           department_id: 1,
           status: 1,
@@ -409,7 +422,7 @@ export function UserPermissionAdmin() {
           name: "",
           username: "",
           email: "",
-          password: "secret123",
+          password: "",
           role: "procurement",
           department: "Purchasing",
           isSuperAdmin: false,
@@ -454,14 +467,23 @@ export function UserPermissionAdmin() {
     }
   };
 
-  // Grouped sidebar items for display in Tab 1
-  const groupedSidebarItems = useMemo(() => {
-    const groups: Record<string, SidebarMenuItemDescriptor[]> = {};
-    for (const item of ALL_SIDEBAR_MENU_ITEMS) {
-      if (!groups[item.section]) groups[item.section] = [];
-      groups[item.section].push(item);
+  // Hierarchical sidebar items for display in Tab 1: Section -> Group -> Items[]
+  const groupedSidebarStructure = useMemo(() => {
+    const sectionOrder = ["Dashboard", "Procurement", "Exim", "Warehouse", "Production"];
+    const structure: Record<string, Record<string, SidebarMenuItemDescriptor[]>> = {};
+
+    for (const sec of sectionOrder) {
+      structure[sec] = {};
     }
-    return groups;
+
+    for (const item of ALL_SIDEBAR_MENU_ITEMS) {
+      const sec = item.section || "General";
+      if (!structure[sec]) structure[sec] = {};
+      const grp = item.group || "General";
+      if (!structure[sec][grp]) structure[sec][grp] = [];
+      structure[sec][grp].push(item);
+    }
+    return structure;
   }, []);
 
   return (
@@ -598,15 +620,14 @@ export function UserPermissionAdmin() {
                         </td>
                         <td style={{ textAlign: "center" }}>
                           <div className="user-row-actions">
-                            <Button
-                              variant="secondary"
-                              size="sm"
-                              icon="lock"
+                            <button
+                              type="button"
+                              className="btn-perm-action"
                               onClick={() => handleOpenPermissions(user)}
                               title="Configure visible sidebar menus and approval rights"
                             >
                               Permissions & Sidebar
-                            </Button>
+                            </button>
                             {!user.isSuperAdmin && (
                               <button
                                 type="button"
@@ -754,6 +775,7 @@ export function UserPermissionAdmin() {
                       type="text"
                       className="form-input"
                       required
+                      placeholder="e.g. TempPass2026!"
                       value={newUserData.password}
                       onChange={(e) => setNewUserData({ ...newUserData, password: e.target.value })}
                     />
@@ -963,18 +985,21 @@ export function UserPermissionAdmin() {
                     </div>
                   </div>
 
-                  {/* Grouped Section Cards */}
-                  {Object.entries(groupedSidebarItems).map(([sectionName, items]) => {
-                    const allSelected = items.every((i) => sidebarDraft.includes(i.id));
-                    const enabledCount = items.filter((i) => sidebarDraft.includes(i.id)).length;
+                  {/* Grouped Section Cards with Subgroups */}
+                  {Object.entries(groupedSidebarStructure).map(([sectionName, subGroups]) => {
+                    const allSectionItems = Object.values(subGroups).flat();
+                    if (allSectionItems.length === 0) return null;
+
+                    const allSelected = allSectionItems.every((i) => sidebarDraft.includes(i.id));
+                    const enabledCount = allSectionItems.filter((i) => sidebarDraft.includes(i.id)).length;
 
                     return (
                       <div key={sectionName} className="perm-section-card">
                         <div className="perm-section-header">
                           <span className="perm-section-title">
                             <span>{sectionName} Section</span>
-                            <Badge tone={enabledCount === items.length ? "blue" : enabledCount > 0 ? "gray" : "gray"}>
-                              {enabledCount} / {items.length} Active
+                            <Badge tone={enabledCount === allSectionItems.length ? "blue" : enabledCount > 0 ? "gray" : "gray"}>
+                              {enabledCount} / {allSectionItems.length} Active
                             </Badge>
                           </span>
                           <button
@@ -982,33 +1007,58 @@ export function UserPermissionAdmin() {
                             className="perm-preset-btn"
                             onClick={() => handleToggleSectionSidebar(sectionName, !allSelected)}
                           >
-                            {allSelected ? "Deselect All" : "Select All in Section"}
+                            {allSelected ? "Deselect All in Section" : "Select All in Section"}
                           </button>
                         </div>
 
-                        <div className="perm-section-grid">
-                          {items.map((item) => {
-                            const isChecked = sidebarDraft.includes(item.id);
-                            return (
-                              <label
-                                key={item.id}
-                                className={`perm-menu-item ${isChecked ? "perm-menu-item--checked" : ""}`}
-                              >
-                                <input
-                                  type="checkbox"
-                                  checked={isChecked}
-                                  onChange={() => handleToggleSidebarItem(item.id)}
-                                />
-                                <div className="perm-menu-item__details">
-                                  <span className="perm-menu-item__name">{item.label}</span>
-                                  {item.group && (
-                                    <span className="perm-menu-item__group">{item.group}</span>
-                                  )}
-                                </div>
-                              </label>
-                            );
-                          })}
-                        </div>
+                        {Object.entries(subGroups).map(([groupName, items]) => {
+                          const isGroupAllSelected = items.every((i) => sidebarDraft.includes(i.id));
+                          const groupEnabledCount = items.filter((i) => sidebarDraft.includes(i.id)).length;
+
+                          return (
+                            <div key={groupName} className="perm-subgroup-block">
+                              <div className="perm-subgroup-header">
+                                <span className="perm-subgroup-title">
+                                  <span>{groupName}</span>
+                                  <span style={{ fontSize: "10.5px", color: "var(--muted)", fontWeight: 500 }}>
+                                    ({groupEnabledCount}/{items.length} active)
+                                  </span>
+                                </span>
+                                {items.length > 1 && (
+                                  <button
+                                    type="button"
+                                    className="perm-subgroup-toggle-btn"
+                                    onClick={() => handleToggleSubgroupSidebar(items, !isGroupAllSelected)}
+                                  >
+                                    {isGroupAllSelected ? "Deselect" : "Select All"}
+                                  </button>
+                                )}
+                              </div>
+
+                              <div className="perm-section-grid">
+                                {items.map((item) => {
+                                  const isChecked = sidebarDraft.includes(item.id);
+                                  return (
+                                    <label
+                                      key={item.id}
+                                      className={`perm-menu-item ${isChecked ? "perm-menu-item--checked" : ""}`}
+                                    >
+                                      <input
+                                        type="checkbox"
+                                        checked={isChecked}
+                                        onChange={() => handleToggleSidebarItem(item.id)}
+                                      />
+                                      <div className="perm-menu-item__details">
+                                        <span className="perm-menu-item__name">{item.label}</span>
+                                        <span className="perm-menu-item__group">{item.group || sectionName}</span>
+                                      </div>
+                                    </label>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
                     );
                   })}

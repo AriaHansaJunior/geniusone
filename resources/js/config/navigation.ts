@@ -208,8 +208,8 @@ export interface SidebarMenuItemDescriptor {
 
 export const ALL_SIDEBAR_MENU_ITEMS: SidebarMenuItemDescriptor[] = [
   // Dashboard & Overview
-  { id: "dashboard", label: "Dashboard", section: "Dashboard" },
-  { id: "stock-notification-master", label: "Stock Notification Master", section: "Dashboard" },
+  { id: "dashboard", label: "Dashboard", section: "Dashboard", group: "Overview" },
+  { id: "stock-notification-master", label: "Stock Notification Master", section: "Dashboard", group: "Overview" },
 
   // Procurement - Purchase Master
   { id: "supplier", label: "Supplier", section: "Procurement", group: "Purchase Master" },
@@ -282,6 +282,9 @@ export const ALL_SIDEBAR_MENU_ITEMS: SidebarMenuItemDescriptor[] = [
   { id: "wh-req-weight-note-fg", label: "Weight Note Multiple FG", section: "Warehouse", group: "Request" },
   { id: "wh-req-shipping", label: "Shipping Instruction", section: "Warehouse", group: "Request" },
 
+  // Warehouse - Move Location
+  { id: "warehouse-move-location", label: "Move Location", section: "Warehouse", group: "Move Location" },
+
   // Warehouse - Report
   { id: "wh-rep-receive-material", label: "Receive Material", section: "Warehouse", group: "Report" },
   { id: "wh-rep-stock-item", label: "Stock Item", section: "Warehouse", group: "Report" },
@@ -292,5 +295,5 @@ export const ALL_SIDEBAR_MENU_ITEMS: SidebarMenuItemDescriptor[] = [
   { id: "wh-rep-outstanding-request", label: "Outstanding Request", section: "Warehouse", group: "Report" },
 
   // Production
-  { id: "production", label: "Production", section: "Production" },
+  { id: "production", label: "Production Module", section: "Production", group: "General" },
 ];

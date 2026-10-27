@@ -10,8 +10,8 @@ interface LoginProps {
 
 export function Login({ onNavigateHome, onLoginSuccess }: LoginProps) {
   const { loginUser } = useAuthPermission();
-  const [username, setUsername] = useState("superadmin");
-  const [password, setPassword] = useState("secret123");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -181,47 +181,6 @@ export function Login({ onNavigateHome, onLoginSuccess }: LoginProps) {
                 {isLoading ? "Signing In..." : "Sign In"}
               </Button>
             </form>
-
-            {/* Quick Fill Test Personas */}
-            <div style={{ marginTop: "18px", paddingTop: "14px", borderTop: "1px solid var(--line)" }}>
-              <span style={{ fontSize: "10.5px", fontWeight: 700, color: "var(--muted)", display: "block", marginBottom: "8px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
-                Select Role to Test (Pass: secret123)
-              </span>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
-                {[
-                  { label: "SuperAdmin", user: "superadmin" },
-                  { label: "Procurement Mgr", user: "rizky.aditya" },
-                  { label: "Purchasing Staff", user: "arsyeila" },
-                  { label: "Finance Approver 1", user: "yustina" },
-                  { label: "Director Approver 2", user: "awi.l" },
-                  { label: "Warehouse Head", user: "bambang.s" },
-                  { label: "Warehouse Staff", user: "budi.s" },
-                ].map((acc) => (
-                  <button
-                    key={acc.user}
-                    type="button"
-                    style={{
-                      fontSize: "11px",
-                      padding: "4px 8px",
-                      background: username === acc.user ? "var(--blue-50)" : "#f8fafc",
-                      border: `1px solid ${username === acc.user ? "var(--blue-500)" : "var(--line)"}`,
-                      borderRadius: "var(--radius-xs)",
-                      color: username === acc.user ? "var(--blue-700)" : "var(--ink-soft)",
-                      cursor: "pointer",
-                      fontWeight: username === acc.user ? 700 : 500,
-                      transition: "all 0.15s ease",
-                    }}
-                    onClick={() => {
-                      setUsername(acc.user);
-                      setPassword("secret123");
-                      setStatusMessage(null);
-                    }}
-                  >
-                    {acc.label}
-                  </button>
-                ))}
-              </div>
-            </div>
           </div>
         </div>
       </main>

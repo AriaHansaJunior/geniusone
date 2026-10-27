@@ -143,6 +143,39 @@
   gap: 6px;
 }
 
+/* Dedicated Highly Visible Permissions & Sidebar Action Button */
+.btn-perm-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 5px 12px;
+  font-size: 11.5px;
+  font-weight: 600;
+  border-radius: var(--radius-sm, 6px);
+  background: #eff6ff;
+  border: 1px solid #93c5fd;
+  color: #1d4ed8;
+  box-shadow: 0 1px 2px rgba(0, 113, 227, 0.05);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.btn-perm-action:hover {
+  background: #2563eb;
+  border-color: #1d4ed8;
+  color: #ffffff;
+  box-shadow: 0 3px 8px rgba(37, 99, 235, 0.28);
+  transform: translateY(-1px);
+}
+
+.btn-perm-action:active {
+  background: #1d4ed8;
+  transform: translateY(0);
+}
+
 /* ==========================================================================
    Permission & Sidebar Management Modal (Modal 2)
    ========================================================================== */
@@ -151,8 +184,11 @@
   width: 980px;
   max-width: 95vw;
   height: 88vh;
+  max-height: 88vh;
   display: flex;
   flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .perm-header-user-info {
@@ -239,13 +275,37 @@
 
 /* Modal Body Scroll Area */
 .perm-modal-body {
-  overflow-y: auto;
-  flex: 1;
-  padding: 18px 24px;
+  flex: 1 1 0;
+  min-height: 0;
+  max-height: 100%;
+  overflow-y: auto !important;
+  overflow-x: hidden;
+  padding: 16px 22px;
   display: flex;
   flex-direction: column;
   gap: 16px;
   background: #fbfcfe;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+
+.perm-modal-body::-webkit-scrollbar {
+  width: 7px;
+}
+
+.perm-modal-body::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 4px;
+}
+
+.perm-modal-body::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+.perm-modal-body::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }
 
 /* SuperAdmin Banner */
@@ -349,10 +409,54 @@
   letter-spacing: 0.4px;
 }
 
+/* Subgroup Block within Section */
+.perm-subgroup-block {
+  padding: 12px 14px 14px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.perm-subgroup-block:last-child {
+  border-bottom: none;
+}
+
+.perm-subgroup-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.perm-subgroup-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--slate-600);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.perm-subgroup-toggle-btn {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--blue-700);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: all 0.12s ease;
+}
+
+.perm-subgroup-toggle-btn:hover {
+  background: var(--blue-50);
+  text-decoration: underline;
+}
+
 .perm-section-grid {
-  padding: 12px 14px;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 8px 10px;
 }
 
