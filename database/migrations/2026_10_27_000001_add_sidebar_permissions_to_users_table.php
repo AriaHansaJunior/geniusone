@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            if (!Schema::hasColumn('users', 'sidebar_permissions')) {
+            if (! Schema::hasColumn('users', 'sidebar_permissions')) {
                 $table->json('sidebar_permissions')->nullable()->after('photo');
             }
         });

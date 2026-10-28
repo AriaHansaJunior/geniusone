@@ -3,9 +3,9 @@
 namespace App\Http\Controllers\Api\Reporting;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
 use App\Services\GeniusOneBackend;
 use App\ViewModels\PrPoTraceabilityViewModel;
+use Illuminate\Http\Request;
 
 class TraceabilityReportApiController extends Controller
 {
@@ -29,9 +29,9 @@ class TraceabilityReportApiController extends Controller
 
         $stats = [
             ['Total Transaksi PO', (string) ($summary['po']['total'] ?? 0), 'PO dalam sistem'],
-            ['Tingkat Pemenuhan Gate', ($summary['warehouse']['fulfillment_rate_percent'] ?? 0) . '%', 'Berdasarkan berat bersih RN'],
-            ['Total Dipesan', number_format($summary['warehouse']['ordered_quantity'] ?? 0, 2) . ' Unit', 'Akumulasi kuantitas PO'],
-            ['Outstanding Inbound', number_format($summary['warehouse']['outstanding_quantity'] ?? 0, 2) . ' Unit', 'Menunggu penerimaan'],
+            ['Tingkat Pemenuhan Gate', ($summary['warehouse']['fulfillment_rate_percent'] ?? 0).'%', 'Berdasarkan berat bersih RN'],
+            ['Total Dipesan', number_format($summary['warehouse']['ordered_quantity'] ?? 0, 2).' Unit', 'Akumulasi kuantitas PO'],
+            ['Outstanding Inbound', number_format($summary['warehouse']['outstanding_quantity'] ?? 0, 2).' Unit', 'Menunggu penerimaan'],
         ];
 
         $rows = $matrix->map(function ($item, $index) {
@@ -45,7 +45,7 @@ class TraceabilityReportApiController extends Controller
                 'qty_received' => number_format($item['net_received_quantity'], 2),
                 'outstanding' => number_format($item['outstanding_quantity'], 2),
                 'status' => $item['fulfillment_status'],
-                'badge' => match($item['fulfillment_status']) {
+                'badge' => match ($item['fulfillment_status']) {
                     'FULLY_RECEIVED' => 'success',
                     'PARTIAL_RECEIVED' => 'warning',
                     default => 'info'
@@ -74,7 +74,7 @@ class TraceabilityReportApiController extends Controller
 
         $matched = $matrix->first(function ($r) use ($code, $rawCode) {
             $poSlug = str_replace(['/', ' '], ['-', '_'], $r['po_number']);
-            $firstPr = !empty($r['linked_prs']) ? $r['linked_prs'][0]['pr_number'] : '';
+            $firstPr = ! empty($r['linked_prs']) ? $r['linked_prs'][0]['pr_number'] : '';
             $prSlug = str_replace(['/', ' '], ['-', '_'], $firstPr);
             $combined = "{$firstPr} / {$r['po_number']}";
             $combSlug = str_replace(['/', ' '], ['-', '_'], $combined);
@@ -88,7 +88,7 @@ class TraceabilityReportApiController extends Controller
                 || strcasecmp($combSlug, $code) === 0;
         });
 
-        if (!$matched) {
+        if (! $matched) {
             return response()->json(['error' => 'Traceability record not found'], 404);
         }
 

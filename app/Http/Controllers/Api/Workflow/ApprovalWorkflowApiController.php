@@ -62,7 +62,7 @@ class ApprovalWorkflowApiController extends Controller
 
             return response()->json([
                 'status' => 'success',
-                'message' => strtoupper($module) . " Stage {$tier} approved successfully. Current status: '{$newStatus}'.",
+                'message' => strtoupper($module)." Stage {$tier} approved successfully. Current status: '{$newStatus}'.",
                 'data' => [
                     'id' => $updatedDoc->id,
                     'module' => strtoupper($module),
@@ -101,7 +101,7 @@ class ApprovalWorkflowApiController extends Controller
 
             return response()->json([
                 'status' => 'success',
-                'message' => strtoupper($module) . " Stage {$tier} unapproved successfully. Status reverted to: '{$newStatus}'.",
+                'message' => strtoupper($module)." Stage {$tier} unapproved successfully. Status reverted to: '{$newStatus}'.",
                 'data' => [
                     'id' => $updatedDoc->id,
                     'module' => strtoupper($module),
@@ -143,7 +143,7 @@ class ApprovalWorkflowApiController extends Controller
 
             return response()->json([
                 'status' => 'success',
-                'message' => strtoupper($module) . " rejected and returned for revision. Status: '{$newStatus}'.",
+                'message' => strtoupper($module)." rejected and returned for revision. Status: '{$newStatus}'.",
                 'data' => [
                     'id' => $updatedDoc->id,
                     'module' => strtoupper($module),
@@ -179,7 +179,7 @@ class ApprovalWorkflowApiController extends Controller
 
             return response()->json([
                 'status' => 'success',
-                'message' => strtoupper($module) . " resubmitted for approval. Status: '{$newStatus}'.",
+                'message' => strtoupper($module)." resubmitted for approval. Status: '{$newStatus}'.",
                 'data' => [
                     'id' => $updatedDoc->id,
                     'module' => strtoupper($module),

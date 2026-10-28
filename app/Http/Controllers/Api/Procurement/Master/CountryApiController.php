@@ -49,6 +49,7 @@ class CountryApiController extends Controller
     public function show(int $id): JsonResponse
     {
         $record = Country::findOrFail($id);
+
         return response()->json(['data' => $record]);
     }
 
@@ -57,7 +58,7 @@ class CountryApiController extends Controller
         $record = Country::findOrFail($id);
 
         $validated = $request->validate([
-            'name' => 'sometimes|required|string|max:45|unique:countries,name,' . $id,
+            'name' => 'sometimes|required|string|max:45|unique:countries,name,'.$id,
             'status' => 'nullable|integer',
         ]);
 

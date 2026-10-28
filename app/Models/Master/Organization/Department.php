@@ -4,6 +4,7 @@ namespace App\Models\Master\Organization;
 
 use App\Models\Master\Material\Unit;
 use App\Models\Procurement\PurchaseRequest\PurchaseRequisition;
+use App\Traits\LogsActivity;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -12,7 +13,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Department extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, LogsActivity, SoftDeletes;
 
     protected $table = 'departments';
 

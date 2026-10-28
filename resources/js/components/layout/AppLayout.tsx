@@ -61,6 +61,7 @@ export function AppLayout({
         onToggleCollapse={handleToggleCollapse}
         onNavigateProfile={onNavigateProfile}
         onNavigateAdmin={() => onNavigate("user-permission-admin" as PageKey, "/admin/user-permissions")}
+        onNavigateAudit={() => onNavigate("audit-log-admin" as PageKey, "/admin/audit-logs")}
         onLogoutRequest={onRequestLogout}
         onToggleMobileSidebar={() => setIsMobileSidebarOpen((prev) => !prev)}
       />

@@ -1,9 +1,13 @@
 <?php
 
-require __DIR__ . '/../vendor/autoload.php';
+use App\Models\System\Auth\User;
+use Illuminate\Contracts\Console\Kernel;
+use Illuminate\Http\Request;
 
-$app = require_once __DIR__ . '/../bootstrap/app.php';
-$consoleKernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
+require __DIR__.'/../vendor/autoload.php';
+
+$app = require_once __DIR__.'/../bootstrap/app.php';
+$consoleKernel = $app->make(Kernel::class);
 $consoleKernel->bootstrap();
 $kernel = $app->make(Illuminate\Contracts\Http\Kernel::class);
 
@@ -65,51 +69,51 @@ $routes = [
     ['GET', '/api/dashboard/exchange-rates'],
 ];
 
-echo "=====================================================" . PHP_EOL;
-echo "  GENIUSONE ALL-API ENDPOINT AUDIT & HEALTH CHECK" . PHP_EOL;
-echo "=====================================================" . PHP_EOL;
+echo '====================================================='.PHP_EOL;
+echo '  GENIUSONE ALL-API ENDPOINT AUDIT & HEALTH CHECK'.PHP_EOL;
+echo '====================================================='.PHP_EOL;
 
 $passed = 0;
 $failed = 0;
 $errors = [];
 
 foreach ($routes as [$method, $uri]) {
-    $request = Illuminate\Http\Request::create($uri, $method);
+    $request = Request::create($uri, $method);
     $request->headers->set('Accept', 'application/json');
-    
+
     // Simulate SuperAdmin user context
-    $user = \App\Models\System\Auth\User::first();
+    $user = User::first();
     if ($user) {
-        $request->setUserResolver(fn() => $user);
+        $request->setUserResolver(fn () => $user);
     }
 
     try {
         $response = $kernel->handle($request);
         $status = $response->getStatusCode();
-        
+
         if ($status >= 200 && $status < 400) {
-            echo "[OK $status] $method $uri" . PHP_EOL;
+            echo "[OK $status] $method $uri".PHP_EOL;
             $passed++;
         } else {
-            echo "[FAIL $status] $method $uri" . PHP_EOL;
+            echo "[FAIL $status] $method $uri".PHP_EOL;
             $failed++;
-            $errors[] = "$method $uri -> HTTP $status: " . substr($response->getContent(), 0, 150);
+            $errors[] = "$method $uri -> HTTP $status: ".substr($response->getContent(), 0, 150);
         }
-    } catch (\Throwable $e) {
-        echo "[EXCEPTION] $method $uri: " . $e->getMessage() . PHP_EOL;
+    } catch (Throwable $e) {
+        echo "[EXCEPTION] $method $uri: ".$e->getMessage().PHP_EOL;
         $failed++;
-        $errors[] = "$method $uri EXCEPTION: " . $e->getMessage();
+        $errors[] = "$method $uri EXCEPTION: ".$e->getMessage();
     }
 }
 
-echo PHP_EOL . "=====================================================" . PHP_EOL;
-echo "Total tested: " . count($routes) . " | Passed: $passed | Failed: $failed" . PHP_EOL;
+echo PHP_EOL.'====================================================='.PHP_EOL;
+echo 'Total tested: '.count($routes)." | Passed: $passed | Failed: $failed".PHP_EOL;
 if ($failed > 0) {
-    echo "Failures details:" . PHP_EOL;
+    echo 'Failures details:'.PHP_EOL;
     foreach ($errors as $err) {
-        echo "- $err" . PHP_EOL;
+        echo "- $err".PHP_EOL;
     }
 } else {
-    echo "ALL ENDPOINTS PASSED WITH 100% HEALTH!" . PHP_EOL;
+    echo 'ALL ENDPOINTS PASSED WITH 100% HEALTH!'.PHP_EOL;
 }
-echo "=====================================================" . PHP_EOL;
+echo '====================================================='.PHP_EOL;

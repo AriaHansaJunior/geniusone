@@ -51,9 +51,9 @@ class ReceiveNoteViewModel
                     'rafaksi' => $rafaksi,
                     'net_quantity' => $netQty,
                     'price' => (float) $poItem->price,
-                    'formatted_price' => $currencyCode . ' ' . number_format((float) $poItem->price, 2),
+                    'formatted_price' => $currencyCode.' '.number_format((float) $poItem->price, 2),
                     'grand_total' => (float) $poItem->grand_total,
-                    'formatted_grand_total' => $currencyCode . ' ' . number_format((float) $poItem->grand_total, 2),
+                    'formatted_grand_total' => $currencyCode.' '.number_format((float) $poItem->grand_total, 2),
                 ];
             })->values()->toArray(),
             'total_items_count' => $this->rn->purchaseOrders->count(),

@@ -2,13 +2,13 @@
 
 namespace App\Services\Warehouse;
 
+use App\Models\Master\Material\Item;
+use App\Models\Warehouse\GateReceiving\PurchaseOrderReceiveNote;
 use App\Models\Warehouse\InboundStorage\BpbReceiveMaterial;
 use App\Models\Warehouse\InboundStorage\PoRnToBpb;
-use App\Models\Warehouse\GateReceiving\PurchaseOrderReceiveNote;
-use App\Models\Master\Material\Item;
+use App\Services\AuditLogger;
 use App\Services\DocumentNumber\DocumentNumberGenerator;
 use App\Services\Inventory\InventoryService;
-use App\Services\AuditLogger;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
@@ -19,17 +19,15 @@ class BpbWarehouseService
 
     public function __construct(?InventoryService $inventoryService = null)
     {
-        $this->inventoryService = $inventoryService ?? new InventoryService();
+        $this->inventoryService = $inventoryService ?? new InventoryService;
     }
 
     /**
      * Create a new BPB (Bukti Penerimaan Barang) and allocate incoming stock to warehouses.
      *
-     * @param array $headerData ['receive_date', 'note', 'bpb_number']
-     * @param array $mappings Array of ['po_has_rn_id', 'warehouses_id', 'item_id' => optional]
-     * @param int $userId
-     * @param bool $autoUpdateStock Whether to automatically increment physical item stock (default false for BE-05 workflow)
-     * @return BpbReceiveMaterial
+     * @param  array  $headerData  ['receive_date', 'note', 'bpb_number']
+     * @param  array  $mappings  Array of ['po_has_rn_id', 'warehouses_id', 'item_id' => optional]
+     * @param  bool  $autoUpdateStock  Whether to automatically increment physical item stock (default false for BE-05 workflow)
      */
     public function createBpb(
         array $headerData,
@@ -38,7 +36,7 @@ class BpbWarehouseService
         bool $autoUpdateStock = false
     ): BpbReceiveMaterial {
         if (empty($mappings)) {
-            throw new InvalidArgumentException("A BPB must contain at least one warehouse item allocation.");
+            throw new InvalidArgumentException('A BPB must contain at least one warehouse item allocation.');
         }
 
         // BE-05: Strict Downstream Gating (RN must be Approved before warehouse allocation)
@@ -46,7 +44,7 @@ class BpbWarehouseService
             $poRnId = $map['po_has_rn_id'] ?? null;
             if ($poRnId) {
                 $poRn = PurchaseOrderReceiveNote::with('receiveNote')->find($poRnId);
-                if ($poRn && $poRn->receiveNote && !in_array($poRn->receiveNote->status, ['Approved', 'Approved 2'], true)) {
+                if ($poRn && $poRn->receiveNote && ! in_array($poRn->receiveNote->status, ['Approved', 'Approved 2'], true)) {
                     throw new InvalidArgumentException("Cannot create BPB: Referenced Receive Note '{$poRn->receiveNote->rn_number}' must be fully Approved first (Current status: {$poRn->receiveNote->status}).");
                 }
             }
@@ -66,7 +64,7 @@ class BpbWarehouseService
 
             foreach ($mappings as $map) {
                 if (empty($map['warehouses_id'])) {
-                    throw new InvalidArgumentException("Each BPB allocation item must specify a destination warehouse.");
+                    throw new InvalidArgumentException('Each BPB allocation item must specify a destination warehouse.');
                 }
 
                 $poRnId = $map['po_has_rn_id'] ?? null;
@@ -85,7 +83,7 @@ class BpbWarehouseService
 
                         // Resolve Item model: by explicit item_id or by matching name/job
                         $itemId = $map['item_id'] ?? null;
-                        if (!$itemId && !empty($poRn->item_name)) {
+                        if (! $itemId && ! empty($poRn->item_name)) {
                             $foundItem = Item::where('name', $poRn->item_name)->first();
                             $itemId = $foundItem?->id;
                         }
@@ -110,7 +108,7 @@ class BpbWarehouseService
                 before: null,
                 after: $bpb->toArray(),
                 userId: $userId,
-                notes: "Created BPB {$bpbNumber} with " . count($mappings) . " warehouse allocations"
+                notes: "Created BPB {$bpbNumber} with ".count($mappings).' warehouse allocations'
             );
 
             return $bpb->load([
@@ -135,9 +133,9 @@ class BpbWarehouseService
             'mappings.purchaseOrderReceiveNote.purchaseOrder',
             'approvals.user',
         ])
-        ->where('bpb_number', $code)
-        ->orWhere('id', is_numeric($code) ? $code : null)
-        ->first();
+            ->where('bpb_number', $code)
+            ->orWhere('id', is_numeric($code) ? $code : null)
+            ->first();
     }
 
     /**
@@ -152,19 +150,19 @@ class BpbWarehouseService
             'approvals',
         ]);
 
-        if (!empty($filters['search'])) {
+        if (! empty($filters['search'])) {
             $s = $filters['search'];
             $query->where(function ($q) use ($s) {
                 $q->where('bpb_number', 'like', "%{$s}%")
-                  ->orWhere('note', 'like', "%{$s}%");
+                    ->orWhere('note', 'like', "%{$s}%");
             });
         }
 
-        if (!empty($filters['date_from'])) {
+        if (! empty($filters['date_from'])) {
             $query->whereDate('receive_date', '>=', $filters['date_from']);
         }
 
-        if (!empty($filters['date_to'])) {
+        if (! empty($filters['date_to'])) {
             $query->whereDate('receive_date', '<=', $filters['date_to']);
         }
 

@@ -40,7 +40,7 @@ class UnitApiController extends Controller
      */
     public function store(Request $request): JsonResponse
     {
-        if ($request->has('name') && !$request->has('nama')) {
+        if ($request->has('name') && ! $request->has('nama')) {
             $request->merge(['nama' => $request->input('name')]);
         }
 
@@ -60,6 +60,7 @@ class UnitApiController extends Controller
     public function show(int $id): JsonResponse
     {
         $record = Unit::findOrFail($id);
+
         return response()->json(['data' => $record]);
     }
 
@@ -67,12 +68,12 @@ class UnitApiController extends Controller
     {
         $record = Unit::findOrFail($id);
 
-        if ($request->has('name') && !$request->has('nama')) {
+        if ($request->has('name') && ! $request->has('nama')) {
             $request->merge(['nama' => $request->input('name')]);
         }
 
         $validated = $request->validate([
-            'nama' => 'sometimes|required|string|max:45|unique:units,nama,' . $id,
+            'nama' => 'sometimes|required|string|max:45|unique:units,nama,'.$id,
             'status' => 'nullable|integer',
         ]);
 

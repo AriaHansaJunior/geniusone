@@ -34,8 +34,8 @@ class ExchangeRateApiController extends Controller
 
         // Enrich with any extra currency defined in master
         foreach ($currencies as $c) {
-            $code = strtoupper(trim((string)($c->code ?? $c->name ?? '')));
-            if (!empty($code) && !isset($baseRates[$code]) && $code !== 'IDR') {
+            $code = strtoupper(trim((string) ($c->code ?? $c->name ?? '')));
+            if (! empty($code) && ! isset($baseRates[$code]) && $code !== 'IDR') {
                 $baseRates[$code] = [
                     'name' => $c->name ?: $code,
                     'base' => 1000.0,
@@ -96,7 +96,7 @@ class ExchangeRateApiController extends Controller
                             $matchesFilter = true;
                         }
 
-                        if (!$matchesFilter) {
+                        if (! $matchesFilter) {
                             continue;
                         }
                     }

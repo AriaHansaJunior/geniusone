@@ -49,6 +49,7 @@ class RafaksiTypeApiController extends Controller
     public function show(int $id): JsonResponse
     {
         $record = RafaksiType::findOrFail($id);
+
         return response()->json(['data' => $record]);
     }
 
@@ -57,7 +58,7 @@ class RafaksiTypeApiController extends Controller
         $record = RafaksiType::findOrFail($id);
 
         $validated = $request->validate([
-            'name' => 'sometimes|required|string|max:45|unique:rafaksi_types,name,' . $id,
+            'name' => 'sometimes|required|string|max:45|unique:rafaksi_types,name,'.$id,
             'status' => 'nullable|integer',
         ]);
 

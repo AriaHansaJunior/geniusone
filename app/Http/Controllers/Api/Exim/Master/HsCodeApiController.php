@@ -18,7 +18,7 @@ class HsCodeApiController extends Controller
         if ($search = $request->query('search')) {
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('description', 'like', "%{$search}%");
+                    ->orWhere('description', 'like', "%{$search}%");
             });
         }
 
@@ -71,6 +71,7 @@ class HsCodeApiController extends Controller
     public function show(int $id): JsonResponse
     {
         $record = HsCode::with(['typeRateBm', 'typeRateCukai'])->findOrFail($id);
+
         return response()->json(['data' => $record]);
     }
 
@@ -79,7 +80,7 @@ class HsCodeApiController extends Controller
         $record = HsCode::findOrFail($id);
 
         $validated = $request->validate([
-            'name' => 'sometimes|required|string|max:45|unique:hs_code,name,' . $id,
+            'name' => 'sometimes|required|string|max:45|unique:hs_code,name,'.$id,
             'description' => 'nullable|string|max:255',
             'rates_bm' => 'nullable|numeric',
             'rates_cukai' => 'nullable|numeric',

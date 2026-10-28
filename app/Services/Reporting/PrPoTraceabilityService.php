@@ -2,11 +2,10 @@
 
 namespace App\Services\Reporting;
 
-use App\Models\Procurement\PurchaseRequest\PurchaseRequisition;
 use App\Models\Procurement\PurchaseOrder\PurchaseOrder;
+use App\Models\Procurement\PurchaseRequest\PurchaseRequisition;
 use App\Models\Warehouse\GateReceiving\ReceiveNote;
 use App\Models\Warehouse\InboundStorage\BpbReceiveMaterial;
-use App\Models\Warehouse\GateReceiving\PurchaseOrderReceiveNote;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -15,8 +14,7 @@ class PrPoTraceabilityService
     /**
      * Get end-to-end traceability matrix for PR -> PO -> RN -> BPB.
      *
-     * @param array $filters ['pr_id', 'po_id', 'supplier_id', 'date_from', 'date_to', 'status']
-     * @return Collection
+     * @param  array  $filters  ['pr_id', 'po_id', 'supplier_id', 'date_from', 'date_to', 'status']
      */
     public function getTraceabilityMatrix(array $filters = []): Collection
     {
@@ -31,23 +29,23 @@ class PrPoTraceabilityService
             'approvals',
         ]);
 
-        if (!empty($filters['po_id'])) {
+        if (! empty($filters['po_id'])) {
             $query->where('id', $filters['po_id']);
         }
 
-        if (!empty($filters['po_number'])) {
+        if (! empty($filters['po_number'])) {
             $query->where('po_number', 'like', "%{$filters['po_number']}%");
         }
 
-        if (!empty($filters['supplier_id'])) {
+        if (! empty($filters['supplier_id'])) {
             $query->where('supliers_id', $filters['supplier_id']);
         }
 
-        if (!empty($filters['date_from'])) {
+        if (! empty($filters['date_from'])) {
             $query->whereDate('created_at', '>=', $filters['date_from']);
         }
 
-        if (!empty($filters['date_to'])) {
+        if (! empty($filters['date_to'])) {
             $query->whereDate('created_at', '<=', $filters['date_to']);
         }
 
@@ -59,7 +57,10 @@ class PrPoTraceabilityService
             // Find linked PRs
             $linkedPrs = $po->items->map(function ($poItem) {
                 $pr = $poItem->requisitionItem?->purchaseRequisition;
-                if (!$pr) return null;
+                if (! $pr) {
+                    return null;
+                }
+
                 return [
                     'pr_id' => $pr->id,
                     'pr_number' => $pr->pr_number,
@@ -92,7 +93,7 @@ class PrPoTraceabilityService
                 }
 
                 // Apply status filter if specified
-                if (!empty($filters['status']) && $filters['status'] !== $fulfillmentStatus) {
+                if (! empty($filters['status']) && $filters['status'] !== $fulfillmentStatus) {
                     continue;
                 }
 
@@ -147,7 +148,7 @@ class PrPoTraceabilityService
         $approvedPrCount = PurchaseRequisition::whereIn('status', ['Approved 1', 'Approved 2'])->count();
 
         $totalPoCount = PurchaseOrder::count();
-        $approvedPoCount = PurchaseOrder::whereHas('approvals', fn($q) => $q->where('status', 1))->count();
+        $approvedPoCount = PurchaseOrder::whereHas('approvals', fn ($q) => $q->where('status', 1))->count();
         $totalPoValue = (float) DB::table('purchase_order_has_purchase_requisitions')->sum('grand_total');
 
         $totalRnCount = ReceiveNote::count();

@@ -5,6 +5,7 @@ namespace App\Models\Warehouse\RequestMaterial;
 use App\Models\Master\Organization\Department;
 use App\Models\System\Auth\User;
 use App\Models\Warehouse\Facility\Warehouse;
+use App\Traits\LogsActivity;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -13,7 +14,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class RequestMaterial extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, LogsActivity, SoftDeletes;
 
     protected $table = 'request_material';
 

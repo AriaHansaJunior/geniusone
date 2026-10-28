@@ -15,6 +15,7 @@ class ApprovalRm extends Model
     protected $table = 'approval_rm';
 
     public $incrementing = false;
+
     protected $primaryKey = ['request_material_id', 'users_id'];
 
     protected $fillable = [

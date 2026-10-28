@@ -2,13 +2,13 @@
 
 namespace App\Models\Warehouse\GateReceiving;
 
+use App\Models\Procurement\PurchaseOrder\PurchaseOrder;
+use App\Models\Warehouse\InboundStorage\PoRnToBpb;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use App\Models\Procurement\PurchaseOrder\PurchaseOrder;
-use App\Models\Warehouse\InboundStorage\PoRnToBpb;
 
 class PurchaseOrderReceiveNote extends Model
 {
@@ -46,7 +46,7 @@ class PurchaseOrderReceiveNote extends Model
         return $this->belongsTo(JobNumber::class, 'job_number_id');
     }
 
-    public function bpbMappings(): \Illuminate\Database\Eloquent\Relations\HasMany
+    public function bpbMappings(): HasMany
     {
         return $this->hasMany(PoRnToBpb::class, 'po_has_rn_id');
     }

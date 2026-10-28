@@ -18,9 +18,9 @@ class DocumentHistoryApiController extends Controller
         if ($search = $request->query('search')) {
             $query->where(function ($q) use ($search) {
                 $q->where('invoice_number', 'like', "%{$search}%")
-                  ->orWhere('transaction_number', 'like', "%{$search}%")
-                  ->orWhere('customer_supplier', 'like', "%{$search}%")
-                  ->orWhere('customs_document', 'like', "%{$search}%");
+                    ->orWhere('transaction_number', 'like', "%{$search}%")
+                    ->orWhere('customer_supplier', 'like', "%{$search}%")
+                    ->orWhere('customs_document', 'like', "%{$search}%");
             });
         }
 
@@ -109,6 +109,7 @@ class DocumentHistoryApiController extends Controller
     public function show(int $id): JsonResponse
     {
         $record = DocumentHistory::with(['items', 'createdByUser', 'updatedByUser'])->findOrFail($id);
+
         return response()->json(['data' => $record]);
     }
 

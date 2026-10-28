@@ -51,6 +51,7 @@ class DepartmentApiController extends Controller
     public function show(int $id): JsonResponse
     {
         $record = Department::with('unit')->findOrFail($id);
+
         return response()->json(['data' => $record]);
     }
 
@@ -59,7 +60,7 @@ class DepartmentApiController extends Controller
         $record = Department::findOrFail($id);
 
         $validated = $request->validate([
-            'name' => 'sometimes|required|string|max:45|unique:departments,name,' . $id,
+            'name' => 'sometimes|required|string|max:45|unique:departments,name,'.$id,
             'units_id' => 'nullable|exists:units,id',
             'status' => 'nullable|integer',
         ]);

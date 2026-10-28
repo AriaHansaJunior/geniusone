@@ -2,10 +2,10 @@
 
 namespace App\Services\Procurement;
 
-use App\Models\Procurement\PurchaseRequest\PurchaseRequisition;
+use App\Models\Procurement\PurchaseOrder\ApprovalPo;
 use App\Models\Procurement\PurchaseOrder\PurchaseOrder;
 use App\Models\Procurement\PurchaseRequest\ApprovalPr;
-use App\Models\Procurement\PurchaseOrder\ApprovalPo;
+use App\Models\Procurement\PurchaseRequest\PurchaseRequisition;
 use App\Services\AuditLogger;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
@@ -17,8 +17,8 @@ class ApprovalWorkflowService
      */
     public function approvePr(int $prId, int $userId, int $tier = 1, ?string $note = null): PurchaseRequisition
     {
-        if (!in_array($tier, [1, 2])) {
-            throw new InvalidArgumentException("PR Approval tier must be 1 or 2.");
+        if (! in_array($tier, [1, 2])) {
+            throw new InvalidArgumentException('PR Approval tier must be 1 or 2.');
         }
 
         return DB::transaction(function () use ($prId, $userId, $tier, $note) {
@@ -109,8 +109,8 @@ class ApprovalWorkflowService
      */
     public function approvePo(int $poId, int $userId, int $tier = 1, ?string $note = null): PurchaseOrder
     {
-        if (!in_array($tier, [1, 2])) {
-            throw new InvalidArgumentException("PO Approval tier must be 1 or 2.");
+        if (! in_array($tier, [1, 2])) {
+            throw new InvalidArgumentException('PO Approval tier must be 1 or 2.');
         }
 
         return DB::transaction(function () use ($poId, $userId, $tier, $note) {

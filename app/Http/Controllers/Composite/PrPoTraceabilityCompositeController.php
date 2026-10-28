@@ -3,14 +3,13 @@
 namespace App\Http\Controllers\Composite;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use App\Services\GeniusOneBackend;
-use App\Services\Procurement\PurchaseRequisitionService;
 use App\Services\Procurement\PurchaseOrderService;
-use App\Services\Warehouse\ReceiveNoteService;
-use App\Services\Warehouse\BpbWarehouseService;
+use App\Services\Procurement\PurchaseRequisitionService;
 use App\Services\Reporting\PrPoTraceabilityService;
+use App\Services\Warehouse\BpbWarehouseService;
+use App\Services\Warehouse\ReceiveNoteService;
 use App\ViewModels\PrPoTraceabilityViewModel;
+use Illuminate\Http\Request;
 
 /**
  * Composite / Aggregator Controller for End-to-End Procurement & Warehouse Traceability.
@@ -23,9 +22,13 @@ use App\ViewModels\PrPoTraceabilityViewModel;
 class PrPoTraceabilityCompositeController extends Controller
 {
     protected PurchaseRequisitionService $prService;
+
     protected PurchaseOrderService $poService;
+
     protected ReceiveNoteService $rnService;
+
     protected BpbWarehouseService $bpbService;
+
     protected PrPoTraceabilityService $traceabilityService;
 
     public function __construct(
@@ -65,15 +68,15 @@ class PrPoTraceabilityCompositeController extends Controller
 
         // 4. Calculate KPI Stats Cards for UI
         $totalRecords = $matrix->count();
-        $completedRecords = $matrix->filter(fn($r) => $r['fulfillment_status'] === 'FULLY_RECEIVED')->count();
+        $completedRecords = $matrix->filter(fn ($r) => $r['fulfillment_status'] === 'FULLY_RECEIVED')->count();
         $outstandingRecords = $totalRecords - $completedRecords;
-        $totalValue = $matrix->sum(fn($r) => $r['price'] * $r['ordered_quantity']);
+        $totalValue = $matrix->sum(fn ($r) => $r['price'] * $r['ordered_quantity']);
 
         $stats = [
-            ["Report records", (string) $totalRecords, "PR–PO tracking line items"],
-            ["Completed records", (string) $completedRecords, $totalRecords > 0 ? round(($completedRecords / $totalRecords) * 100, 1) . "% fulfilled" : "0%"],
-            ["Outstanding records", (string) $outstandingRecords, $totalRecords > 0 ? round(($outstandingRecords / $totalRecords) * 100, 1) . "% in progress" : "0%"],
-            ["Total value", "IDR " . number_format($totalValue, 0), "Across all procurement items"],
+            ['Report records', (string) $totalRecords, 'PR–PO tracking line items'],
+            ['Completed records', (string) $completedRecords, $totalRecords > 0 ? round(($completedRecords / $totalRecords) * 100, 1).'% fulfilled' : '0%'],
+            ['Outstanding records', (string) $outstandingRecords, $totalRecords > 0 ? round(($outstandingRecords / $totalRecords) * 100, 1).'% in progress' : '0%'],
+            ['Total value', 'IDR '.number_format($totalValue, 0), 'Across all procurement items'],
         ];
 
         // Format rows for Frontend Table
@@ -111,7 +114,7 @@ class PrPoTraceabilityCompositeController extends Controller
 
         $matched = $matrix->first(function ($r) use ($code, $rawCode) {
             $poSlug = str_replace(['/', ' '], ['-', '_'], $r['po_number']);
-            $firstPr = !empty($r['linked_prs']) ? $r['linked_prs'][0]['pr_number'] : '';
+            $firstPr = ! empty($r['linked_prs']) ? $r['linked_prs'][0]['pr_number'] : '';
             $prSlug = str_replace(['/', ' '], ['-', '_'], $firstPr);
             $combined = "{$firstPr} / {$r['po_number']}";
             $combSlug = str_replace(['/', ' '], ['-', '_'], $combined);
@@ -125,14 +128,15 @@ class PrPoTraceabilityCompositeController extends Controller
                 || strcasecmp($combSlug, $code) === 0;
         });
 
-        if (!$matched && $matrix->isNotEmpty()) {
+        if (! $matched && $matrix->isNotEmpty()) {
             $matched = $matrix->first();
         }
 
-        if (!$matched) {
+        if (! $matched) {
             if ($request->expectsJson() || $request->is('api/*')) {
                 return response()->json(['error' => 'Report record not found'], 404);
             }
+
             return redirect('/report')->withErrors(['error' => 'Report record not found']);
         }
 
@@ -164,9 +168,9 @@ class PrPoTraceabilityCompositeController extends Controller
             default => 'Draft',
         };
 
-        $firstPr = !empty($row['linked_prs']) ? $row['linked_prs'][0]['pr_number'] : '0026/PR-IMLI/X/2026';
+        $firstPr = ! empty($row['linked_prs']) ? $row['linked_prs'][0]['pr_number'] : '0026/PR-IMLI/X/2026';
         $supplierName = $row['supplier_name'] ?? 'PT. Surya Baja Mandiri';
-        $firstBpb = !empty($row['bpb_details']) ? $row['bpb_details'][0]['bpb_number'] : '0138/WHIN-IMLI/G/X/2026';
+        $firstBpb = ! empty($row['bpb_details']) ? $row['bpb_details'][0]['bpb_number'] : '0138/WHIN-IMLI/G/X/2026';
 
         $priceVal = (float) ($row['price'] ?? 52000000);
         $totalVal = $priceVal * (float) $row['ordered_quantity'];
@@ -181,7 +185,7 @@ class PrPoTraceabilityCompositeController extends Controller
                 'item' => $row['item_name'] ?? 'Anode Tembaga Grade A',
                 'itemCode' => $row['item_code'] ?? '14-3843-000000000',
                 'itemAlias' => '—',
-                'quantity' => number_format((float) $row['ordered_quantity'], 4) . " {$row['unit']}",
+                'quantity' => number_format((float) $row['ordered_quantity'], 4)." {$row['unit']}",
                 'unit' => $row['unit'] ?? 'PCE',
                 'price' => number_format($priceVal, 2),
                 'discount' => '0.00',
@@ -195,7 +199,7 @@ class PrPoTraceabilityCompositeController extends Controller
                 'subtotalPph' => '0.00',
                 'currency' => $row['currency'] ?? 'IDR',
                 'remark' => 'PP Sby Kebutuhan Operasional',
-            ]
+            ],
         ];
 
         return [
@@ -206,7 +210,7 @@ class PrPoTraceabilityCompositeController extends Controller
             '_rawDate' => $row['po_date'] ?? '08-Oct-2026',
             '_rawDueDate' => '—',
             '_rawSupplier' => $supplierName,
-            '_rawTotal' => "IDR " . number_format($grandTotalVal, 2),
+            '_rawTotal' => 'IDR '.number_format($grandTotalVal, 2),
             '_rawPr' => $firstPr,
             '_rawPo' => $row['po_number'],
             '_rawRn' => '0131/RN-IMLI/X/2026',
@@ -218,7 +222,7 @@ class PrPoTraceabilityCompositeController extends Controller
             '_rawCreatedBy' => 'System 08-10-2026 14:20',
             '_rawLastUpdated' => 'System 08-10-2026 14:20',
             '_rawRemark' => 'Procurement & Warehouse End-to-End Tracking',
-            '_totalQty' => number_format((float) $row['ordered_quantity'], 4) . " {$row['unit']}",
+            '_totalQty' => number_format((float) $row['ordered_quantity'], 4)." {$row['unit']}",
             '_items' => $lineItems,
             'no' => $indexNo,
             'datePr' => '07-10-2026',

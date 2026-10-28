@@ -109,9 +109,10 @@ class StyleImportApiController extends Controller
             ]);
         } catch (\Throwable $e) {
             DB::rollBack();
+
             return response()->json([
                 'status' => 'error',
-                'message' => 'Failed to import styles: ' . $e->getMessage(),
+                'message' => 'Failed to import styles: '.$e->getMessage(),
             ], 500);
         }
     }
@@ -142,7 +143,7 @@ class StyleImportApiController extends Controller
     private function parseCsv(string $filePath): array
     {
         $rows = [];
-        if (!file_exists($filePath) || !is_readable($filePath)) {
+        if (! file_exists($filePath) || ! is_readable($filePath)) {
             return $rows;
         }
 
@@ -151,9 +152,10 @@ class StyleImportApiController extends Controller
             while (($data = fgetcsv($handle, 2000, ',')) !== false) {
                 if ($headers === null) {
                     $headers = array_map('trim', $data);
+
                     continue;
                 }
-                if (count($data) >= 1 && !empty(array_filter($data))) {
+                if (count($data) >= 1 && ! empty(array_filter($data))) {
                     $row = [];
                     foreach ($headers as $i => $header) {
                         $row[$header] = $data[$i] ?? '';
@@ -173,7 +175,7 @@ class StyleImportApiController extends Controller
     private function parseXlsx(string $filePath): array
     {
         $rows = [];
-        $zip = new ZipArchive();
+        $zip = new ZipArchive;
 
         if ($zip->open($filePath) !== true) {
             return $rows;
@@ -225,6 +227,7 @@ class StyleImportApiController extends Controller
         }
 
         $zip->close();
+
         return $rows;
     }
 }

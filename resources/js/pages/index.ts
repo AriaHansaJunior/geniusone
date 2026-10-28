@@ -98,3 +98,4 @@ export { TypeOfRequestForm } from "./Warehouse/Master/TypeOfRequest/TypeOfReques
 export { DestinationLocationIndex } from "./Warehouse/Master/DestinationLocation/DestinationLocationIndex";
 export { DestinationLocationForm } from "./Warehouse/Master/DestinationLocation/DestinationLocationForm";
 export { UserPermissionAdmin } from "./Admin/UserPermissionAdmin";
+export { AuditLogAdmin } from "./Admin/AuditLogAdmin";

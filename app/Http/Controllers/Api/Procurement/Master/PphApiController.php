@@ -62,6 +62,7 @@ class PphApiController extends Controller
     public function show(int $id): JsonResponse
     {
         $record = Pph::with('type')->findOrFail($id);
+
         return response()->json(['data' => $record]);
     }
 
@@ -70,7 +71,7 @@ class PphApiController extends Controller
         $record = Pph::findOrFail($id);
 
         $validated = $request->validate([
-            'name' => 'sometimes|required|string|max:45|unique:pph,name,' . $id,
+            'name' => 'sometimes|required|string|max:45|unique:pph,name,'.$id,
             'value' => 'sometimes|required|numeric',
             'deduction' => 'nullable|in:yes,no,-',
             'status' => 'nullable|string|max:45',

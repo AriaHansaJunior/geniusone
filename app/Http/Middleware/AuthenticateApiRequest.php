@@ -2,11 +2,11 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\System\Auth\User;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
-use App\Models\System\Auth\User;
 use Symfony\Component\HttpFoundation\Response;
 
 class AuthenticateApiRequest
@@ -31,7 +31,7 @@ class AuthenticateApiRequest
                 $user = User::find($userId);
                 if ($user && $user->isActive()) {
                     Auth::setUser($user);
-                    $request->setUserResolver(fn() => $user);
+                    $request->setUserResolver(fn () => $user);
                 }
             }
         }

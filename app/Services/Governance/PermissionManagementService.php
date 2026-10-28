@@ -42,7 +42,7 @@ class PermissionManagementService
             'is_system' => false,
         ]);
 
-        if (!empty($data['permissions'])) {
+        if (! empty($data['permissions'])) {
             $role->syncPermissions($data['permissions']);
         }
 
@@ -72,7 +72,7 @@ class PermissionManagementService
         }
 
         // Prevent renaming system role name
-        if (!$role->is_system && isset($data['name'])) {
+        if (! $role->is_system && isset($data['name'])) {
             $updateData['name'] = strtolower(trim($data['name']));
         }
 
@@ -100,7 +100,7 @@ class PermissionManagementService
         $role = Role::findOrFail($roleId);
 
         if ($role->is_system || in_array($role->name, [Role::SUPERADMIN, Role::ADMIN], true)) {
-            throw new InvalidArgumentException("System protected roles cannot be deleted.");
+            throw new InvalidArgumentException('System protected roles cannot be deleted.');
         }
 
         AuditLogger::log(
@@ -152,7 +152,7 @@ class PermissionManagementService
         }
 
         return [
-            'roles' => $roles->map(fn($r) => ['id' => $r->id, 'name' => $r->name, 'label' => $r->label, 'is_system' => $r->is_system])->values()->toArray(),
+            'roles' => $roles->map(fn ($r) => ['id' => $r->id, 'name' => $r->name, 'label' => $r->label, 'is_system' => $r->is_system])->values()->toArray(),
             'matrix' => $matrix,
         ];
     }
@@ -165,7 +165,7 @@ class PermissionManagementService
         $role = Role::findOrFail($roleId);
 
         if ($role->name === Role::SUPERADMIN) {
-            throw new InvalidArgumentException("SuperAdmin role permissions are immutable and inherently unrestricted (*).");
+            throw new InvalidArgumentException('SuperAdmin role permissions are immutable and inherently unrestricted (*).');
         }
 
         $role->syncPermissions($permissionNames);

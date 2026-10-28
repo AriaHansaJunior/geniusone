@@ -2,8 +2,11 @@
 
 namespace App\Models\Master\Material;
 
+use App\Models\Master\Finance\Account;
+use App\Models\Master\Organization\ReportingType;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Classification extends Model
@@ -11,6 +14,7 @@ class Classification extends Model
     use HasFactory;
 
     protected $table = 'classifications';
+
     public $timestamps = false;
 
     protected $fillable = [
@@ -27,13 +31,13 @@ class Classification extends Model
         return $this->hasMany(Item::class, 'classifications_id');
     }
 
-    public function reportingType(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    public function reportingType(): BelongsTo
     {
-        return $this->belongsTo(\App\Models\Master\Organization\ReportingType::class, 'reporting_types_id');
+        return $this->belongsTo(ReportingType::class, 'reporting_types_id');
     }
 
-    public function account(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    public function account(): BelongsTo
     {
-        return $this->belongsTo(\App\Models\Master\Finance\Account::class, 'accounts_id');
+        return $this->belongsTo(Account::class, 'accounts_id');
     }
 }

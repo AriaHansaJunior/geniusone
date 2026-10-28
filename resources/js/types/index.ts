@@ -20,6 +20,7 @@ export type IconName =
   | "chevronRight"
   | "clock"
   | "close"
+  | "copy"
   | "download"
   | "edit"
   | "eye"
@@ -42,6 +43,7 @@ export type IconName =
   | "refresh"
   | "search"
   | "settings"
+  | "shield"
   | "trash"
   | "upload"
   | "user";
@@ -123,7 +125,8 @@ export type PageKey =
   | "wh-rep-delivery-order"
   | "wh-rep-stock-mutation"
   | "wh-rep-outstanding-request"
-  | "user-permission-admin";
+  | "user-permission-admin"
+  | "audit-log-admin";
 
 export type ViewState =
   | { type: "dashboard" }

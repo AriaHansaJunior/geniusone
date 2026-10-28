@@ -2,66 +2,64 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\DB;
-use App\Models\System\Auth\User;
-use App\Models\System\Audit\Log;
-use App\Models\Master\Organization\Department;
-use App\Models\Master\Organization\Section;
-use App\Models\Master\Organization\ReportingType;
-use App\Models\Master\Organization\JobNumber;
-use App\Models\Master\Finance\Currency;
-use App\Models\Master\Finance\Valuta;
-use App\Models\Master\Finance\PaymentTerm;
-use App\Models\Master\Finance\PaymentMethod;
-use App\Models\Master\Finance\DeliveryTerm;
-use App\Models\Master\Finance\RafaksiType;
-use App\Models\Master\Finance\Account;
-use App\Models\Master\Finance\Pph;
-use App\Models\Master\Finance\PphType;
-use App\Models\Master\Material\UnitOfMeasurement;
-use App\Models\Master\Material\Category;
-use App\Models\Master\Material\Classification;
-use App\Models\Master\Material\Brand;
-use App\Models\Master\Material\Style;
-use App\Models\Master\Material\Colour;
-use App\Models\Master\Material\ItemType;
-use App\Models\Master\Material\Item;
+use App\Models\Master\Customs\DocumentHistory;
+use App\Models\Master\Customs\DocumentHistoryItem;
 use App\Models\Master\Customs\Facility;
 use App\Models\Master\Customs\HsCode;
-use App\Models\Procurement\PurchaseOrder\AdditionalCostType;
+use App\Models\Master\Finance\Account;
+use App\Models\Master\Finance\Currency;
+use App\Models\Master\Finance\DeliveryTerm;
+use App\Models\Master\Finance\PaymentMethod;
+use App\Models\Master\Finance\PaymentTerm;
+use App\Models\Master\Finance\Pph;
+use App\Models\Master\Finance\PphType;
+use App\Models\Master\Finance\RafaksiType;
+use App\Models\Master\Finance\Valuta;
+use App\Models\Master\Material\Brand;
+use App\Models\Master\Material\Category;
+use App\Models\Master\Material\Classification;
+use App\Models\Master\Material\Colour;
+use App\Models\Master\Material\Item;
+use App\Models\Master\Material\ItemType;
+use App\Models\Master\Material\Style;
+use App\Models\Master\Material\UnitOfMeasurement;
+use App\Models\Master\Organization\Department;
+use App\Models\Master\Organization\JobNumber;
+use App\Models\Master\Organization\ReportingType;
+use App\Models\Master\Organization\Section;
+use App\Models\Master\Partner\Country;
 use App\Models\Master\Partner\Origin;
 use App\Models\Master\Partner\Port;
 use App\Models\Master\Partner\Supplier;
-use App\Models\Master\Partner\Country;
-use App\Models\Warehouse\Facility\WarehouseType;
-use App\Models\Warehouse\Facility\Warehouse;
+use App\Models\Procurement\PurchaseOrder\AdditionalCostType;
+use App\Models\Procurement\PurchaseOrder\ApprovalPo;
 use App\Models\Procurement\PurchaseOrder\PoType;
-use App\Models\Procurement\PurchaseRequest\PurchaseRequisition;
-use App\Models\Procurement\PurchaseRequest\PurchaseRequisitionItem;
-use App\Models\Procurement\PurchaseRequest\ApprovalPr;
 use App\Models\Procurement\PurchaseOrder\PurchaseOrder;
 use App\Models\Procurement\PurchaseOrder\PurchaseOrderItem;
-use App\Models\Procurement\PurchaseOrder\ApprovalPo;
-use App\Models\Warehouse\GateReceiving\ReceiveNote;
-use App\Models\Warehouse\GateReceiving\PurchaseOrderReceiveNote;
-use App\Models\Warehouse\GateReceiving\ApprovalRn;
-use App\Models\Warehouse\InboundStorage\BpbReceiveMaterial;
-use App\Models\Warehouse\InboundStorage\PoRnToBpb;
-use App\Models\Warehouse\InboundStorage\ApprovalBpb;
+use App\Models\Procurement\PurchaseRequest\ApprovalPr;
+use App\Models\Procurement\PurchaseRequest\PurchaseRequisition;
+use App\Models\Procurement\PurchaseRequest\PurchaseRequisitionItem;
+use App\Models\System\Auth\User;
+use App\Models\Warehouse\Facility\Warehouse;
 use App\Models\Warehouse\Facility\WarehouseCoordinate;
+use App\Models\Warehouse\Facility\WarehouseType;
+use App\Models\Warehouse\GateReceiving\ApprovalRn;
+use App\Models\Warehouse\GateReceiving\PurchaseOrderReceiveNote;
+use App\Models\Warehouse\GateReceiving\ReceiveNote;
 use App\Models\Warehouse\GateReceiving\ReceiveNoteReturn;
 use App\Models\Warehouse\GateReceiving\ReceiveNoteReturnItem;
-use App\Models\Master\Customs\DocumentHistory;
-use App\Models\Master\Customs\DocumentHistoryItem;
+use App\Models\Warehouse\InboundStorage\ApprovalBpb;
+use App\Models\Warehouse\InboundStorage\BpbReceiveMaterial;
+use App\Models\Warehouse\InboundStorage\PoRnToBpb;
 use Carbon\Carbon;
+use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Hash;
 
 class GeniusOneDemoSeeder extends Seeder
 {
     public function run(): void
     {
-        $this->command->info("Seeding Master Data for GeniusOne...");
+        $this->command->info('Seeding Master Data for GeniusOne...');
 
         // 1. Users
         $admin = User::updateOrCreate(
@@ -331,7 +329,7 @@ class GeniusOneDemoSeeder extends Seeder
             );
         }
 
-        $this->command->info("Master Data ready. Seeding 10 Complete Procurement Lifecycle Records...");
+        $this->command->info('Master Data ready. Seeding 10 Complete Procurement Lifecycle Records...');
 
         // =========================================================================
         // 10 PROCUREMENT LIFECYCLE RECORDS (PR -> PO -> RN -> BPB)
@@ -527,7 +525,7 @@ class GeniusOneDemoSeeder extends Seeder
             }
 
             // 2. Create PO if applicable
-            if (!empty($d['po_number'])) {
+            if (! empty($d['po_number'])) {
                 $subtotal = $d['qty_po'] * $d['price'];
                 $dpp = $subtotal - ($d['discount'] ?? 0);
                 $ppn = $d['ppn'] ?? ($dpp * 0.12);
@@ -550,7 +548,7 @@ class GeniusOneDemoSeeder extends Seeder
                         'latest_delivery' => Carbon::parse($d['due']),
                         'facility_status' => 'FASILITAS',
                         'service_subkon' => 0,
-                        'remark' => 'Pengadaan reguler sesuai PR ' . $pr->pr_number,
+                        'remark' => 'Pengadaan reguler sesuai PR '.$pr->pr_number,
                         'created_at' => Carbon::parse($d['date'])->addDays(2),
                         'updated_at' => Carbon::parse($d['date'])->addDays(2),
                     ]
@@ -590,7 +588,7 @@ class GeniusOneDemoSeeder extends Seeder
                 }
 
                 // 3. Create Receive Note (RN) if applicable
-                if (!empty($d['rn_number'])) {
+                if (! empty($d['rn_number'])) {
                     $rnDate = Carbon::parse($d['date'])->addDays(5);
                     $rn = ReceiveNote::updateOrCreate(
                         ['rn_number' => $d['rn_number']],
@@ -599,7 +597,7 @@ class GeniusOneDemoSeeder extends Seeder
                             'currencies_id' => $curIdr->id,
                             'rate' => 1.0,
                             'arrival_date' => $rnDate,
-                            'invoice_number' => 'INV/' . substr($d['po_number'], 4),
+                            'invoice_number' => 'INV/'.substr($d['po_number'], 4),
                             'invoice_date' => $rnDate,
                             'sj_number' => $d['sj_number'],
                             'sj_date' => $rnDate,
@@ -618,7 +616,7 @@ class GeniusOneDemoSeeder extends Seeder
                             'receive_note_id' => $rn->id,
                         ],
                         [
-                            'dn_number' => 'DN-' . substr($rn->rn_number, 0, 4),
+                            'dn_number' => 'DN-'.substr($rn->rn_number, 0, 4),
                             'job_number_id' => $jobAlpha->id,
                             'item_name' => $itemModel->name,
                             'quantity' => $d['qty_rn'],
@@ -634,13 +632,13 @@ class GeniusOneDemoSeeder extends Seeder
                     );
 
                     // 4. Create BPB (Warehouse Inbound) if applicable
-                    if (!empty($d['bpb_number'])) {
+                    if (! empty($d['bpb_number'])) {
                         $bpbDate = $rnDate->copy()->addDay();
                         $bpb = BpbReceiveMaterial::updateOrCreate(
                             ['bpb_number' => $d['bpb_number']],
                             [
                                 'receive_date' => $bpbDate,
-                                'note' => 'Diterima di ' . $d['warehouse']->name,
+                                'note' => 'Diterima di '.$d['warehouse']->name,
                                 'creator_id' => $warehouseUser->id,
                                 'updated_by' => $warehouseUser->id,
                                 'created_at' => $bpbDate,
@@ -670,7 +668,7 @@ class GeniusOneDemoSeeder extends Seeder
                 }
             }
 
-            $this->command->info("Seeded record #" . ($idx + 1) . ": PR {$d['pr_number']}" . (!empty($d['po_number']) ? " -> PO {$d['po_number']}" : ""));
+            $this->command->info('Seeded record #'.($idx + 1).": PR {$d['pr_number']}".(! empty($d['po_number']) ? " -> PO {$d['po_number']}" : ''));
         }
 
         // Seed sample Receive Note Return
@@ -753,6 +751,6 @@ class GeniusOneDemoSeeder extends Seeder
             ]
         );
 
-        $this->command->info("GeniusOne 10 Demo Records successfully seeded!");
+        $this->command->info('GeniusOne 10 Demo Records successfully seeded!');
     }
 }

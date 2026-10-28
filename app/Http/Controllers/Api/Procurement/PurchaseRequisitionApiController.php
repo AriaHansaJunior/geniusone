@@ -3,11 +3,14 @@
 namespace App\Http\Controllers\Api\Procurement;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
+use App\Models\Master\Material\Item;
+use App\Models\Master\Organization\Department;
+use App\Models\Master\Organization\Section;
 use App\Models\Procurement\PurchaseRequest\PurchaseRequisition;
-use App\ViewModels\PurchaseRequisitionViewModel;
+use App\Services\DocumentNumber\DocumentNumberGenerator;
 use App\Services\GeniusOneBackend;
 use Carbon\Carbon;
+use Illuminate\Http\Request;
 
 class PurchaseRequisitionApiController extends Controller
 {
@@ -28,8 +31,8 @@ class PurchaseRequisitionApiController extends Controller
             $s = $request->search;
             $query->where(function ($q) use ($s) {
                 $q->where('pr_number', 'like', "%{$s}%")
-                  ->orWhere('notes', 'like', "%{$s}%")
-                  ->orWhereHas('department', fn($dq) => $dq->where('name', 'like', "%{$s}%"));
+                    ->orWhere('notes', 'like', "%{$s}%")
+                    ->orWhereHas('department', fn ($dq) => $dq->where('name', 'like', "%{$s}%"));
             });
         }
 
@@ -37,16 +40,16 @@ class PurchaseRequisitionApiController extends Controller
 
         // Calculate Summary Cards
         $totalCount = $records->count();
-        $approvedCount = $records->filter(fn($r) => in_array($r->status, ['Approved 1', 'Approved 2', 'Completed']))->count();
-        $draftCount = $records->filter(fn($r) => in_array($r->status, ['Draft', 'Ready']))->count();
-        $totalItems = $records->sum(fn($r) => $r->items->count());
-        $totalQuantity = $records->sum(fn($r) => $r->items->sum('quantity'));
+        $approvedCount = $records->filter(fn ($r) => in_array($r->status, ['Approved 1', 'Approved 2', 'Completed']))->count();
+        $draftCount = $records->filter(fn ($r) => in_array($r->status, ['Draft', 'Ready']))->count();
+        $totalItems = $records->sum(fn ($r) => $r->items->count());
+        $totalQuantity = $records->sum(fn ($r) => $r->items->sum('quantity'));
 
         $stats = [
-            ["Total PR Documents", (string) $totalCount, "Generated this month"],
-            ["Approved PRs", (string) $approvedCount, "Ready for PO conversion"],
-            ["Pending Approval", (string) ($totalCount - $approvedCount), "Draft & Pending"],
-            ["Total Items Requested", number_format($totalQuantity, 2) . " Units", "Across {$totalItems} line items"],
+            ['Total PR Documents', (string) $totalCount, 'Generated this month'],
+            ['Approved PRs', (string) $approvedCount, 'Ready for PO conversion'],
+            ['Pending Approval', (string) ($totalCount - $approvedCount), 'Draft & Pending'],
+            ['Total Items Requested', number_format($totalQuantity, 2).' Units', "Across {$totalItems} line items"],
         ];
 
         // Format rows for Frontend Table
@@ -63,7 +66,7 @@ class PurchaseRequisitionApiController extends Controller
                     'item' => $it->item?->name ?? 'Material Item',
                     'itemCode' => $it->item?->code ?? '-',
                     'itemAlias' => '—',
-                    'quantity' => number_format((float) $it->quantity, 4) . ' ' . ($it->item?->unitOfMeasurement?->name ?? 'PCE'),
+                    'quantity' => number_format((float) $it->quantity, 4).' '.($it->item?->unitOfMeasurement?->name ?? 'PCE'),
                     'unit' => $it->item?->unitOfMeasurement?->name ?? 'PCE',
                     'remark' => $it->remark ?? $it->note ?? 'PP Sby Kebutuhan Operasional',
                     'dueDate' => $it->due_date ? Carbon::parse($it->due_date)->format('d-M-Y') : '-',
@@ -82,7 +85,7 @@ class PurchaseRequisitionApiController extends Controller
                 '_rawCreatedBy' => "{$creatorName} {$createdTime}",
                 '_rawLastUpdated' => "{$creatorName} {$createdTime}",
                 '_rawPr' => $pr->pr_number,
-                '_totalQty' => number_format((float) $pr->items->sum('quantity'), 4) . ' ' . ($firstItem?->item?->unitOfMeasurement?->name ?? 'PCE'),
+                '_totalQty' => number_format((float) $pr->items->sum('quantity'), 4).' '.($firstItem?->item?->unitOfMeasurement?->name ?? 'PCE'),
                 '_items' => $lineItems,
                 'no' => $idx + 1,
                 'prNumber' => $pr->pr_number,
@@ -128,12 +131,12 @@ class PurchaseRequisitionApiController extends Controller
             'items.item.unitOfMeasurement',
             'approvals.user',
         ])
-        ->where('pr_number', $rawCode)
-        ->orWhere('pr_number', $code)
-        ->orWhere('id', is_numeric($code) ? $code : null)
-        ->first();
+            ->where('pr_number', $rawCode)
+            ->orWhere('pr_number', $code)
+            ->orWhere('id', is_numeric($code) ? $code : null)
+            ->first();
 
-        if (!$pr) {
+        if (! $pr) {
             $pr = PurchaseRequisition::with([
                 'department',
                 'section',
@@ -143,10 +146,11 @@ class PurchaseRequisitionApiController extends Controller
             ])->first();
         }
 
-        if (!$pr) {
+        if (! $pr) {
             if ($request->expectsJson() || $request->is('api/*')) {
                 return response()->json(['error' => 'Purchase Requisition not found'], 404);
             }
+
             return redirect('/pr')->withErrors(['error' => 'Purchase Requisition not found']);
         }
 
@@ -161,7 +165,7 @@ class PurchaseRequisitionApiController extends Controller
                 'item' => $it->item?->name ?? 'Material Item',
                 'itemCode' => $it->item?->code ?? '-',
                 'itemAlias' => '—',
-                'quantity' => number_format((float) $it->quantity, 4) . ' ' . ($it->item?->unitOfMeasurement?->name ?? 'PCE'),
+                'quantity' => number_format((float) $it->quantity, 4).' '.($it->item?->unitOfMeasurement?->name ?? 'PCE'),
                 'unit' => $it->item?->unitOfMeasurement?->name ?? 'PCE',
                 'remark' => $it->remark ?? $it->note ?? 'PP Sby Kebutuhan Operasional',
                 'dueDate' => $it->due_date ? Carbon::parse($it->due_date)->format('d-M-Y') : '-',
@@ -180,9 +184,9 @@ class PurchaseRequisitionApiController extends Controller
             '_rawCreatedBy' => "{$creatorName} {$createdTime}",
             '_rawLastUpdated' => "{$creatorName} {$createdTime}",
             '_rawPr' => $pr->pr_number,
-            '_totalQty' => number_format((float) $pr->items->sum('quantity'), 4) . ' ' . ($firstItem?->item?->unitOfMeasurement?->name ?? 'PCE'),
+            '_totalQty' => number_format((float) $pr->items->sum('quantity'), 4).' '.($firstItem?->item?->unitOfMeasurement?->name ?? 'PCE'),
             '_items' => $lineItems,
-            'approvals' => $pr->approvals->map(fn($a) => [
+            'approvals' => $pr->approvals->map(fn ($a) => [
                 'tier' => (int) $a->approval_ke,
                 'status' => $a->status === 1 ? 'Approved' : 'Pending',
                 'user' => $a->user?->name ?? 'System',
@@ -214,27 +218,27 @@ class PurchaseRequisitionApiController extends Controller
         // Resolve Department ID
         $deptInput = $request->input('departments_id') ?? $request->input('department') ?? $request->input('deptRequest');
         $deptId = null;
-        if (is_numeric($deptInput) && \App\Models\Master\Organization\Department::where('id', $deptInput)->exists()) {
+        if (is_numeric($deptInput) && Department::where('id', $deptInput)->exists()) {
             $deptId = (int) $deptInput;
-        } elseif (!empty($deptInput)) {
-            $dept = \App\Models\Master\Organization\Department::where('name', 'like', "%{$deptInput}%")->first();
+        } elseif (! empty($deptInput)) {
+            $dept = Department::where('name', 'like', "%{$deptInput}%")->first();
             $deptId = $dept?->id;
         }
-        if (!$deptId) {
-            $deptId = \App\Models\Master\Organization\Department::first()?->id ?? 1;
+        if (! $deptId) {
+            $deptId = Department::first()?->id ?? 1;
         }
 
         // Resolve Section ID
         $secInput = $request->input('sections_id') ?? $request->input('section');
         $secId = null;
-        if (is_numeric($secInput) && \App\Models\Master\Organization\Section::where('id', $secInput)->exists()) {
+        if (is_numeric($secInput) && Section::where('id', $secInput)->exists()) {
             $secId = (int) $secInput;
-        } elseif (!empty($secInput)) {
-            $sec = \App\Models\Master\Organization\Section::where('name', 'like', "%{$secInput}%")->first();
+        } elseif (! empty($secInput)) {
+            $sec = Section::where('name', 'like', "%{$secInput}%")->first();
             $secId = $sec?->id;
         }
-        if (!$secId) {
-            $secId = \App\Models\Master\Organization\Section::first()?->id ?? 1;
+        if (! $secId) {
+            $secId = Section::first()?->id ?? 1;
         }
 
         // Resolve Line Items
@@ -242,29 +246,29 @@ class PurchaseRequisitionApiController extends Controller
         if (empty($rawItems)) {
             return response()->json([
                 'message' => 'Validation error',
-                'errors' => ['items' => ['At least one item is required.']]
+                'errors' => ['items' => ['At least one item is required.']],
             ], 422);
         }
 
-        $firstDbItem = \App\Models\Master\Material\Item::first();
+        $firstDbItem = Item::first();
         $fallbackItemId = $firstDbItem?->id ?? 1;
 
         $processedItems = [];
         foreach ($rawItems as $idx => $it) {
             $itemId = null;
-            if (!empty($it['items_id']) && is_numeric($it['items_id']) && \App\Models\Master\Material\Item::where('id', $it['items_id'])->exists()) {
+            if (! empty($it['items_id']) && is_numeric($it['items_id']) && Item::where('id', $it['items_id'])->exists()) {
                 $itemId = (int) $it['items_id'];
-            } elseif (!empty($it['itemCode']) || !empty($it['code']) || !empty($it['item_code'])) {
+            } elseif (! empty($it['itemCode']) || ! empty($it['code']) || ! empty($it['item_code'])) {
                 $code = $it['itemCode'] ?? $it['code'] ?? $it['item_code'];
-                $found = \App\Models\Master\Material\Item::where('code', $code)->first();
+                $found = Item::where('code', $code)->first();
                 $itemId = $found?->id;
-            } elseif (!empty($it['itemName']) || !empty($it['name']) || !empty($it['item_name'])) {
+            } elseif (! empty($it['itemName']) || ! empty($it['name']) || ! empty($it['item_name'])) {
                 $name = $it['itemName'] ?? $it['name'] ?? $it['item_name'];
-                $found = \App\Models\Master\Material\Item::where('name', 'like', "%{$name}%")->first();
+                $found = Item::where('name', 'like', "%{$name}%")->first();
                 $itemId = $found?->id;
             }
 
-            if (!$itemId) {
+            if (! $itemId) {
                 $itemId = $fallbackItemId;
             }
 
@@ -276,7 +280,7 @@ class PurchaseRequisitionApiController extends Controller
             ];
         }
 
-        $prNumber = $request->input('pr_number') ?? \App\Services\DocumentNumber\DocumentNumberGenerator::generatePrNumber();
+        $prNumber = $request->input('pr_number') ?? DocumentNumberGenerator::generatePrNumber();
         $date = $request->input('date') ?? now()->format('Y-m-d');
         $dueDate = $request->input('due_date') ?? now()->addDays(14)->format('Y-m-d');
 
@@ -328,7 +332,7 @@ class PurchaseRequisitionApiController extends Controller
         $pr = GeniusOneBackend::procurement()->rejectPr($id, $userId, $tier, $reason);
 
         return response()->json([
-            'message' => "Purchase Requisition rejected successfully",
+            'message' => 'Purchase Requisition rejected successfully',
             'data' => $pr,
         ]);
     }

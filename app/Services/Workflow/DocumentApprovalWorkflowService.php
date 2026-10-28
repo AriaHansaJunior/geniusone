@@ -2,6 +2,7 @@
 
 namespace App\Services\Workflow;
 
+use App\Models\Master\Material\Item;
 use App\Models\Procurement\PurchaseOrder\ApprovalPo;
 use App\Models\Procurement\PurchaseOrder\PurchaseOrder;
 use App\Models\Procurement\PurchaseRequest\ApprovalPr;
@@ -22,6 +23,7 @@ use App\Services\AuditLogger;
 use App\Services\Inventory\InventoryService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use InvalidArgumentException;
 
 /**
@@ -31,16 +33,20 @@ use InvalidArgumentException;
 class DocumentApprovalWorkflowService
 {
     public const STATUS_DRAFT = 'Draft';
+
     public const STATUS_WAITING_1 = 'Waiting for Approve 1';
+
     public const STATUS_WAITING_2 = 'Waiting for Approve 2';
+
     public const STATUS_APPROVED = 'Approved';
+
     public const STATUS_REJECTED = 'Rejected';
 
     protected InventoryService $inventoryService;
 
     public function __construct(?InventoryService $inventoryService = null)
     {
-        $this->inventoryService = $inventoryService ?? new InventoryService();
+        $this->inventoryService = $inventoryService ?? new InventoryService;
     }
 
     /**
@@ -84,15 +90,15 @@ class DocumentApprovalWorkflowService
      */
     public function approve(string $module, int $id, int $userId, int $tier = 1, ?string $note = null): Model
     {
-        if (!in_array($tier, [1, 2], true)) {
-            throw new InvalidArgumentException("Approval tier must be 1 or 2.");
+        if (! in_array($tier, [1, 2], true)) {
+            throw new InvalidArgumentException('Approval tier must be 1 or 2.');
         }
 
         $user = User::findOrFail($userId);
         $normKey = $this->normalizeModuleKey($module);
-        $permKey = strtolower($normKey) . ".approve_{$tier}";
+        $permKey = strtolower($normKey).".approve_{$tier}";
 
-        if (!$user->hasPermission($permKey) && !$user->hasPermission(strtolower($normKey) . ".*")) {
+        if (! $user->hasPermission($permKey) && ! $user->hasPermission(strtolower($normKey).'.*')) {
             throw new InvalidArgumentException("User does not have permission '{$permKey}' to approve {$normKey} Stage {$tier}.");
         }
 
@@ -168,15 +174,15 @@ class DocumentApprovalWorkflowService
      */
     public function unapprove(string $module, int $id, int $userId, int $tier = 1, ?string $reason = null): Model
     {
-        if (!in_array($tier, [1, 2], true)) {
-            throw new InvalidArgumentException("UnApprove tier must be 1 or 2.");
+        if (! in_array($tier, [1, 2], true)) {
+            throw new InvalidArgumentException('UnApprove tier must be 1 or 2.');
         }
 
         $user = User::findOrFail($userId);
         $normKey = $this->normalizeModuleKey($module);
-        $permKey = strtolower($normKey) . ".unapprove_{$tier}";
+        $permKey = strtolower($normKey).".unapprove_{$tier}";
 
-        if (!$user->hasPermission($permKey) && !$user->hasPermission(strtolower($normKey) . ".*")) {
+        if (! $user->hasPermission($permKey) && ! $user->hasPermission(strtolower($normKey).'.*')) {
             throw new InvalidArgumentException("User does not have permission '{$permKey}' to unapprove {$normKey} Stage {$tier}.");
         }
 
@@ -205,7 +211,7 @@ class DocumentApprovalWorkflowService
                 $this->resetModuleApprovalRecord($normKey, $doc->id, 2);
             } else {
                 // UnApprove 2 cancels only Stage 2, rolling back to Waiting 2
-                if (!in_array($currentStatus, [self::STATUS_APPROVED, 'Approved 2'])) {
+                if (! in_array($currentStatus, [self::STATUS_APPROVED, 'Approved 2'])) {
                     throw new InvalidArgumentException("Cannot UnApprove Stage 2 because document is not in Approved status (Current status: {$currentStatus}).");
                 }
 
@@ -263,14 +269,14 @@ class DocumentApprovalWorkflowService
     {
         $reason = trim($reason);
         if (strlen($reason) < 3) {
-            throw new InvalidArgumentException("A valid rejection reason (minimum 3 characters) is required.");
+            throw new InvalidArgumentException('A valid rejection reason (minimum 3 characters) is required.');
         }
 
         $user = User::findOrFail($userId);
         $normKey = $this->normalizeModuleKey($module);
-        $permKey = strtolower($normKey) . ".approve_{$tier}";
+        $permKey = strtolower($normKey).".approve_{$tier}";
 
-        if (!$user->hasPermission($permKey) && !$user->hasPermission(strtolower($normKey) . ".*")) {
+        if (! $user->hasPermission($permKey) && ! $user->hasPermission(strtolower($normKey).'.*')) {
             throw new InvalidArgumentException("User does not have authority to reject {$normKey} Stage {$tier}.");
         }
 
@@ -279,7 +285,7 @@ class DocumentApprovalWorkflowService
             $currentStatus = $this->getDocumentStatus($doc);
 
             if (in_array($currentStatus, [self::STATUS_APPROVED, 'Approved 2'])) {
-                throw new InvalidArgumentException("Cannot reject document that has already been fully Approved. Use UnApprove first.");
+                throw new InvalidArgumentException('Cannot reject document that has already been fully Approved. Use UnApprove first.');
             }
 
             // 1. Update module approval table (status = 2 / Rejected)
@@ -332,7 +338,7 @@ class DocumentApprovalWorkflowService
             $currentStatus = $this->getDocumentStatus($doc);
 
             if ($currentStatus !== self::STATUS_REJECTED && $currentStatus !== self::STATUS_DRAFT) {
-                throw new InvalidArgumentException("Only Draft or Rejected documents can be submitted for approval.");
+                throw new InvalidArgumentException('Only Draft or Rejected documents can be submitted for approval.');
             }
 
             $this->resetModuleApprovalRecord($normKey, $doc->id, 1);
@@ -400,6 +406,7 @@ class DocumentApprovalWorkflowService
     public function isLocked(Model $doc): bool
     {
         $status = $this->getDocumentStatus($doc);
+
         return in_array($status, [self::STATUS_APPROVED, 'Approved', 'Approved 2'], true);
     }
 
@@ -409,11 +416,11 @@ class DocumentApprovalWorkflowService
 
     public function getDocumentStatus(Model $doc): string
     {
-        if (isset($doc->status) && !empty($doc->status)) {
+        if (isset($doc->status) && ! empty($doc->status)) {
             return (string) $doc->status;
         }
 
-        if (isset($doc->approval_status) && !empty($doc->approval_status)) {
+        if (isset($doc->approval_status) && ! empty($doc->approval_status)) {
             return (string) $doc->approval_status;
         }
 
@@ -428,15 +435,15 @@ class DocumentApprovalWorkflowService
     {
         $data = ['updated_by' => $userId];
 
-        if (\Illuminate\Support\Facades\Schema::hasColumn($doc->getTable(), 'status')) {
+        if (Schema::hasColumn($doc->getTable(), 'status')) {
             $data['status'] = $status;
         }
 
-        if (\Illuminate\Support\Facades\Schema::hasColumn($doc->getTable(), 'approval_status')) {
+        if (Schema::hasColumn($doc->getTable(), 'approval_status')) {
             $data['approval_status'] = $status;
         }
 
-        if (\Illuminate\Support\Facades\Schema::hasColumn($doc->getTable(), 'rejection_note')) {
+        if (Schema::hasColumn($doc->getTable(), 'rejection_note')) {
             $data['rejection_note'] = $rejectionNote;
         }
 
@@ -500,7 +507,7 @@ class DocumentApprovalWorkflowService
         if ($module === 'PR') {
             // Check if any PO items reference this PR's items
             $prItemIds = $doc->items()->pluck('id')->toArray();
-            if (!empty($prItemIds)) {
+            if (! empty($prItemIds)) {
                 $hasPo = DB::table('purchase_order_has_purchase_requisitions')
                     ->whereIn('pr_has_items_id', $prItemIds)
                     ->exists();
@@ -522,7 +529,7 @@ class DocumentApprovalWorkflowService
         if ($module === 'RN') {
             // Check if any BPB references this RN
             $poRnIds = $doc->purchaseOrders()->pluck('id')->toArray();
-            if (!empty($poRnIds)) {
+            if (! empty($poRnIds)) {
                 $hasBpb = PoRnToBpb::whereIn('po_has_rn_id', $poRnIds)->exists();
                 if ($hasBpb) {
                     throw new InvalidArgumentException("Cannot UnApprove Receive Note '{$doc->rn_number}': It has already been allocated in BPB (Warehouse Inbound). Cancel the BPB first.");
@@ -540,7 +547,7 @@ class DocumentApprovalWorkflowService
 
         foreach ($mappings as $map) {
             $poRn = $map->poReceiveNote;
-            if (!$poRn) {
+            if (! $poRn) {
                 continue;
             }
 
@@ -549,8 +556,8 @@ class DocumentApprovalWorkflowService
                 continue;
             }
 
-            $item = \App\Models\Master\Material\Item::where('name', $poRn->item_name)->first()
-                ?? \App\Models\Master\Material\Item::first();
+            $item = Item::where('name', $poRn->item_name)->first()
+                ?? Item::first();
 
             if ($item) {
                 $this->inventoryService->recordStockMovement(
@@ -576,7 +583,7 @@ class DocumentApprovalWorkflowService
 
         foreach ($mappings as $map) {
             $poRn = $map->poReceiveNote;
-            if (!$poRn) {
+            if (! $poRn) {
                 continue;
             }
 
@@ -585,8 +592,8 @@ class DocumentApprovalWorkflowService
                 continue;
             }
 
-            $item = \App\Models\Master\Material\Item::where('name', $poRn->item_name)->first()
-                ?? \App\Models\Master\Material\Item::first();
+            $item = Item::where('name', $poRn->item_name)->first()
+                ?? Item::first();
 
             if ($item) {
                 $this->inventoryService->recordStockMovement(
@@ -616,7 +623,7 @@ class DocumentApprovalWorkflowService
                 continue;
             }
 
-            $targetItem = $rmItem->item ?? \App\Models\Master\Material\Item::find($rmItem->items_id);
+            $targetItem = $rmItem->item ?? Item::find($rmItem->items_id);
             if ($targetItem) {
                 $warehouseId = $rm->warehouses_id ?? 1;
                 $this->inventoryService->recordStockMovement(
@@ -646,7 +653,7 @@ class DocumentApprovalWorkflowService
                 continue;
             }
 
-            $targetItem = $rmItem->item ?? \App\Models\Master\Material\Item::find($rmItem->items_id);
+            $targetItem = $rmItem->item ?? Item::find($rmItem->items_id);
             if ($targetItem) {
                 $warehouseId = $rm->warehouses_id ?? 1;
                 $this->inventoryService->recordStockMovement(

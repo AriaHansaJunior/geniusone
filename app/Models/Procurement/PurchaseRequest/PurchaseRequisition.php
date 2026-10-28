@@ -2,19 +2,19 @@
 
 namespace App\Models\Procurement\PurchaseRequest;
 
+use App\Models\Master\Organization\Department;
+use App\Models\Master\Organization\Section;
+use App\Models\System\Auth\User;
+use App\Traits\LogsActivity;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use App\Traits\LogsActivity;
-use App\Models\Master\Organization\Department;
-use App\Models\Master\Organization\Section;
-use App\Models\System\Auth\User;
 
 class PurchaseRequisition extends Model
 {
-    use HasFactory, SoftDeletes, LogsActivity;
+    use HasFactory, LogsActivity, SoftDeletes;
 
     protected $table = 'purchase_requisitions';
 

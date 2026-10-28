@@ -18,11 +18,11 @@ class UserProfileApiController extends Controller
     public function show(Request $request): JsonResponse
     {
         $user = $request->user() ?: Auth::user();
-        if (!$user && $request->query('user_id')) {
+        if (! $user && $request->query('user_id')) {
             $user = User::find($request->query('user_id'));
         }
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Unauthenticated: User profile not found.',
@@ -49,11 +49,11 @@ class UserProfileApiController extends Controller
     public function update(Request $request): JsonResponse
     {
         $user = $request->user() ?: Auth::user();
-        if (!$user && $request->input('user_id')) {
+        if (! $user && $request->input('user_id')) {
             $user = User::find($request->input('user_id'));
         }
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Unauthenticated: User profile not found to update.',
@@ -68,19 +68,19 @@ class UserProfileApiController extends Controller
             'photo' => 'nullable', // Base64 data URL, image file, or string path
         ]);
 
-        if (!empty($validated['name'])) {
+        if (! empty($validated['name'])) {
             $user->name = $validated['name'];
         }
 
-        if (!empty($validated['username'])) {
+        if (! empty($validated['username'])) {
             $user->username = $validated['username'];
         }
 
-        if (!empty($validated['email'])) {
+        if (! empty($validated['email'])) {
             $user->email = $validated['email'];
         }
 
-        if (!empty($validated['password'])) {
+        if (! empty($validated['password'])) {
             $user->password = Hash::make($validated['password']);
         }
 
@@ -88,15 +88,15 @@ class UserProfileApiController extends Controller
         if ($request->hasFile('photo')) {
             $path = $request->file('photo')->store('avatars', 'public');
             $user->photo = Storage::url($path);
-        } elseif (!empty($validated['photo']) && is_string($validated['photo'])) {
+        } elseif (! empty($validated['photo']) && is_string($validated['photo'])) {
             $photoStr = $validated['photo'];
             if (str_starts_with($photoStr, 'data:image')) {
                 // Save data URL to storage
-                @list($type, $data) = explode(';', $photoStr);
-                @list(, $data) = explode(',', $data);
+                @[$type, $data] = explode(';', $photoStr);
+                @[, $data] = explode(',', $data);
                 if ($data) {
                     $decoded = base64_decode($data);
-                    $fileName = 'avatars/' . Str::uuid() . '.png';
+                    $fileName = 'avatars/'.Str::uuid().'.png';
                     Storage::disk('public')->put($fileName, $decoded);
                     $user->photo = Storage::url($fileName);
                 }

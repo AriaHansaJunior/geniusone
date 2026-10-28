@@ -18,9 +18,9 @@ class ReceiveNoteReturnApiController extends Controller
         if ($search = $request->query('search')) {
             $query->where(function ($q) use ($search) {
                 $q->where('rn_number', 'like', "%{$search}%")
-                  ->orWhere('delivery_order', 'like', "%{$search}%")
-                  ->orWhere('customer', 'like', "%{$search}%")
-                  ->orWhere('sales_delivery_number', 'like', "%{$search}%");
+                    ->orWhere('delivery_order', 'like', "%{$search}%")
+                    ->orWhere('customer', 'like', "%{$search}%")
+                    ->orWhere('sales_delivery_number', 'like', "%{$search}%");
             });
         }
 
@@ -71,7 +71,7 @@ class ReceiveNoteReturnApiController extends Controller
         return DB::transaction(function () use ($validated, $request) {
             if (empty($validated['rn_number'])) {
                 $nextId = (ReceiveNoteReturn::max('id') ?? 0) + 1;
-                $validated['rn_number'] = 'RNR-' . date('Y') . '-' . str_pad((string) $nextId, 4, '0', STR_PAD_LEFT);
+                $validated['rn_number'] = 'RNR-'.date('Y').'-'.str_pad((string) $nextId, 4, '0', STR_PAD_LEFT);
             }
 
             $validated['created_by'] = $request->user()?->id ?? 1;
@@ -114,6 +114,7 @@ class ReceiveNoteReturnApiController extends Controller
     public function show(int $id): JsonResponse
     {
         $record = ReceiveNoteReturn::with(['items', 'createdByUser', 'updatedByUser'])->findOrFail($id);
+
         return response()->json(['data' => $record]);
     }
 

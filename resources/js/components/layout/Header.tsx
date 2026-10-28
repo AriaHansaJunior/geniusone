@@ -7,6 +7,7 @@ interface HeaderProps {
   onToggleCollapse?: () => void;
   onNavigateProfile?: () => void;
   onNavigateAdmin?: () => void;
+  onNavigateAudit?: () => void;
   onLogoutRequest?: () => void;
   onToggleMobileSidebar?: () => void;
 }
@@ -16,6 +17,7 @@ export function Header({
   onToggleCollapse,
   onNavigateProfile,
   onNavigateAdmin,
+  onNavigateAudit,
   onLogoutRequest,
   onToggleMobileSidebar,
 }: HeaderProps) {
@@ -197,6 +199,22 @@ export function Header({
                   >
                     <Icon name="lock" size={15} />
                     <span>User & Permission Admin</span>
+                  </button>
+                )}
+
+                {isSuperAdmin && onNavigateAudit && (
+                  <button
+                    type="button"
+                    className="user-dropdown__item"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsDropdownOpen(false);
+                      onNavigateAudit();
+                    }}
+                    role="menuitem"
+                  >
+                    <Icon name="history" size={15} />
+                    <span>System Audit Logs</span>
                   </button>
                 )}
 

@@ -14,7 +14,7 @@ return new class extends Migration
         // =========================================================================
         // 1. TYPE OF REQUEST (Master Tipe Permintaan Bahan Baku)
         // =========================================================================
-        if (!Schema::hasTable('type_of_request')) {
+        if (! Schema::hasTable('type_of_request')) {
             Schema::create('type_of_request', function (Blueprint $table) {
                 $table->id();
                 $table->string('name', 45);
@@ -27,7 +27,7 @@ return new class extends Migration
         // =========================================================================
         // 2. DESTINATION LOCATION (Master Lokasi Tujuan Penyaluran Material)
         // =========================================================================
-        if (!Schema::hasTable('destination_location')) {
+        if (! Schema::hasTable('destination_location')) {
             Schema::create('destination_location', function (Blueprint $table) {
                 $table->id();
                 $table->string('name', 45);
@@ -40,7 +40,7 @@ return new class extends Migration
         // =========================================================================
         // 3. REQUEST MATERIAL (Header Transaksi Permintaan Material)
         // =========================================================================
-        if (!Schema::hasTable('request_material')) {
+        if (! Schema::hasTable('request_material')) {
             Schema::create('request_material', function (Blueprint $table) {
                 $table->id();
                 $table->string('request_number', 100)->nullable()->index();
@@ -62,7 +62,7 @@ return new class extends Migration
         // =========================================================================
         // 4. REQUEST MATERIAL ITEM (Detail Item Bahan yang Diminta)
         // =========================================================================
-        if (!Schema::hasTable('request_material_item')) {
+        if (! Schema::hasTable('request_material_item')) {
             Schema::create('request_material_item', function (Blueprint $table) {
                 $table->foreignId('items_id')->constrained('items');
                 $table->foreignId('request_material_id')->constrained('request_material')->cascadeOnDelete();
@@ -78,7 +78,7 @@ return new class extends Migration
         // =========================================================================
         // 5. APPROVAL RM (Persetujuan Berjenjang Request Material Ke-1 dan Ke-2)
         // =========================================================================
-        if (!Schema::hasTable('approval_rm')) {
+        if (! Schema::hasTable('approval_rm')) {
             Schema::create('approval_rm', function (Blueprint $table) {
                 $table->foreignId('request_material_id')->constrained('request_material')->cascadeOnDelete();
                 $table->foreignId('users_id')->constrained('users');

@@ -2,8 +2,10 @@
 
 namespace App\Services\Warehouse;
 
-use App\Models\Warehouse\GateReceiving\ReceiveNote;
+use App\Models\JobNumber;
+use App\Models\Procurement\PurchaseOrder\PurchaseOrder;
 use App\Models\Warehouse\GateReceiving\PurchaseOrderReceiveNote;
+use App\Models\Warehouse\GateReceiving\ReceiveNote;
 use App\Services\DocumentNumber\DocumentNumberGenerator;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
@@ -17,15 +19,15 @@ class ReceiveNoteService
     public function createReceiveNote(array $headerData, array $receivedItems, int $userId = 1): ReceiveNote
     {
         if (empty($receivedItems)) {
-            throw new InvalidArgumentException("A Receive Note must link to at least one PO item.");
+            throw new InvalidArgumentException('A Receive Note must link to at least one PO item.');
         }
 
         // BE-05: Strict Downstream Gating (PO must be Approved before receiving materials)
         foreach ($receivedItems as $item) {
             $poId = $item['purchase_order_id'] ?? null;
             if ($poId) {
-                $po = \App\Models\Procurement\PurchaseOrder\PurchaseOrder::find($poId);
-                if ($po && !in_array($po->status, ['Approved', 'Approved 2'], true)) {
+                $po = PurchaseOrder::find($poId);
+                if ($po && ! in_array($po->status, ['Approved', 'Approved 2'], true)) {
                     throw new InvalidArgumentException("Cannot create Receive Note: Linked Purchase Order '{$po->po_number}' must be fully Approved first (Current status: {$po->status}).");
                 }
             }
@@ -56,7 +58,7 @@ class ReceiveNoteService
                 'updated_by' => $userId,
             ]);
 
-            $defaultJobId = \App\Models\JobNumber::first()?->id ?? 1;
+            $defaultJobId = JobNumber::first()?->id ?? 1;
 
             foreach ($receivedItems as $item) {
                 PurchaseOrderReceiveNote::create([
@@ -92,9 +94,9 @@ class ReceiveNoteService
             'purchaseOrders.jobNumber',
             'approvals.user',
         ])
-        ->where('rn_number', $code)
-        ->orWhere('id', is_numeric($code) ? $code : null)
-        ->first();
+            ->where('rn_number', $code)
+            ->orWhere('id', is_numeric($code) ? $code : null)
+            ->first();
     }
 
     /**
@@ -108,19 +110,19 @@ class ReceiveNoteService
             'purchaseOrders.purchaseOrder',
         ]);
 
-        if (!empty($filters['search'])) {
+        if (! empty($filters['search'])) {
             $s = $filters['search'];
             $query->where(function ($q) use ($s) {
                 $q->where('rn_number', 'like', "%{$s}%")
-                  ->orWhere('sj_number', 'like', "%{$s}%")
-                  ->orWhere('license_plate', 'like', "%{$s}%")
-                  ->orWhereHas('supplier', function ($sq) use ($s) {
-                      $sq->where('name', 'like', "%{$s}%");
-                  });
+                    ->orWhere('sj_number', 'like', "%{$s}%")
+                    ->orWhere('license_plate', 'like', "%{$s}%")
+                    ->orWhereHas('supplier', function ($sq) use ($s) {
+                        $sq->where('name', 'like', "%{$s}%");
+                    });
             });
         }
 
-        if (!empty($filters['supplier_id'])) {
+        if (! empty($filters['supplier_id'])) {
             $query->where('supliers_id', $filters['supplier_id']);
         }
 

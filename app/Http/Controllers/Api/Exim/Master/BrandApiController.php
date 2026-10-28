@@ -16,7 +16,7 @@ class BrandApiController extends Controller
         if ($search = $request->query('search')) {
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('code', 'like', "%{$search}%");
+                    ->orWhere('code', 'like', "%{$search}%");
             });
         }
 
@@ -54,6 +54,7 @@ class BrandApiController extends Controller
     public function show(int $id): JsonResponse
     {
         $record = Brand::findOrFail($id);
+
         return response()->json(['data' => $record]);
     }
 
@@ -62,7 +63,7 @@ class BrandApiController extends Controller
         $record = Brand::findOrFail($id);
 
         $validated = $request->validate([
-            'code' => 'sometimes|required|string|max:45|unique:brands,code,' . $id,
+            'code' => 'sometimes|required|string|max:45|unique:brands,code,'.$id,
             'name' => 'sometimes|required|string|max:45',
             'description' => 'nullable|string|max:255',
             'status' => 'nullable|integer',

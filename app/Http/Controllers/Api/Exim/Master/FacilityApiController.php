@@ -16,7 +16,7 @@ class FacilityApiController extends Controller
         if ($search = $request->query('search')) {
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('description', 'like', "%{$search}%");
+                    ->orWhere('description', 'like', "%{$search}%");
             });
         }
 
@@ -53,6 +53,7 @@ class FacilityApiController extends Controller
     public function show(int $id): JsonResponse
     {
         $record = Facility::findOrFail($id);
+
         return response()->json(['data' => $record]);
     }
 
@@ -61,7 +62,7 @@ class FacilityApiController extends Controller
         $record = Facility::findOrFail($id);
 
         $validated = $request->validate([
-            'name' => 'sometimes|required|string|max:45|unique:facilities,name,' . $id,
+            'name' => 'sometimes|required|string|max:45|unique:facilities,name,'.$id,
             'description' => 'nullable|string|max:255',
             'status' => 'nullable|integer',
         ]);

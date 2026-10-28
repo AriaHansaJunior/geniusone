@@ -3,11 +3,18 @@
 namespace App\Http\Controllers\Api\Procurement;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
+use App\Models\Master\Finance\DeliveryTerm;
+use App\Models\Master\Finance\PaymentMethod;
+use App\Models\Master\Finance\PaymentTerm;
+use App\Models\Master\Finance\Valuta;
+use App\Models\Master\Partner\Supplier;
+use App\Models\Procurement\PurchaseOrder\PoType;
 use App\Models\Procurement\PurchaseOrder\PurchaseOrder;
 use App\Models\System\Audit\Log;
+use App\Services\DocumentNumber\DocumentNumberGenerator;
 use App\Services\GeniusOneBackend;
 use Carbon\Carbon;
+use Illuminate\Http\Request;
 
 class PurchaseOrderApiController extends Controller
 {
@@ -36,8 +43,8 @@ class PurchaseOrderApiController extends Controller
             $s = $request->search;
             $query->where(function ($q) use ($s) {
                 $q->where('po_number', 'like', "%{$s}%")
-                  ->orWhere('remark', 'like', "%{$s}%")
-                  ->orWhereHas('supplier', fn($sq) => $sq->where('name', 'like', "%{$s}%"));
+                    ->orWhere('remark', 'like', "%{$s}%")
+                    ->orWhereHas('supplier', fn ($sq) => $sq->where('name', 'like', "%{$s}%"));
             });
         }
 
@@ -45,16 +52,16 @@ class PurchaseOrderApiController extends Controller
 
         // Calculate Summary Cards
         $totalCount = $records->count();
-        $approved1Count = $records->filter(fn($r) => $r->status === 'Approved 1')->count();
-        $approved2Count = $records->filter(fn($r) => in_array($r->status, ['Approved 2', 'Completed']))->count();
-        $readyDraftCount = $records->filter(fn($r) => in_array($r->status, ['Draft', 'Ready']))->count();
-        $grandTotalValue = $records->sum(fn($r) => $r->grand_total);
+        $approved1Count = $records->filter(fn ($r) => $r->status === 'Approved 1')->count();
+        $approved2Count = $records->filter(fn ($r) => in_array($r->status, ['Approved 2', 'Completed']))->count();
+        $readyDraftCount = $records->filter(fn ($r) => in_array($r->status, ['Draft', 'Ready']))->count();
+        $grandTotalValue = $records->sum(fn ($r) => $r->grand_total);
 
         $stats = [
-            ["Total POs", (string) $totalCount, "Generated procurement orders"],
-            ["Approved 1", (string) $approved1Count, $totalCount > 0 ? round(($approved1Count / $totalCount) * 100, 1) . "% of total" : "0%"],
-            ["Approved 2", (string) $approved2Count, $totalCount > 0 ? round(($approved2Count / $totalCount) * 100, 1) . "% of total" : "0%"],
-            ["Total Order Value", "IDR " . number_format($grandTotalValue, 0), "Across all line items"],
+            ['Total POs', (string) $totalCount, 'Generated procurement orders'],
+            ['Approved 1', (string) $approved1Count, $totalCount > 0 ? round(($approved1Count / $totalCount) * 100, 1).'% of total' : '0%'],
+            ['Approved 2', (string) $approved2Count, $totalCount > 0 ? round(($approved2Count / $totalCount) * 100, 1).'% of total' : '0%'],
+            ['Total Order Value', 'IDR '.number_format($grandTotalValue, 0), 'Across all line items'],
         ];
 
         // Format rows for Frontend Table
@@ -97,12 +104,12 @@ class PurchaseOrderApiController extends Controller
             'additionalCosts',
             'receiveNotes.receiveNote',
         ])
-        ->where('po_number', $rawCode)
-        ->orWhere('po_number', $code)
-        ->orWhere('id', is_numeric($code) ? $code : null)
-        ->first();
+            ->where('po_number', $rawCode)
+            ->orWhere('po_number', $code)
+            ->orWhere('id', is_numeric($code) ? $code : null)
+            ->first();
 
-        if (!$po) {
+        if (! $po) {
             $po = PurchaseOrder::with([
                 'supplier',
                 'creator',
@@ -120,10 +127,11 @@ class PurchaseOrderApiController extends Controller
             ])->first();
         }
 
-        if (!$po) {
+        if (! $po) {
             if ($request->expectsJson() || $request->is('api/*')) {
                 return response()->json(['error' => 'Purchase Order not found'], 404);
             }
+
             return redirect('/po')->withErrors(['error' => 'Purchase Order not found']);
         }
 
@@ -164,8 +172,8 @@ class PurchaseOrderApiController extends Controller
 
         $appr1 = $po->approvals->where('approval_ke', '1')->first();
         $appr2 = $po->approvals->where('approval_ke', '2')->first();
-        $releasedBy = $appr1 && $appr1->user ? ($appr1->updated_at?->format('d-m-Y H:i') . ' by ' . $appr1->user->name) : '—';
-        $approvedBy = $appr2 && $appr2->user ? ($appr2->updated_at?->format('d-m-Y H:i') . ' by ' . $appr2->user->name) : '—';
+        $releasedBy = $appr1 && $appr1->user ? ($appr1->updated_at?->format('d-m-Y H:i').' by '.$appr1->user->name) : '—';
+        $approvedBy = $appr2 && $appr2->user ? ($appr2->updated_at?->format('d-m-Y H:i').' by '.$appr2->user->name) : '—';
 
         $totalOrderQty = (float) $po->items->sum('order');
 
@@ -185,7 +193,7 @@ class PurchaseOrderApiController extends Controller
                 'item' => $itemObj?->name ?? 'Industrial Material',
                 'itemCode' => $itemObj?->code ?? '-',
                 'itemAlias' => $it->item_alias ?? '—',
-                'quantity' => number_format($qty, 4) . ' ' . $unitName,
+                'quantity' => number_format($qty, 4).' '.$unitName,
                 'unit' => $unitName,
                 'price' => number_format($price, 2),
                 'discount' => number_format($disc, 2),
@@ -208,7 +216,7 @@ class PurchaseOrderApiController extends Controller
                 'no' => $acIdx + 1,
                 'item' => $ac->name ?? 'Operational Freight / Handling',
                 'itemCode' => '-',
-                'nominal' => $currencyCode . ' ' . number_format((float) $ac->value, 2),
+                'nominal' => $currencyCode.' '.number_format((float) $ac->value, 2),
                 'currency' => $currencyCode,
                 'remark' => $ac->note ?? '-',
             ];
@@ -253,7 +261,7 @@ class PurchaseOrderApiController extends Controller
             '_rawDate' => $po->date ? Carbon::parse($po->date)->format('d-M-Y') : ($po->created_at?->format('d-M-Y') ?? '-'),
             '_rawDueDate' => $po->due_date ? Carbon::parse($po->due_date)->format('d-M-Y') : '-',
             '_rawSupplier' => $supplierName,
-            '_rawTotal' => $currencyCode . ' ' . number_format((float) $po->grand_total, 2),
+            '_rawTotal' => $currencyCode.' '.number_format((float) $po->grand_total, 2),
             '_rawPr' => $prNumber,
             '_rawPo' => $po->po_number,
             '_rawRn' => $rnNumber,
@@ -270,17 +278,17 @@ class PurchaseOrderApiController extends Controller
             '_rawRevision' => (string) ($po->revision ?? 0),
             '_rawSubkon' => $po->service_subkon ? 'Yes' : 'No',
             '_rawDeptCreated' => 'Purchasing',
-            '_totalQty' => number_format($totalOrderQty, 4) . " {$firstItemUnit}",
+            '_totalQty' => number_format($totalOrderQty, 4)." {$firstItemUnit}",
             '_items' => $lineItems,
             '_otherCosts' => $otherCosts,
             '_financials' => [
-                'subtotal' => $currencyCode . ' ' . number_format((float) $po->subtotal, 2),
-                'discount' => $currencyCode . ' ' . number_format((float) $po->discount, 2),
-                'dpp' => $currencyCode . ' ' . number_format((float) $po->dpp, 2),
-                'ppn' => $currencyCode . ' ' . number_format((float) $po->ppn, 2),
-                'pph' => $currencyCode . ' ' . number_format((float) $po->pph, 2),
-                'additionalCosts' => $currencyCode . ' ' . number_format((float) $po->additional_costs_total, 2),
-                'grandTotal' => $currencyCode . ' ' . number_format((float) $po->grand_total, 2),
+                'subtotal' => $currencyCode.' '.number_format((float) $po->subtotal, 2),
+                'discount' => $currencyCode.' '.number_format((float) $po->discount, 2),
+                'dpp' => $currencyCode.' '.number_format((float) $po->dpp, 2),
+                'ppn' => $currencyCode.' '.number_format((float) $po->ppn, 2),
+                'pph' => $currencyCode.' '.number_format((float) $po->pph, 2),
+                'additionalCosts' => $currencyCode.' '.number_format((float) $po->additional_costs_total, 2),
+                'grandTotal' => $currencyCode.' '.number_format((float) $po->grand_total, 2),
             ],
             '_history' => $history,
             'no' => $indexNo,
@@ -291,7 +299,7 @@ class PurchaseOrderApiController extends Controller
             'paymentTerm' => $po->paymentTerm?->name ?? 'Cash On Delivery',
             'totalItem' => $po->items->count(),
             'totalOrder' => number_format($totalOrderQty, 4),
-            'total' => $currencyCode . ' ' . number_format((float) $po->grand_total, 2),
+            'total' => $currencyCode.' '.number_format((float) $po->grand_total, 2),
             'actions' => '',
             '_search' => "{$po->po_number} {$supplierName} {$status} {$prNumber}",
         ];
@@ -307,72 +315,72 @@ class PurchaseOrderApiController extends Controller
         // Resolve PO Type ID
         $poTypeInput = $request->input('po_types_id') ?? $request->input('poType') ?? $request->input('po_type');
         $poTypeId = null;
-        if (is_numeric($poTypeInput) && \App\Models\Procurement\PurchaseOrder\PoType::where('id', $poTypeInput)->exists()) {
+        if (is_numeric($poTypeInput) && PoType::where('id', $poTypeInput)->exists()) {
             $poTypeId = (int) $poTypeInput;
-        } elseif (!empty($poTypeInput)) {
-            $pt = \App\Models\Procurement\PurchaseOrder\PoType::where('code', $poTypeInput)->orWhere('name', 'like', "%{$poTypeInput}%")->first();
+        } elseif (! empty($poTypeInput)) {
+            $pt = PoType::where('code', $poTypeInput)->orWhere('name', 'like', "%{$poTypeInput}%")->first();
             $poTypeId = $pt?->id;
         }
-        if (!$poTypeId) {
-            $poTypeId = \App\Models\Procurement\PurchaseOrder\PoType::first()?->id ?? 1;
+        if (! $poTypeId) {
+            $poTypeId = PoType::first()?->id ?? 1;
         }
 
         // Resolve Supplier ID
         $supInput = $request->input('supliers_id') ?? $request->input('supplier_id') ?? $request->input('supplierId') ?? $request->input('supplier');
         $supId = null;
-        if (is_numeric($supInput) && \App\Models\Master\Partner\Supplier::where('id', $supInput)->exists()) {
+        if (is_numeric($supInput) && Supplier::where('id', $supInput)->exists()) {
             $supId = (int) $supInput;
-        } elseif (!empty($supInput)) {
+        } elseif (! empty($supInput)) {
             // Check if input is formatted like "sup-1" or "SUP-001"
             $cleaned = preg_replace('/^sup-?/i', '', (string) $supInput);
-            if (is_numeric($cleaned) && \App\Models\Master\Partner\Supplier::where('id', $cleaned)->exists()) {
+            if (is_numeric($cleaned) && Supplier::where('id', $cleaned)->exists()) {
                 $supId = (int) $cleaned;
             } else {
-                $sup = \App\Models\Master\Partner\Supplier::where('code', $supInput)->orWhere('name', 'like', "%{$supInput}%")->first();
+                $sup = Supplier::where('code', $supInput)->orWhere('name', 'like', "%{$supInput}%")->first();
                 $supId = $sup?->id;
             }
         }
-        if (!$supId) {
-            $supId = \App\Models\Master\Partner\Supplier::first()?->id ?? 1;
+        if (! $supId) {
+            $supId = Supplier::first()?->id ?? 1;
         }
 
         // Resolve Valuta / Currency ID
         $valutaInput = $request->input('valutas_id') ?? $request->input('currency_id') ?? $request->input('currency');
         $valutaId = null;
-        if (is_numeric($valutaInput) && \App\Models\Master\Finance\Valuta::where('id', $valutaInput)->exists()) {
+        if (is_numeric($valutaInput) && Valuta::where('id', $valutaInput)->exists()) {
             $valutaId = (int) $valutaInput;
-        } elseif (!empty($valutaInput)) {
-            $v = \App\Models\Master\Finance\Valuta::where('code', 'like', "%{$valutaInput}%")->orWhere('name', 'like', "%{$valutaInput}%")->first();
+        } elseif (! empty($valutaInput)) {
+            $v = Valuta::where('code', 'like', "%{$valutaInput}%")->orWhere('name', 'like', "%{$valutaInput}%")->first();
             $valutaId = $v?->id;
         }
-        if (!$valutaId) {
-            $valutaId = \App\Models\Master\Finance\Valuta::first()?->id ?? 1;
+        if (! $valutaId) {
+            $valutaId = Valuta::first()?->id ?? 1;
         }
 
         // Resolve Payment Term ID
         $payTermInput = $request->input('payment_terms_id') ?? $request->input('paymentTerm');
-        $payTermId = is_numeric($payTermInput) && \App\Models\Master\Finance\PaymentTerm::where('id', $payTermInput)->exists()
+        $payTermId = is_numeric($payTermInput) && PaymentTerm::where('id', $payTermInput)->exists()
             ? (int) $payTermInput
-            : (\App\Models\Master\Finance\PaymentTerm::first()?->id ?? 1);
+            : (PaymentTerm::first()?->id ?? 1);
 
         // Resolve Payment Method ID
         $payMethodInput = $request->input('payment_methods_id') ?? $request->input('paymentMethod');
-        $payMethodId = is_numeric($payMethodInput) && \App\Models\Master\Finance\PaymentMethod::where('id', $payMethodInput)->exists()
+        $payMethodId = is_numeric($payMethodInput) && PaymentMethod::where('id', $payMethodInput)->exists()
             ? (int) $payMethodInput
-            : (\App\Models\Master\Finance\PaymentMethod::first()?->id ?? 1);
+            : (PaymentMethod::first()?->id ?? 1);
 
         // Resolve Delivery Term ID
         $delivTermInput = $request->input('delivery_terms_id') ?? $request->input('deliveryTerm');
-        $delivTermId = is_numeric($delivTermInput) && \App\Models\Master\Finance\DeliveryTerm::where('id', $delivTermInput)->exists()
+        $delivTermId = is_numeric($delivTermInput) && DeliveryTerm::where('id', $delivTermInput)->exists()
             ? (int) $delivTermInput
-            : (\App\Models\Master\Finance\DeliveryTerm::first()?->id ?? 1);
+            : (DeliveryTerm::first()?->id ?? 1);
 
         // Resolve Line Items
         $rawItems = $request->input('items', []);
         if (empty($rawItems)) {
             return response()->json([
                 'message' => 'Validation error',
-                'errors' => ['items' => ['At least one item is required.']]
+                'errors' => ['items' => ['At least one item is required.']],
             ], 422);
         }
 
@@ -380,7 +388,7 @@ class PurchaseOrderApiController extends Controller
         foreach ($rawItems as $it) {
             $orderQty = (float) ($it['order'] ?? $it['orderQty'] ?? $it['quantity'] ?? 1);
             $price = (float) ($it['price'] ?? 0);
-            $prHasItemId = !empty($it['pr_has_items_id']) && is_numeric($it['pr_has_items_id']) ? (int) $it['pr_has_items_id'] : null;
+            $prHasItemId = ! empty($it['pr_has_items_id']) && is_numeric($it['pr_has_items_id']) ? (int) $it['pr_has_items_id'] : null;
 
             $processedItems[] = [
                 'pr_has_items_id' => $prHasItemId,
@@ -395,7 +403,7 @@ class PurchaseOrderApiController extends Controller
             ];
         }
 
-        $poNumber = $request->input('po_number') ?? \App\Services\DocumentNumber\DocumentNumberGenerator::generatePoNumber();
+        $poNumber = $request->input('po_number') ?? DocumentNumberGenerator::generatePoNumber();
         $date = $request->input('date') ?? now()->format('Y-m-d');
         $dueDate = $request->input('due_date') ?? now()->addDays(14)->format('Y-m-d');
         $latestDeliv = $request->input('latest_delivery') ?? now()->addDays(14);
@@ -461,7 +469,7 @@ class PurchaseOrderApiController extends Controller
         $po = GeniusOneBackend::procurement()->rejectPo($id, $userId, $tier, $reason);
 
         return response()->json([
-            'message' => "Purchase Order rejected successfully",
+            'message' => 'Purchase Order rejected successfully',
             'data' => $po,
         ]);
     }

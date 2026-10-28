@@ -52,38 +52,39 @@ class PurchaseOrderViewModel
                     'unit' => $item->item?->unitOfMeasurement?->name ?? 'PCS',
                     'quantity' => (float) $item->quantity,
                     'price' => (float) $item->price,
-                    'formatted_price' => $currencyCode . ' ' . number_format((float) $item->price, 2),
+                    'formatted_price' => $currencyCode.' '.number_format((float) $item->price, 2),
                     'total' => (float) $item->subtotal,
-                    'formatted_total' => $currencyCode . ' ' . number_format((float) $item->subtotal, 2),
+                    'formatted_total' => $currencyCode.' '.number_format((float) $item->subtotal, 2),
                     'discount' => (float) $item->discount,
                     'ppn' => (float) $item->ppn,
                     'grand_total' => (float) $item->grand_total,
-                    'formatted_grand_total' => $currencyCode . ' ' . number_format((float) $item->grand_total, 2),
+                    'formatted_grand_total' => $currencyCode.' '.number_format((float) $item->grand_total, 2),
                 ];
             })->values()->toArray(),
             'financials' => [
                 'subtotal' => (float) $this->po->subtotal,
-                'formatted_subtotal' => $currencyCode . ' ' . number_format((float) $this->po->subtotal, 2),
+                'formatted_subtotal' => $currencyCode.' '.number_format((float) $this->po->subtotal, 2),
                 'discount' => (float) $this->po->discount,
-                'formatted_discount' => $currencyCode . ' ' . number_format((float) $this->po->discount, 2),
+                'formatted_discount' => $currencyCode.' '.number_format((float) $this->po->discount, 2),
                 'dpp' => (float) $this->po->dpp,
-                'formatted_dpp' => $currencyCode . ' ' . number_format((float) $this->po->dpp, 2),
+                'formatted_dpp' => $currencyCode.' '.number_format((float) $this->po->dpp, 2),
                 'ppn' => (float) $this->po->ppn,
-                'formatted_ppn' => $currencyCode . ' ' . number_format((float) $this->po->ppn, 2),
+                'formatted_ppn' => $currencyCode.' '.number_format((float) $this->po->ppn, 2),
                 'pph' => (float) $this->po->pph,
-                'formatted_pph' => $currencyCode . ' ' . number_format((float) $this->po->pph, 2),
+                'formatted_pph' => $currencyCode.' '.number_format((float) $this->po->pph, 2),
                 'additional_costs' => (float) $this->po->additional_costs_total,
-                'formatted_additional_costs' => $currencyCode . ' ' . number_format((float) $this->po->additional_costs_total, 2),
+                'formatted_additional_costs' => $currencyCode.' '.number_format((float) $this->po->additional_costs_total, 2),
                 'grand_total' => (float) $this->po->grand_total,
-                'formatted_grand_total' => $currencyCode . ' ' . number_format((float) $this->po->grand_total, 2),
+                'formatted_grand_total' => $currencyCode.' '.number_format((float) $this->po->grand_total, 2),
             ],
             'linked_prs' => $this->po->items->map(function ($map) {
                 $pr = $map->requisitionItem?->purchaseRequisition;
+
                 return [
                     'pr_id' => $pr?->id,
                     'pr_number' => $pr?->pr_number ?? '-',
                 ];
-            })->filter(fn($x) => !empty($x['pr_id']))->unique('pr_id')->values()->toArray(),
+            })->filter(fn ($x) => ! empty($x['pr_id']))->unique('pr_id')->values()->toArray(),
             'approvals' => $this->po->approvals->map(function ($appr) {
                 return [
                     'tier' => (int) $appr->approval_ke,

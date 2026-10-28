@@ -3,32 +3,43 @@
 namespace App\Models\System\Auth;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Models\Master\Organization\Department;
+use App\Models\System\Governance\Permission;
+use App\Models\System\Governance\Role;
+use App\Traits\LogsActivity;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-
-use Illuminate\Database\Eloquent\SoftDeletes;
-
-use App\Traits\LogsActivity;
 
 #[Fillable(['username', 'name', 'email', 'password', 'photo', 'role', 'departments_id', 'status', 'sidebar_permissions'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable, SoftDeletes, LogsActivity;
+    use HasFactory, LogsActivity, Notifiable, SoftDeletes;
 
     public const ROLE_SUPERADMIN = 'superadmin';
+
     public const ROLE_ADMIN = 'admin';
+
     public const ROLE_APPROVER_TIER1 = 'approver_tier1';
+
     public const ROLE_APPROVER_TIER2 = 'approver_tier2';
+
     public const ROLE_PROCUREMENT = 'procurement';
+
     public const ROLE_WAREHOUSE = 'warehouse';
+
     public const ROLE_APPROVER = 'approver';
+
     public const ROLE_REQUESTER = 'requester';
+
     public const ROLE_VIEWER = 'viewer';
 
     public const ROLE_PERMISSIONS = [
@@ -101,18 +112,18 @@ class User extends Authenticatable
     /**
      * User's primary department relation.
      */
-    public function department(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    public function department(): BelongsTo
     {
-        return $this->belongsTo(\App\Models\Master\Organization\Department::class, 'departments_id');
+        return $this->belongsTo(Department::class, 'departments_id');
     }
 
     /**
      * Direct custom user-specific permission overrides.
      */
-    public function directPermissions(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    public function directPermissions(): BelongsToMany
     {
         return $this->belongsToMany(
-            \App\Models\System\Governance\Permission::class,
+            Permission::class,
             'user_has_permissions',
             'user_id',
             'permission_id'
@@ -122,9 +133,9 @@ class User extends Authenticatable
     /**
      * Associated Role model if present in database.
      */
-    public function roleModel(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    public function roleModel(): BelongsTo
     {
-        return $this->belongsTo(\App\Models\System\Governance\Role::class, 'role', 'name');
+        return $this->belongsTo(Role::class, 'role', 'name');
     }
 
     /**
@@ -175,7 +186,7 @@ class User extends Authenticatable
             return true;
         }
 
-        if (!$this->isActive()) {
+        if (! $this->isActive()) {
             return false;
         }
 
@@ -191,7 +202,7 @@ class User extends Authenticatable
 
         // 2. Check Role model permissions from DB
         try {
-            $roleModel = \App\Models\System\Governance\Role::where('name', $this->role)->with('permissions')->first();
+            $roleModel = Role::where('name', $this->role)->with('permissions')->first();
             if ($roleModel) {
                 if ($roleModel->permissions->contains('name', '*')) {
                     return true;
@@ -237,7 +248,7 @@ class User extends Authenticatable
         $perms = collect();
 
         try {
-            $roleModel = \App\Models\System\Governance\Role::where('name', $this->role)->with('permissions')->first();
+            $roleModel = Role::where('name', $this->role)->with('permissions')->first();
             if ($roleModel) {
                 if ($roleModel->permissions->contains('name', '*')) {
                     return ['*'];
@@ -256,7 +267,7 @@ class User extends Authenticatable
                 if ($dp->pivot->is_granted) {
                     $perms->push($dp->name);
                 } else {
-                    $perms = $perms->reject(fn($name) => $name === $dp->name);
+                    $perms = $perms->reject(fn ($name) => $name === $dp->name);
                 }
             }
         } catch (\Throwable $e) {

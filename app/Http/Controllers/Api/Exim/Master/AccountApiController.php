@@ -16,7 +16,7 @@ class AccountApiController extends Controller
         if ($search = $request->query('search')) {
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('code', 'like', "%{$search}%");
+                    ->orWhere('code', 'like', "%{$search}%");
             });
         }
 
@@ -53,6 +53,7 @@ class AccountApiController extends Controller
     public function show(int $id): JsonResponse
     {
         $record = Account::findOrFail($id);
+
         return response()->json(['data' => $record]);
     }
 
@@ -61,7 +62,7 @@ class AccountApiController extends Controller
         $record = Account::findOrFail($id);
 
         $validated = $request->validate([
-            'code' => 'sometimes|required|string|max:45|unique:accounts,code,' . $id,
+            'code' => 'sometimes|required|string|max:45|unique:accounts,code,'.$id,
             'name' => 'sometimes|required|string|max:45',
             'status' => 'nullable|string|max:45',
         ]);

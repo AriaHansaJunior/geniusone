@@ -2,26 +2,23 @@
 
 namespace App\Models\Procurement\PurchaseOrder;
 
+use App\Models\Master\Finance\DeliveryTerm;
+use App\Models\Master\Finance\PaymentMethod;
+use App\Models\Master\Finance\PaymentTerm;
+use App\Models\Master\Finance\Valuta;
+use App\Models\Master\Partner\Supplier;
+use App\Models\System\Auth\User;
+use App\Models\Warehouse\GateReceiving\PurchaseOrderReceiveNote;
+use App\Traits\LogsActivity;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use App\Traits\LogsActivity;
-use App\Models\System\Auth\User;
-use App\Models\Master\Partner\Supplier;
-use App\Models\Master\Finance\Valuta;
-use App\Models\Master\Finance\PaymentTerm;
-use App\Models\Master\Finance\PaymentMethod;
-use App\Models\Master\Finance\DeliveryTerm;
-use App\Models\Warehouse\GateReceiving\PurchaseOrderReceiveNote;
-use App\Models\Procurement\PurchaseOrder\PoType;
-use App\Models\Procurement\PurchaseOrder\AdditionalCost;
-use App\Models\Procurement\PurchaseOrder\ApprovalPo;
 
 class PurchaseOrder extends Model
 {
-    use HasFactory, SoftDeletes, LogsActivity;
+    use HasFactory, LogsActivity, SoftDeletes;
 
     protected $table = 'purchase_order';
 
@@ -155,12 +152,20 @@ class PurchaseOrder extends Model
     public function getStatusAttribute(): string
     {
         $appr2 = $this->approvals->where('approval_ke', '2')->first();
-        if ($appr2 && $appr2->status === 1) return 'Approved 2';
-        if ($appr2 && $appr2->status === 2) return 'Rejected';
+        if ($appr2 && $appr2->status === 1) {
+            return 'Approved 2';
+        }
+        if ($appr2 && $appr2->status === 2) {
+            return 'Rejected';
+        }
 
         $appr1 = $this->approvals->where('approval_ke', '1')->first();
-        if ($appr1 && $appr1->status === 1) return 'Approved 1';
-        if ($appr1 && $appr1->status === 2) return 'Rejected';
+        if ($appr1 && $appr1->status === 1) {
+            return 'Approved 1';
+        }
+        if ($appr1 && $appr1->status === 2) {
+            return 'Rejected';
+        }
 
         return 'Draft';
     }

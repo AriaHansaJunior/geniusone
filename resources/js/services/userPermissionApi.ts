@@ -201,11 +201,11 @@ export function getCurrentUser(): UserAccount {
   return users[0]; // Default SuperAdmin
 }
 
-export function setCurrentUser(userId: string): UserAccount {
+export function setCurrentUser(userId: string | number): UserAccount {
   const users = getStoredUsers();
-  const found = users.find((u) => u.id === userId) || users[0];
+  const found = users.find((u) => String(u.id) === String(userId)) || users[0];
   try {
-    localStorage.setItem(CURRENT_USER_KEY, found.id);
+    localStorage.setItem(CURRENT_USER_KEY, String(found.id));
   } catch (err) {
     console.warn("Error setting current user:", err);
   }

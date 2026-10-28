@@ -2,14 +2,14 @@
 
 namespace App\Models\System\Governance;
 
-use App\Models\System\Auth\User;
+use App\Traits\LogsActivity;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Role extends Model
 {
-    use HasFactory;
+    use HasFactory, LogsActivity;
 
     protected $table = 'roles';
 
@@ -28,12 +28,19 @@ class Role extends Model
      * Standard System Role Constants.
      */
     public const SUPERADMIN = 'superadmin';
+
     public const ADMIN = 'admin';
+
     public const APPROVER_TIER1 = 'approver_tier1';
+
     public const APPROVER_TIER2 = 'approver_tier2';
+
     public const PROCUREMENT = 'procurement';
+
     public const WAREHOUSE = 'warehouse';
+
     public const REQUESTER = 'requester';
+
     public const VIEWER = 'viewer';
 
     /**

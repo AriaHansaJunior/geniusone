@@ -7,18 +7,17 @@ class ProcurementCalculationService
     /**
      * Calculate financial breakdown for a single PO item.
      *
-     * @param float $price Unit price
-     * @param float $order Quantity ordered
-     * @param float $discountVal Discount rate (%) or nominal value
-     * @param string $discountType 'percentage' or 'nominal'
-     * @param float $ppnRate PPN rate (%) e.g. 11 or 12
-     * @param bool $isKawasanBerikat Whether PPN is suspended under customs facility
-     * @param float $pphRate PPh rate (%) e.g. 0.25, 0.5, 2.0
-     * @param bool $isPphDeduction Whether PPh deducts from payment
-     * @param float $lme LME price (USD)
-     * @param float $optionalRate Optional FX rate for LME
-     * @param float $percentageLme LME percentage (e.g. 40.0)
-     * @return array
+     * @param  float  $price  Unit price
+     * @param  float  $order  Quantity ordered
+     * @param  float  $discountVal  Discount rate (%) or nominal value
+     * @param  string  $discountType  'percentage' or 'nominal'
+     * @param  float  $ppnRate  PPN rate (%) e.g. 11 or 12
+     * @param  bool  $isKawasanBerikat  Whether PPN is suspended under customs facility
+     * @param  float  $pphRate  PPh rate (%) e.g. 0.25, 0.5, 2.0
+     * @param  bool  $isPphDeduction  Whether PPh deducts from payment
+     * @param  float  $lme  LME price (USD)
+     * @param  float  $optionalRate  Optional FX rate for LME
+     * @param  float  $percentageLme  LME percentage (e.g. 40.0)
      */
     public static function calculateItemFinancials(
         float $price,
@@ -47,7 +46,7 @@ class ProcurementCalculationService
 
         // PPN (Pajak Pertambahan Nilai)
         $ppnAmount = 0.0;
-        if (!$isKawasanBerikat && $ppnRate > 0) {
+        if (! $isKawasanBerikat && $ppnRate > 0) {
             $ppnAmount = round(($dpp * $ppnRate) / 100, 2);
         }
 
@@ -89,9 +88,8 @@ class ProcurementCalculationService
     /**
      * Compute entire Purchase Order order total including items & additional costs.
      *
-     * @param array $items Array of calculated item financials
-     * @param array $additionalCosts Array of additional cost items ['value' => 50000]
-     * @return array
+     * @param  array  $items  Array of calculated item financials
+     * @param  array  $additionalCosts  Array of additional cost items ['value' => 50000]
      */
     public static function calculateOrderGrandTotals(array $items, array $additionalCosts = []): array
     {

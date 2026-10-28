@@ -15,6 +15,7 @@ class RequestMaterialItem extends Model
     protected $table = 'request_material_item';
 
     public $incrementing = false;
+
     protected $primaryKey = ['items_id', 'request_material_id'];
 
     protected $fillable = [

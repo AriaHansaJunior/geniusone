@@ -16,7 +16,7 @@ class CurrencyApiController extends Controller
         if ($search = $request->query('search')) {
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('code', 'like', "%{$search}%");
+                    ->orWhere('code', 'like', "%{$search}%");
             });
         }
 
@@ -53,6 +53,7 @@ class CurrencyApiController extends Controller
     public function show(int $id): JsonResponse
     {
         $record = Valuta::findOrFail($id);
+
         return response()->json(['data' => $record]);
     }
 
@@ -61,8 +62,8 @@ class CurrencyApiController extends Controller
         $record = Valuta::findOrFail($id);
 
         $validated = $request->validate([
-            'code' => 'sometimes|required|string|max:45|unique:valutas,code,' . $id,
-            'name' => 'sometimes|required|string|max:45|unique:valutas,name,' . $id,
+            'code' => 'sometimes|required|string|max:45|unique:valutas,code,'.$id,
+            'name' => 'sometimes|required|string|max:45|unique:valutas,name,'.$id,
             'status' => 'nullable|integer',
         ]);
 

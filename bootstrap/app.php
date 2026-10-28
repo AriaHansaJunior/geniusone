@@ -1,5 +1,10 @@
 <?php
 
+use App\Http\Middleware\AuthenticateApiRequest;
+use App\Http\Middleware\EnsureAuthenticated;
+use App\Http\Middleware\EnsureUserIsActive;
+use App\Http\Middleware\EnsureUserPermission;
+use App\Http\Middleware\EnsureUserRole;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -14,14 +19,14 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->api(prepend: [
-            \App\Http\Middleware\AuthenticateApiRequest::class,
+            AuthenticateApiRequest::class,
         ]);
 
         $middleware->alias([
-            'auth' => \App\Http\Middleware\EnsureAuthenticated::class,
-            'active' => \App\Http\Middleware\EnsureUserIsActive::class,
-            'role' => \App\Http\Middleware\EnsureUserRole::class,
-            'permission' => \App\Http\Middleware\EnsureUserPermission::class,
+            'auth' => EnsureAuthenticated::class,
+            'active' => EnsureUserIsActive::class,
+            'role' => EnsureUserRole::class,
+            'permission' => EnsureUserPermission::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

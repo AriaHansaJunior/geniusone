@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Procurement\Master;
 
 use App\Http\Controllers\Controller;
+use App\Models\Master\Partner\Country;
 use App\Models\Master\Partner\Supplier;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -26,9 +27,9 @@ class SupplierApiController extends Controller
         if ($search = $request->query('search')) {
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('code', 'like', "%{$search}%")
-                  ->orWhere('npwp', 'like', "%{$search}%")
-                  ->orWhere('address', 'like', "%{$search}%");
+                    ->orWhere('code', 'like', "%{$search}%")
+                    ->orWhere('npwp', 'like', "%{$search}%")
+                    ->orWhere('address', 'like', "%{$search}%");
             });
         }
 
@@ -52,27 +53,27 @@ class SupplierApiController extends Controller
     public function store(Request $request): JsonResponse
     {
         // Normalize camelCase fields from frontend
-        if ($request->has('supplierName') && !$request->has('name')) {
+        if ($request->has('supplierName') && ! $request->has('name')) {
             $request->merge(['name' => $request->input('supplierName')]);
         }
-        if ($request->has('supplierCode') && !$request->has('code')) {
+        if ($request->has('supplierCode') && ! $request->has('code')) {
             $request->merge(['code' => $request->input('supplierCode')]);
         }
-        if ($request->has('contactPerson') && !$request->has('contact_person')) {
+        if ($request->has('contactPerson') && ! $request->has('contact_person')) {
             $request->merge(['contact_person' => $request->input('contactPerson')]);
         }
-        if ($request->has('telephoneNumber') && !$request->has('telephone_number')) {
+        if ($request->has('telephoneNumber') && ! $request->has('telephone_number')) {
             $request->merge(['telephone_number' => $request->input('telephoneNumber')]);
         }
-        if ($request->has('wechatId') && !$request->has('wechat_id')) {
+        if ($request->has('wechatId') && ! $request->has('wechat_id')) {
             $request->merge(['wechat_id' => $request->input('wechatId')]);
         }
-        if ($request->has('country') && !$request->has('countries_id')) {
+        if ($request->has('country') && ! $request->has('countries_id')) {
             $countryVal = $request->input('country');
             if (is_numeric($countryVal)) {
                 $request->merge(['countries_id' => (int) $countryVal]);
-            } elseif (!empty($countryVal)) {
-                $country = \App\Models\Master\Partner\Country::firstOrCreate(['name' => trim($countryVal)]);
+            } elseif (! empty($countryVal)) {
+                $country = Country::firstOrCreate(['name' => trim($countryVal)]);
                 $request->merge(['countries_id' => $country->id]);
             }
         }
@@ -102,7 +103,7 @@ class SupplierApiController extends Controller
         // Auto-generate code if empty
         if (empty($validated['code'])) {
             $nextId = (Supplier::max('id') ?? 0) + 1;
-            $validated['code'] = 'SUP.' . str_pad((string) $nextId, 4, '0', STR_PAD_LEFT);
+            $validated['code'] = 'SUP.'.str_pad((string) $nextId, 4, '0', STR_PAD_LEFT);
         }
 
         $validated['created_by'] = $request->user()?->id ?? 1;

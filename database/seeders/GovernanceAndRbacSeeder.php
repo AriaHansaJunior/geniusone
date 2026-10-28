@@ -2,17 +2,17 @@
 
 namespace Database\Seeders;
 
+use App\Models\System\Auth\User;
+use App\Models\System\Governance\Permission;
+use App\Models\System\Governance\Role;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
-use App\Models\System\Auth\User;
-use App\Models\System\Governance\Role;
-use App\Models\System\Governance\Permission;
 
 class GovernanceAndRbacSeeder extends Seeder
 {
     public function run(): void
     {
-        $this->command?->info("Seeding Governance & RBAC System (BE-01 & BE-02)...");
+        $this->command?->info('Seeding Governance & RBAC System (BE-01 & BE-02)...');
 
         // 1. ROLES
         $rolesData = [
@@ -126,7 +126,7 @@ class GovernanceAndRbacSeeder extends Seeder
                     [
                         'module' => $mKey,
                         'action' => $act,
-                        'label' => ucfirst($act) . " {$mLabel}",
+                        'label' => ucfirst($act)." {$mLabel}",
                     ]
                 );
             }
@@ -160,43 +160,43 @@ class GovernanceAndRbacSeeder extends Seeder
 
         // 3. ROLE-PERMISSION MAPPINGS
         // Superadmin: receives all permissions
-        $roles[Role::SUPERADMIN]->permissions()->sync(array_values(array_map(fn($p) => $p->id, $allPermissions)));
-        $roles[Role::ADMIN]->permissions()->sync(array_values(array_map(fn($p) => $p->id, $allPermissions)));
+        $roles[Role::SUPERADMIN]->permissions()->sync(array_values(array_map(fn ($p) => $p->id, $allPermissions)));
+        $roles[Role::ADMIN]->permissions()->sync(array_values(array_map(fn ($p) => $p->id, $allPermissions)));
 
         // Approver Tier 1
-        $tier1Perms = Permission::where(function($q) {
+        $tier1Perms = Permission::where(function ($q) {
             $q->whereIn('action', ['view', 'approve_1', 'unapprove_1'])
-              ->orWhereIn('module', ['reports', 'inventory']);
+                ->orWhereIn('module', ['reports', 'inventory']);
         })->pluck('id')->toArray();
         $roles[Role::APPROVER_TIER1]->permissions()->sync($tier1Perms);
 
         // Approver Tier 2
-        $tier2Perms = Permission::where(function($q) {
+        $tier2Perms = Permission::where(function ($q) {
             $q->whereIn('action', ['view', 'approve_2', 'unapprove_2'])
-              ->orWhereIn('module', ['reports', 'inventory']);
+                ->orWhereIn('module', ['reports', 'inventory']);
         })->pluck('id')->toArray();
         $roles[Role::APPROVER_TIER2]->permissions()->sync($tier2Perms);
 
         // Procurement Staff
-        $procPerms = Permission::where(function($q) {
+        $procPerms = Permission::where(function ($q) {
             $q->whereIn('module', ['pr', 'po', 'master_supplier'])
-              ->whereIn('action', ['view', 'create', 'update', 'delete'])
-              ->orWhereIn('module', ['reports']);
+                ->whereIn('action', ['view', 'create', 'update', 'delete'])
+                ->orWhereIn('module', ['reports']);
         })->pluck('id')->toArray();
         $roles[Role::PROCUREMENT]->permissions()->sync($procPerms);
 
         // Warehouse Staff
-        $whPerms = Permission::where(function($q) {
+        $whPerms = Permission::where(function ($q) {
             $q->whereIn('module', ['rn', 'bpb', 'rm', 'return', 'master_warehouse', 'inventory'])
-              ->whereIn('action', ['view', 'create', 'update', 'delete'])
-              ->orWhereIn('module', ['reports']);
+                ->whereIn('action', ['view', 'create', 'update', 'delete'])
+                ->orWhereIn('module', ['reports']);
         })->pluck('id')->toArray();
         $roles[Role::WAREHOUSE]->permissions()->sync($whPerms);
 
         // Requisitioner
-        $reqPerms = Permission::where(function($q) {
+        $reqPerms = Permission::where(function ($q) {
             $q->whereIn('module', ['pr', 'rm'])
-              ->whereIn('action', ['view', 'create', 'update']);
+                ->whereIn('action', ['view', 'create', 'update']);
         })->pluck('id')->toArray();
         $roles[Role::REQUESTER]->permissions()->sync($reqPerms);
 
@@ -287,6 +287,6 @@ class GovernanceAndRbacSeeder extends Seeder
             $user1->update(['role' => Role::SUPERADMIN]);
         }
 
-        $this->command?->info("Governance & RBAC System Seeding Completed successfully!");
+        $this->command?->info('Governance & RBAC System Seeding Completed successfully!');
     }
 }

@@ -2,9 +2,16 @@
 
 namespace App\Services\Procurement;
 
+use App\Models\DeliveryTerm;
+use App\Models\PaymentMethod;
+use App\Models\PaymentTerm;
+use App\Models\PoType;
+use App\Models\Procurement\PurchaseOrder\AdditionalCost;
 use App\Models\Procurement\PurchaseOrder\PurchaseOrder;
 use App\Models\Procurement\PurchaseOrder\PurchaseOrderItem;
-use App\Models\Procurement\PurchaseOrder\AdditionalCost;
+use App\Models\Procurement\PurchaseRequest\PurchaseRequisition;
+use App\Models\Procurement\PurchaseRequest\PurchaseRequisitionItem;
+use App\Models\Valuta;
 use App\Services\DocumentNumber\DocumentNumberGenerator;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
@@ -31,10 +38,10 @@ class PurchaseOrderService
         array $additionalCosts = [],
         int $userId = 1
     ): PurchaseOrder {
-        $pr = \App\Models\Procurement\PurchaseRequest\PurchaseRequisition::with('items.item')->findOrFail($prId);
+        $pr = PurchaseRequisition::with('items.item')->findOrFail($prId);
 
         // BE-05: Strict Downstream Gating (PR must be Approved before PO generation)
-        if (!in_array($pr->status, ['Approved', 'Approved 2'], true)) {
+        if (! in_array($pr->status, ['Approved', 'Approved 2'], true)) {
             throw new InvalidArgumentException("Cannot create Purchase Order: Purchase Requisition '{$pr->pr_number}' must be fully Approved first (Current status: {$pr->status}).");
         }
 
@@ -52,7 +59,7 @@ class PurchaseOrderService
         } else {
             // Ensure pr_has_items_id is mapped if items_id is given
             foreach ($itemsData as &$item) {
-                if (empty($item['pr_has_items_id']) && !empty($item['items_id'])) {
+                if (empty($item['pr_has_items_id']) && ! empty($item['items_id'])) {
                     $matchedPrItem = $pr->items->where('items_id', $item['items_id'])->first();
                     if ($matchedPrItem) {
                         $item['pr_has_items_id'] = $matchedPrItem->id;
@@ -75,14 +82,14 @@ class PurchaseOrderService
         int $userId = 1
     ): PurchaseOrder {
         if (empty($items)) {
-            throw new InvalidArgumentException("A Purchase Order must contain at least one item.");
+            throw new InvalidArgumentException('A Purchase Order must contain at least one item.');
         }
 
         // BE-05: Enforce that any explicitly linked PR items belong to an Approved PR
         foreach ($items as $it) {
-            if (!empty($it['pr_has_items_id'])) {
-                $prItem = \App\Models\Procurement\PurchaseRequest\PurchaseRequisitionItem::with('purchaseRequisition')->find($it['pr_has_items_id']);
-                if ($prItem && !in_array($prItem->purchaseRequisition?->status, ['Approved', 'Approved 2'], true)) {
+            if (! empty($it['pr_has_items_id'])) {
+                $prItem = PurchaseRequisitionItem::with('purchaseRequisition')->find($it['pr_has_items_id']);
+                if ($prItem && ! in_array($prItem->purchaseRequisition?->status, ['Approved', 'Approved 2'], true)) {
                     throw new InvalidArgumentException("Cannot create Purchase Order: Linked PR '{$prItem->purchaseRequisition?->pr_number}' is not fully Approved.");
                 }
             }
@@ -91,11 +98,11 @@ class PurchaseOrderService
         return DB::transaction(function () use ($headerData, $items, $additionalCosts, $userId) {
             $poNumber = $headerData['po_number'] ?? DocumentNumberGenerator::generatePoNumber();
 
-            $poTypeId = $headerData['po_types_id'] ?? \App\Models\PoType::firstOrCreate(['code' => 'STD'], ['name' => 'PO Standard'])->id;
-            $valutaId = $headerData['valutas_id'] ?? \App\Models\Valuta::firstOrCreate(['code' => 'IDR'], ['name' => 'Rupiah'])->id;
-            $delivTermId = $headerData['delivery_terms_id'] ?? \App\Models\DeliveryTerm::firstOrCreate(['name' => 'Loco Surabaya'])->id;
-            $payTermId = $headerData['payment_terms_id'] ?? \App\Models\PaymentTerm::first()?->id ?? 1;
-            $payMethodId = $headerData['payment_methods_id'] ?? \App\Models\PaymentMethod::first()?->id ?? 1;
+            $poTypeId = $headerData['po_types_id'] ?? PoType::firstOrCreate(['code' => 'STD'], ['name' => 'PO Standard'])->id;
+            $valutaId = $headerData['valutas_id'] ?? Valuta::firstOrCreate(['code' => 'IDR'], ['name' => 'Rupiah'])->id;
+            $delivTermId = $headerData['delivery_terms_id'] ?? DeliveryTerm::firstOrCreate(['name' => 'Loco Surabaya'])->id;
+            $payTermId = $headerData['payment_terms_id'] ?? PaymentTerm::first()?->id ?? 1;
+            $payMethodId = $headerData['payment_methods_id'] ?? PaymentMethod::first()?->id ?? 1;
             $dueDate = $headerData['due_date'] ?? now()->addDays(14)->format('Y-m-d');
             $latestDeliv = $headerData['latest_delivery'] ?? now()->addDays(14);
 
@@ -203,9 +210,9 @@ class PurchaseOrderService
             'approvals.user',
             'receiveNotes.receiveNote',
         ])
-        ->where('po_number', $code)
-        ->orWhere('id', is_numeric($code) ? $code : null)
-        ->first();
+            ->where('po_number', $code)
+            ->orWhere('id', is_numeric($code) ? $code : null)
+            ->first();
     }
 
     /**
@@ -222,27 +229,27 @@ class PurchaseOrderService
             'approvals',
         ]);
 
-        if (!empty($filters['search'])) {
+        if (! empty($filters['search'])) {
             $s = $filters['search'];
             $query->where(function ($q) use ($s) {
                 $q->where('po_number', 'like', "%{$s}%")
-                  ->orWhere('remark', 'like', "%{$s}%")
-                  ->orWhereHas('supplier', function ($sq) use ($s) {
-                      $sq->where('name', 'like', "%{$s}%")
-                         ->orWhere('code', 'like', "%{$s}%");
-                  });
+                    ->orWhere('remark', 'like', "%{$s}%")
+                    ->orWhereHas('supplier', function ($sq) use ($s) {
+                        $sq->where('name', 'like', "%{$s}%")
+                            ->orWhere('code', 'like', "%{$s}%");
+                    });
             });
         }
 
-        if (!empty($filters['supplier_id'])) {
+        if (! empty($filters['supplier_id'])) {
             $query->where('supliers_id', $filters['supplier_id']);
         }
 
-        if (!empty($filters['facility_status'])) {
+        if (! empty($filters['facility_status'])) {
             $query->where('facility_status', $filters['facility_status']);
         }
 
-        if (!empty($filters['po_type_id'])) {
+        if (! empty($filters['po_type_id'])) {
             $query->where('po_types_id', $filters['po_type_id']);
         }
 

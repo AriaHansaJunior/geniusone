@@ -1,63 +1,54 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-
+use App\Http\Controllers\Api\Admin\AuditLogApiController;
 // Procurement Domain Controllers
-use App\Http\Controllers\Api\Procurement\PurchaseRequisitionApiController;
-use App\Http\Controllers\Api\Procurement\PurchaseOrderApiController;
-use App\Http\Controllers\Api\Procurement\Master\SupplierApiController;
-use App\Http\Controllers\Api\Procurement\Master\PaymentTermApiController;
-use App\Http\Controllers\Api\Procurement\Master\PurchaseCategoryApiController;
-use App\Http\Controllers\Api\Procurement\Master\DeliveryTermsApiController;
-use App\Http\Controllers\Api\Procurement\Master\AdditionalCostsApiController;
-use App\Http\Controllers\Api\Procurement\Master\PphApiController;
-use App\Http\Controllers\Api\Procurement\Master\CountryApiController;
-use App\Http\Controllers\Api\Procurement\Master\RafaksiTypeApiController;
-use App\Http\Controllers\Api\Procurement\Master\CurrencyApiController;
-
-// Warehouse Domain Controllers
-use App\Http\Controllers\Api\Warehouse\WarehouseApiController;
-use App\Http\Controllers\Api\Warehouse\ReceiveNoteApiController;
-use App\Http\Controllers\Api\Warehouse\Master\WarehouseMasterApiController;
-
-// Exim Domain Controllers
-use App\Http\Controllers\Api\Exim\Master\UnitApiController;
-use App\Http\Controllers\Api\Exim\Master\ItemApiController;
-use App\Http\Controllers\Api\Exim\Master\BrandApiController;
-use App\Http\Controllers\Api\Exim\Master\ClassificationApiController;
-use App\Http\Controllers\Api\Exim\Master\DepartmentApiController;
-use App\Http\Controllers\Api\Exim\Master\FacilityApiController;
-use App\Http\Controllers\Api\Exim\Master\HsCodeApiController;
-use App\Http\Controllers\Api\Exim\Master\CategoryApiController;
-use App\Http\Controllers\Api\Exim\Master\StyleApiController;
-use App\Http\Controllers\Api\Exim\Master\ColourApiController;
-use App\Http\Controllers\Api\Exim\Master\AccountApiController;
-use App\Http\Controllers\Api\Exim\Master\JobNumberApiController;
-use App\Http\Controllers\Api\Exim\Operations\ReceiveNoteReturnApiController;
-use App\Http\Controllers\Api\Exim\Operations\DocumentHistoryApiController;
-use App\Http\Controllers\Api\Exim\Master\StyleImportApiController;
-
-// Warehouse Extended Controllers
-use App\Http\Controllers\Api\Warehouse\WarehouseReportApiController;
-use App\Http\Controllers\Api\Warehouse\MaterialRequestApiController;
-
-// Auth & User Domain Controllers
+use App\Http\Controllers\Api\Admin\RolePermissionApiController;
+use App\Http\Controllers\Api\Admin\UserManagementApiController;
 use App\Http\Controllers\Api\Auth\AuthApiController;
 use App\Http\Controllers\Api\Auth\UserProfileApiController;
-
-// Common & Dashboard Controllers
 use App\Http\Controllers\Api\Common\ExchangeRateApiController;
-
-// Reporting Domain Controllers
+use App\Http\Controllers\Api\Exim\Master\AccountApiController;
+use App\Http\Controllers\Api\Exim\Master\BrandApiController;
+use App\Http\Controllers\Api\Exim\Master\CategoryApiController;
+use App\Http\Controllers\Api\Exim\Master\ClassificationApiController;
+use App\Http\Controllers\Api\Exim\Master\ColourApiController;
+use App\Http\Controllers\Api\Exim\Master\DepartmentApiController;
+// Warehouse Domain Controllers
+use App\Http\Controllers\Api\Exim\Master\FacilityApiController;
+use App\Http\Controllers\Api\Exim\Master\HsCodeApiController;
+use App\Http\Controllers\Api\Exim\Master\ItemApiController;
+// Exim Domain Controllers
+use App\Http\Controllers\Api\Exim\Master\JobNumberApiController;
+use App\Http\Controllers\Api\Exim\Master\StyleApiController;
+use App\Http\Controllers\Api\Exim\Master\StyleImportApiController;
+use App\Http\Controllers\Api\Exim\Master\UnitApiController;
+use App\Http\Controllers\Api\Exim\Operations\DocumentHistoryApiController;
+use App\Http\Controllers\Api\Exim\Operations\ReceiveNoteReturnApiController;
+use App\Http\Controllers\Api\Procurement\Master\AdditionalCostsApiController;
+use App\Http\Controllers\Api\Procurement\Master\CountryApiController;
+use App\Http\Controllers\Api\Procurement\Master\CurrencyApiController;
+use App\Http\Controllers\Api\Procurement\Master\DeliveryTermsApiController;
+use App\Http\Controllers\Api\Procurement\Master\PaymentTermApiController;
+use App\Http\Controllers\Api\Procurement\Master\PphApiController;
+use App\Http\Controllers\Api\Procurement\Master\PurchaseCategoryApiController;
+use App\Http\Controllers\Api\Procurement\Master\RafaksiTypeApiController;
+use App\Http\Controllers\Api\Procurement\Master\SupplierApiController;
+// Warehouse Extended Controllers
+use App\Http\Controllers\Api\Procurement\PurchaseOrderApiController;
+use App\Http\Controllers\Api\Procurement\PurchaseRequisitionApiController;
+// Auth & User Domain Controllers
 use App\Http\Controllers\Api\Reporting\TraceabilityReportApiController;
-
+use App\Http\Controllers\Api\Warehouse\Master\WarehouseMasterApiController;
+// Common & Dashboard Controllers
+use App\Http\Controllers\Api\Warehouse\MaterialRequestApiController;
+// Reporting Domain Controllers
+use App\Http\Controllers\Api\Warehouse\ReceiveNoteApiController;
 // Governance & Admin Controllers (BE-01, BE-02, BE-06)
-use App\Http\Controllers\Api\Admin\UserManagementApiController;
-use App\Http\Controllers\Api\Admin\RolePermissionApiController;
-use App\Http\Controllers\Api\Admin\AuditLogApiController;
-
-// Workflow & Approval Engine Controllers (BE-03, BE-04, BE-05, BE-06)
+use App\Http\Controllers\Api\Warehouse\WarehouseApiController;
+use App\Http\Controllers\Api\Warehouse\WarehouseReportApiController;
 use App\Http\Controllers\Api\Workflow\ApprovalWorkflowApiController;
+// Workflow & Approval Engine Controllers (BE-03, BE-04, BE-05, BE-06)
+use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
@@ -204,7 +195,6 @@ Route::prefix('dashboard')->group(function () {
     Route::get('/exchange-rates', [ExchangeRateApiController::class, 'index']);
 });
 
-
 // =========================================================================
 // 7. BACKWARD-COMPATIBILITY ALIASES (Direct Routes for Existing Frontend)
 // =========================================================================
@@ -306,5 +296,3 @@ foreach ($workflowModules as $mod) {
     Route::post("{$mod}/{id}/resubmit", [ApprovalWorkflowApiController::class, 'resubmit'])->defaults('module', $mod);
     Route::get("{$mod}/{id}/approval-history", [ApprovalWorkflowApiController::class, 'history'])->defaults('module', $mod);
 }
-
-

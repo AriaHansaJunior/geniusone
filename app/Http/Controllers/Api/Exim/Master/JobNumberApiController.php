@@ -49,6 +49,7 @@ class JobNumberApiController extends Controller
     public function show(int $id): JsonResponse
     {
         $record = JobNumber::findOrFail($id);
+
         return response()->json(['data' => $record]);
     }
 

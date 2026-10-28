@@ -89,7 +89,7 @@ class RouteConsistencyTest extends TestCase
         foreach ($map as $url => $expectedPage) {
             $response = $this->get($url);
             $response->assertStatus(200);
-            $response->assertSee('data-initial-page="' . $expectedPage . '"', false);
+            $response->assertSee('data-initial-page="'.$expectedPage.'"', false);
         }
     }
 }

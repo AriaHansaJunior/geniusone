@@ -356,6 +356,11 @@ export const pageMeta: Record<PageKey, PageMeta> = {
     title: "User & Permission Management",
     description: "Manage enterprise user accounts, security roles, and granular two-stage approval authorizations.",
   },
+  "audit-log-admin": {
+    eyebrow: "SUPERADMIN GOVERNANCE",
+    title: "System Audit Trail & History",
+    description: "Real-time chronological audit trail of all user authentications, data modifications, and system activities in Western Indonesia Time (WIB).",
+  },
 };
 
 export const prRows: TableRow[] = [

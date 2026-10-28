@@ -56,7 +56,7 @@ class UserManagementApiController extends Controller
      */
     public function store(Request $request): JsonResponse
     {
-        if ($request->has('department_id') && !$request->has('departments_id')) {
+        if ($request->has('department_id') && ! $request->has('departments_id')) {
             $request->merge(['departments_id' => $request->input('department_id')]);
         }
 
@@ -119,7 +119,7 @@ class UserManagementApiController extends Controller
     {
         $user = User::findOrFail($id);
 
-        if ($request->has('department_id') && !$request->has('departments_id')) {
+        if ($request->has('department_id') && ! $request->has('departments_id')) {
             $request->merge(['departments_id' => $request->input('department_id')]);
         }
 

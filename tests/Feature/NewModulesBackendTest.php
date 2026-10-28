@@ -5,7 +5,6 @@ namespace Tests\Feature;
 use App\Models\Master\Material\Style;
 use App\Models\System\Auth\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 

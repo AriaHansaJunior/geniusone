@@ -80,6 +80,8 @@ export interface UserAccount {
   role: string;
   role_label?: string;
   department?: string;
+  department_id?: number | null;
+  departments_id?: number | null;
   avatar?: string;
   photo?: string | null;
   status?: "active" | "inactive" | number;

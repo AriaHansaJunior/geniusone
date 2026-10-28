@@ -14,7 +14,7 @@ return new class extends Migration
         // =========================================================================
         // 1. WAREHOUSE COORDINATES (Master Koordinat Rak/Lokasi Gudang)
         // =========================================================================
-        if (!Schema::hasTable('warehouse_coordinates')) {
+        if (! Schema::hasTable('warehouse_coordinates')) {
             Schema::create('warehouse_coordinates', function (Blueprint $table) {
                 $table->id();
                 $table->foreignId('warehouses_id')->constrained('warehouses')->cascadeOnDelete();
@@ -29,7 +29,7 @@ return new class extends Migration
         // =========================================================================
         // 2. RECEIVE NOTE RETURNS (Retur Penerimaan Barang Exim)
         // =========================================================================
-        if (!Schema::hasTable('receive_note_returns')) {
+        if (! Schema::hasTable('receive_note_returns')) {
             Schema::create('receive_note_returns', function (Blueprint $table) {
                 $table->id();
                 $table->string('rn_number', 100)->nullable();
@@ -55,7 +55,7 @@ return new class extends Migration
             });
         }
 
-        if (!Schema::hasTable('receive_note_return_items')) {
+        if (! Schema::hasTable('receive_note_return_items')) {
             Schema::create('receive_note_return_items', function (Blueprint $table) {
                 $table->id();
                 $table->foreignId('receive_note_return_id')->constrained('receive_note_returns')->cascadeOnDelete();
@@ -82,7 +82,7 @@ return new class extends Migration
         // =========================================================================
         // 3. EXIM DOCUMENT HISTORIES (Pelacakan Riwayat Dokumen BC & Invoice)
         // =========================================================================
-        if (!Schema::hasTable('document_histories')) {
+        if (! Schema::hasTable('document_histories')) {
             Schema::create('document_histories', function (Blueprint $table) {
                 $table->id();
                 $table->string('invoice_number', 100)->nullable();
@@ -104,7 +104,7 @@ return new class extends Migration
             });
         }
 
-        if (!Schema::hasTable('document_history_items')) {
+        if (! Schema::hasTable('document_history_items')) {
             Schema::create('document_history_items', function (Blueprint $table) {
                 $table->id();
                 $table->foreignId('document_history_id')->constrained('document_histories')->cascadeOnDelete();
@@ -140,20 +140,20 @@ return new class extends Migration
 
         // A. Pelengkapan Kolom Items (Satuan Terkecil/Terbesar & Created By)
         Schema::table('items', function (Blueprint $table) {
-            if (!Schema::hasColumn('items', 'smallest_unit_id')) {
+            if (! Schema::hasColumn('items', 'smallest_unit_id')) {
                 $table->foreignId('smallest_unit_id')->nullable()->constrained('units_of_measurements')->nullOnDelete();
             }
-            if (!Schema::hasColumn('items', 'greatest_unit_id')) {
+            if (! Schema::hasColumn('items', 'greatest_unit_id')) {
                 $table->foreignId('greatest_unit_id')->nullable()->constrained('units_of_measurements')->nullOnDelete();
             }
-            if (!Schema::hasColumn('items', 'created_by')) {
+            if (! Schema::hasColumn('items', 'created_by')) {
                 $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
             }
         });
 
         // B. Pelengkapan Kolom Supliers (Created By)
         Schema::table('supliers', function (Blueprint $table) {
-            if (!Schema::hasColumn('supliers', 'created_by')) {
+            if (! Schema::hasColumn('supliers', 'created_by')) {
                 $table->foreignId('created_by')->nullable()->constrained('users')->nullOnDelete();
             }
         });
@@ -161,7 +161,7 @@ return new class extends Migration
         // C. Pelengkapan Catatan Persetujuan (Note / Reject Reason)
         if (Schema::hasTable('approval_pr')) {
             Schema::table('approval_pr', function (Blueprint $table) {
-                if (!Schema::hasColumn('approval_pr', 'note')) {
+                if (! Schema::hasColumn('approval_pr', 'note')) {
                     $table->text('note')->nullable();
                 }
             });
@@ -169,7 +169,7 @@ return new class extends Migration
 
         if (Schema::hasTable('approval_po')) {
             Schema::table('approval_po', function (Blueprint $table) {
-                if (!Schema::hasColumn('approval_po', 'note')) {
+                if (! Schema::hasColumn('approval_po', 'note')) {
                     $table->text('note')->nullable();
                 }
             });
@@ -177,7 +177,7 @@ return new class extends Migration
 
         if (Schema::hasTable('approval_rn')) {
             Schema::table('approval_rn', function (Blueprint $table) {
-                if (!Schema::hasColumn('approval_rn', 'note')) {
+                if (! Schema::hasColumn('approval_rn', 'note')) {
                     $table->text('note')->nullable();
                 }
             });
@@ -185,7 +185,7 @@ return new class extends Migration
 
         if (Schema::hasTable('approval_bpb')) {
             Schema::table('approval_bpb', function (Blueprint $table) {
-                if (!Schema::hasColumn('approval_bpb', 'note')) {
+                if (! Schema::hasColumn('approval_bpb', 'note')) {
                     $table->text('note')->nullable();
                 }
             });
@@ -193,7 +193,7 @@ return new class extends Migration
 
         if (Schema::hasTable('purchase_requisitions')) {
             Schema::table('purchase_requisitions', function (Blueprint $table) {
-                if (!Schema::hasColumn('purchase_requisitions', 'rejection_note')) {
+                if (! Schema::hasColumn('purchase_requisitions', 'rejection_note')) {
                     $table->text('rejection_note')->nullable();
                 }
             });
@@ -201,7 +201,7 @@ return new class extends Migration
 
         if (Schema::hasTable('purchase_order')) {
             Schema::table('purchase_order', function (Blueprint $table) {
-                if (!Schema::hasColumn('purchase_order', 'rejection_note')) {
+                if (! Schema::hasColumn('purchase_order', 'rejection_note')) {
                     $table->text('rejection_note')->nullable();
                 }
             });

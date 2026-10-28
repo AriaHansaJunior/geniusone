@@ -4,6 +4,7 @@ namespace App\Services\Procurement;
 
 use App\Models\Procurement\PurchaseRequest\PurchaseRequisition;
 use App\Models\Procurement\PurchaseRequest\PurchaseRequisitionItem;
+use App\Models\Section;
 use App\Services\DocumentNumber\DocumentNumberGenerator;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
@@ -18,16 +19,11 @@ class PurchaseRequisitionService
 
     /**
      * Create a new Purchase Requisition with its line items.
-     *
-     * @param array $headerData
-     * @param array $items
-     * @param int $userId
-     * @return PurchaseRequisition
      */
     public function createRequisition(array $headerData, array $items, int $userId): PurchaseRequisition
     {
         if (empty($items)) {
-            throw new InvalidArgumentException("A Purchase Requisition must contain at least one item.");
+            throw new InvalidArgumentException('A Purchase Requisition must contain at least one item.');
         }
 
         return DB::transaction(function () use ($headerData, $items, $userId) {
@@ -36,9 +32,9 @@ class PurchaseRequisitionService
 
             $deptId = $headerData['departments_id'] ?? $headerData['department_id'] ?? null;
             $secId = $headerData['sections_id'] ?? $headerData['section_id'] ?? null;
-            if (!$secId) {
-                $firstSec = \App\Models\Section::first();
-                $secId = $firstSec ? $firstSec->id : \App\Models\Section::create(['name' => 'General'])->id;
+            if (! $secId) {
+                $firstSec = Section::first();
+                $secId = $firstSec ? $firstSec->id : Section::create(['name' => 'General'])->id;
             }
             $dueDate = $headerData['due_date'] ?? now()->addDays(7)->format('Y-m-d');
             $date = $headerData['date'] ?? $headerData['date_pr'] ?? now()->format('d-M-Y');
@@ -87,11 +83,11 @@ class PurchaseRequisitionService
             'items.item.unitOfMeasurement',
             'approvals.user',
         ])
-        ->where('pr_number', $code)
-        ->orWhere('pr_number', $normalizedSlash)
-        ->orWhere('pr_number', $normalizedHyphen)
-        ->orWhere('id', is_numeric($code) ? $code : null)
-        ->first();
+            ->where('pr_number', $code)
+            ->orWhere('pr_number', $normalizedSlash)
+            ->orWhere('pr_number', $normalizedHyphen)
+            ->orWhere('id', is_numeric($code) ? $code : null)
+            ->first();
     }
 
     /**
@@ -103,8 +99,8 @@ class PurchaseRequisitionService
             $requisition = PurchaseRequisition::findOrFail($id);
 
             // Cannot update if already fully approved or complete without revision
-            if (in_array($requisition->status, ['Approved 2', 'Complete']) && !isset($headerData['revision'])) {
-                throw new InvalidArgumentException("Cannot modify fully approved/completed PR without revision.");
+            if (in_array($requisition->status, ['Approved 2', 'Complete']) && ! isset($headerData['revision'])) {
+                throw new InvalidArgumentException('Cannot modify fully approved/completed PR without revision.');
             }
 
             if ($userId) {
@@ -146,32 +142,32 @@ class PurchaseRequisitionService
         ]);
 
         // Search by PR number or remark
-        if (!empty($filters['search'])) {
+        if (! empty($filters['search'])) {
             $s = $filters['search'];
             $query->where(function ($q) use ($s) {
                 $q->where('pr_number', 'like', "%{$s}%")
-                  ->orWhereHas('items', function ($iq) use ($s) {
-                      $iq->where('remark', 'like', "%{$s}%")
-                         ->orWhereHas('item', function ($mq) use ($s) {
-                             $mq->where('name', 'like', "%{$s}%")
-                                ->orWhere('code', 'like', "%{$s}%");
-                         });
-                  });
+                    ->orWhereHas('items', function ($iq) use ($s) {
+                        $iq->where('remark', 'like', "%{$s}%")
+                            ->orWhereHas('item', function ($mq) use ($s) {
+                                $mq->where('name', 'like', "%{$s}%")
+                                    ->orWhere('code', 'like', "%{$s}%");
+                            });
+                    });
             });
         }
 
         // Filter by Department
-        if (!empty($filters['department_id'])) {
+        if (! empty($filters['department_id'])) {
             $query->where('departments_id', $filters['department_id']);
         }
 
         // Filter by Section
-        if (!empty($filters['section_id'])) {
+        if (! empty($filters['section_id'])) {
             $query->where('sections_id', $filters['section_id']);
         }
 
         // Filter by Status
-        if (!empty($filters['status'])) {
+        if (! empty($filters['status'])) {
             $query->where('status', $filters['status']);
         }
 
@@ -199,6 +195,7 @@ class PurchaseRequisitionService
             }
 
             PurchaseRequisitionItem::where('purchase_requisitions_id', $requisition->id)->delete();
+
             return (bool) $requisition->delete();
         });
     }

@@ -83,6 +83,7 @@ import {
   DestinationLocationIndex,
   DestinationLocationForm,
   UserPermissionAdmin,
+  AuditLogAdmin,
 } from "../pages";
 import { initialRequestMaterialRecords } from "../pages/Warehouse/Request/RequestMaterial/request-material-data";
 import type { RequestMaterialRecord } from "../pages/Warehouse/Request/RequestMaterial/request-material-types";
@@ -624,6 +625,14 @@ function resolveViewStateFromPath(pathname: string, defaultPage: PageKey = "dash
     cleanPath === "/user-permission-admin"
   ) {
     return { type: "list", page: "user-permission-admin" };
+  }
+
+  if (
+    cleanPath === "/admin/audit-logs" ||
+    cleanPath === "/admin/audit" ||
+    cleanPath === "/audit-log-admin"
+  ) {
+    return { type: "list", page: "audit-log-admin" };
   }
 
   if (
@@ -2542,7 +2551,16 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
 
         {/* SuperAdmin User & Permission Administration */}
         {viewState.type === "list" && viewState.page === "user-permission-admin" && (
-          <UserPermissionAdmin />
+          <UserPermissionAdmin
+            onNavigateAudit={() => handleNavigateList("audit-log-admin", "/admin/audit-logs")}
+          />
+        )}
+
+        {/* SuperAdmin System Audit Trail & History */}
+        {viewState.type === "list" && viewState.page === "audit-log-admin" && (
+          <AuditLogAdmin
+            onNavigateUsers={() => handleNavigateList("user-permission-admin", "/admin/user-permissions")}
+          />
         )}
 
         {/* Existing Core List Page Views */}
@@ -2935,6 +2953,7 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
           viewState.page !== "rafaksi-type" &&
           viewState.page !== "currency" &&
           viewState.page !== "user-permission-admin" &&
+          viewState.page !== "audit-log-admin" &&
           viewState.page !== "dashboard" && (
             <PlaceholderPage
               eyebrow={currentMeta.eyebrow}

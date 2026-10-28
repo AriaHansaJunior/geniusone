@@ -15,18 +15,14 @@ class InventoryService
     public function getItemStock(int $itemId): float
     {
         $item = Item::findOrFail($itemId);
+
         return (float) $item->stock;
     }
 
     /**
      * Adjust physical item stock with full audit tracking.
      *
-     * @param int $itemId
-     * @param float $quantityDelta Positive for addition, negative for deduction
-     * @param string $reason
-     * @param int $userId
-     * @param array $extraMetadata
-     * @return Item
+     * @param  float  $quantityDelta  Positive for addition, negative for deduction
      */
     public function adjustStock(
         int $itemId,
@@ -35,14 +31,14 @@ class InventoryService
         int $userId = 1,
         array $extraMetadata = []
     ): Item {
-        return DB::transaction(function () use ($itemId, $quantityDelta, $reason, $userId, $extraMetadata) {
+        return DB::transaction(function () use ($itemId, $quantityDelta, $reason, $userId) {
             $item = Item::lockForUpdate()->findOrFail($itemId);
             $previousStock = (float) $item->stock;
             $newStock = $previousStock + $quantityDelta;
 
             if ($newStock < 0) {
                 throw new InvalidArgumentException(
-                    "Insufficient stock for item '{$item->name}' (Code: {$item->code}). " .
+                    "Insufficient stock for item '{$item->name}' (Code: {$item->code}). ".
                     "Current: {$previousStock}, Requested delta: {$quantityDelta}."
                 );
             }
@@ -77,13 +73,13 @@ class InventoryService
         ?int $warehouseId = null
     ): Item {
         if ($quantity <= 0) {
-            throw new InvalidArgumentException("Inbound quantity must be greater than zero.");
+            throw new InvalidArgumentException('Inbound quantity must be greater than zero.');
         }
 
         return $this->adjustStock(
             itemId: $itemId,
             quantityDelta: $quantity,
-            reason: "Material Inbound BPB Receipt ({$referenceDoc})" . ($warehouseId ? " to WH #{$warehouseId}" : ""),
+            reason: "Material Inbound BPB Receipt ({$referenceDoc})".($warehouseId ? " to WH #{$warehouseId}" : ''),
             userId: $userId,
             extraMetadata: ['warehouse_id' => $warehouseId, 'document' => $referenceDoc]
         );
@@ -99,7 +95,7 @@ class InventoryService
         int $userId = 1
     ): Item {
         if ($quantity <= 0) {
-            throw new InvalidArgumentException("Outbound quantity must be greater than zero.");
+            throw new InvalidArgumentException('Outbound quantity must be greater than zero.');
         }
 
         return $this->adjustStock(

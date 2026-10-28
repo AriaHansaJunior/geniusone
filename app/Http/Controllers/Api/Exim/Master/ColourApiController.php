@@ -16,7 +16,7 @@ class ColourApiController extends Controller
         if ($search = $request->query('search')) {
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('grade', 'like', "%{$search}%");
+                    ->orWhere('grade', 'like', "%{$search}%");
             });
         }
 
@@ -57,6 +57,7 @@ class ColourApiController extends Controller
     public function show(int $id): JsonResponse
     {
         $record = Colour::findOrFail($id);
+
         return response()->json(['data' => $record]);
     }
 
@@ -65,7 +66,7 @@ class ColourApiController extends Controller
         $record = Colour::findOrFail($id);
 
         $validated = $request->validate([
-            'name' => 'sometimes|required|string|max:45|unique:colours,name,' . $id,
+            'name' => 'sometimes|required|string|max:45|unique:colours,name,'.$id,
             'grade' => 'nullable|string|max:45',
             'status' => 'nullable|integer',
         ]);

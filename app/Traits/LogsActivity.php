@@ -19,7 +19,9 @@ trait LogsActivity
     public static function bootLogsActivity(): void
     {
         static::created(function (Model $model) {
-            if (static::$loggingDisabled) return;
+            if (static::$loggingDisabled) {
+                return;
+            }
 
             $modelName = class_basename($model);
             $primaryKey = $model->getKey();
@@ -41,7 +43,9 @@ trait LogsActivity
         });
 
         static::updated(function (Model $model) {
-            if (static::$loggingDisabled) return;
+            if (static::$loggingDisabled) {
+                return;
+            }
 
             $dirty = $model->getDirty();
 
@@ -89,7 +93,9 @@ trait LogsActivity
         });
 
         static::deleted(function (Model $model) {
-            if (static::$loggingDisabled) return;
+            if (static::$loggingDisabled) {
+                return;
+            }
 
             $modelName = class_basename($model);
             $primaryKey = $model->getKey();
@@ -117,7 +123,9 @@ trait LogsActivity
 
         if (method_exists(static::class, 'restored')) {
             static::restored(function (Model $model) {
-                if (static::$loggingDisabled) return;
+                if (static::$loggingDisabled) {
+                    return;
+                }
 
                 $modelName = class_basename($model);
                 $primaryKey = $model->getKey();
@@ -185,6 +193,7 @@ trait LogsActivity
     protected function filterLoggedAttributes(array $attributes): array
     {
         $hidden = $this->getHiddenFromAudit();
+
         return array_diff_key($attributes, array_flip($hidden));
     }
 

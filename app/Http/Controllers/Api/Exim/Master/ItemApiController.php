@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Exim\Master;
 
 use App\Http\Controllers\Controller;
 use App\Models\Master\Material\Item;
+use App\Models\Master\Material\ItemType;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -27,8 +28,8 @@ class ItemApiController extends Controller
         if ($search = $request->query('search')) {
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('code', 'like', "%{$search}%")
-                  ->orWhere('external_code', 'like', "%{$search}%");
+                    ->orWhere('code', 'like', "%{$search}%")
+                    ->orWhere('external_code', 'like', "%{$search}%");
             });
         }
 
@@ -86,11 +87,11 @@ class ItemApiController extends Controller
 
         if (empty($validated['code'])) {
             $nextId = (Item::max('id') ?? 0) + 1;
-            $validated['code'] = 'ITM.' . str_pad((string) $nextId, 5, '0', STR_PAD_LEFT);
+            $validated['code'] = 'ITM.'.str_pad((string) $nextId, 5, '0', STR_PAD_LEFT);
         }
 
         if (empty($validated['item_types_id'])) {
-            $firstType = \App\Models\Master\Material\ItemType::first();
+            $firstType = ItemType::first();
             $validated['item_types_id'] = $firstType?->id ?? 1;
         }
 
@@ -126,7 +127,7 @@ class ItemApiController extends Controller
 
         $validated = $request->validate([
             'name' => 'sometimes|required|string|max:255',
-            'code' => 'nullable|string|max:45|unique:items,code,' . $id,
+            'code' => 'nullable|string|max:45|unique:items,code,'.$id,
             'external_code' => 'nullable|string|max:45',
             'categories_id' => 'nullable|exists:categories,id',
             'classifications_id' => 'nullable|exists:classifications,id',

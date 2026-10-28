@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\System\Auth\User;
+use App\Services\AuditLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -30,7 +31,13 @@ class AuthApiController extends Controller
             ->orWhere('email', $loginInput)
             ->first();
 
-        if (!$user) {
+        if (! $user) {
+            AuditLogger::logAuth('LOGIN_FAILED', null, [
+                'attempted_username' => $loginInput,
+                'reason' => 'User account not found',
+                'ip' => $request->ip(),
+            ]);
+
             return response()->json([
                 'status' => 'error',
                 'message' => 'User account not found with the provided credentials.',
@@ -40,14 +47,26 @@ class AuthApiController extends Controller
         // Validate password against hashed password or plain fallback for initial seed
         $passwordValid = Hash::check($password, $user->password) || $user->password === $password;
 
-        if (!$passwordValid) {
+        if (! $passwordValid) {
+            AuditLogger::logAuth('LOGIN_FAILED', $user->id, [
+                'username' => $user->username,
+                'reason' => 'Invalid password credentials',
+                'ip' => $request->ip(),
+            ]);
+
             return response()->json([
                 'status' => 'error',
                 'message' => 'Invalid username or password.',
             ], 401);
         }
 
-        if (isset($user->status) && (int)$user->status === 0) {
+        if (isset($user->status) && (int) $user->status === 0) {
+            AuditLogger::logAuth('LOGIN_BLOCKED', $user->id, [
+                'username' => $user->username,
+                'reason' => 'Account is deactivated',
+                'ip' => $request->ip(),
+            ]);
+
             return response()->json([
                 'status' => 'error',
                 'message' => 'This account has been deactivated. Please contact your administrator.',
@@ -59,6 +78,14 @@ class AuthApiController extends Controller
         if ($request->hasSession()) {
             $request->session()->regenerate();
         }
+
+        // Record successful login audit log
+        AuditLogger::logAuth('LOGIN_SUCCESS', $user->id, [
+            'username' => $user->username,
+            'name' => $user->name,
+            'role' => $user->role,
+            'ip' => $request->ip(),
+        ]);
 
         // Generate stateless API Bearer token
         $token = Str::random(60);
@@ -98,6 +125,11 @@ class AuthApiController extends Controller
 
         $user = $request->user() ?: Auth::user();
         if ($user) {
+            AuditLogger::logAuth('LOGOUT', $user->id, [
+                'username' => $user->username,
+                'name' => $user->name,
+                'ip' => $request->ip(),
+            ]);
             $user->update(['remember_token' => null]);
         }
 
@@ -121,7 +153,7 @@ class AuthApiController extends Controller
     {
         $user = $request->user() ?: Auth::user();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Unauthenticated.',
@@ -154,7 +186,7 @@ class AuthApiController extends Controller
             ->with('roleModel')
             ->select('id', 'name', 'username', 'email', 'role', 'status')
             ->get()
-            ->map(fn($u) => [
+            ->map(fn ($u) => [
                 'id' => $u->id,
                 'name' => $u->name,
                 'username' => $u->username,

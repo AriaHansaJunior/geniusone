@@ -3,11 +3,12 @@
 namespace App\Http\Controllers\Api\Warehouse;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
+use App\Models\Master\Partner\Supplier;
+use App\Models\Procurement\PurchaseOrder\PurchaseOrder;
 use App\Models\Warehouse\GateReceiving\ReceiveNote;
-use App\ViewModels\ReceiveNoteViewModel;
 use App\Services\GeniusOneBackend;
-use Carbon\Carbon;
+use App\ViewModels\ReceiveNoteViewModel;
+use Illuminate\Http\Request;
 
 class ReceiveNoteApiController extends Controller
 {
@@ -28,9 +29,9 @@ class ReceiveNoteApiController extends Controller
             $s = $request->search;
             $query->where(function ($q) use ($s) {
                 $q->where('rn_number', 'like', "%{$s}%")
-                  ->orWhere('license_plate', 'like', "%{$s}%")
-                  ->orWhere('sj_number', 'like', "%{$s}%")
-                  ->orWhereHas('supplier', fn($sq) => $sq->where('name', 'like', "%{$s}%"));
+                    ->orWhere('license_plate', 'like', "%{$s}%")
+                    ->orWhere('sj_number', 'like', "%{$s}%")
+                    ->orWhereHas('supplier', fn ($sq) => $sq->where('name', 'like', "%{$s}%"));
             });
         }
 
@@ -60,12 +61,12 @@ class ReceiveNoteApiController extends Controller
             'purchaseOrders.purchaseOrder',
             'approvals.user',
         ])
-        ->where('rn_number', $rawCode)
-        ->orWhere('rn_number', $code)
-        ->orWhere('id', is_numeric($code) ? $code : null)
-        ->first();
+            ->where('rn_number', $rawCode)
+            ->orWhere('rn_number', $code)
+            ->orWhere('id', is_numeric($code) ? $code : null)
+            ->first();
 
-        if (!$rn) {
+        if (! $rn) {
             return response()->json(['error' => 'Receive Note not found'], 404);
         }
 
@@ -87,44 +88,46 @@ class ReceiveNoteApiController extends Controller
         // Resolve Supplier ID
         $supInput = $request->input('supliers_id') ?? $request->input('supplier') ?? $request->input('supplier_id');
         $supId = null;
-        if (is_numeric($supInput) && \App\Models\Master\Partner\Supplier::where('id', $supInput)->exists()) {
+        if (is_numeric($supInput) && Supplier::where('id', $supInput)->exists()) {
             $supId = (int) $supInput;
-        } elseif (!empty($supInput)) {
+        } elseif (! empty($supInput)) {
             $cleaned = preg_replace('/^sup-?/i', '', (string) $supInput);
-            if (is_numeric($cleaned) && \App\Models\Master\Partner\Supplier::where('id', $cleaned)->exists()) {
+            if (is_numeric($cleaned) && Supplier::where('id', $cleaned)->exists()) {
                 $supId = (int) $cleaned;
             } else {
-                $sup = \App\Models\Master\Partner\Supplier::where('code', $supInput)->orWhere('name', 'like', "%{$supInput}%")->first();
+                $sup = Supplier::where('code', $supInput)->orWhere('name', 'like', "%{$supInput}%")->first();
                 $supId = $sup?->id;
             }
         }
-        if (!$supId) {
-            $supId = \App\Models\Master\Partner\Supplier::first()?->id ?? 1;
+        if (! $supId) {
+            $supId = Supplier::first()?->id ?? 1;
         }
 
         // Resolve Items
         $rawItems = $request->input('items', []);
-        $firstPo = \App\Models\Procurement\PurchaseOrder\PurchaseOrder::first();
+        $firstPo = PurchaseOrder::first();
         $fallbackPoId = $firstPo?->id ?? 1;
 
         $processedItems = [];
-        if (!empty($rawItems)) {
+        if (! empty($rawItems)) {
             foreach ($rawItems as $it) {
                 $poId = null;
-                if (!empty($it['purchase_order_id']) && is_numeric($it['purchase_order_id'])) {
+                if (! empty($it['purchase_order_id']) && is_numeric($it['purchase_order_id'])) {
                     $poId = (int) $it['purchase_order_id'];
-                } elseif (!empty($it['poNumber']) || !empty($it['po_number'])) {
+                } elseif (! empty($it['poNumber']) || ! empty($it['po_number'])) {
                     $poCode = $it['poNumber'] ?? $it['po_number'];
-                    $poObj = \App\Models\Procurement\PurchaseOrder\PurchaseOrder::where('po_number', $poCode)->first();
+                    $poObj = PurchaseOrder::where('po_number', $poCode)->first();
                     $poId = $poObj?->id;
                 }
-                if (!$poId) $poId = $fallbackPoId;
+                if (! $poId) {
+                    $poId = $fallbackPoId;
+                }
 
                 $processedItems[] = [
                     'purchase_order_id' => $poId,
                     'quantity' => (float) ($it['quantity'] ?? $it['suratJalanQty'] ?? 1),
                     'item_name' => $it['item_name'] ?? $it['itemName'] ?? 'Material Item',
-                    'job_number_id' => !empty($it['job_number_id']) ? (int) $it['job_number_id'] : null,
+                    'job_number_id' => ! empty($it['job_number_id']) ? (int) $it['job_number_id'] : null,
                     'rafaksi' => (float) ($it['rafaksi'] ?? 0),
                     'price' => (float) ($it['price'] ?? 0),
                 ];
@@ -197,7 +200,7 @@ class ReceiveNoteApiController extends Controller
         $rn = GeniusOneBackend::warehouse()->rejectRn($id, $userId, $tier, $reason);
 
         return response()->json([
-            'message' => "Receive Note rejected successfully",
+            'message' => 'Receive Note rejected successfully',
             'data' => (new ReceiveNoteViewModel($rn))->toArray(),
         ]);
     }

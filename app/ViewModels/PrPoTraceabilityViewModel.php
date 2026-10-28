@@ -7,6 +7,7 @@ use Illuminate\Support\Collection;
 class PrPoTraceabilityViewModel
 {
     protected Collection $rows;
+
     protected array $summary;
 
     public function __construct(Collection $rows, array $summary = [])
@@ -31,8 +32,8 @@ class PrPoTraceabilityViewModel
                     'formatted_ordered' => number_format((float) $row['ordered_quantity'], 2),
                     'formatted_net_received' => number_format((float) $row['net_received_quantity'], 2),
                     'formatted_outstanding' => number_format((float) $row['outstanding_quantity'], 2),
-                    'fulfillment_percentage' => $row['ordered_quantity'] > 0 
-                        ? round(($row['net_received_quantity'] / $row['ordered_quantity']) * 100, 1) 
+                    'fulfillment_percentage' => $row['ordered_quantity'] > 0
+                        ? round(($row['net_received_quantity'] / $row['ordered_quantity']) * 100, 1)
                         : 0,
                 ]);
             })->values()->toArray(),

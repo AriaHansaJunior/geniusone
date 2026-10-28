@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Api\Warehouse;
 
 use App\Http\Controllers\Controller;
 use App\Models\Master\Material\Item;
-use App\Models\Master\Material\UnitOfMeasurement;
 use App\Models\Warehouse\Facility\Warehouse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -25,18 +24,18 @@ class WarehouseReportApiController extends Controller
 
         // Locate item
         $item = null;
-        if (!empty($itemQuery)) {
+        if (! empty($itemQuery)) {
             $item = Item::where('code', $itemQuery)
-                ->orWhere('id', is_numeric($itemQuery) ? (int)$itemQuery : 0)
+                ->orWhere('id', is_numeric($itemQuery) ? (int) $itemQuery : 0)
                 ->orWhere('name', 'like', "%{$itemQuery}%")
                 ->first();
         }
 
-        if (!$item) {
+        if (! $item) {
             $item = Item::first();
         }
 
-        if (!$item) {
+        if (! $item) {
             return response()->json([
                 'status' => 'success',
                 'data' => [
@@ -60,7 +59,7 @@ class WarehouseReportApiController extends Controller
             ->leftJoin('warehouses as w', 'pb.warehouses_id', '=', 'w.id')
             ->where(function ($q) use ($item) {
                 $q->where('porn.item_name', 'like', "%{$item->name}%")
-                  ->orWhere('porn.item_name', 'like', "%{$item->code}%");
+                    ->orWhere('porn.item_name', 'like', "%{$item->code}%");
             })
             ->whereBetween('rn.arrival_date', ["{$startDate} 00:00:00", "{$endDate} 23:59:59"])
             ->select([
@@ -90,7 +89,7 @@ class WarehouseReportApiController extends Controller
                 'id' => (string) ($idx + 1),
                 'date' => substr($entry->date, 0, 10),
                 'doc_type' => 'BPB Inbound',
-                'doc_number' => $entry->bpb_number ?: $entry->rn_number ?: 'BPB-' . str_pad($entry->rn_id, 4, '0', STR_PAD_LEFT),
+                'doc_number' => $entry->bpb_number ?: $entry->rn_number ?: 'BPB-'.str_pad($entry->rn_id, 4, '0', STR_PAD_LEFT),
                 'reference_no' => $entry->rn_number ?: '-',
                 'warehouse' => $entry->warehouse_name ?: 'Main Warehouse',
                 'unit' => $item->unit?->name ?? 'PCS',
@@ -152,21 +151,21 @@ class WarehouseReportApiController extends Controller
         $query = Item::query()
             ->with(['category', 'unit', 'brand']);
 
-        if (!empty($search)) {
+        if (! empty($search)) {
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('code', 'like', "%{$search}%");
+                    ->orWhere('code', 'like', "%{$search}%");
             });
         }
 
-        if (!empty($categoryId)) {
+        if (! empty($categoryId)) {
             $query->where('categories_id', $categoryId);
         }
 
         $items = $query->orderBy('name')->get();
 
         $warehouses = Warehouse::where('status', 1)->pluck('name')->toArray();
-        $defaultWh = !empty($warehouses) ? $warehouses[0] : 'Main Warehouse';
+        $defaultWh = ! empty($warehouses) ? $warehouses[0] : 'Main Warehouse';
 
         $records = $items->map(function ($item, $idx) use ($defaultWh) {
             $stock = (float) $item->stock;

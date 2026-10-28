@@ -11,6 +11,7 @@ class HsCode extends Model
     use HasFactory;
 
     protected $table = 'hs_code';
+
     public $timestamps = false;
 
     protected $fillable = [

@@ -23,12 +23,19 @@ class Permission extends Model
      * Standard Actions.
      */
     public const ACTION_CREATE = 'create';
+
     public const ACTION_VIEW = 'view';
+
     public const ACTION_UPDATE = 'update';
+
     public const ACTION_DELETE = 'delete';
+
     public const ACTION_APPROVE_1 = 'approve_1';
+
     public const ACTION_UNAPPROVE_1 = 'unapprove_1';
+
     public const ACTION_APPROVE_2 = 'approve_2';
+
     public const ACTION_UNAPPROVE_2 = 'unapprove_2';
 
     /**

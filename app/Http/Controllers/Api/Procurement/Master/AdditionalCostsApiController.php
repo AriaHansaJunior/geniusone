@@ -16,7 +16,7 @@ class AdditionalCostsApiController extends Controller
         if ($search = $request->query('search')) {
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('code', 'like', "%{$search}%");
+                    ->orWhere('code', 'like', "%{$search}%");
             });
         }
 
@@ -53,6 +53,7 @@ class AdditionalCostsApiController extends Controller
     public function show(int $id): JsonResponse
     {
         $record = AdditionalCostType::findOrFail($id);
+
         return response()->json(['data' => $record]);
     }
 
@@ -61,8 +62,8 @@ class AdditionalCostsApiController extends Controller
         $record = AdditionalCostType::findOrFail($id);
 
         $validated = $request->validate([
-            'code' => 'sometimes|required|string|max:45|unique:additional_cost_types,code,' . $id,
-            'name' => 'sometimes|required|string|max:45|unique:additional_cost_types,name,' . $id,
+            'code' => 'sometimes|required|string|max:45|unique:additional_cost_types,code,'.$id,
+            'name' => 'sometimes|required|string|max:45|unique:additional_cost_types,name,'.$id,
             'status' => 'nullable|integer',
         ]);
 

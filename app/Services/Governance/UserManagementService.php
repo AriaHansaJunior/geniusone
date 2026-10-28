@@ -3,6 +3,7 @@
 namespace App\Services\Governance;
 
 use App\Models\System\Auth\User;
+use App\Models\System\Governance\Permission;
 use App\Models\System\Governance\Role;
 use App\Services\AuditLogger;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -22,16 +23,16 @@ class UserManagementService
     {
         $query = User::with(['department', 'roleModel'])->orderBy('id', 'desc');
 
-        if (!empty($filters['search'])) {
+        if (! empty($filters['search'])) {
             $search = trim($filters['search']);
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('username', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%");
+                    ->orWhere('username', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%");
             });
         }
 
-        if (!empty($filters['role']) && $filters['role'] !== 'all') {
+        if (! empty($filters['role']) && $filters['role'] !== 'all') {
             $query->where('role', $filters['role']);
         }
 
@@ -39,7 +40,7 @@ class UserManagementService
             $query->where('status', (int) $filters['status']);
         }
 
-        if (!empty($filters['departments_id'])) {
+        if (! empty($filters['departments_id'])) {
             $query->where('departments_id', (int) $filters['departments_id']);
         }
 
@@ -65,7 +66,7 @@ class UserManagementService
             'sidebar_permissions' => $data['sidebar_permissions'] ?? null,
         ]);
 
-        if (!empty($data['permissions']) && is_array($data['permissions'])) {
+        if (! empty($data['permissions']) && is_array($data['permissions'])) {
             $this->syncUserDirectPermissions($user, $data['permissions']);
         }
 
@@ -89,7 +90,7 @@ class UserManagementService
 
         // Prevent demoting primary superadmin (id 1 or username superadmin)
         if ($user->id === 1 && isset($data['role']) && $data['role'] !== Role::SUPERADMIN) {
-            throw new InvalidArgumentException("The primary SuperAdmin account role cannot be changed.");
+            throw new InvalidArgumentException('The primary SuperAdmin account role cannot be changed.');
         }
 
         $updatePayload = [
@@ -101,7 +102,7 @@ class UserManagementService
             'status' => isset($data['status']) ? (int) $data['status'] : $user->status,
         ];
 
-        if (!empty($data['password'])) {
+        if (! empty($data['password'])) {
             $updatePayload['password'] = Hash::make($data['password']);
         }
 
@@ -160,17 +161,18 @@ class UserManagementService
         $user = User::findOrFail($userId);
 
         if ($user->id === 1 || $user->role === Role::SUPERADMIN) {
-            throw new InvalidArgumentException("SuperAdmin accounts cannot be deactivated.");
+            throw new InvalidArgumentException('SuperAdmin accounts cannot be deactivated.');
         }
 
-        $newStatus = ($user->status === 1) ? 0 : 1;
+        $oldStatus = (int) $user->status;
+        $newStatus = ($oldStatus === 1) ? 0 : 1;
         $user->update(['status' => $newStatus]);
 
         AuditLogger::log(
             userId: $actorId,
             type: $newStatus === 1 ? 'USER_ACTIVATED' : 'USER_DEACTIVATED',
-            old: ['status' => $user->status],
-            new: ['status' => $newStatus]
+            old: ['status' => $oldStatus, 'target_user' => $user->username, 'name' => $user->name],
+            new: ['status' => $newStatus, 'target_user' => $user->username, 'name' => $user->name]
         );
 
         return $user;
@@ -203,11 +205,11 @@ class UserManagementService
         $user = User::findOrFail($userId);
 
         if ($user->id === 1 || $user->role === Role::SUPERADMIN) {
-            throw new InvalidArgumentException("SuperAdmin accounts cannot be deleted.");
+            throw new InvalidArgumentException('SuperAdmin accounts cannot be deleted.');
         }
 
         if ($user->id === $actorId) {
-            throw new InvalidArgumentException("You cannot delete your own active account.");
+            throw new InvalidArgumentException('You cannot delete your own active account.');
         }
 
         AuditLogger::log(
@@ -225,7 +227,7 @@ class UserManagementService
      */
     public function syncUserDirectPermissions(User $user, array $permissionNames): void
     {
-        $permissionIds = \App\Models\System\Governance\Permission::whereIn('name', $permissionNames)->pluck('id')->toArray();
+        $permissionIds = Permission::whereIn('name', $permissionNames)->pluck('id')->toArray();
         $user->directPermissions()->sync($permissionIds);
     }
 }

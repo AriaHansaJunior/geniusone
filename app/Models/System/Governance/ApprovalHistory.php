@@ -35,10 +35,15 @@ class ApprovalHistory extends Model
      * Standard Actions.
      */
     public const ACTION_APPROVE_1 = 'APPROVE_1';
+
     public const ACTION_APPROVE_2 = 'APPROVE_2';
+
     public const ACTION_UNAPPROVE_1 = 'UNAPPROVE_1';
+
     public const ACTION_UNAPPROVE_2 = 'UNAPPROVE_2';
+
     public const ACTION_REJECT = 'REJECT';
+
     public const ACTION_RESUBMIT = 'RESUBMIT';
 
     /**

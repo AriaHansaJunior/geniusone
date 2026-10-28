@@ -2,26 +2,30 @@
 
 namespace App\Services;
 
-use App\Services\DocumentNumber\DocumentNumberGenerator;
-use App\Services\Procurement\ProcurementCalculationService;
-use App\Services\Procurement\PurchaseRequisitionService;
-use App\Services\Procurement\PurchaseOrderService;
-use App\Services\Procurement\ApprovalWorkflowService;
-use App\Services\Warehouse\ReceiveNoteService;
-use App\Services\Warehouse\BpbWarehouseService;
-use App\Services\Warehouse\WarehouseApprovalService;
-use App\Services\Inventory\InventoryService;
-use App\Services\Reporting\PrPoTraceabilityService;
-use App\ViewModels\PurchaseRequisitionViewModel;
-use App\ViewModels\PurchaseOrderViewModel;
-use App\ViewModels\ReceiveNoteViewModel;
-use App\ViewModels\BpbViewModel;
-use App\ViewModels\PrPoTraceabilityViewModel;
-use App\Models\Procurement\PurchaseRequest\PurchaseRequisition;
 use App\Models\Procurement\PurchaseOrder\PurchaseOrder;
+use App\Models\Procurement\PurchaseRequest\PurchaseRequisition;
 use App\Models\Warehouse\GateReceiving\ReceiveNote;
 use App\Models\Warehouse\InboundStorage\BpbReceiveMaterial;
+use App\Services\DocumentNumber\DocumentNumberGenerator;
+use App\Services\Governance\PermissionManagementService;
+use App\Services\Governance\UserManagementService;
+use App\Services\Inventory\InventoryService;
+use App\Services\Procurement\ApprovalWorkflowService;
+use App\Services\Procurement\ProcurementCalculationService;
+use App\Services\Procurement\PurchaseOrderService;
+use App\Services\Procurement\PurchaseRequisitionService;
+use App\Services\Reporting\PrPoTraceabilityService;
+use App\Services\Warehouse\BpbWarehouseService;
+use App\Services\Warehouse\ReceiveNoteService;
+use App\Services\Warehouse\WarehouseApprovalService;
+use App\Services\Workflow\DocumentApprovalWorkflowService;
+use App\ViewModels\BpbViewModel;
+use App\ViewModels\PrPoTraceabilityViewModel;
+use App\ViewModels\PurchaseOrderViewModel;
+use App\ViewModels\PurchaseRequisitionViewModel;
+use App\ViewModels\ReceiveNoteViewModel;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Auth;
 
 /**
  * Unified Backend Entry Point & Facade for GeniusOne System.
@@ -77,23 +81,35 @@ class GeniusOneBackend
      */
     public static function procurement(): object
     {
-        return new class {
-            public function createPr(array $headerData, array $itemsData, int $userId) {
+        return new class
+        {
+            public function createPr(array $headerData, array $itemsData, int $userId)
+            {
                 return GeniusOneBackend::pr()->createPr($headerData, $itemsData, $userId);
             }
-            public function createPo(array $headerData, array $items, array $additionalCosts = [], int $userId = 1) {
+
+            public function createPo(array $headerData, array $items, array $additionalCosts = [], int $userId = 1)
+            {
                 return GeniusOneBackend::po()->createPo($headerData, $items, $additionalCosts, $userId);
             }
-            public function approvePr(int $id, int $userId, int $tier = 1, ?string $note = null) {
+
+            public function approvePr(int $id, int $userId, int $tier = 1, ?string $note = null)
+            {
                 return GeniusOneBackend::procurementApproval()->approvePr($id, $userId, $tier, $note);
             }
-            public function rejectPr(int $id, int $userId, int $tier = 1, ?string $reason = null) {
+
+            public function rejectPr(int $id, int $userId, int $tier = 1, ?string $reason = null)
+            {
                 return GeniusOneBackend::procurementApproval()->rejectPr($id, $userId, $tier, $reason);
             }
-            public function approvePo(int $id, int $userId, int $tier = 1, ?string $note = null) {
+
+            public function approvePo(int $id, int $userId, int $tier = 1, ?string $note = null)
+            {
                 return GeniusOneBackend::procurementApproval()->approvePo($id, $userId, $tier, $note);
             }
-            public function rejectPo(int $id, int $userId, int $tier = 1, ?string $reason = null) {
+
+            public function rejectPo(int $id, int $userId, int $tier = 1, ?string $reason = null)
+            {
                 return GeniusOneBackend::procurementApproval()->rejectPo($id, $userId, $tier, $reason);
             }
         };
@@ -150,25 +166,25 @@ class GeniusOneBackend
     /**
      * Unified Document Approval & Workflow State Machine Engine (BE-03, BE-04, BE-05, BE-06).
      */
-    public static function workflow(): \App\Services\Workflow\DocumentApprovalWorkflowService
+    public static function workflow(): DocumentApprovalWorkflowService
     {
-        return app(\App\Services\Workflow\DocumentApprovalWorkflowService::class);
+        return app(DocumentApprovalWorkflowService::class);
     }
 
     /**
      * SuperAdmin User Account Management Service (BE-01).
      */
-    public static function userManagement(): \App\Services\Governance\UserManagementService
+    public static function userManagement(): UserManagementService
     {
-        return app(\App\Services\Governance\UserManagementService::class);
+        return app(UserManagementService::class);
     }
 
     /**
      * Granular Permission & Role Management Service (BE-02).
      */
-    public static function permissionManagement(): \App\Services\Governance\PermissionManagementService
+    public static function permissionManagement(): PermissionManagementService
     {
-        return app(\App\Services\Governance\PermissionManagementService::class);
+        return app(PermissionManagementService::class);
     }
 
     /**
@@ -176,7 +192,8 @@ class GeniusOneBackend
      */
     public static function can(string $permission): bool
     {
-        $user = \Illuminate\Support\Facades\Auth::user();
+        $user = Auth::user();
+
         return $user ? $user->hasPermission($permission) : false;
     }
 
@@ -185,7 +202,8 @@ class GeniusOneBackend
      */
     public static function hasRole(string|array $roles): bool
     {
-        $user = \Illuminate\Support\Facades\Auth::user();
+        $user = Auth::user();
+
         return $user ? $user->hasRole($roles) : false;
     }
 

@@ -8,6 +8,7 @@ use Tests\TestCase;
 class ModularApiTest extends TestCase
 {
     use RefreshDatabase;
+
     /**
      * Test Procurement Master APIs.
      */

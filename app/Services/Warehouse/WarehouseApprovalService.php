@@ -2,10 +2,10 @@
 
 namespace App\Services\Warehouse;
 
-use App\Models\Warehouse\GateReceiving\ReceiveNote;
-use App\Models\Warehouse\InboundStorage\BpbReceiveMaterial;
 use App\Models\Warehouse\GateReceiving\ApprovalRn;
+use App\Models\Warehouse\GateReceiving\ReceiveNote;
 use App\Models\Warehouse\InboundStorage\ApprovalBpb;
+use App\Models\Warehouse\InboundStorage\BpbReceiveMaterial;
 use App\Services\AuditLogger;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
@@ -15,16 +15,12 @@ class WarehouseApprovalService
     /**
      * Approve Receive Note (RN).
      *
-     * @param int $rnId
-     * @param int $userId
-     * @param int $tier 1 = QC/Gate Inspector, 2 = Warehouse Supervisor
-     * @param string|null $note
-     * @return ReceiveNote
+     * @param  int  $tier  1 = QC/Gate Inspector, 2 = Warehouse Supervisor
      */
     public function approveRn(int $rnId, int $userId, int $tier = 1, ?string $note = null): ReceiveNote
     {
-        if (!in_array($tier, [1, 2])) {
-            throw new InvalidArgumentException("RN Approval tier must be 1 or 2.");
+        if (! in_array($tier, [1, 2])) {
+            throw new InvalidArgumentException('RN Approval tier must be 1 or 2.');
         }
 
         return DB::transaction(function () use ($rnId, $userId, $tier, $note) {
@@ -109,16 +105,12 @@ class WarehouseApprovalService
     /**
      * Approve BPB Receive Material (Warehouse Inbound Slip).
      *
-     * @param int $bpbId
-     * @param int $userId
-     * @param int $tier 1 = Warehouse Officer, 2 = Warehouse Head / Manager
-     * @param string|null $note
-     * @return BpbReceiveMaterial
+     * @param  int  $tier  1 = Warehouse Officer, 2 = Warehouse Head / Manager
      */
     public function approveBpb(int $bpbId, int $userId, int $tier = 1, ?string $note = null): BpbReceiveMaterial
     {
-        if (!in_array($tier, [1, 2])) {
-            throw new InvalidArgumentException("BPB Approval tier must be 1 or 2.");
+        if (! in_array($tier, [1, 2])) {
+            throw new InvalidArgumentException('BPB Approval tier must be 1 or 2.');
         }
 
         return DB::transaction(function () use ($bpbId, $userId, $tier, $note) {

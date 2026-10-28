@@ -2,17 +2,18 @@
 
 namespace App\Models\Master\Material;
 
+use App\Models\Master\Customs\Facility;
+use App\Models\Master\Organization\JobNumber;
+use App\Models\System\Auth\User;
+use App\Traits\LogsActivity;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use App\Traits\LogsActivity;
-use App\Models\Master\Customs\Facility;
-use App\Models\Master\Organization\JobNumber;
 
 class Item extends Model
 {
-    use HasFactory, SoftDeletes, LogsActivity;
+    use HasFactory, LogsActivity, SoftDeletes;
 
     protected $table = 'items';
 
@@ -91,7 +92,7 @@ class Item extends Model
 
     public function createdByUser(): BelongsTo
     {
-        return $this->belongsTo(\App\Models\System\Auth\User::class, 'created_by');
+        return $this->belongsTo(User::class, 'created_by');
     }
 
     public function jobNumber(): BelongsTo

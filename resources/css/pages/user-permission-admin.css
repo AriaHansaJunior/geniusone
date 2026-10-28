@@ -140,7 +140,10 @@
 .user-row-actions {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
+  white-space: nowrap;
+  vertical-align: middle;
 }
 
 /* Dedicated Highly Visible Permissions & Sidebar Action Button */
@@ -149,7 +152,9 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
-  padding: 5px 12px;
+  height: 30px;
+  padding: 0 12px;
+  box-sizing: border-box;
   font-size: 11.5px;
   font-weight: 600;
   border-radius: var(--radius-sm, 6px);
@@ -277,7 +282,6 @@
 .perm-modal-body {
   flex: 1 1 0;
   min-height: 0;
-  max-height: 100%;
   overflow-y: auto !important;
   overflow-x: hidden;
   padding: 16px 22px;
@@ -287,11 +291,15 @@
   background: #fbfcfe;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: thin;
-  scrollbar-color: #cbd5e1 transparent;
+  scrollbar-color: #cbd5e1 #f8fafc;
+}
+
+.perm-modal-body > * {
+  flex-shrink: 0;
 }
 
 .perm-modal-body::-webkit-scrollbar {
-  width: 7px;
+  width: 8px;
 }
 
 .perm-modal-body::-webkit-scrollbar-track {
@@ -324,6 +332,7 @@
 
 /* Tab 1: Navigation Access Preset Toolbar */
 .sidebar-preset-bar {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -381,6 +390,7 @@
 
 /* Section Card for Sidebar Navigation */
 .perm-section-card {
+  flex-shrink: 0;
   border: 1px solid var(--line);
   border-radius: var(--radius-md, 8px);
   overflow: hidden;
@@ -523,6 +533,7 @@
    ========================================================================== */
 
 .perm-workflow-module {
+  flex-shrink: 0;
   border: 1px solid var(--line);
   border-radius: var(--radius-md, 8px);
   overflow: hidden;
@@ -676,3 +687,48 @@
   align-items: center;
   gap: 10px;
 }
+
+/* ==========================================================================
+   Seamless Collapsible / Minimize Block Controls
+   ========================================================================== */
+
+.perm-section-header,
+.perm-workflow-header {
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s ease;
+}
+
+.perm-section-header:hover,
+.perm-workflow-header:hover {
+  background: linear-gradient(180deg, #f1f5f9 0%, #e2e8f0 100%);
+}
+
+.perm-workflow-module--collapsed .perm-workflow-header,
+.perm-section-card--collapsed .perm-section-header {
+  border-bottom: none;
+}
+
+.perm-workflow-header__title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.perm-section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--ink);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.perm-workflow-body,
+.perm-section-grid {
+  animation: fadeIn 0.15s ease-out;
+}
+
+

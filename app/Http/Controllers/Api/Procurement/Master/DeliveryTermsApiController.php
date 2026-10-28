@@ -49,6 +49,7 @@ class DeliveryTermsApiController extends Controller
     public function show(int $id): JsonResponse
     {
         $record = DeliveryTerm::findOrFail($id);
+
         return response()->json(['data' => $record]);
     }
 
@@ -57,7 +58,7 @@ class DeliveryTermsApiController extends Controller
         $record = DeliveryTerm::findOrFail($id);
 
         $validated = $request->validate([
-            'name' => 'sometimes|required|string|max:45|unique:delivery_terms,name,' . $id,
+            'name' => 'sometimes|required|string|max:45|unique:delivery_terms,name,'.$id,
             'status' => 'nullable|integer',
         ]);
 

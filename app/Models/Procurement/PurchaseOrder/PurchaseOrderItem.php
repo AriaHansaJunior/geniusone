@@ -2,14 +2,14 @@
 
 namespace App\Models\Procurement\PurchaseOrder;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\SoftDeletes;
 use App\Models\Master\Finance\Pph;
 use App\Models\Master\Finance\Ppn;
 use App\Models\Master\Material\Item;
 use App\Models\Procurement\PurchaseRequest\PurchaseRequisitionItem;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class PurchaseOrderItem extends Model
 {

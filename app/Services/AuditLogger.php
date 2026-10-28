@@ -10,13 +10,6 @@ class AuditLogger
 {
     /**
      * Record an audit log entry in the logs table.
-     *
-     * @param string $type
-     * @param array|null $old
-     * @param array|null $new
-     * @param int|null $userId
-     * @param array $metadata
-     * @return Log
      */
     public static function log(
         string $type,
@@ -39,11 +32,11 @@ class AuditLogger
                 'method' => Request::method(),
             ]);
 
-            if (!empty($metadata)) {
+            if (! empty($metadata)) {
                 $context = array_merge($context, $metadata);
             }
 
-            if (!empty($context)) {
+            if (! empty($context)) {
                 $newPayload['_context'] = $context;
             }
         }

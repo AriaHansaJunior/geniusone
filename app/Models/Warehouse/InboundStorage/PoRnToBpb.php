@@ -2,12 +2,12 @@
 
 namespace App\Models\Warehouse\InboundStorage;
 
+use App\Models\Warehouse\Facility\Warehouse;
+use App\Models\Warehouse\GateReceiving\PurchaseOrderReceiveNote;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use App\Models\Warehouse\Facility\Warehouse;
-use App\Models\Warehouse\GateReceiving\PurchaseOrderReceiveNote;
 
 class PoRnToBpb extends Model
 {

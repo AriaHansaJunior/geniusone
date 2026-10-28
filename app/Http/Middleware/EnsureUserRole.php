@@ -2,10 +2,10 @@
 
 namespace App\Http\Middleware;
 
+use App\Services\AuditLogger;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use App\Services\AuditLogger;
 use Symfony\Component\HttpFoundation\Response;
 
 class EnsureUserRole
@@ -13,14 +13,14 @@ class EnsureUserRole
     /**
      * Handle an incoming request.
      *
-     * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
+     * @param  Closure(Request): (Response)  $next
      * @param  string  ...$roles
      */
     public function handle(Request $request, Closure $next, ...$roles): Response
     {
         $user = Auth::user();
 
-        if (!$user) {
+        if (! $user) {
             if ($request->expectsJson() || $request->is('api/*') || $request->header('X-Inertia')) {
                 return response()->json([
                     'error' => 'Unauthenticated',
@@ -32,7 +32,7 @@ class EnsureUserRole
         }
 
         // Check if user possesses at least one of the permitted roles
-        if (!$user->hasRole($roles)) {
+        if (! $user->hasRole($roles)) {
             AuditLogger::logAuth(
                 event: 'UNAUTHORIZED_ROLE_ACCESS',
                 userId: $user->id,

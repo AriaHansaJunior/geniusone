@@ -3,9 +3,9 @@
 namespace App\Http\Controllers\Api\Exim\Master;
 
 use App\Http\Controllers\Controller;
+use App\Models\Master\Finance\Account;
 use App\Models\Master\Material\Classification;
 use App\Models\Master\Organization\ReportingType;
-use App\Models\Master\Finance\Account;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -18,8 +18,8 @@ class ClassificationApiController extends Controller
         if ($search = $request->query('search')) {
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('code', 'like', "%{$search}%")
-                  ->orWhere('description', 'like', "%{$search}%");
+                    ->orWhere('code', 'like', "%{$search}%")
+                    ->orWhere('description', 'like', "%{$search}%");
             });
         }
 
@@ -69,6 +69,7 @@ class ClassificationApiController extends Controller
     public function show(int $id): JsonResponse
     {
         $record = Classification::with(['reportingType', 'account'])->findOrFail($id);
+
         return response()->json(['data' => $record]);
     }
 
@@ -77,7 +78,7 @@ class ClassificationApiController extends Controller
         $record = Classification::findOrFail($id);
 
         $validated = $request->validate([
-            'code' => 'sometimes|required|string|max:45|unique:classifications,code,' . $id,
+            'code' => 'sometimes|required|string|max:45|unique:classifications,code,'.$id,
             'name' => 'sometimes|required|string|max:45',
             'description' => 'nullable|string|max:255',
             'reporting_types_id' => 'nullable|exists:reporting_types,id',

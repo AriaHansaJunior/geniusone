@@ -2,6 +2,65 @@
 
 namespace App\Providers;
 
+use App\Models\Master\Customs\CustomsReport;
+use App\Models\Master\Customs\DocumentHistory;
+use App\Models\Master\Customs\DocumentHistoryItem;
+use App\Models\Master\Customs\Facility;
+use App\Models\Master\Customs\HsCode;
+use App\Models\Master\Customs\TypeRateBm;
+use App\Models\Master\Customs\TypeRateCukai;
+use App\Models\Master\Finance\Account;
+use App\Models\Master\Finance\Currency;
+use App\Models\Master\Finance\DeliveryTerm;
+use App\Models\Master\Finance\PaymentMethod;
+use App\Models\Master\Finance\PaymentTerm;
+use App\Models\Master\Finance\Pph;
+use App\Models\Master\Finance\PphType;
+use App\Models\Master\Finance\Ppn;
+use App\Models\Master\Finance\RafaksiType;
+use App\Models\Master\Finance\Valuta;
+use App\Models\Master\Material\Brand;
+use App\Models\Master\Material\Category;
+use App\Models\Master\Material\Classification;
+use App\Models\Master\Material\Colour;
+use App\Models\Master\Material\GroupScrapItem;
+use App\Models\Master\Material\Item;
+use App\Models\Master\Material\ItemType;
+use App\Models\Master\Material\Specification;
+use App\Models\Master\Material\Style;
+use App\Models\Master\Material\Unit;
+use App\Models\Master\Material\UnitOfMeasurement;
+use App\Models\Master\Organization\Department;
+use App\Models\Master\Organization\JobNumber;
+use App\Models\Master\Organization\ReportingType;
+use App\Models\Master\Organization\Section;
+use App\Models\Master\Partner\Country;
+use App\Models\Master\Partner\Origin;
+use App\Models\Master\Partner\Port;
+use App\Models\Master\Partner\Supplier;
+use App\Models\Procurement\PurchaseOrder\AdditionalCost;
+use App\Models\Procurement\PurchaseOrder\AdditionalCostType;
+use App\Models\Procurement\PurchaseOrder\ApprovalPo;
+use App\Models\Procurement\PurchaseOrder\DiscountType;
+use App\Models\Procurement\PurchaseOrder\PoType;
+use App\Models\Procurement\PurchaseOrder\PurchaseOrder;
+use App\Models\Procurement\PurchaseOrder\PurchaseOrderItem;
+use App\Models\Procurement\PurchaseRequest\ApprovalPr;
+use App\Models\Procurement\PurchaseRequest\PurchaseRequisition;
+use App\Models\Procurement\PurchaseRequest\PurchaseRequisitionItem;
+use App\Models\System\Audit\Log;
+use App\Models\System\Auth\User;
+use App\Models\Warehouse\Facility\Warehouse;
+use App\Models\Warehouse\Facility\WarehouseCoordinate;
+use App\Models\Warehouse\Facility\WarehouseType;
+use App\Models\Warehouse\GateReceiving\ApprovalRn;
+use App\Models\Warehouse\GateReceiving\PurchaseOrderReceiveNote;
+use App\Models\Warehouse\GateReceiving\ReceiveNote;
+use App\Models\Warehouse\GateReceiving\ReceiveNoteReturn;
+use App\Models\Warehouse\GateReceiving\ReceiveNoteReturnItem;
+use App\Models\Warehouse\InboundStorage\ApprovalBpb;
+use App\Models\Warehouse\InboundStorage\BpbReceiveMaterial;
+use App\Models\Warehouse\InboundStorage\PoRnToBpb;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -11,85 +70,85 @@ class AppServiceProvider extends ServiceProvider
      */
     protected const MODEL_DOMAIN_ALIASES = [
         // 1. Procurement / PurchaseRequest
-        'App\Models\PurchaseRequisition' => \App\Models\Procurement\PurchaseRequest\PurchaseRequisition::class,
-        'App\Models\PurchaseRequisitionItem' => \App\Models\Procurement\PurchaseRequest\PurchaseRequisitionItem::class,
-        'App\Models\ApprovalPr' => \App\Models\Procurement\PurchaseRequest\ApprovalPr::class,
+        'App\Models\PurchaseRequisition' => PurchaseRequisition::class,
+        'App\Models\PurchaseRequisitionItem' => PurchaseRequisitionItem::class,
+        'App\Models\ApprovalPr' => ApprovalPr::class,
 
         // 2. Procurement / PurchaseOrder
-        'App\Models\PurchaseOrder' => \App\Models\Procurement\PurchaseOrder\PurchaseOrder::class,
-        'App\Models\PurchaseOrderItem' => \App\Models\Procurement\PurchaseOrder\PurchaseOrderItem::class,
-        'App\Models\ApprovalPo' => \App\Models\Procurement\PurchaseOrder\ApprovalPo::class,
-        'App\Models\AdditionalCost' => \App\Models\Procurement\PurchaseOrder\AdditionalCost::class,
-        'App\Models\AdditionalCostType' => \App\Models\Procurement\PurchaseOrder\AdditionalCostType::class,
-        'App\Models\PoType' => \App\Models\Procurement\PurchaseOrder\PoType::class,
-        'App\Models\DiscountType' => \App\Models\Procurement\PurchaseOrder\DiscountType::class,
+        'App\Models\PurchaseOrder' => PurchaseOrder::class,
+        'App\Models\PurchaseOrderItem' => PurchaseOrderItem::class,
+        'App\Models\ApprovalPo' => ApprovalPo::class,
+        'App\Models\AdditionalCost' => AdditionalCost::class,
+        'App\Models\AdditionalCostType' => AdditionalCostType::class,
+        'App\Models\PoType' => PoType::class,
+        'App\Models\DiscountType' => DiscountType::class,
 
         // 3. Warehouse / GateReceiving
-        'App\Models\ReceiveNote' => \App\Models\Warehouse\GateReceiving\ReceiveNote::class,
-        'App\Models\PurchaseOrderReceiveNote' => \App\Models\Warehouse\GateReceiving\PurchaseOrderReceiveNote::class,
-        'App\Models\ApprovalRn' => \App\Models\Warehouse\GateReceiving\ApprovalRn::class,
-        'App\Models\ReceiveNoteReturn' => \App\Models\Warehouse\GateReceiving\ReceiveNoteReturn::class,
-        'App\Models\ReceiveNoteReturnItem' => \App\Models\Warehouse\GateReceiving\ReceiveNoteReturnItem::class,
+        'App\Models\ReceiveNote' => ReceiveNote::class,
+        'App\Models\PurchaseOrderReceiveNote' => PurchaseOrderReceiveNote::class,
+        'App\Models\ApprovalRn' => ApprovalRn::class,
+        'App\Models\ReceiveNoteReturn' => ReceiveNoteReturn::class,
+        'App\Models\ReceiveNoteReturnItem' => ReceiveNoteReturnItem::class,
 
         // 4. Warehouse / InboundStorage
-        'App\Models\BpbReceiveMaterial' => \App\Models\Warehouse\InboundStorage\BpbReceiveMaterial::class,
-        'App\Models\PoRnToBpb' => \App\Models\Warehouse\InboundStorage\PoRnToBpb::class,
-        'App\Models\ApprovalBpb' => \App\Models\Warehouse\InboundStorage\ApprovalBpb::class,
+        'App\Models\BpbReceiveMaterial' => BpbReceiveMaterial::class,
+        'App\Models\PoRnToBpb' => PoRnToBpb::class,
+        'App\Models\ApprovalBpb' => ApprovalBpb::class,
 
         // 5. Warehouse / Facility
-        'App\Models\Warehouse' => \App\Models\Warehouse\Facility\Warehouse::class,
-        'App\Models\WarehouseType' => \App\Models\Warehouse\Facility\WarehouseType::class,
-        'App\Models\WarehouseCoordinate' => \App\Models\Warehouse\Facility\WarehouseCoordinate::class,
+        'App\Models\Warehouse' => Warehouse::class,
+        'App\Models\WarehouseType' => WarehouseType::class,
+        'App\Models\WarehouseCoordinate' => WarehouseCoordinate::class,
 
         // 6. Master / Material
-        'App\Models\Item' => \App\Models\Master\Material\Item::class,
-        'App\Models\ItemType' => \App\Models\Master\Material\ItemType::class,
-        'App\Models\Category' => \App\Models\Master\Material\Category::class,
-        'App\Models\Classification' => \App\Models\Master\Material\Classification::class,
-        'App\Models\Brand' => \App\Models\Master\Material\Brand::class,
-        'App\Models\Colour' => \App\Models\Master\Material\Colour::class,
-        'App\Models\Style' => \App\Models\Master\Material\Style::class,
-        'App\Models\Specification' => \App\Models\Master\Material\Specification::class,
-        'App\Models\GroupScrapItem' => \App\Models\Master\Material\GroupScrapItem::class,
-        'App\Models\Unit' => \App\Models\Master\Material\Unit::class,
-        'App\Models\UnitOfMeasurement' => \App\Models\Master\Material\UnitOfMeasurement::class,
+        'App\Models\Item' => Item::class,
+        'App\Models\ItemType' => ItemType::class,
+        'App\Models\Category' => Category::class,
+        'App\Models\Classification' => Classification::class,
+        'App\Models\Brand' => Brand::class,
+        'App\Models\Colour' => Colour::class,
+        'App\Models\Style' => Style::class,
+        'App\Models\Specification' => Specification::class,
+        'App\Models\GroupScrapItem' => GroupScrapItem::class,
+        'App\Models\Unit' => Unit::class,
+        'App\Models\UnitOfMeasurement' => UnitOfMeasurement::class,
 
         // 7. Master / Partner
-        'App\Models\Supplier' => \App\Models\Master\Partner\Supplier::class,
-        'App\Models\Origin' => \App\Models\Master\Partner\Origin::class,
-        'App\Models\Country' => \App\Models\Master\Partner\Country::class,
-        'App\Models\Port' => \App\Models\Master\Partner\Port::class,
+        'App\Models\Supplier' => Supplier::class,
+        'App\Models\Origin' => Origin::class,
+        'App\Models\Country' => Country::class,
+        'App\Models\Port' => Port::class,
 
         // 8. Master / Finance
-        'App\Models\Currency' => \App\Models\Master\Finance\Currency::class,
-        'App\Models\Valuta' => \App\Models\Master\Finance\Valuta::class,
-        'App\Models\PaymentTerm' => \App\Models\Master\Finance\PaymentTerm::class,
-        'App\Models\PaymentMethod' => \App\Models\Master\Finance\PaymentMethod::class,
-        'App\Models\DeliveryTerm' => \App\Models\Master\Finance\DeliveryTerm::class,
-        'App\Models\RafaksiType' => \App\Models\Master\Finance\RafaksiType::class,
-        'App\Models\Ppn' => \App\Models\Master\Finance\Ppn::class,
-        'App\Models\Pph' => \App\Models\Master\Finance\Pph::class,
-        'App\Models\PphType' => \App\Models\Master\Finance\PphType::class,
-        'App\Models\Account' => \App\Models\Master\Finance\Account::class,
+        'App\Models\Currency' => Currency::class,
+        'App\Models\Valuta' => Valuta::class,
+        'App\Models\PaymentTerm' => PaymentTerm::class,
+        'App\Models\PaymentMethod' => PaymentMethod::class,
+        'App\Models\DeliveryTerm' => DeliveryTerm::class,
+        'App\Models\RafaksiType' => RafaksiType::class,
+        'App\Models\Ppn' => Ppn::class,
+        'App\Models\Pph' => Pph::class,
+        'App\Models\PphType' => PphType::class,
+        'App\Models\Account' => Account::class,
 
         // 9. Master / Organization
-        'App\Models\Department' => \App\Models\Master\Organization\Department::class,
-        'App\Models\Section' => \App\Models\Master\Organization\Section::class,
-        'App\Models\ReportingType' => \App\Models\Master\Organization\ReportingType::class,
-        'App\Models\JobNumber' => \App\Models\Master\Organization\JobNumber::class,
+        'App\Models\Department' => Department::class,
+        'App\Models\Section' => Section::class,
+        'App\Models\ReportingType' => ReportingType::class,
+        'App\Models\JobNumber' => JobNumber::class,
 
         // 10. Master / Customs
-        'App\Models\Facility' => \App\Models\Master\Customs\Facility::class,
-        'App\Models\HsCode' => \App\Models\Master\Customs\HsCode::class,
-        'App\Models\TypeRateBm' => \App\Models\Master\Customs\TypeRateBm::class,
-        'App\Models\TypeRateCukai' => \App\Models\Master\Customs\TypeRateCukai::class,
-        'App\Models\CustomsReport' => \App\Models\Master\Customs\CustomsReport::class,
-        'App\Models\DocumentHistory' => \App\Models\Master\Customs\DocumentHistory::class,
-        'App\Models\DocumentHistoryItem' => \App\Models\Master\Customs\DocumentHistoryItem::class,
+        'App\Models\Facility' => Facility::class,
+        'App\Models\HsCode' => HsCode::class,
+        'App\Models\TypeRateBm' => TypeRateBm::class,
+        'App\Models\TypeRateCukai' => TypeRateCukai::class,
+        'App\Models\CustomsReport' => CustomsReport::class,
+        'App\Models\DocumentHistory' => DocumentHistory::class,
+        'App\Models\DocumentHistoryItem' => DocumentHistoryItem::class,
 
         // 11. System
-        'App\Models\User' => \App\Models\System\Auth\User::class,
-        'App\Models\Log' => \App\Models\System\Audit\Log::class,
+        'App\Models\User' => User::class,
+        'App\Models\Log' => Log::class,
     ];
 
     /**
@@ -99,7 +158,7 @@ class AppServiceProvider extends ServiceProvider
     {
         // Register runtime class aliases for backward compatibility
         foreach (self::MODEL_DOMAIN_ALIASES as $legacyClass => $domainClass) {
-            if (!class_exists($legacyClass, false)) {
+            if (! class_exists($legacyClass, false)) {
                 class_alias($domainClass, $legacyClass);
             }
         }

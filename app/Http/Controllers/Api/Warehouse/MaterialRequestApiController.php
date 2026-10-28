@@ -47,20 +47,20 @@ class MaterialRequestApiController extends Controller
                 ->orderByDesc('id');
 
             $search = strtolower(trim($request->query('search', '')));
-            if (!empty($search)) {
+            if (! empty($search)) {
                 $query->where(function ($q) use ($search) {
                     $q->where('request_number', 'like', "%{$search}%")
-                      ->orWhere('note', 'like', "%{$search}%");
+                        ->orWhere('note', 'like', "%{$search}%");
                 });
             }
 
             $department = $request->query('department');
-            if (!empty($department) && $department !== 'All Departments') {
-                $query->whereHas('department', fn($q) => $q->where('name', $department));
+            if (! empty($department) && $department !== 'All Departments') {
+                $query->whereHas('department', fn ($q) => $q->where('name', $department));
             }
 
             $approval = $request->query('approval');
-            if (!empty($approval) && $approval !== 'All') {
+            if (! empty($approval) && $approval !== 'All') {
                 $query->where('status', $approval);
             }
 
@@ -89,7 +89,7 @@ class MaterialRequestApiController extends Controller
         $department = $request->query('department');
         $approval = $request->query('approval');
 
-        if (!empty($search)) {
+        if (! empty($search)) {
             $records = array_filter($records, function ($r) use ($search) {
                 return str_contains(strtolower($r['requestCode'] ?? ''), $search)
                     || str_contains(strtolower($r['customer'] ?? ''), $search)
@@ -98,12 +98,12 @@ class MaterialRequestApiController extends Controller
             });
         }
 
-        if (!empty($department) && $department !== 'All Departments') {
-            $records = array_filter($records, fn($r) => ($r['department'] ?? '') === $department);
+        if (! empty($department) && $department !== 'All Departments') {
+            $records = array_filter($records, fn ($r) => ($r['department'] ?? '') === $department);
         }
 
-        if (!empty($approval) && $approval !== 'All') {
-            $records = array_filter($records, fn($r) => ($r['approval'] ?? '') === $approval);
+        if (! empty($approval) && $approval !== 'All') {
+            $records = array_filter($records, fn ($r) => ($r['approval'] ?? '') === $approval);
         }
 
         return response()->json([
@@ -135,7 +135,7 @@ class MaterialRequestApiController extends Controller
             DB::beginTransaction();
             try {
                 $seq = RequestMaterial::count() + 1;
-                $requestCode = 'REQ-WH-' . date('Y') . '-' . str_pad($seq, 3, '0', STR_PAD_LEFT);
+                $requestCode = 'REQ-WH-'.date('Y').'-'.str_pad($seq, 3, '0', STR_PAD_LEFT);
 
                 // Resolve relations
                 $dept = Department::where('name', $validated['department'] ?? '')->first() ?? Department::first();
@@ -144,7 +144,7 @@ class MaterialRequestApiController extends Controller
                 $wh = Warehouse::first();
                 $creator = User::first();
 
-                $requestDate = !empty($validated['requestDate']) ? $validated['requestDate'] : date('Y-m-d H:i:s');
+                $requestDate = ! empty($validated['requestDate']) ? $validated['requestDate'] : date('Y-m-d H:i:s');
 
                 $reqMaterial = RequestMaterial::create([
                     'request_number' => $requestCode,
@@ -166,10 +166,10 @@ class MaterialRequestApiController extends Controller
                 foreach ($itemsInput as $idx => $it) {
                     $itemCode = $it['itemCode'] ?? $it['item_code'] ?? '';
                     $item = null;
-                    if (!empty($itemCode)) {
+                    if (! empty($itemCode)) {
                         $item = Item::where('code', $itemCode)->first();
                     }
-                    if (!$item) {
+                    if (! $item) {
                         $item = Item::skip($idx % max(1, Item::count()))->first() ?? Item::first();
                     }
 
@@ -186,7 +186,7 @@ class MaterialRequestApiController extends Controller
                         );
 
                         $savedItems[] = [
-                            'id' => "{$requestCode}-ITM-" . ($idx + 1),
+                            'id' => "{$requestCode}-ITM-".($idx + 1),
                             'itemCode' => $item->code,
                             'externalCode' => $item->external_code ?? '-',
                             'itemName' => $item->name,
@@ -245,16 +245,16 @@ class MaterialRequestApiController extends Controller
         // Fallback to JSON file storage
         $records = $this->loadRecords();
         $seq = count($records) + 1;
-        $requestCode = 'REQ-WH-' . date('Y') . '-' . str_pad($seq, 3, '0', STR_PAD_LEFT);
+        $requestCode = 'REQ-WH-'.date('Y').'-'.str_pad($seq, 3, '0', STR_PAD_LEFT);
         $now = date('Y-m-d H:i:s');
 
         $items = $request->input('items', []);
         $itemsWithId = array_map(function ($it, $idx) use ($requestCode) {
             return [
-                'id' => "{$requestCode}-ITM-" . ($idx + 1),
-                'itemCode' => $it['itemCode'] ?? $it['item_code'] ?? "60.154.300." . str_pad($idx + 1, 3, '0', STR_PAD_LEFT),
+                'id' => "{$requestCode}-ITM-".($idx + 1),
+                'itemCode' => $it['itemCode'] ?? $it['item_code'] ?? '60.154.300.'.str_pad($idx + 1, 3, '0', STR_PAD_LEFT),
                 'externalCode' => $it['externalCode'] ?? $it['external_code'] ?? '-',
-                'itemName' => $it['itemName'] ?? $it['item_name'] ?? 'Material Item ' . ($idx + 1),
+                'itemName' => $it['itemName'] ?? $it['item_name'] ?? 'Material Item '.($idx + 1),
                 'unit' => $it['unit'] ?? 'PCS',
                 'jobNumber' => $it['jobNumber'] ?? $it['job_number'] ?? '-',
                 'size' => $it['size'] ?? '-',
@@ -311,9 +311,9 @@ class MaterialRequestApiController extends Controller
                 'approvals',
                 'creatorUser',
             ])
-            ->where('request_number', $id)
-            ->orWhere('id', is_numeric($id) ? (int)$id : 0)
-            ->first();
+                ->where('request_number', $id)
+                ->orWhere('id', is_numeric($id) ? (int) $id : 0)
+                ->first();
 
             if ($r) {
                 return response()->json([
@@ -346,7 +346,7 @@ class MaterialRequestApiController extends Controller
     {
         if (Schema::hasTable('request_material')) {
             $r = RequestMaterial::where('request_number', $id)
-                ->orWhere('id', is_numeric($id) ? (int)$id : 0)
+                ->orWhere('id', is_numeric($id) ? (int) $id : 0)
                 ->first();
 
             if ($r) {
@@ -385,7 +385,7 @@ class MaterialRequestApiController extends Controller
             }
         }
 
-        if (!$found) {
+        if (! $found) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Record not found to approve.',
@@ -406,12 +406,13 @@ class MaterialRequestApiController extends Controller
      */
     private function formatDatabaseRecord(RequestMaterial $r, int $no): array
     {
-        $requestCode = $r->request_number ?: 'REQ-WH-' . date('Y') . '-' . str_pad($r->id, 3, '0', STR_PAD_LEFT);
+        $requestCode = $r->request_number ?: 'REQ-WH-'.date('Y').'-'.str_pad($r->id, 3, '0', STR_PAD_LEFT);
 
         $items = $r->items->map(function ($it, $idx) use ($requestCode) {
             $item = $it->item;
+
             return [
-                'id' => "{$requestCode}-ITM-" . ($idx + 1),
+                'id' => "{$requestCode}-ITM-".($idx + 1),
                 'itemCode' => $item?->code ?? '-',
                 'externalCode' => $item?->external_code ?? '-',
                 'itemName' => $item?->name ?? 'Material Item',
@@ -429,7 +430,7 @@ class MaterialRequestApiController extends Controller
             'id' => $requestCode,
             'no' => $no,
             'requestCode' => $requestCode,
-            'requestDate' => substr((string)$r->request_date, 0, 10),
+            'requestDate' => substr((string) $r->request_date, 0, 10),
             'destinationLocation' => $r->destinationLocation?->name ?? 'Main Production',
             'department' => $r->department?->name ?? 'Production',
             'typeOfRequest' => $r->typeOfRequest?->name ?? 'Production Issue',
@@ -451,9 +452,10 @@ class MaterialRequestApiController extends Controller
      */
     private function loadRecords(): array
     {
-        if (!File::exists($this->storagePath)) {
+        if (! File::exists($this->storagePath)) {
             $default = $this->getSeedRecords();
             $this->saveRecords($default);
+
             return $default;
         }
 
@@ -469,7 +471,7 @@ class MaterialRequestApiController extends Controller
     private function saveRecords(array $records): void
     {
         $dir = dirname($this->storagePath);
-        if (!File::isDirectory($dir)) {
+        if (! File::isDirectory($dir)) {
             File::makeDirectory($dir, 0755, true);
         }
 

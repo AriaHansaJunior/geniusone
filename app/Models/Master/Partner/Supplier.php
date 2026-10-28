@@ -2,23 +2,21 @@
 
 namespace App\Models\Master\Partner;
 
+use App\Models\Master\Finance\Currency;
+use App\Models\Master\Finance\PaymentMethod;
+use App\Models\Master\Finance\PaymentTerm;
+use App\Models\Procurement\PurchaseOrder\PurchaseOrder;
+use App\Models\System\Auth\User;
+use App\Traits\LogsActivity;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use App\Traits\LogsActivity;
-use App\Models\Master\Finance\PaymentTerm;
-use App\Models\Master\Finance\PaymentMethod;
-use App\Models\Master\Finance\Currency;
-use App\Models\Master\Finance\RafaksiType;
-use App\Models\Master\Partner\Port;
-use App\Models\Master\Partner\Country;
-use App\Models\Procurement\PurchaseOrder\PurchaseOrder;
 
 class Supplier extends Model
 {
-    use HasFactory, SoftDeletes, LogsActivity;
+    use HasFactory, LogsActivity, SoftDeletes;
 
     protected $table = 'supliers';
 
@@ -47,7 +45,7 @@ class Supplier extends Model
 
     public function createdByUser(): BelongsTo
     {
-        return $this->belongsTo(\App\Models\System\Auth\User::class, 'created_by');
+        return $this->belongsTo(User::class, 'created_by');
     }
 
     public function country(): BelongsTo

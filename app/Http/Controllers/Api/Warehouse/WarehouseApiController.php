@@ -3,13 +3,12 @@
 namespace App\Http\Controllers\Api\Warehouse;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use App\Models\Warehouse\InboundStorage\BpbReceiveMaterial;
-use App\Models\Warehouse\GateReceiving\ReceiveNote;
 use App\Models\Warehouse\Facility\Warehouse;
-use App\Models\Procurement\PurchaseOrder\PurchaseOrder;
+use App\Models\Warehouse\GateReceiving\ReceiveNote;
+use App\Models\Warehouse\InboundStorage\BpbReceiveMaterial;
 use App\Services\GeniusOneBackend;
 use Carbon\Carbon;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class WarehouseApiController extends Controller
@@ -31,8 +30,8 @@ class WarehouseApiController extends Controller
             $s = $request->search;
             $query->where(function ($q) use ($s) {
                 $q->where('bpb_number', 'like', "%{$s}%")
-                  ->orWhere('note', 'like', "%{$s}%")
-                  ->orWhereHas('mappings.purchaseOrderReceiveNote.purchaseOrder.supplier', fn($sq) => $sq->where('name', 'like', "%{$s}%"));
+                    ->orWhere('note', 'like', "%{$s}%")
+                    ->orWhereHas('mappings.purchaseOrderReceiveNote.purchaseOrder.supplier', fn ($sq) => $sq->where('name', 'like', "%{$s}%"));
             });
         }
 
@@ -40,23 +39,24 @@ class WarehouseApiController extends Controller
 
         // Calculate KPI Stats Cards
         $totalCount = $records->count();
-        $readyCount = $records->filter(fn($r) => $r->approvals->isEmpty() || $r->approvals->first()?->status === 0)->count();
+        $readyCount = $records->filter(fn ($r) => $r->approvals->isEmpty() || $r->approvals->first()?->status === 0)->count();
         $totalQty = $records->sum(function ($bpb) {
             return $bpb->mappings->sum(function ($map) {
                 $poRn = $map->purchaseOrderReceiveNote;
+
                 return (float) (($poRn?->quantity ?? 0) - ($poRn?->rafaksi ?? 0));
             });
         });
 
         $suppliersCount = $records->map(function ($bpb) {
-            return $bpb->mappings->map(fn($m) => $m->purchaseOrderReceiveNote?->purchaseOrder?->supliers_id);
+            return $bpb->mappings->map(fn ($m) => $m->purchaseOrderReceiveNote?->purchaseOrder?->supliers_id);
         })->flatten()->filter()->unique()->count();
 
         $stats = [
-            ["Receive documents", (string) $totalCount, "Warehouse inbound receipts"],
-            ["Approval status", "{$readyCount} Ready", "Awaiting verification"],
-            ["Total received items", number_format($totalQty, 2), "Across all BPB receipts"],
-            ["Registered suppliers", (string) max(1, $suppliersCount), "Supplying incoming materials"],
+            ['Receive documents', (string) $totalCount, 'Warehouse inbound receipts'],
+            ['Approval status', "{$readyCount} Ready", 'Awaiting verification'],
+            ['Total received items', number_format($totalQty, 2), 'Across all BPB receipts'],
+            ['Registered suppliers', (string) max(1, $suppliersCount), 'Supplying incoming materials'],
         ];
 
         // Format rows for Frontend Table
@@ -92,12 +92,12 @@ class WarehouseApiController extends Controller
             'mappings.purchaseOrderReceiveNote.purchaseOrder.items.requisitionItem.purchaseRequisition',
             'mappings.purchaseOrderReceiveNote.receiveNote',
         ])
-        ->where('bpb_number', $rawCode)
-        ->orWhere('bpb_number', $code)
-        ->orWhere('id', is_numeric($code) ? $code : null)
-        ->first();
+            ->where('bpb_number', $rawCode)
+            ->orWhere('bpb_number', $code)
+            ->orWhere('id', is_numeric($code) ? $code : null)
+            ->first();
 
-        if (!$bpb) {
+        if (! $bpb) {
             $bpb = BpbReceiveMaterial::with([
                 'creator',
                 'approvals.user',
@@ -108,10 +108,11 @@ class WarehouseApiController extends Controller
             ])->first();
         }
 
-        if (!$bpb) {
+        if (! $bpb) {
             if ($request->expectsJson() || $request->is('api/*')) {
                 return response()->json(['error' => 'BPB Receive Material not found'], 404);
             }
+
             return redirect('/warehouse')->withErrors(['error' => 'BPB Receive Material not found']);
         }
 
@@ -210,6 +211,7 @@ class WarehouseApiController extends Controller
             if ($request->expectsJson() || $request->is('api/*')) {
                 return response()->json(['error' => $e->getMessage()], 422);
             }
+
             return back()->withErrors(['error' => $e->getMessage()]);
         }
     }
@@ -238,9 +240,12 @@ class WarehouseApiController extends Controller
 
         $totalQty = $bpb->mappings->sum(function ($m) {
             $prn = $m->purchaseOrderReceiveNote;
+
             return (float) (($prn?->quantity ?? 25) - ($prn?->rafaksi ?? 0));
         });
-        if ($totalQty == 0) $totalQty = 25.0;
+        if ($totalQty == 0) {
+            $totalQty = 25.0;
+        }
 
         $totalItem = max(1, $bpb->mappings->count());
         $materialName = $poRn?->item_name ?? 'Mur Baut M 10 x 40 + ring pir';
@@ -254,7 +259,7 @@ class WarehouseApiController extends Controller
         $apprStatus = $firstAppr && $firstAppr->status === 1 ? 'Approved' : 'Ready';
 
         // Line Items
-        $lineItems = $bpb->mappings->map(function ($map, $mIdx) use ($bpb, $poNumber, $rnNumber, $supplierName) {
+        $lineItems = $bpb->mappings->map(function ($map, $mIdx) use ($bpb, $poNumber) {
             $prn = $map->purchaseOrderReceiveNote;
             $qty = (float) ($prn?->quantity ?? 25.0);
             $raf = (float) ($prn?->rafaksi ?? 0.0);
@@ -267,9 +272,9 @@ class WarehouseApiController extends Controller
                 'item' => $prn?->item_name ?? 'Mur Baut M 10 x 40 + ring pir',
                 'itemCode' => '14-3843-000000000',
                 'itemAlias' => '—',
-                'quantity' => number_format($net, 4) . ' PCE',
-                'grossQty' => number_format($qty, 4) . ' PCE',
-                'rafaksi' => number_format($raf, 4) . ' PCE',
+                'quantity' => number_format($net, 4).' PCE',
+                'grossQty' => number_format($qty, 4).' PCE',
+                'rafaksi' => number_format($raf, 4).' PCE',
                 'unit' => 'PCE',
                 'remark' => $bpb->note ?? 'PP Sby Kebutuhan Operasional',
                 'warehouse' => $map->warehouse?->name ?? 'Gudang Bahan Baku Utama',
@@ -284,7 +289,7 @@ class WarehouseApiController extends Controller
             '_rawDate' => $bpb->receive_date ? Carbon::parse($bpb->receive_date)->format('d-M-Y') : '08-Oct-2026',
             '_rawDueDate' => '—',
             '_rawSupplier' => $supplierName,
-            '_rawTotal' => number_format($totalQty, 4) . ' PCE',
+            '_rawTotal' => number_format($totalQty, 4).' PCE',
             '_rawPr' => $prNumber,
             '_rawPo' => $poNumber,
             '_rawRn' => $rnNumber,
@@ -293,7 +298,7 @@ class WarehouseApiController extends Controller
             '_rawCreatedBy' => "{$creatorName} {$createdTime}",
             '_rawLastUpdated' => "{$creatorName} {$createdTime}",
             '_rawRemark' => $bpb->note ?? 'Penerimaan Material Produksi Gudang',
-            '_totalQty' => number_format($totalQty, 4) . ' PCE',
+            '_totalQty' => number_format($totalQty, 4).' PCE',
             '_items' => $lineItems,
             'no' => $indexNo,
             'rnNumber' => $rnNumber,

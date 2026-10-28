@@ -49,6 +49,7 @@ class PaymentTermApiController extends Controller
     public function show(int $id): JsonResponse
     {
         $record = PaymentTerm::findOrFail($id);
+
         return response()->json(['data' => $record]);
     }
 
@@ -57,7 +58,7 @@ class PaymentTermApiController extends Controller
         $record = PaymentTerm::findOrFail($id);
 
         $validated = $request->validate([
-            'name' => 'sometimes|required|string|max:500|unique:payment_terms,name,' . $id,
+            'name' => 'sometimes|required|string|max:500|unique:payment_terms,name,'.$id,
             'status' => 'nullable|integer',
         ]);
 
