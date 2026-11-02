@@ -212,7 +212,12 @@ class AuditLogApiController extends Controller
             'UPDATED_ITEM' => 'Master Item Updated',
             'ITEM_STOCK_ADJUSTMENT' => 'Stock Quantity Adjusted',
             'CREATED_SUPPLIER' => 'Supplier Master Created',
-            default => ucwords(strtolower($clean)),
+            default => match (true) {
+                str_starts_with(strtoupper($type), 'CREATED_') => ucwords(strtolower(str_replace('_', ' ', substr($type, 8)))).' Created',
+                str_starts_with(strtoupper($type), 'UPDATED_') => ucwords(strtolower(str_replace('_', ' ', substr($type, 8)))).' Updated',
+                str_starts_with(strtoupper($type), 'DELETED_') => ucwords(strtolower(str_replace('_', ' ', substr($type, 8)))).' Deleted',
+                default => ucwords(strtolower($clean)),
+            },
         };
     }
 
