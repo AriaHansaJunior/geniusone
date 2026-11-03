@@ -125,12 +125,18 @@ export function PaymentTermIndex({
                     <span
                       style={{
                         marginLeft: "6px",
-                        fontSize: "11px",
-                        color: sortDirection === "none" ? "var(--muted)" : "var(--blue-600)",
-                        fontWeight: 800,
+                        display: "inline-flex",
+                        alignItems: "center",
+                        color: sortDirection === "none" ? "var(--muted-2)" : "var(--blue-600)",
                       }}
                     >
-                      {sortDirection === "asc" ? "▲" : sortDirection === "desc" ? "▼" : "⇅"}
+                      {sortDirection === "asc" ? (
+                        <Icon name="arrowUp" size={12} />
+                      ) : sortDirection === "desc" ? (
+                        <Icon name="arrowDown" size={12} />
+                      ) : (
+                        <Icon name="arrowUpDown" size={12} />
+                      )}
                     </span>
                   </th>
                   <th style={{ width: "95px", textAlign: "center" }}>

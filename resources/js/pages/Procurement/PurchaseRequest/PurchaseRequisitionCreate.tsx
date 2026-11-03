@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo, useEffect } from "react";
+/*  */import React, { useState, useRef, useMemo, useEffect } from "react";
 import { Button } from "../../../components/ui/Button";
 import { Icon } from "../../../components/ui/Icon";
 import { ConfirmDialog } from "../../../components/ui/ConfirmDialog";
@@ -238,14 +238,20 @@ export function PurchaseRequisitionCreate({
     const file = e.target.files?.[0];
     if (file) {
       if (file.size > 2 * 1024 * 1024) {
-        alert("Attachment exceeds maximum allowed size of 2MB.");
+        setNotification({
+          type: "error",
+          message: "Attachment exceeds maximum allowed size of 2MB.",
+        });
         e.target.value = "";
         return;
       }
       const ext = "." + file.name.split(".").pop()?.toLowerCase();
       const validExtensions = [".pdf", ".doc", ".docx", ".xls", ".xlsx", ".jpg", ".jpeg", ".png"];
       if (!validExtensions.includes(ext)) {
-        alert("Invalid file format. Allowed formats: PDF, DOC, XLS, JPG, PNG.");
+        setNotification({
+          type: "error",
+          message: "Invalid file format. Allowed formats: PDF, DOC, XLS, JPG, PNG.",
+        });
         e.target.value = "";
         return;
       }
@@ -370,11 +376,25 @@ export function PurchaseRequisitionCreate({
             justifyContent: "space-between",
           }}
         >
-          <span>{notification.message}</span>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <Icon
+              name={notification.type === "error" ? "alertTriangle" : "check"}
+              size={16}
+            />
+            <span>{notification.message}</span>
+          </div>
           <button
             type="button"
             onClick={() => setNotification(null)}
-            style={{ border: 0, background: "transparent", cursor: "pointer", fontWeight: 700 }}
+            style={{
+              border: 0,
+              background: "transparent",
+              cursor: "pointer",
+              fontWeight: 700,
+              color: "inherit",
+              fontSize: "16px",
+              lineHeight: 1,
+            }}
           >
             ×
           </button>

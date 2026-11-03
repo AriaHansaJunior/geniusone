@@ -174,10 +174,10 @@ export function BrandForm({
           <label htmlFor="brandDescription" className="brand-form-label">
             Description
           </label>
-          <input
+          <textarea
             id="brandDescription"
-            type="text"
-            className="brand-form-input"
+            className="brand-form-textarea master-form-textarea"
+            rows={3}
             placeholder="Optional brand notes or description..."
             value={description}
             onChange={(e) => setDescription(e.target.value)}
@@ -185,11 +185,11 @@ export function BrandForm({
         </div>
 
         {/* Form Action Buttons: Cancel and Save */}
-        <div className="brand-form-actions">
+        <div className="brand-form-actions" style={{ display: "flex", gap: "10px", marginTop: "12px" }}>
           <Button type="button" variant="ghost" onClick={onBack}>
             Cancel
           </Button>
-          <Button type="submit" variant="primary" icon="check">
+          <Button type="submit" variant="primary">
             Save
           </Button>
         </div>

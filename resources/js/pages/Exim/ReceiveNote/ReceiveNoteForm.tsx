@@ -212,447 +212,513 @@ export function ReceiveNoteForm({ onBack, onSave }: ReceiveNoteFormProps) {
   );
 
   return (
-    <div className="rn-form-page">
+    <div className="transaction-create-page">
       {/* Page Title */}
-      <div className="rn-form-header">
-        <h1 className="rn-form-title">Add Receive Note</h1>
+      <div className="tx-page-header">
+        <h1 className="tx-page-title">Add Receive Note</h1>
       </div>
 
       {/* Notice Message */}
       {notice && (
-        <div className={`rn-alert rn-alert--${notice.type}`}>
-          <Icon
-            name={
+        <div
+          style={{
+            padding: "10px 16px",
+            background:
               notice.type === "warning"
-                ? "alertTriangle"
+                ? "#fffbeb"
                 : notice.type === "success"
-                ? "check"
-                : "info"
-            }
-            size={16}
-          />
-          <div className="rn-alert__content">
-            <p>{notice.message}</p>
+                ? "#f0fdf4"
+                : "#eff6ff",
+            border: `1px solid ${
+              notice.type === "warning"
+                ? "#fde68a"
+                : notice.type === "success"
+                ? "#bbf7d0"
+                : "#bfdbfe"
+            }`,
+            borderRadius: "var(--radius-sm)",
+            color:
+              notice.type === "warning"
+                ? "#92400e"
+                : notice.type === "success"
+                ? "#166534"
+                : "#1e40af",
+            fontSize: "12.5px",
+            fontWeight: 600,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <Icon
+              name={
+                notice.type === "warning"
+                  ? "alertTriangle"
+                  : notice.type === "success"
+                  ? "check"
+                  : "info"
+              }
+              size={16}
+            />
+            <span>{notice.message}</span>
           </div>
           <button
             type="button"
-            className="rn-alert-close"
             onClick={() => setNotice(null)}
+            style={{
+              border: 0,
+              background: "transparent",
+              cursor: "pointer",
+              fontWeight: 700,
+              color: "inherit",
+            }}
           >
             ×
           </button>
         </div>
       )}
 
-      {/* Main Form Card */}
-      <form onSubmit={handleSubmit} className="rn-form-card">
-        {/* Row 1: Supplier, Currency, Rate */}
-        <div className="rn-form-row">
-          <div className="rn-form-col-4">
-            <label className="rn-label">
-              Supplier <span className="rn-required">*</span>
-            </label>
-            <select
-              className={`rn-select ${formErrors.supplier ? "has-error" : ""}`}
-              value={supplier}
-              onChange={(e) => {
-                setSupplier(e.target.value);
-                if (formErrors.supplier) {
-                  setFormErrors((prev) => ({ ...prev, supplier: "" }));
-                }
-              }}
-            >
-              <option value="">Select Supplier</option>
-              {suppliersList
-                .filter((s) => s !== "All Suppliers")
-                .map((sup) => (
-                  <option key={sup} value={sup}>
-                    {sup}
-                  </option>
-                ))}
-            </select>
-            {formErrors.supplier && (
-              <span className="rn-error-msg">{formErrors.supplier}</span>
-            )}
+      {/* Main Form Panel */}
+      <div className="tx-panel">
+        <form onSubmit={handleSubmit}>
+          {/* Header Grid: Row 1 */}
+          <div className="tx-header-grid" style={{ marginBottom: "14px" }}>
+            {/* Supplier */}
+            <div className="master-form-group">
+              <label className="master-form-label">
+                Supplier <span className="required-asterisk">*</span>
+              </label>
+              <select
+                className={`master-form-select ${formErrors.supplier ? "has-error" : ""}`}
+                value={supplier}
+                onChange={(e) => {
+                  setSupplier(e.target.value);
+                  if (formErrors.supplier) {
+                    setFormErrors((prev) => ({ ...prev, supplier: "" }));
+                  }
+                }}
+              >
+                <option value="">Select Supplier</option>
+                {suppliersList
+                  .filter((s) => s !== "All Suppliers")
+                  .map((sup) => (
+                    <option key={sup} value={sup}>
+                      {sup}
+                    </option>
+                  ))}
+              </select>
+              {formErrors.supplier && (
+                <span className="master-form-error">{formErrors.supplier}</span>
+              )}
+            </div>
+
+            {/* Currency */}
+            <div className="master-form-group">
+              <label className="master-form-label">
+                Currency <span className="required-asterisk">*</span>
+              </label>
+              <select
+                className={`master-form-select ${formErrors.currency ? "has-error" : ""}`}
+                value={currency}
+                onChange={(e) => setCurrency(e.target.value)}
+              >
+                <option value="IDR - RUPIAH">IDR - RUPIAH</option>
+                <option value="USD - US DOLLAR">USD - US DOLLAR</option>
+                <option value="EUR - EURO">EUR - EURO</option>
+                <option value="SGD - SINGAPORE DOLLAR">SGD - SINGAPORE DOLLAR</option>
+              </select>
+            </div>
+
+            {/* Rate */}
+            <div className="master-form-group">
+              <label className="master-form-label">
+                Rate <span className="required-asterisk">*</span>
+              </label>
+              <input
+                type="text"
+                className={`master-form-input ${formErrors.rate ? "has-error" : ""}`}
+                value={rate}
+                onChange={(e) => setRate(e.target.value)}
+                placeholder="1.0000"
+              />
+              {formErrors.rate && (
+                <span className="master-form-error">{formErrors.rate}</span>
+              )}
+            </div>
+
+            {/* Type of Document */}
+            <div className="master-form-group">
+              <label className="master-form-label">
+                Type of Document <span className="required-asterisk">*</span>
+              </label>
+              <select
+                className={`master-form-select ${formErrors.typeOfDocument ? "has-error" : ""}`}
+                value={typeOfDocument}
+                onChange={(e) => {
+                  setTypeOfDocument(e.target.value);
+                  if (formErrors.typeOfDocument) {
+                    setFormErrors((prev) => ({ ...prev, typeOfDocument: "" }));
+                  }
+                }}
+              >
+                <option value="">Select Data ...</option>
+                {docTypesList
+                  .filter((d) => d !== "All Type of Documents")
+                  .map((dt) => (
+                    <option key={dt} value={dt}>
+                      {dt}
+                    </option>
+                  ))}
+              </select>
+              {formErrors.typeOfDocument && (
+                <span className="master-form-error">{formErrors.typeOfDocument}</span>
+              )}
+            </div>
           </div>
 
-          <div className="rn-form-col-4">
-            <label className="rn-label">
-              Currency <span className="rn-required">*</span>
-            </label>
-            <select
-              className={`rn-select ${formErrors.currency ? "has-error" : ""}`}
-              value={currency}
-              onChange={(e) => setCurrency(e.target.value)}
-            >
-              <option value="IDR - RUPIAH">IDR - RUPIAH</option>
-              <option value="USD - US DOLLAR">USD - US DOLLAR</option>
-              <option value="EUR - EURO">EUR - EURO</option>
-              <option value="SGD - SINGAPORE DOLLAR">SGD - SINGAPORE DOLLAR</option>
-            </select>
+          {/* Header Grid: Row 2 */}
+          <div className="tx-header-grid" style={{ marginBottom: "14px" }}>
+            {/* Arrival Date */}
+            <div className="master-form-group">
+              <label className="master-form-label">
+                Arrival Date <span className="required-asterisk">*</span>
+              </label>
+              <input
+                type="date"
+                className={`master-form-input ${formErrors.arrivalDate ? "has-error" : ""}`}
+                value={arrivalDate}
+                onChange={(e) => setArrivalDate(e.target.value)}
+              />
+            </div>
+
+            {/* Invoice Number */}
+            <div className="master-form-group">
+              <label className="master-form-label">Invoice Number</label>
+              <input
+                type="text"
+                className="master-form-input"
+                value={invoiceNumber}
+                onChange={(e) => setInvoiceNumber(e.target.value)}
+                placeholder="Invoice Number"
+              />
+            </div>
+
+            {/* Invoice Date */}
+            <div className="master-form-group">
+              <label className="master-form-label">Invoice Date</label>
+              <input
+                type="date"
+                className="master-form-input"
+                value={invoiceDate}
+                onChange={(e) => setInvoiceDate(e.target.value)}
+              />
+            </div>
+
+            {/* Tax Invoice */}
+            <div className="master-form-group">
+              <label className="master-form-label">Tax Invoice</label>
+              <input
+                type="text"
+                className="master-form-input"
+                value={taxInvoice}
+                onChange={(e) => setTaxInvoice(e.target.value)}
+                placeholder="Tax Invoice Number"
+              />
+            </div>
+
+            {/* Tax Invoice Date */}
+            <div className="master-form-group">
+              <label className="master-form-label">Tax Invoice Date</label>
+              <input
+                type="date"
+                className="master-form-input"
+                value={taxInvoiceDate}
+                onChange={(e) => setTaxInvoiceDate(e.target.value)}
+              />
+            </div>
           </div>
 
-          <div className="rn-form-col-4">
-            <label className="rn-label">
-              Rate <span className="rn-required">*</span>
-            </label>
-            <input
-              type="text"
-              className={`rn-input ${formErrors.rate ? "has-error" : ""}`}
-              value={rate}
-              onChange={(e) => setRate(e.target.value)}
-              placeholder="1.0000"
-            />
-            {formErrors.rate && (
-              <span className="rn-error-msg">{formErrors.rate}</span>
-            )}
-          </div>
-        </div>
+          {/* Header Grid: Row 3 */}
+          <div className="tx-header-grid" style={{ marginBottom: "14px" }}>
+            {/* S.J Number */}
+            <div className="master-form-group">
+              <label className="master-form-label">S.J Number</label>
+              <input
+                type="text"
+                className="master-form-input"
+                value={sjNumber}
+                onChange={(e) => setSjNumber(e.target.value)}
+                placeholder="Surat Jalan Number"
+              />
+            </div>
 
-        {/* Row 2: Arrival Date, Invoice Number, Invoice Date, Tax Invoice, Tax Invoice Date */}
-        <div className="rn-form-row">
-          <div className="rn-form-col">
-            <label className="rn-label">
-              Arrival Date <span className="rn-required">*</span>
-            </label>
-            <input
-              type="date"
-              className={`rn-input ${formErrors.arrivalDate ? "has-error" : ""}`}
-              value={arrivalDate}
-              onChange={(e) => setArrivalDate(e.target.value)}
-            />
-          </div>
+            {/* S.J Date */}
+            <div className="master-form-group">
+              <label className="master-form-label">S.J Date</label>
+              <input
+                type="date"
+                className="master-form-input"
+                value={sjDate}
+                onChange={(e) => setSjDate(e.target.value)}
+              />
+            </div>
 
-          <div className="rn-form-col">
-            <label className="rn-label">Invoice Number</label>
-            <input
-              type="text"
-              className="rn-input"
-              value={invoiceNumber}
-              onChange={(e) => setInvoiceNumber(e.target.value)}
-              placeholder="Invoice Number"
-            />
-          </div>
+            {/* PL Number */}
+            <div className="master-form-group">
+              <label className="master-form-label">PL Number</label>
+              <input
+                type="text"
+                className="master-form-input"
+                value={plNumber}
+                onChange={(e) => setPlNumber(e.target.value)}
+                placeholder="Packing List Number"
+              />
+            </div>
 
-          <div className="rn-form-col">
-            <label className="rn-label">Invoice Date</label>
-            <input
-              type="date"
-              className="rn-input"
-              value={invoiceDate}
-              onChange={(e) => setInvoiceDate(e.target.value)}
-            />
-          </div>
+            {/* PL Date */}
+            <div className="master-form-group">
+              <label className="master-form-label">PL Date</label>
+              <input
+                type="date"
+                className="master-form-input"
+                value={plDate}
+                onChange={(e) => setPlDate(e.target.value)}
+              />
+            </div>
 
-          <div className="rn-form-col">
-            <label className="rn-label">Tax Invoice</label>
-            <input
-              type="text"
-              className="rn-input"
-              value={taxInvoice}
-              onChange={(e) => setTaxInvoice(e.target.value)}
-              placeholder="Tax Invoice Number"
-            />
-          </div>
+            {/* Vehicle Type */}
+            <div className="master-form-group">
+              <label className="master-form-label">Vehicle Type</label>
+              <select
+                className="master-form-select"
+                value={vehicleType}
+                onChange={(e) => setVehicleType(e.target.value)}
+              >
+                <option value="">Choose Vehicle Type...</option>
+                <option value="MOBIL BARANG">MOBIL BARANG</option>
+                <option value="TRUK BOX">TRUK BOX</option>
+                <option value="CONTAINER 20FT">CONTAINER 20FT</option>
+                <option value="CONTAINER 40FT">CONTAINER 40FT</option>
+                <option value="PICKUP">PICKUP</option>
+              </select>
+            </div>
 
-          <div className="rn-form-col">
-            <label className="rn-label">Tax Invoice Date</label>
-            <input
-              type="date"
-              className="rn-input"
-              value={taxInvoiceDate}
-              onChange={(e) => setTaxInvoiceDate(e.target.value)}
-            />
-          </div>
-        </div>
-
-        {/* Row 3: Vehicle Type, License Plate, Notes */}
-        <div className="rn-form-row">
-          <div className="rn-form-col-4">
-            <label className="rn-label">Vehicle Type</label>
-            <select
-              className="rn-select"
-              value={vehicleType}
-              onChange={(e) => setVehicleType(e.target.value)}
-            >
-              <option value="">Choose Vehicle Type...</option>
-              <option value="MOBIL BARANG">MOBIL BARANG</option>
-              <option value="TRUK BOX">TRUK BOX</option>
-              <option value="CONTAINER 20FT">CONTAINER 20FT</option>
-              <option value="CONTAINER 40FT">CONTAINER 40FT</option>
-              <option value="PICKUP">PICKUP</option>
-            </select>
+            {/* License Plate */}
+            <div className="master-form-group">
+              <label className="master-form-label">License Plate</label>
+              <input
+                type="text"
+                className="master-form-input"
+                value={licensePlate}
+                onChange={(e) => setLicensePlate(e.target.value)}
+                placeholder="e.g. AG 8605 EG"
+              />
+            </div>
           </div>
 
-          <div className="rn-form-col-4">
-            <label className="rn-label">License Plate</label>
-            <input
-              type="text"
-              className="rn-input"
-              value={licensePlate}
-              onChange={(e) => setLicensePlate(e.target.value)}
-              placeholder="e.g. AG 8605 EG"
-            />
-          </div>
-
-          <div className="rn-form-col-4">
-            <label className="rn-label">Notes</label>
-            <input
-              type="text"
-              className="rn-input"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Optional notes or remarks"
-            />
-          </div>
-        </div>
-
-        {/* Row 4: S.J Number, S.J Date, PL Number, PL Date, Status DN, Service / Subkon */}
-        <div className="rn-form-row align-items-end">
-          <div className="rn-form-col">
-            <label className="rn-label">S.J Number</label>
-            <input
-              type="text"
-              className="rn-input"
-              value={sjNumber}
-              onChange={(e) => setSjNumber(e.target.value)}
-              placeholder="Surat Jalan Number"
-            />
-          </div>
-
-          <div className="rn-form-col">
-            <label className="rn-label">S.J Date</label>
-            <input
-              type="date"
-              className="rn-input"
-              value={sjDate}
-              onChange={(e) => setSjDate(e.target.value)}
-            />
-          </div>
-
-          <div className="rn-form-col">
-            <label className="rn-label">PL Number</label>
-            <input
-              type="text"
-              className="rn-input"
-              value={plNumber}
-              onChange={(e) => setPlNumber(e.target.value)}
-              placeholder="Packing List Number"
-            />
-          </div>
-
-          <div className="rn-form-col">
-            <label className="rn-label">PL Date</label>
-            <input
-              type="date"
-              className="rn-input"
-              value={plDate}
-              onChange={(e) => setPlDate(e.target.value)}
-            />
-          </div>
-
-          <div className="rn-form-col-check">
-            <span className="rn-label">Status DN</span>
-            <label className="rn-checkbox-label">
+          {/* Options checkboxes and notes */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "24px",
+              padding: "10px 14px",
+              background: "rgba(248, 250, 252, 0.7)",
+              border: "1px solid var(--line)",
+              borderRadius: "var(--radius-sm)",
+              marginBottom: "16px",
+              flexWrap: "wrap",
+            }}
+          >
+            <label style={{ display: "inline-flex", alignItems: "center", gap: "8px", fontSize: "12px", fontWeight: 600, color: "var(--ink)", cursor: "pointer" }}>
               <input
                 type="checkbox"
-                className="rn-checkbox"
                 checked={statusDn}
                 onChange={(e) => setStatusDn(e.target.checked)}
+                style={{ width: "16px", height: "16px", cursor: "pointer" }}
               />
-              <span>Facility User</span>
+              <span>Status DN: Facility User</span>
             </label>
-          </div>
 
-          <div className="rn-form-col-check">
-            <span className="rn-label">Service / Subkon</span>
-            <label className="rn-checkbox-label">
+            <label style={{ display: "inline-flex", alignItems: "center", gap: "8px", fontSize: "12px", fontWeight: 600, color: "var(--ink)", cursor: "pointer" }}>
               <input
                 type="checkbox"
-                className="rn-checkbox"
                 checked={serviceSubkon}
                 onChange={(e) => setServiceSubkon(e.target.checked)}
+                style={{ width: "16px", height: "16px", cursor: "pointer" }}
               />
               <span>Service / Subkon</span>
             </label>
-          </div>
-        </div>
 
-        {/* Row 5: Type of Document */}
-        <div className="rn-form-row">
-          <div className="rn-form-col-4">
-            <label className="rn-label">
-              Type of Document <span className="rn-required">*</span>
-            </label>
-            <select
-              className={`rn-select ${formErrors.typeOfDocument ? "has-error" : ""}`}
-              value={typeOfDocument}
-              onChange={(e) => {
-                setTypeOfDocument(e.target.value);
-                if (formErrors.typeOfDocument) {
-                  setFormErrors((prev) => ({ ...prev, typeOfDocument: "" }));
-                }
+            <div style={{ flex: 1, minWidth: "220px" }}>
+              <input
+                type="text"
+                className="master-form-input"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Optional notes or remarks..."
+                style={{ height: "32px", fontSize: "12px" }}
+              />
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setIsPickerOpen(true)}
+              style={{
+                background: "#16a34a",
+                color: "#ffffff",
+                border: "1px solid #15803d",
+                padding: "6px 14px",
+                borderRadius: "var(--radius-sm)",
+                fontSize: "12px",
+                fontWeight: 700,
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px",
+                cursor: "pointer",
+                whiteSpace: "nowrap",
               }}
             >
-              <option value="">Select Data ...</option>
-              {docTypesList
-                .filter((d) => d !== "All Type of Documents")
-                .map((dt) => (
-                  <option key={dt} value={dt}>
-                    {dt}
-                  </option>
-                ))}
-            </select>
-            {formErrors.typeOfDocument && (
-              <span className="rn-error-msg">{formErrors.typeOfDocument}</span>
-            )}
+              <Icon name="plus" size={14} />
+              <span>Add Items from PO</span>
+            </button>
           </div>
-        </div>
 
-        <div className="rn-form-divider" />
-
-        {/* Receive Note Item Table */}
-        <div className="rn-item-table-container">
-          <table className="rn-form-table">
-            <thead>
-              <tr>
-                <th rowSpan={2} className="rn-th-no">
-                  No
-                </th>
-                <th rowSpan={2}>PO Number</th>
-                <th rowSpan={2}>Item Name</th>
-                <th rowSpan={2}>SJ Number</th>
-                <th rowSpan={2}>SJ Date</th>
-                <th rowSpan={2} className="text-right">
-                  Price
-                </th>
-                <th colSpan={4} className="text-center rn-th-grouped">
-                  Quantity
-                </th>
-                <th rowSpan={2} className="text-right">
-                  Sub Total
-                </th>
-                <th rowSpan={2}>Remark</th>
-                <th rowSpan={2} className="rn-th-action text-center">
-                  <button
-                    type="button"
-                    className="rn-btn-add-item-header"
-                    onClick={() => setIsPickerOpen(true)}
-                    title="Add Item from Purchase Order"
-                    aria-label="Add Item"
-                  >
-                    <Icon name="plus" size={16} />
-                  </button>
-                </th>
-              </tr>
-              <tr>
-                <th className="rn-th-sub text-right">PO</th>
-                <th className="rn-th-sub text-right">DLVR</th>
-                <th className="rn-th-sub text-right">Surat Jalan</th>
-                <th className="rn-th-sub text-right">Rafaksi</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.length === 0 ? (
+          {/* Receive Note Item Table */}
+          <div className="tx-table-container">
+            <table className="tx-grid-table">
+              <thead>
                 <tr>
-                  <td colSpan={13} className="rn-table-empty">
-                    No items selected yet. Click the green <strong>+</strong> button above to pick purchase order items.
-                  </td>
+                  <th rowSpan={2} style={{ width: "45px", textAlign: "center" }}>
+                    No
+                  </th>
+                  <th rowSpan={2} style={{ width: "140px" }}>PO Number</th>
+                  <th rowSpan={2} style={{ minWidth: "200px" }}>Item Name</th>
+                  <th rowSpan={2} style={{ width: "120px" }}>SJ Number</th>
+                  <th rowSpan={2} style={{ width: "100px" }}>SJ Date</th>
+                  <th rowSpan={2} className="th-right" style={{ width: "110px" }}>
+                    Price
+                  </th>
+                  <th colSpan={4} className="th-center" style={{ borderBottom: "1px solid var(--line)" }}>
+                    Quantity
+                  </th>
+                  <th rowSpan={2} className="th-right" style={{ width: "120px" }}>
+                    Sub Total
+                  </th>
+                  <th rowSpan={2} style={{ minWidth: "140px" }}>Remark</th>
+                  <th rowSpan={2} className="th-center" style={{ width: "50px" }}>
+                    Action
+                  </th>
                 </tr>
-              ) : (
-                items.map((it, idx) => (
-                  <tr key={it.id}>
-                    <td className="text-center">{idx + 1}</td>
-                    <td className="font-medium text-ink">{it.poNumber}</td>
-                    <td>
-                      <div className="font-medium text-ink">{it.itemName}</div>
-                      <div className="text-xs text-muted font-mono">{it.itemCode}</div>
-                    </td>
-                    <td>{it.sjNumber || sjNumber || "-"}</td>
-                    <td>{it.sjDate || sjDate || "-"}</td>
-                    <td className="text-right font-mono">
-                      {it.pricePerUnit.toLocaleString("en-US", { minimumFractionDigits: 2 })}
-                    </td>
-                    <td className="text-right font-mono text-muted">
-                      {(it.poQty ?? it.qty).toLocaleString("en-US", { minimumFractionDigits: 2 })}
-                    </td>
-                    <td className="text-right font-mono text-muted">
-                      {(it.dlvrQty ?? 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}
-                    </td>
-                    <td className="text-right font-mono">
-                      <input
-                        type="number"
-                        className="rn-table-input text-right"
-                        value={it.suratJalanQty ?? it.qty}
-                        onChange={(e) =>
-                          handleUpdateItemQty(it.id, parseFloat(e.target.value))
-                        }
-                        min="0"
-                        step="any"
-                      />
-                    </td>
-                    <td className="text-right font-mono">
-                      {it.rafaksi.toLocaleString("en-US", { minimumFractionDigits: 2 })}
-                    </td>
-                    <td className="text-right font-mono font-medium text-ink">
-                      {it.priceSubtotal.toLocaleString("en-US", { minimumFractionDigits: 2 })}
-                    </td>
-                    <td>{it.remark || "-"}</td>
-                    <td className="text-center">
-                      <button
-                        type="button"
-                        className="rn-btn-remove-row"
-                        onClick={() => handleRemoveItem(it.id)}
-                        title="Remove Item"
-                        aria-label="Remove item"
-                      >
-                        <Icon name="trash" size={14} />
-                      </button>
+                <tr>
+                  <th className="th-right" style={{ width: "75px" }}>PO</th>
+                  <th className="th-right" style={{ width: "75px" }}>DLVR</th>
+                  <th className="th-right" style={{ width: "85px" }}>Surat Jalan</th>
+                  <th className="th-right" style={{ width: "75px" }}>Rafaksi</th>
+                </tr>
+              </thead>
+              <tbody>
+                {items.length === 0 ? (
+                  <tr>
+                    <td colSpan={13} style={{ textAlign: "center", padding: "40px 20px", color: "var(--muted)" }}>
+                      No items selected yet. Click the green <strong>Add Items from PO</strong> button above to pick purchase order items.
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-            <tfoot>
-              <tr className="rn-table-total-row">
-                <td colSpan={8} className="text-right font-bold">
-                  Total
-                </td>
-                <td className="text-right font-mono font-bold">
-                  {totalSuratJalanQty.toLocaleString("en-US", {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}
-                </td>
-                <td></td>
-                <td className="text-right font-mono font-bold">
-                  {totalSubTotal.toLocaleString("en-US", {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  })}
-                </td>
-                <td colSpan={2}></td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
+                ) : (
+                  items.map((it, idx) => (
+                    <tr key={it.id}>
+                      <td className="td-center">{idx + 1}</td>
+                      <td style={{ fontWeight: 600 }}>{it.poNumber}</td>
+                      <td>
+                        <div style={{ fontWeight: 600 }}>{it.itemName}</div>
+                        <div style={{ fontSize: "10.5px", color: "var(--muted)", fontFamily: "monospace" }}>{it.itemCode}</div>
+                      </td>
+                      <td>{it.sjNumber || sjNumber || "-"}</td>
+                      <td>{it.sjDate || sjDate || "-"}</td>
+                      <td className="td-right" style={{ fontFamily: "monospace" }}>
+                        {it.pricePerUnit.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                      </td>
+                      <td className="td-right" style={{ fontFamily: "monospace", color: "var(--muted)" }}>
+                        {(it.poQty ?? it.qty).toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                      </td>
+                      <td className="td-right" style={{ fontFamily: "monospace", color: "var(--muted)" }}>
+                        {(it.dlvrQty ?? 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                      </td>
+                      <td className="td-right">
+                        <input
+                          type="number"
+                          className="tx-input-cell tx-input-cell--num"
+                          value={it.suratJalanQty ?? it.qty}
+                          onChange={(e) =>
+                            handleUpdateItemQty(it.id, parseFloat(e.target.value))
+                          }
+                          min="0"
+                          step="any"
+                          style={{ width: "80px", height: "28px" }}
+                        />
+                      </td>
+                      <td className="td-right" style={{ fontFamily: "monospace" }}>
+                        {it.rafaksi.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                      </td>
+                      <td className="td-right" style={{ fontFamily: "monospace", fontWeight: 700 }}>
+                        {it.priceSubtotal.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                      </td>
+                      <td>{it.remark || "-"}</td>
+                      <td className="td-center">
+                        <button
+                          type="button"
+                          className="tx-row-delete-btn"
+                          onClick={() => handleRemoveItem(it.id)}
+                          title="Remove item"
+                          aria-label="Remove item"
+                        >
+                          <Icon name="trash" size={13} />
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+              <tfoot>
+                <tr style={{ background: "var(--slate-50)", borderTop: "2px solid var(--line)" }}>
+                  <td colSpan={8} className="td-right" style={{ fontWeight: 800 }}>
+                    Total
+                  </td>
+                  <td className="td-right" style={{ fontFamily: "monospace", fontWeight: 800 }}>
+                    {totalSuratJalanQty.toLocaleString("en-US", {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
+                  </td>
+                  <td></td>
+                  <td className="td-right" style={{ fontFamily: "monospace", fontWeight: 800, color: "var(--blue-700)" }}>
+                    {totalSubTotal.toLocaleString("en-US", {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
+                  </td>
+                  <td colSpan={2}></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
 
-        {/* Actions: Save & Cancel */}
-        <div className="rn-form-footer">
-          <div className="rn-footer-actions">
-            <button type="submit" className="rn-btn-save">
+          {/* Actions: Save & Cancel */}
+          <div className="tx-actions-bar">
+            <button type="submit" className="btn-tx-save">
               <span>Save</span>
             </button>
             <button
               type="button"
-              className="rn-btn-cancel"
+              className="btn-tx-cancel"
               onClick={onBack}
             >
               <span>Cancel</span>
             </button>
           </div>
-        </div>
-      </form>
+        </form>
+      </div>
 
       {/* PO Item Picker Modal */}
       <PickPoItemModal

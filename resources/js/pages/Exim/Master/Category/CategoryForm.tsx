@@ -174,10 +174,10 @@ export function CategoryForm({
           <label htmlFor="categoryDescription" className="category-form-label">
             Description
           </label>
-          <input
+          <textarea
             id="categoryDescription"
-            type="text"
-            className="category-form-input"
+            className="category-form-textarea master-form-textarea"
+            rows={3}
             placeholder="Optional category description or classification remarks..."
             value={description}
             onChange={(e) => setDescription(e.target.value)}
@@ -185,11 +185,11 @@ export function CategoryForm({
         </div>
 
         {/* Form Action Buttons: Cancel and Save */}
-        <div className="category-form-actions">
+        <div className="category-form-actions" style={{ display: "flex", gap: "10px", marginTop: "12px" }}>
           <Button type="button" variant="ghost" onClick={onBack}>
             Cancel
           </Button>
-          <Button type="submit" variant="primary" icon="check">
+          <Button type="submit" variant="primary">
             Save
           </Button>
         </div>

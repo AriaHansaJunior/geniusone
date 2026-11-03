@@ -149,12 +149,25 @@ export function ReceiveNoteIndex({
   };
 
   const renderSortIndicator = (field: ReceiveNoteSortField) => {
-    if (sortField !== field || sortDirection === "none") {
-      return <span className="rn-sort-indicator text-muted">⇅</span>;
-    }
+    const isActive = sortField === field && sortDirection !== "none";
     return (
-      <span className="rn-sort-indicator text-primary font-bold">
-        {sortDirection === "asc" ? "▲" : "▼"}
+      <span
+        style={{
+          marginLeft: "6px",
+          display: "inline-flex",
+          alignItems: "center",
+          color: isActive ? "var(--blue-600)" : "var(--muted-2)",
+        }}
+      >
+        {isActive ? (
+          sortDirection === "asc" ? (
+            <Icon name="arrowUp" size={12} />
+          ) : (
+            <Icon name="arrowDown" size={12} />
+          )
+        ) : (
+          <Icon name="arrowUpDown" size={12} />
+        )}
       </span>
     );
   };
@@ -241,23 +254,6 @@ export function ReceiveNoteIndex({
 
   return (
     <div className="rn-page">
-      {/* Top Header */}
-      <div className="rn-page-header">
-        <h1 className="rn-page-title">Receive Note</h1>
-        <div className="rn-header-actions">
-          <Button variant="primary" onClick={onAddNew}>
-            Add New
-          </Button>
-          <Button
-            variant="excel"
-            onClick={handleExportToExcel}
-            title="Export records to Excel (.xlsx)"
-          >
-            Export To Excel
-          </Button>
-        </div>
-      </div>
-
       {/* Export Notice */}
       {exportNotice && (
         <div className="rn-alert rn-alert--info">
@@ -350,8 +346,18 @@ export function ReceiveNoteIndex({
             </select>
           </div>
 
-          {/* Settings / Gear button */}
-          <div className="rn-filter-settings">
+          {/* Actions & Settings */}
+          <div className="rn-filter-settings" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <Button variant="primary" onClick={onAddNew}>
+              Add New
+            </Button>
+            <Button
+              variant="excel"
+              onClick={handleExportToExcel}
+              title="Export records to Excel (.xlsx)"
+            >
+              Export To Excel
+            </Button>
             <button
               type="button"
               className="rn-btn-settings"

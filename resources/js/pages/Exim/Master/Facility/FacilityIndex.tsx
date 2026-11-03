@@ -176,13 +176,22 @@ export function FacilityIndex({
     const isActive = sortField === field && sortDirection !== "none";
     return (
       <span
-        className={`facility-sort-indicator ${isActive ? "active" : "inactive"}`}
+        style={{
+          marginLeft: "6px",
+          display: "inline-flex",
+          alignItems: "center",
+          color: isActive ? "var(--blue-600)" : "var(--muted-2)",
+        }}
       >
-        {isActive
-          ? sortDirection === "asc"
-            ? "▲"
-            : "▼"
-          : "⇅"}
+        {isActive ? (
+          sortDirection === "asc" ? (
+            <Icon name="arrowUp" size={12} />
+          ) : (
+            <Icon name="arrowDown" size={12} />
+          )
+        ) : (
+          <Icon name="arrowUpDown" size={12} />
+        )}
       </span>
     );
   };
@@ -198,25 +207,6 @@ export function FacilityIndex({
 
   return (
     <div className="facility-page">
-      {/* Page Heading Area: Master Facility title on left, Add New & Export on right */}
-      <div className="facility-page-header">
-        <h1 className="facility-page-title">Master Facility</h1>
-
-        <div className="facility-header-actions">
-          <Button variant="primary" onClick={onAddNew}>
-            Add New
-          </Button>
-
-          <Button
-            variant="excel"
-            onClick={handleExportToExcel}
-            title="Export filtered records to Excel-compatible CSV"
-          >
-            Export To Excel
-          </Button>
-        </div>
-      </div>
-
       {/* Export notification notice */}
       {exportNotice && (
         <div className="facility-alert facility-alert--info">
@@ -237,8 +227,8 @@ export function FacilityIndex({
 
       {/* Main Table Panel */}
       <div className="facility-table-panel panel">
-        {/* Table Toolbar: Search on Left */}
-        <div className="facility-toolbar">
+        {/* Table Toolbar: Search on Left, Actions on Right */}
+        <div className="facility-toolbar" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" }}>
           <SearchField
             value={search}
             onChange={(val) => {
@@ -247,6 +237,19 @@ export function FacilityIndex({
             }}
             placeholder="Search..."
           />
+
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <Button variant="primary" onClick={onAddNew}>
+              Add New
+            </Button>
+            <Button
+              variant="excel"
+              onClick={handleExportToExcel}
+              title="Export filtered records to Excel-compatible CSV"
+            >
+              Export To Excel
+            </Button>
+          </div>
         </div>
 
         {/* Responsive Table Frame */}

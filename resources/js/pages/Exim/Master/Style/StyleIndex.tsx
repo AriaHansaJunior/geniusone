@@ -110,12 +110,25 @@ export function StyleIndex({
   };
 
   const renderSortIndicator = (field: StyleSortField) => {
-    if (sortField !== field || sortDirection === "none") {
-      return <span className="style-sort-indicator inactive">⇅</span>;
-    }
+    const isActive = sortField === field && sortDirection !== "none";
     return (
-      <span className="style-sort-indicator active">
-        {sortDirection === "asc" ? "▲" : "▼"}
+      <span
+        style={{
+          marginLeft: "6px",
+          display: "inline-flex",
+          alignItems: "center",
+          color: isActive ? "var(--blue-600)" : "var(--muted-2)",
+        }}
+      >
+        {isActive ? (
+          sortDirection === "asc" ? (
+            <Icon name="arrowUp" size={12} />
+          ) : (
+            <Icon name="arrowDown" size={12} />
+          )
+        ) : (
+          <Icon name="arrowUpDown" size={12} />
+        )}
       </span>
     );
   };
@@ -201,33 +214,6 @@ export function StyleIndex({
 
   return (
     <div className="style-page">
-      {/* Page Heading Area: Master Specification/Model title and action buttons */}
-      <div className="style-page-header">
-        <h1 className="style-page-title">Master Specification/Model</h1>
-
-        <div className="style-header-actions">
-          <Button variant="primary" onClick={onAddNew}>
-            Add New
-          </Button>
-
-          <Button
-            variant="ghost"
-            onClick={onImportExcel}
-            title="Import Excel file for Specification/Model"
-          >
-            Import Excel
-          </Button>
-
-          <Button
-            variant="excel"
-            onClick={handleExportToExcel}
-            title="Export filtered records to Excel-compatible CSV"
-          >
-            Export To Excel
-          </Button>
-        </div>
-      </div>
-
       {/* Export notification notice */}
       {exportNotice && (
         <div className="style-alert style-alert--info">
@@ -248,8 +234,8 @@ export function StyleIndex({
 
       {/* Main Table Panel */}
       <div className="style-table-panel panel">
-        {/* Table Toolbar: Search on Left */}
-        <div className="style-toolbar">
+        {/* Table Toolbar: Search on Left, Actions on Right */}
+        <div className="style-toolbar" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" }}>
           <SearchField
             value={search}
             onChange={(val) => {
@@ -258,6 +244,26 @@ export function StyleIndex({
             }}
             placeholder="Search..."
           />
+
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <Button variant="primary" onClick={onAddNew}>
+              Add New
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={onImportExcel}
+              title="Import Excel file for Specification/Model"
+            >
+              Import Excel
+            </Button>
+            <Button
+              variant="excel"
+              onClick={handleExportToExcel}
+              title="Export filtered records to Excel-compatible CSV"
+            >
+              Export To Excel
+            </Button>
+          </div>
         </div>
 
         {/* Responsive Table Frame */}

@@ -192,189 +192,235 @@ export function ReceiveNoteReturnForm({
   );
 
   return (
-    <div className="rnr-form-page">
+    <div className="transaction-create-page">
       {/* Page Title */}
-      <div className="rnr-form-header">
-        <h1 className="rnr-form-title">Add Receive Note Retur</h1>
+      <div className="tx-page-header">
+        <h1 className="tx-page-title">Add Receive Note Retur</h1>
       </div>
 
       {/* Notice Message */}
       {notice && (
-        <div className={`rnr-alert rnr-alert--${notice.type}`}>
-          <Icon
-            name={
+        <div
+          style={{
+            padding: "10px 16px",
+            background:
               notice.type === "warning"
-                ? "alertTriangle"
+                ? "#fffbeb"
                 : notice.type === "success"
-                ? "check"
-                : "info"
-            }
-            size={16}
-          />
-          <div className="rnr-alert__content">
-            <p>{notice.message}</p>
+                ? "#f0fdf4"
+                : "#eff6ff",
+            border: `1px solid ${
+              notice.type === "warning"
+                ? "#fde68a"
+                : notice.type === "success"
+                ? "#bbf7d0"
+                : "#bfdbfe"
+            }`,
+            borderRadius: "var(--radius-sm)",
+            color:
+              notice.type === "warning"
+                ? "#92400e"
+                : notice.type === "success"
+                ? "#166534"
+                : "#1e40af",
+            fontSize: "12.5px",
+            fontWeight: 600,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <Icon
+              name={
+                notice.type === "warning"
+                  ? "alertTriangle"
+                  : notice.type === "success"
+                  ? "check"
+                  : "info"
+              }
+              size={16}
+            />
+            <span>{notice.message}</span>
           </div>
           <button
             type="button"
-            className="rnr-alert-close"
             onClick={() => setNotice(null)}
+            style={{
+              border: 0,
+              background: "transparent",
+              cursor: "pointer",
+              fontWeight: 700,
+              color: "inherit",
+            }}
           >
             ×
           </button>
         </div>
       )}
 
-      {/* Main Form Card */}
-      <form onSubmit={handleSubmit} className="rnr-form-card">
-        {/* Row 1: Arrival Date, Customer, Currency, Jenis Retur */}
-        <div className="rnr-form-row">
-          <div className="rnr-form-col-4">
-            <label className="rnr-label">Arrival Date</label>
-            <input
-              type="date"
-              className="rnr-input"
-              value={arrivalDate}
-              onChange={(e) => setArrivalDate(e.target.value)}
-            />
-          </div>
+      {/* Main Form Panel */}
+      <div className="tx-panel">
+        <form onSubmit={handleSubmit}>
+          {/* Header Row 1: Arrival Date, Customer, Currency, Jenis Retur */}
+          <div className="tx-header-grid" style={{ marginBottom: "14px" }}>
+            {/* Arrival Date */}
+            <div className="master-form-group">
+              <label className="master-form-label">
+                Arrival Date <span className="required-asterisk">*</span>
+              </label>
+              <input
+                type="date"
+                className="master-form-input"
+                value={arrivalDate}
+                onChange={(e) => setArrivalDate(e.target.value)}
+              />
+            </div>
 
-          <div className="rnr-form-col-4">
-            <label className="rnr-label">Customer</label>
-            <select
-              className={`rnr-select ${formErrors.customer ? "has-error" : ""}`}
-              value={customer}
-              onChange={(e) => {
-                setCustomer(e.target.value);
-                if (formErrors.customer) {
-                  setFormErrors((prev) => ({ ...prev, customer: "" }));
-                }
-              }}
-            >
-              <option value="">Select Customer</option>
-              {customerList
-                .filter((c) => c !== "Choose Customer")
-                .map((cust) => (
-                  <option key={cust} value={cust}>
-                    {cust}
+            {/* Customer */}
+            <div className="master-form-group">
+              <label className="master-form-label">
+                Customer <span className="required-asterisk">*</span>
+              </label>
+              <select
+                className={`master-form-select ${formErrors.customer ? "has-error" : ""}`}
+                value={customer}
+                onChange={(e) => {
+                  setCustomer(e.target.value);
+                  if (formErrors.customer) {
+                    setFormErrors((prev) => ({ ...prev, customer: "" }));
+                  }
+                }}
+              >
+                <option value="">Select Customer</option>
+                {customerList
+                  .filter((c) => c !== "Choose Customer")
+                  .map((cust) => (
+                    <option key={cust} value={cust}>
+                      {cust}
+                    </option>
+                  ))}
+              </select>
+              {formErrors.customer && (
+                <span className="master-form-error">{formErrors.customer}</span>
+              )}
+            </div>
+
+            {/* Currency */}
+            <div className="master-form-group">
+              <label className="master-form-label">
+                Currency <span className="required-asterisk">*</span>
+              </label>
+              <select
+                className={`master-form-select ${formErrors.currency ? "has-error" : ""}`}
+                value={currency}
+                onChange={(e) => {
+                  setCurrency(e.target.value);
+                  if (formErrors.currency) {
+                    setFormErrors((prev) => ({ ...prev, currency: "" }));
+                  }
+                }}
+              >
+                {currencyList.map((cur) => (
+                  <option key={cur} value={cur}>
+                    {cur}
                   </option>
                 ))}
-            </select>
-            {formErrors.customer && (
-              <span className="rnr-error-msg">{formErrors.customer}</span>
-            )}
-          </div>
+              </select>
+              {formErrors.currency && (
+                <span className="master-form-error">{formErrors.currency}</span>
+              )}
+            </div>
 
-          <div className="rnr-form-col-4">
-            <label className="rnr-label">Currency</label>
-            <select
-              className={`rnr-select ${formErrors.currency ? "has-error" : ""}`}
-              value={currency}
-              onChange={(e) => {
-                setCurrency(e.target.value);
-                if (formErrors.currency) {
-                  setFormErrors((prev) => ({ ...prev, currency: "" }));
-                }
-              }}
-            >
-              {currencyList.map((cur) => (
-                <option key={cur} value={cur}>
-                  {cur}
-                </option>
-              ))}
-            </select>
-            {formErrors.currency && (
-              <span className="rnr-error-msg">{formErrors.currency}</span>
-            )}
-          </div>
-
-          <div className="rnr-form-col-4">
-            <label className="rnr-label">Jenis Retur</label>
-            <select
-              className={`rnr-select ${formErrors.jenisRetur ? "has-error" : ""}`}
-              value={jenisRetur}
-              onChange={(e) => {
-                setJenisRetur(e.target.value);
-                if (formErrors.jenisRetur) {
-                  setFormErrors((prev) => ({ ...prev, jenisRetur: "" }));
-                }
-              }}
-            >
-              {returnTypesList.map((rt) => (
-                <option key={rt} value={rt}>
-                  {rt}
-                </option>
-              ))}
-            </select>
-            {formErrors.jenisRetur && (
-              <span className="rnr-error-msg">{formErrors.jenisRetur}</span>
-            )}
-          </div>
-        </div>
-
-        {/* Row 2: Vehicle Type, License Plate, Type of Document */}
-        <div className="rnr-form-row">
-          <div className="rnr-form-col-4">
-            <label className="rnr-label">Vehicle Type</label>
-            <select
-              className="rnr-select"
-              value={vehicleType}
-              onChange={(e) => setVehicleType(e.target.value)}
-            >
-              {vehicleTypesList.map((vt) => (
-                <option key={vt} value={vt}>
-                  {vt}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="rnr-form-col-4">
-            <label className="rnr-label">License Plate</label>
-            <input
-              type="text"
-              className="rnr-input"
-              value={licensePlate}
-              onChange={(e) => setLicensePlate(e.target.value)}
-              placeholder="e.g. 123, L 8821 UZ"
-            />
-          </div>
-
-          <div className="rnr-form-col-4">
-            <label className="rnr-label">Type of Document</label>
-            <select
-              className="rnr-select"
-              value={typeOfDocument}
-              onChange={(e) => setTypeOfDocument(e.target.value)}
-            >
-              <option value="">Select Option...</option>
-              {docTypesList
-                .filter((d) => d !== "All Type of Documents")
-                .map((dt) => (
-                  <option key={dt} value={dt}>
-                    {dt}
+            {/* Jenis Retur */}
+            <div className="master-form-group">
+              <label className="master-form-label">
+                Jenis Retur <span className="required-asterisk">*</span>
+              </label>
+              <select
+                className={`master-form-select ${formErrors.jenisRetur ? "has-error" : ""}`}
+                value={jenisRetur}
+                onChange={(e) => {
+                  setJenisRetur(e.target.value);
+                  if (formErrors.jenisRetur) {
+                    setFormErrors((prev) => ({ ...prev, jenisRetur: "" }));
+                  }
+                }}
+              >
+                {returnTypesList.map((rt) => (
+                  <option key={rt} value={rt}>
+                    {rt}
                   </option>
                 ))}
-            </select>
+              </select>
+              {formErrors.jenisRetur && (
+                <span className="master-form-error">{formErrors.jenisRetur}</span>
+              )}
+            </div>
           </div>
-        </div>
 
-        {/* Interactive Tabs: Item Detail & Additional Costs */}
-        <div className="rnr-tabs-container">
-          <div className="rnr-tabs-header">
+          {/* Header Row 2: Vehicle Type, License Plate, Type of Document */}
+          <div className="tx-header-grid" style={{ marginBottom: "16px" }}>
+            {/* Vehicle Type */}
+            <div className="master-form-group">
+              <label className="master-form-label">Vehicle Type</label>
+              <select
+                className="master-form-select"
+                value={vehicleType}
+                onChange={(e) => setVehicleType(e.target.value)}
+              >
+                {vehicleTypesList.map((vt) => (
+                  <option key={vt} value={vt}>
+                    {vt}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* License Plate */}
+            <div className="master-form-group">
+              <label className="master-form-label">License Plate</label>
+              <input
+                type="text"
+                className="master-form-input"
+                value={licensePlate}
+                onChange={(e) => setLicensePlate(e.target.value)}
+                placeholder="e.g. 123, L 8821 UZ"
+              />
+            </div>
+
+            {/* Type of Document */}
+            <div className="master-form-group">
+              <label className="master-form-label">Type of Document</label>
+              <select
+                className="master-form-select"
+                value={typeOfDocument}
+                onChange={(e) => setTypeOfDocument(e.target.value)}
+              >
+                <option value="">Select Option...</option>
+                {docTypesList
+                  .filter((d) => d !== "All Type of Documents")
+                  .map((dt) => (
+                    <option key={dt} value={dt}>
+                      {dt}
+                    </option>
+                  ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Interactive Tabs */}
+          <div className="tx-tabs-header">
             <button
               type="button"
-              className={`rnr-tab-btn ${
-                activeTab === "item-detail" ? "rnr-tab-btn--active" : ""
-              }`}
+              className={`tx-tab-btn ${activeTab === "item-detail" ? "active" : ""}`}
               onClick={() => setActiveTab("item-detail")}
             >
               Item Detail
             </button>
             <button
               type="button"
-              className={`rnr-tab-btn ${
-                activeTab === "additional-costs" ? "rnr-tab-btn--active" : ""
-              }`}
+              className={`tx-tab-btn ${activeTab === "additional-costs" ? "active" : ""}`}
               onClick={() => setActiveTab("additional-costs")}
             >
               Additional Costs
@@ -383,101 +429,115 @@ export function ReceiveNoteReturnForm({
 
           {/* Tab 1: Item Detail Content */}
           {activeTab === "item-detail" && (
-            <div className="rnr-tab-pane">
-              {/* Add Item Button at upper right */}
-              <div className="rnr-tab-actions">
+            <div>
+              {/* Add Item Button */}
+              <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "10px" }}>
                 <button
                   type="button"
-                  className="rnr-btn-add-item"
                   onClick={() => setIsPickerOpen(true)}
+                  style={{
+                    background: "#16a34a",
+                    color: "#ffffff",
+                    border: "1px solid #15803d",
+                    padding: "6px 14px",
+                    borderRadius: "var(--radius-sm)",
+                    fontSize: "12px",
+                    fontWeight: 700,
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    cursor: "pointer",
+                  }}
                 >
+                  <Icon name="plus" size={14} />
                   <span>Add Item</span>
                 </button>
               </div>
 
               {/* Grouped Item Table */}
-              <div className="rnr-item-table-wrapper">
-                <table className="rnr-form-table">
+              <div className="tx-table-container">
+                <table className="tx-grid-table">
                   <thead>
                     <tr>
-                      <th rowSpan={2} className="rnr-th-no">
+                      <th rowSpan={2} style={{ width: "45px", textAlign: "center" }}>
                         No
                       </th>
-                      <th rowSpan={2}>SJ Number</th>
-                      <th rowSpan={2}>Item Name</th>
-                      <th rowSpan={2} className="text-right">
+                      <th rowSpan={2} style={{ width: "140px" }}>SJ Number</th>
+                      <th rowSpan={2} style={{ minWidth: "200px" }}>Item Name</th>
+                      <th rowSpan={2} className="th-right" style={{ width: "110px" }}>
                         Price
                       </th>
-                      <th colSpan={2} className="text-center rnr-th-grouped">
+                      <th colSpan={2} className="th-center" style={{ borderBottom: "1px solid var(--line)" }}>
                         Quantity
                       </th>
-                      <th rowSpan={2} className="text-right">
+                      <th rowSpan={2} className="th-right" style={{ width: "120px" }}>
                         Sub Total
                       </th>
-                      <th colSpan={2} className="text-center rnr-th-grouped">
+                      <th colSpan={2} className="th-center" style={{ borderBottom: "1px solid var(--line)" }}>
                         Package
                       </th>
-                      <th rowSpan={2} className="rnr-th-action text-center">
+                      <th rowSpan={2} className="th-center" style={{ width: "50px" }}>
                         Action
                       </th>
                     </tr>
                     <tr>
-                      <th className="rnr-th-sub text-right">Delivery</th>
-                      <th className="rnr-th-sub text-right">Retur</th>
-                      <th className="rnr-th-sub text-right">Qty</th>
-                      <th className="rnr-th-sub">Type</th>
+                      <th className="th-right" style={{ width: "80px" }}>Delivery</th>
+                      <th className="th-right" style={{ width: "80px" }}>Retur</th>
+                      <th className="th-right" style={{ width: "70px" }}>Qty</th>
+                      <th style={{ width: "90px" }}>Type</th>
                     </tr>
                   </thead>
                   <tbody>
                     {items.length === 0 ? (
                       <tr>
-                        <td colSpan={10} className="rnr-table-empty">
+                        <td colSpan={10} style={{ textAlign: "center", padding: "40px 20px", color: "var(--muted)" }}>
                           No items selected yet. Click the green <strong>+ Add Item</strong> button above to pick return items.
                         </td>
                       </tr>
                     ) : (
                       items.map((it, idx) => (
                         <tr key={it.id}>
-                          <td className="text-center">{idx + 1}</td>
-                          <td className="font-medium text-ink">{it.sjNumber || it.doNumber}</td>
+                          <td className="td-center">{idx + 1}</td>
+                          <td style={{ fontWeight: 600 }}>{it.sjNumber || it.doNumber}</td>
                           <td>
-                            <div className="font-medium text-ink">{it.itemName}</div>
-                            <div className="text-xs text-muted font-mono">{it.itemCode}</div>
+                            <div style={{ fontWeight: 600 }}>{it.itemName}</div>
+                            <div style={{ fontSize: "10.5px", color: "var(--muted)", fontFamily: "monospace" }}>{it.itemCode}</div>
                           </td>
-                          <td className="text-right font-mono">
+                          <td className="td-right" style={{ fontFamily: "monospace" }}>
                             {it.price.toLocaleString("en-US", { minimumFractionDigits: 2 })}
                           </td>
-                          <td className="text-right font-mono text-muted">
+                          <td className="td-right" style={{ fontFamily: "monospace", color: "var(--muted)" }}>
                             {(it.deliveryQty ?? it.quantity).toLocaleString("en-US", {
                               minimumFractionDigits: 2,
                             })}
                           </td>
-                          <td className="text-right font-mono">
+                          <td className="td-right">
                             <input
                               type="number"
-                              className="rnr-table-input text-right"
+                              className="tx-input-cell tx-input-cell--num"
                               value={it.returQty ?? it.quantity}
                               onChange={(e) =>
                                 handleUpdateItemReturQty(it.id, parseFloat(e.target.value))
                               }
                               min="0"
                               step="any"
+                              style={{ width: "75px", height: "28px" }}
                             />
                           </td>
-                          <td className="text-right font-mono font-medium text-ink">
+                          <td className="td-right" style={{ fontFamily: "monospace", fontWeight: 700 }}>
                             {it.subtotal.toLocaleString("en-US", { minimumFractionDigits: 2 })}
                           </td>
-                          <td className="text-right font-mono">{it.qtyPackage}</td>
+                          <td className="td-right" style={{ fontFamily: "monospace" }}>{it.qtyPackage}</td>
                           <td>{it.packageType}</td>
-                          <td className="text-center">
+                          <td className="td-center">
                             <button
                               type="button"
-                              className="rnr-btn-remove-row"
+                              className="tx-row-delete-btn"
                               onClick={() => handleRemoveItem(it.id)}
                               title="Remove Item"
                               aria-label="Remove item"
                             >
-                              <Icon name="trash" size={14} />
+                              <Icon name="trash" size={13} />
                             </button>
                           </td>
                         </tr>
@@ -486,11 +546,11 @@ export function ReceiveNoteReturnForm({
                   </tbody>
                   <tfoot>
                     {/* Summary Row 1: Total */}
-                    <tr className="rnr-table-summary-row">
-                      <td colSpan={6} className="text-right font-bold text-ink">
+                    <tr style={{ background: "var(--slate-50)", borderTop: "2px solid var(--line)" }}>
+                      <td colSpan={6} className="td-right" style={{ fontWeight: 700 }}>
                         Total
                       </td>
-                      <td className="text-right font-mono font-bold text-ink">
+                      <td className="td-right" style={{ fontFamily: "monospace", fontWeight: 700 }}>
                         {totalSubtotal.toLocaleString("en-US", {
                           minimumFractionDigits: 2,
                           maximumFractionDigits: 2,
@@ -500,11 +560,11 @@ export function ReceiveNoteReturnForm({
                     </tr>
 
                     {/* Summary Row 2: Total Additional Cost */}
-                    <tr className="rnr-table-summary-row">
-                      <td colSpan={6} className="text-right font-medium text-ink">
+                    <tr style={{ background: "var(--slate-50)" }}>
+                      <td colSpan={6} className="td-right" style={{ fontWeight: 600, color: "var(--muted)" }}>
                         Total Additional Cost
                       </td>
-                      <td className="text-right font-mono font-medium text-ink">
+                      <td className="td-right" style={{ fontFamily: "monospace", fontWeight: 600 }}>
                         {additionalCostAmount.toLocaleString("en-US", {
                           minimumFractionDigits: 2,
                           maximumFractionDigits: 2,
@@ -514,11 +574,11 @@ export function ReceiveNoteReturnForm({
                     </tr>
 
                     {/* Summary Row 3: Grand Total */}
-                    <tr className="rnr-table-summary-row rnr-table-summary-row--grand">
-                      <td colSpan={6} className="text-right font-bold text-ink">
+                    <tr style={{ background: "var(--slate-100)", borderTop: "1px solid var(--line)" }}>
+                      <td colSpan={6} className="td-right" style={{ fontWeight: 800 }}>
                         Grand Total
                       </td>
-                      <td className="text-right font-mono font-bold text-ink">
+                      <td className="td-right" style={{ fontFamily: "monospace", fontWeight: 800, color: "var(--blue-700)", fontSize: "13px" }}>
                         {grandTotal.toLocaleString("en-US", {
                           minimumFractionDigits: 2,
                           maximumFractionDigits: 2,
@@ -534,73 +594,70 @@ export function ReceiveNoteReturnForm({
 
           {/* Tab 2: Additional Costs Content */}
           {activeTab === "additional-costs" && (
-            <div className="rnr-tab-pane rnr-additional-costs-pane">
-              <div className="rnr-add-costs-card">
-                <div className="rnr-add-costs-header">
-                  <h3 className="rnr-add-costs-title">Additional Return Costs</h3>
-                  <p className="rnr-add-costs-subtitle">
-                    Optionally record packaging, delivery discrepancy, or transport fees associated with this sales return.
-                  </p>
+            <div style={{ padding: "16px", background: "rgba(248, 250, 252, 0.7)", border: "1px solid var(--line)", borderRadius: "var(--radius-sm)", marginBottom: "16px" }}>
+              <div style={{ marginBottom: "14px" }}>
+                <h4 style={{ margin: "0 0 4px", fontSize: "13px", fontWeight: 700, color: "var(--ink)" }}>Additional Return Costs</h4>
+                <p style={{ margin: 0, fontSize: "11.5px", color: "var(--muted)" }}>
+                  Optionally record packaging, delivery discrepancy, or transport fees associated with this sales return.
+                </p>
+              </div>
+              <div className="tx-header-grid">
+                <div className="master-form-group">
+                  <label className="master-form-label">Cost Description</label>
+                  <input
+                    type="text"
+                    className="master-form-input"
+                    value={additionalCostRemark}
+                    onChange={(e) => setAdditionalCostRemark(e.target.value)}
+                    placeholder="e.g. Transport inspection fee, repackaging"
+                  />
                 </div>
-                <div className="rnr-form-row">
-                  <div className="rnr-form-col-4">
-                    <label className="rnr-label">Cost Description</label>
-                    <input
-                      type="text"
-                      className="rnr-input"
-                      value={additionalCostRemark}
-                      onChange={(e) => setAdditionalCostRemark(e.target.value)}
-                      placeholder="e.g. Transport inspection fee, repackaging"
-                    />
-                  </div>
-                  <div className="rnr-form-col-4">
-                    <label className="rnr-label">Amount (IDR)</label>
-                    <input
-                      type="number"
-                      className="rnr-input"
-                      value={additionalCostAmount || ""}
-                      onChange={(e) =>
-                        setAdditionalCostAmount(parseFloat(e.target.value) || 0)
-                      }
-                      placeholder="0.00"
-                      min="0"
-                      step="any"
-                    />
-                  </div>
+                <div className="master-form-group">
+                  <label className="master-form-label">Amount (IDR)</label>
+                  <input
+                    type="number"
+                    className="master-form-input"
+                    value={additionalCostAmount || ""}
+                    onChange={(e) =>
+                      setAdditionalCostAmount(parseFloat(e.target.value) || 0)
+                    }
+                    placeholder="0.00"
+                    min="0"
+                    step="any"
+                  />
                 </div>
               </div>
             </div>
           )}
-        </div>
 
-        {/* Full-width Notes textarea */}
-        <div className="rnr-notes-section">
-          <label className="rnr-label">Notes</label>
-          <textarea
-            className="rnr-textarea"
-            rows={3}
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            placeholder="Additional remarks or notes..."
-          />
-        </div>
+          {/* Full-width Notes textarea */}
+          <div className="master-form-group" style={{ marginTop: "14px", marginBottom: "16px" }}>
+            <label className="master-form-label">Notes</label>
+            <textarea
+              className="master-form-input"
+              rows={3}
+              style={{ height: "auto", padding: "8px 12px" }}
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Additional remarks or notes..."
+            />
+          </div>
 
-        {/* Form Actions: Save & Cancel */}
-        <div className="rnr-form-footer">
-          <div className="rnr-footer-actions">
-            <button type="submit" className="rnr-btn-save">
+          {/* Form Actions: Save & Cancel */}
+          <div className="tx-actions-bar">
+            <button type="submit" className="btn-tx-save">
               <span>Save</span>
             </button>
             <button
               type="button"
-              className="rnr-btn-cancel"
+              className="btn-tx-cancel"
               onClick={onBack}
             >
               <span>Cancel</span>
             </button>
           </div>
-        </div>
-      </form>
+        </form>
+      </div>
 
       {/* Item Picker Modal */}
       <PickSalesDeliveryItemModal

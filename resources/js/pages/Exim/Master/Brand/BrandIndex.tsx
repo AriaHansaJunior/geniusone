@@ -179,13 +179,22 @@ export function BrandIndex({
     const isActive = sortField === field && sortDirection !== "none";
     return (
       <span
-        className={`brand-sort-indicator ${isActive ? "active" : "inactive"}`}
+        style={{
+          marginLeft: "6px",
+          display: "inline-flex",
+          alignItems: "center",
+          color: isActive ? "var(--blue-600)" : "var(--muted-2)",
+        }}
       >
-        {isActive
-          ? sortDirection === "asc"
-            ? "▲"
-            : "▼"
-          : "⇅"}
+        {isActive ? (
+          sortDirection === "asc" ? (
+            <Icon name="arrowUp" size={12} />
+          ) : (
+            <Icon name="arrowDown" size={12} />
+          )
+        ) : (
+          <Icon name="arrowUpDown" size={12} />
+        )}
       </span>
     );
   };
@@ -201,25 +210,6 @@ export function BrandIndex({
 
   return (
     <div className="brand-page">
-      {/* Page Heading Area: Master Brand title on left, Add New & Export on right */}
-      <div className="brand-page-header">
-        <h1 className="brand-page-title">Master Brand</h1>
-
-        <div className="brand-header-actions">
-          <Button variant="primary" onClick={onAddNew}>
-            Add New
-          </Button>
-
-          <Button
-            variant="excel"
-            onClick={handleExportToExcel}
-            title="Export filtered records to Excel-compatible CSV"
-          >
-            Export to Excel
-          </Button>
-        </div>
-      </div>
-
       {/* Export notification notice */}
       {exportNotice && (
         <div className="brand-alert brand-alert--info">
@@ -239,16 +229,29 @@ export function BrandIndex({
 
       {/* Main Table Panel */}
       <div className="brand-table-panel panel">
-        {/* Table Toolbar: Search on Left */}
-        <div className="brand-toolbar">
+        {/* Table Toolbar */}
+        <div className="brand-toolbar" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 18px", borderBottom: "1px solid var(--line)", background: "#ffffff", gap: "16px" }}>
           <SearchField
             value={search}
             onChange={(val) => {
               setSearch(val);
               setCurrentPage(1);
             }}
-            placeholder="Search..."
+            placeholder="Search code, name..."
           />
+          <div className="brand-header-actions" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <Button variant="primary" onClick={onAddNew}>
+              Add New
+            </Button>
+
+            <Button
+              variant="excel"
+              onClick={handleExportToExcel}
+              title="Export filtered records to Excel-compatible CSV"
+            >
+              Export to Excel
+            </Button>
+          </div>
         </div>
 
         {/* Responsive Table Frame */}

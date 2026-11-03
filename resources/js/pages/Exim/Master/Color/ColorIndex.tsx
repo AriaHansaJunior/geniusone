@@ -92,12 +92,25 @@ export function ColorIndex({
   };
 
   const renderSortIndicator = (field: ColorSortField) => {
-    if (sortField !== field || sortDirection === "none") {
-      return <span className="color-sort-indicator inactive">⇅</span>;
-    }
+    const isActive = sortField === field && sortDirection !== "none";
     return (
-      <span className="color-sort-indicator active">
-        {sortDirection === "asc" ? "▲" : "▼"}
+      <span
+        style={{
+          marginLeft: "6px",
+          display: "inline-flex",
+          alignItems: "center",
+          color: isActive ? "var(--blue-600)" : "var(--muted-2)",
+        }}
+      >
+        {isActive ? (
+          sortDirection === "asc" ? (
+            <Icon name="arrowUp" size={12} />
+          ) : (
+            <Icon name="arrowDown" size={12} />
+          )
+        ) : (
+          <Icon name="arrowUpDown" size={12} />
+        )}
       </span>
     );
   };
@@ -156,25 +169,6 @@ export function ColorIndex({
 
   return (
     <div className="color-page">
-      {/* Page Heading Area: Master Color title on left, Add New and Export on right */}
-      <div className="color-page-header">
-        <h1 className="color-page-title">Master Color</h1>
-
-        <div className="color-header-actions">
-          <Button variant="primary" onClick={onAddNew}>
-            Add New
-          </Button>
-
-          <Button
-            variant="excel"
-            onClick={handleExportToExcel}
-            title="Export color records to Excel (.xlsx)"
-          >
-            Export To Excel
-          </Button>
-        </div>
-      </div>
-
       {/* Export notification notice */}
       {exportNotice && (
         <div className="color-alert color-alert--info">
@@ -195,8 +189,8 @@ export function ColorIndex({
 
       {/* Main Table Panel */}
       <div className="color-table-panel panel">
-        {/* Table Toolbar: Search on Left */}
-        <div className="color-toolbar">
+        {/* Table Toolbar: Search on Left, Actions on Right */}
+        <div className="color-toolbar" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" }}>
           <SearchField
             value={search}
             onChange={(val) => {
@@ -205,6 +199,19 @@ export function ColorIndex({
             }}
             placeholder="Search..."
           />
+
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <Button variant="primary" onClick={onAddNew}>
+              Add New
+            </Button>
+            <Button
+              variant="excel"
+              onClick={handleExportToExcel}
+              title="Export color records to Excel (.xlsx)"
+            >
+              Export To Excel
+            </Button>
+          </div>
         </div>
 
         {/* Responsive Table Frame */}

@@ -360,11 +360,25 @@ export function PurchaseOrderCreate({ onBack, onSaveSuccess }: PurchaseOrderCrea
             justifyContent: "space-between",
           }}
         >
-          <span>{notification.message}</span>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <Icon
+              name={notification.type === "error" ? "alertTriangle" : "check"}
+              size={16}
+            />
+            <span>{notification.message}</span>
+          </div>
           <button
             type="button"
             onClick={() => setNotification(null)}
-            style={{ border: 0, background: "transparent", cursor: "pointer", fontWeight: 700 }}
+            style={{
+              border: 0,
+              background: "transparent",
+              cursor: "pointer",
+              fontWeight: 700,
+              color: "inherit",
+              fontSize: "16px",
+              lineHeight: 1,
+            }}
           >
             ×
           </button>

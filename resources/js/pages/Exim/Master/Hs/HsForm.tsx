@@ -356,11 +356,11 @@ export function HsForm({
         </div>
 
         {/* Form Action Buttons: Cancel and Save */}
-        <div className="hs-form-actions">
+        <div className="hs-form-actions" style={{ display: "flex", gap: "10px", marginTop: "16px" }}>
           <Button type="button" variant="ghost" onClick={onBack}>
             Cancel
           </Button>
-          <Button type="submit" variant="primary" icon="check">
+          <Button type="submit" variant="primary">
             Save
           </Button>
         </div>

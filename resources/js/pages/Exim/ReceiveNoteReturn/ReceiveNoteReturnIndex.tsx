@@ -155,12 +155,25 @@ export function ReceiveNoteReturnIndex({
   };
 
   const renderSortIndicator = (field: ReceiveNoteReturnSortField) => {
-    if (sortField !== field || sortDirection === "none") {
-      return <span className="rnr-sort-indicator text-muted">⇅</span>;
-    }
+    const isActive = sortField === field && sortDirection !== "none";
     return (
-      <span className="rnr-sort-indicator text-primary font-bold">
-        {sortDirection === "asc" ? "▲" : "▼"}
+      <span
+        style={{
+          marginLeft: "6px",
+          display: "inline-flex",
+          alignItems: "center",
+          color: isActive ? "var(--blue-600)" : "var(--muted-2)",
+        }}
+      >
+        {isActive ? (
+          sortDirection === "asc" ? (
+            <Icon name="arrowUp" size={12} />
+          ) : (
+            <Icon name="arrowDown" size={12} />
+          )
+        ) : (
+          <Icon name="arrowUpDown" size={12} />
+        )}
       </span>
     );
   };
@@ -253,23 +266,6 @@ export function ReceiveNoteReturnIndex({
 
   return (
     <div className="rnr-page">
-      {/* Top Header */}
-      <div className="rnr-page-header">
-        <h1 className="rnr-page-title">Receive Note (Sales Return)</h1>
-        <div className="rnr-header-actions">
-          <Button variant="primary" onClick={onAddNew}>
-            Add New
-          </Button>
-          <Button
-            variant="excel"
-            onClick={handleExportToExcel}
-            title="Export records to Excel (.xlsx)"
-          >
-            Export To Excel
-          </Button>
-        </div>
-      </div>
-
       {/* Export Notice */}
       {exportNotice && (
         <div className="rnr-alert rnr-alert--info">
@@ -362,8 +358,18 @@ export function ReceiveNoteReturnIndex({
             </select>
           </div>
 
-          {/* Settings / Gear button */}
-          <div className="rnr-filter-settings">
+          {/* Actions & Settings */}
+          <div className="rnr-filter-settings" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <Button variant="primary" onClick={onAddNew}>
+              Add New
+            </Button>
+            <Button
+              variant="excel"
+              onClick={handleExportToExcel}
+              title="Export records to Excel (.xlsx)"
+            >
+              Export To Excel
+            </Button>
             <button
               type="button"
               className="rnr-btn-settings"

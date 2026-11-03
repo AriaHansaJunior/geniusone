@@ -84,13 +84,95 @@
   gap: 10px;
 }
 
-/* Master Form Elements */
+/* Master Form Elements & Universal Form Classes */
+.brand-form-page,
+.category-form-page,
+.classification-form-page,
+.color-form-page,
+.department-form-page,
+.facility-form-page,
+.hs-form-page,
+.style-form-page,
+.unit-form-page,
+.wh-page,
+[class*="-form-page"],
+.master-form-page {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  animation: fadeIn 0.15s ease-in-out;
+}
+
+.brand-form-card,
+.category-form-card,
+.classification-form-card,
+.color-form-card,
+.department-form-card,
+.facility-form-card,
+.hs-form-card,
+.style-form-card,
+.unit-form-card,
+.wh-form-card,
+[class*="-form-card"],
+.master-form-card {
+  background: var(--glass-card-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-sm);
+  padding: 24px 28px;
+  max-width: 680px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.brand-form-header,
+.category-form-header,
+.classification-form-header,
+.color-form-header,
+.department-form-header,
+.facility-form-header,
+.hs-form-header,
+.style-form-header,
+.unit-form-header,
+[class*="-form-header"] {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.brand-form-group,
+.category-form-group,
+.classification-form-group,
+.color-form-group,
+.department-form-group,
+.facility-form-group,
+.hs-form-group,
+.style-form-group,
+.unit-form-group,
+.wh-form-group,
+[class*="-form-group"],
 .master-form-group {
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 6px;
 }
 
+.brand-form-label,
+.category-form-label,
+.classification-form-label,
+.color-form-label,
+.department-form-label,
+.facility-form-label,
+.hs-form-label,
+.style-form-label,
+.unit-form-label,
+.wh-form-label,
+[class*="-form-label"],
 .master-form-label {
   font-size: 11px;
   font-weight: 700;
@@ -102,17 +184,42 @@
   gap: 4px;
 }
 
-.master-required-star {
+.master-required-star,
+.required-mark,
+.required-asterisk,
+.wh-required {
   color: var(--red-600);
 }
 
+.brand-form-input,
+.category-form-input,
+.classification-form-input,
+.color-form-input,
+.department-form-input,
+.facility-form-input,
+.hs-form-input,
+.style-form-input,
+.unit-form-input,
+.wh-form-input,
+.brand-form-select,
+.category-form-select,
+.classification-form-select,
+.color-form-select,
+.department-form-select,
+.facility-form-select,
+.hs-form-select,
+.style-form-select,
+.unit-form-select,
+.wh-form-select,
+[class*="-form-input"],
+[class*="-form-select"],
 .master-form-input,
-.master-form-select,
-.master-form-textarea {
+.master-form-select {
   width: 100%;
+  height: 38px;
   border: 1px solid var(--line-strong);
   border-radius: var(--radius-sm);
-  padding: 8px 12px;
+  padding: 0 12px;
   font-size: 12px;
   color: var(--ink);
   background: #ffffff;
@@ -122,6 +229,37 @@
   box-sizing: border-box;
 }
 
+.brand-form-textarea,
+.category-form-textarea,
+.classification-form-textarea,
+.color-form-textarea,
+.department-form-textarea,
+.facility-form-textarea,
+.hs-form-textarea,
+.style-form-textarea,
+.unit-form-textarea,
+.wh-form-textarea,
+[class*="-form-textarea"],
+.master-form-textarea {
+  width: 100%;
+  height: auto;
+  min-height: 80px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  font-size: 12px;
+  color: var(--ink);
+  background: #ffffff;
+  outline: none;
+  font-family: inherit;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  box-sizing: border-box;
+  resize: vertical;
+}
+
+[class*="-form-input"]:focus,
+[class*="-form-select"]:focus,
+[class*="-form-textarea"]:focus,
 .master-form-input:focus,
 .master-form-select:focus,
 .master-form-textarea:focus {
@@ -129,23 +267,106 @@
   box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.18);
 }
 
+[class*="-form-input"].has-error,
+[class*="-form-select"].has-error,
+.wh-form-input--error,
 .master-form-input.has-error,
 .master-form-select.has-error {
   border-color: var(--red-600);
   box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.18);
 }
 
+[class*="-form-input"]:disabled,
 .master-form-input:disabled {
   background: var(--slate-100);
   color: var(--slate-500);
   cursor: not-allowed;
 }
 
+.brand-form-actions,
+.category-form-actions,
+.classification-form-actions,
+.color-form-actions,
+.department-form-actions,
+.facility-form-actions,
+.hs-form-actions,
+.style-form-actions,
+.unit-form-actions,
+.wh-form-actions,
+[class*="-form-actions"],
+.master-form-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.brand-form-error-msg,
+.category-form-error-msg,
+.classification-form-error-msg,
+.color-form-error-msg,
+.department-form-error-msg,
+.facility-form-error-msg,
+.hs-form-error-msg,
+.style-form-error-msg,
+.unit-form-error-msg,
+.wh-form-error,
+[class*="-form-error"],
 .master-error-msg {
   font-size: 11px;
   font-weight: 600;
   color: var(--red-600);
   margin-top: 2px;
+}
+
+/* Universal Alert Banners */
+[class$="-alert"] {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border-radius: var(--radius-sm);
+  margin-bottom: 16px;
+  font-size: 12.5px;
+  background: var(--blue-50);
+  border: 1px solid rgba(0, 113, 227, 0.2);
+  color: var(--blue-700);
+}
+
+[class*="-alert--warning"] {
+  background: #fffbeb !important;
+  border: 1px solid #fde68a !important;
+  color: #92400e !important;
+}
+
+[class*="-alert--success"] {
+  background: var(--green-50) !important;
+  border: 1px solid rgba(22, 163, 74, 0.25) !important;
+  color: var(--green-700) !important;
+}
+
+[class$="-alert__content"] {
+  flex: 1;
+}
+
+[class$="-alert__content"] p {
+  margin: 0;
+  font-weight: 500;
+}
+
+[class$="-alert-close"] {
+  background: none;
+  border: none;
+  font-size: 18px;
+  line-height: 1;
+  color: inherit;
+  cursor: pointer;
+  opacity: 0.6;
+  padding: 0 4px;
+}
+
+[class$="-alert-close"]:hover {
+  opacity: 1;
 }
 
 /* ==========================================================================

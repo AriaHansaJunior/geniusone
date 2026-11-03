@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { Button } from "../../../components/ui/Button";
 import { Icon } from "../../../components/ui/Icon";
 import type {
   WarehouseCoordinateRecord,
@@ -76,18 +77,14 @@ export function WarehouseCoordinateForm({
             {error && <span className="wh-form-error">{error}</span>}
           </div>
 
-          {/* Form Actions (Green Save & Red Cancel) */}
-          <div className="wh-form-actions">
-            <button type="submit" className="wh-btn-save">
-              <span>Save</span>
-            </button>
-            <button
-              type="button"
-              className="wh-btn-cancel"
-              onClick={onBack}
-            >
-              <span>Cancel</span>
-            </button>
+          {/* Form Actions */}
+          <div style={{ display: "flex", gap: "10px", marginTop: "16px" }}>
+            <Button type="button" variant="ghost" onClick={onBack}>
+              Cancel
+            </Button>
+            <Button type="submit" variant="primary">
+              Save
+            </Button>
           </div>
         </form>
       </div>
