@@ -154,6 +154,13 @@ Route::get('/procurement/job-number', fn () => view('app', ['page' => 'job-numbe
 Route::get('/procurement/purchase-master/job-number', fn () => view('app', ['page' => 'job-number']));
 Route::get('/exim/master/job-number', fn () => view('app', ['page' => 'job-number']));
 
+Route::get('/procurement/item', fn () => view('app', ['page' => 'item']))->name('procurement.item');
+Route::get('/procurement/purchase-master/item', fn () => view('app', ['page' => 'item']));
+Route::get('/procurement/master-item', fn () => view('app', ['page' => 'item']));
+Route::get('/master-item', fn () => view('app', ['page' => 'item']));
+Route::get('/master/item', fn () => view('app', ['page' => 'item']));
+Route::get('/item', fn () => view('app', ['page' => 'item']));
+
 // Procurement - Reports Routes
 Route::get('/procurement/pr-report', fn () => view('app', ['page' => 'pr-report']))->name('procurement.pr-report');
 Route::get('/procurement/reports/purchase-requisition-report', fn () => view('app', ['page' => 'pr-report']));

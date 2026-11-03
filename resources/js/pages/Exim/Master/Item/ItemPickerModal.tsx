@@ -337,7 +337,6 @@ export function ItemPickerModal({
             </span>
             <Button
               variant="primary"
-              icon="plus"
               disabled={selectedCodes.size === 0}
               onClick={handleConfirmAdd}
             >

@@ -257,7 +257,7 @@ export function AuthPermissionProvider({ children }: { children: React.ReactNode
       if (role === "procurement") {
         return [
           "supplier", "payment-term", "purchase-category", "delivery-terms",
-          "additional-costs", "pph", "rafaksi-type", "job-number",
+          "additional-costs", "pph", "rafaksi-type", "job-number", "item",
           "pr", "po", "report", "pr-report", "po-report"
         ].includes(itemId);
       }

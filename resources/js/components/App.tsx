@@ -688,7 +688,18 @@ function resolveViewStateFromPath(pathname: string, defaultPage: PageKey = "dash
   ) {
     return { type: "list", page: "satuan" };
   }
-  if (cleanPath === "/exim/item" || cleanPath === "/exim/master/item") return { type: "list", page: "item" };
+  if (
+    cleanPath === "/exim/item" ||
+    cleanPath === "/exim/master/item" ||
+    cleanPath === "/procurement/purchase-master/item" ||
+    cleanPath === "/procurement/master-item" ||
+    cleanPath === "/procurement/item" ||
+    cleanPath === "/master-item" ||
+    cleanPath === "/master/item" ||
+    cleanPath === "/item"
+  ) {
+    return { type: "list", page: "item" };
+  }
   if (cleanPath === "/exim/brand" || cleanPath === "/exim/master/brand") return { type: "list", page: "brand" };
   if (cleanPath === "/exim/classification" || cleanPath === "/exim/master/classification") return { type: "list", page: "classification" };
   if (cleanPath === "/exim/department" || cleanPath === "/exim/master/department") return { type: "list", page: "department" };
@@ -791,64 +802,64 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
     viewState.type === "dashboard"
       ? "dashboard"
       : viewState.type === "list"
-      ? viewState.page
-      : viewState.type === "pr-detail" || viewState.type === "pr-create"
-      ? "pr"
-      : viewState.type === "po-detail" || viewState.type === "po-create"
-      ? "po"
-      : viewState.type === "report-detail"
-      ? "report"
-      : viewState.type === "warehouse-detail" || viewState.type === "warehouse-create"
-      ? "warehouse"
-      : viewState.type === "supplier-create"
-      ? "supplier"
-      : viewState.type === "payment-term-create"
-      ? "payment-term"
-      : viewState.type === "purchase-category-create"
-      ? "purchase-category"
-      : viewState.type === "delivery-terms-create"
-      ? "delivery-terms"
-      : viewState.type === "additional-costs-create"
-      ? "additional-costs"
-      : viewState.type === "pph-create"
-      ? "pph"
-      : viewState.type === "unit-create" || viewState.type === "unit-edit"
-      ? "unit"
-      : viewState.type === "classification-create" || viewState.type === "classification-edit"
-      ? "classification"
-      : viewState.type === "department-create" || viewState.type === "department-edit"
-      ? "department"
-      : viewState.type === "brand-create" || viewState.type === "brand-edit"
-      ? "brand"
-      : viewState.type === "facility-create" || viewState.type === "facility-edit"
-      ? "facility"
-      : viewState.type === "hs-create" || viewState.type === "hs-edit"
-      ? "hs"
-      : viewState.type === "category-create" || viewState.type === "category-edit"
-      ? "category"
-      : viewState.type === "style-create" || viewState.type === "style-edit" || viewState.type === "style-import"
-      ? "style"
-      : viewState.type === "colour-create"
-      ? "colour"
-      : viewState.type === "receive-note-create" || viewState.type === "receive-note-detail"
-      ? "receive-note"
-      : viewState.type === "receive-note-return-create" || viewState.type === "receive-note-return-detail"
-      ? "receive-note-return"
-      : viewState.type === "document-history-detail"
-      ? "document-history"
-      : viewState.type === "warehouse-master-create" || viewState.type === "warehouse-coordinate" || viewState.type === "warehouse-coordinate-create"
-      ? "warehouse-master"
-      : viewState.type === "item-create" || viewState.type === "item-edit" || viewState.type === "item-qr"
-      ? "item"
-      : viewState.type === "wh-req-material-create" || viewState.type === "wh-req-material-detail"
-      ? "wh-req-material"
-      : viewState.type === "stock-notification-create" || viewState.type === "stock-notification-edit"
-      ? "stock-notification-master"
-      : viewState.type === "wh-type-of-request-create" || viewState.type === "wh-type-of-request-edit"
-      ? "wh-type-of-request"
-      : viewState.type === "wh-destination-location-create" || viewState.type === "wh-destination-location-edit"
-      ? "wh-destination-location"
-      : null;
+        ? viewState.page
+        : viewState.type === "pr-detail" || viewState.type === "pr-create"
+          ? "pr"
+          : viewState.type === "po-detail" || viewState.type === "po-create"
+            ? "po"
+            : viewState.type === "report-detail"
+              ? "report"
+              : viewState.type === "warehouse-detail" || viewState.type === "warehouse-create"
+                ? "warehouse"
+                : viewState.type === "supplier-create"
+                  ? "supplier"
+                  : viewState.type === "payment-term-create"
+                    ? "payment-term"
+                    : viewState.type === "purchase-category-create"
+                      ? "purchase-category"
+                      : viewState.type === "delivery-terms-create"
+                        ? "delivery-terms"
+                        : viewState.type === "additional-costs-create"
+                          ? "additional-costs"
+                          : viewState.type === "pph-create"
+                            ? "pph"
+                            : viewState.type === "unit-create" || viewState.type === "unit-edit"
+                              ? "unit"
+                              : viewState.type === "classification-create" || viewState.type === "classification-edit"
+                                ? "classification"
+                                : viewState.type === "department-create" || viewState.type === "department-edit"
+                                  ? "department"
+                                  : viewState.type === "brand-create" || viewState.type === "brand-edit"
+                                    ? "brand"
+                                    : viewState.type === "facility-create" || viewState.type === "facility-edit"
+                                      ? "facility"
+                                      : viewState.type === "hs-create" || viewState.type === "hs-edit"
+                                        ? "hs"
+                                        : viewState.type === "category-create" || viewState.type === "category-edit"
+                                          ? "category"
+                                          : viewState.type === "style-create" || viewState.type === "style-edit" || viewState.type === "style-import"
+                                            ? "style"
+                                            : viewState.type === "colour-create"
+                                              ? "colour"
+                                              : viewState.type === "receive-note-create" || viewState.type === "receive-note-detail"
+                                                ? "receive-note"
+                                                : viewState.type === "receive-note-return-create" || viewState.type === "receive-note-return-detail"
+                                                  ? "receive-note-return"
+                                                  : viewState.type === "document-history-detail"
+                                                    ? "document-history"
+                                                    : viewState.type === "warehouse-master-create" || viewState.type === "warehouse-coordinate" || viewState.type === "warehouse-coordinate-create"
+                                                      ? "warehouse-master"
+                                                      : viewState.type === "item-create" || viewState.type === "item-edit" || viewState.type === "item-qr"
+                                                        ? "item"
+                                                        : viewState.type === "wh-req-material-create" || viewState.type === "wh-req-material-detail"
+                                                          ? "wh-req-material"
+                                                          : viewState.type === "stock-notification-create" || viewState.type === "stock-notification-edit"
+                                                            ? "stock-notification-master"
+                                                            : viewState.type === "wh-type-of-request-create" || viewState.type === "wh-type-of-request-edit"
+                                                              ? "wh-type-of-request"
+                                                              : viewState.type === "wh-destination-location-create" || viewState.type === "wh-destination-location-edit"
+                                                                ? "wh-destination-location"
+                                                                : null;
 
   const isDetailPage = viewState.type !== "list" && viewState.type !== "dashboard";
   const hideDefaultHeader = isDetailPage;
@@ -3112,6 +3123,7 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
         {viewState.type === "pr-create" && (
           <PurchaseRequisitionCreate
             availableJobNumbers={jobNumberRecords.map((j) => j.jobNumber)}
+            availableItems={itemRecords}
             onBack={() => handleNavigateList("pr", "/procurement/transactions/purchase-requisition")}
             onSaveSuccess={() => handleNavigateList("pr", "/procurement/transactions/purchase-requisition")}
           />

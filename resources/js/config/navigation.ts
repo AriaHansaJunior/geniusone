@@ -59,6 +59,7 @@ export const navigationConfig: NavSection[] = [
           { id: "pph", label: "PPH", path: "/procurement/purchase-master/pph" },
           { id: "rafaksi-type", label: "Rafaksi Type", path: "/procurement/purchase-master/rafaksi-type" },
           { id: "job-number", label: "Job Number", path: "/procurement/purchase-master/job-number" },
+          { id: "item", label: "Master Item", path: "/procurement/purchase-master/item" },
         ],
       },
       {

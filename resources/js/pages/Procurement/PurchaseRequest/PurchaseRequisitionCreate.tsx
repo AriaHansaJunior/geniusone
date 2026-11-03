@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useMemo, useEffect } from "react";
 import { Button } from "../../../components/ui/Button";
 import { Icon } from "../../../components/ui/Icon";
 import { ConfirmDialog } from "../../../components/ui/ConfirmDialog";
@@ -25,13 +25,141 @@ interface PurchaseRequisitionCreateProps {
   onBack: () => void;
   onSaveSuccess?: (newPR: any) => void;
   availableJobNumbers?: string[];
+  availableItems?: ItemRecord[];
+}
+
+interface SearchableItemComboboxProps {
+  value: string;
+  hasError?: boolean;
+  availableItems: ItemRecord[];
+  onSelect: (item: ItemRecord) => void;
+  onTextChange: (text: string) => void;
+}
+
+function SearchableItemCombobox({
+  value,
+  hasError,
+  availableItems,
+  onSelect,
+  onTextChange,
+}: SearchableItemComboboxProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown on click outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  const filteredItems = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return availableItems.slice(0, 35);
+    return availableItems
+      .filter((it) => {
+        return (
+          it.itemName.toLowerCase().includes(query) ||
+          it.itemCode.toLowerCase().includes(query) ||
+          (it.kodeEksternal && it.kodeEksternal.toLowerCase().includes(query)) ||
+          (it.classification && it.classification.toLowerCase().includes(query)) ||
+          (it.category && it.category.toLowerCase().includes(query))
+        );
+      })
+      .slice(0, 35);
+  }, [availableItems, searchQuery]);
+
+  return (
+    <div className="searchable-item-cell" ref={containerRef}>
+      <div className="searchable-item-input-wrapper">
+        <input
+          type="text"
+          className={`searchable-item-input ${hasError ? "has-error" : ""}`}
+          placeholder="Select or search item..."
+          value={isOpen ? searchQuery : value}
+          onFocus={() => {
+            setSearchQuery(value);
+            setIsOpen(true);
+          }}
+          onChange={(e) => {
+            const val = e.target.value;
+            setSearchQuery(val);
+            onTextChange(val);
+            if (!isOpen) setIsOpen(true);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Escape") {
+              setIsOpen(false);
+            }
+          }}
+        />
+        <button
+          type="button"
+          className="searchable-item-toggle"
+          onClick={() => {
+            if (!isOpen) setSearchQuery(value);
+            setIsOpen((prev) => !prev);
+          }}
+          tabIndex={-1}
+          aria-label="Toggle items dropdown"
+        >
+          <Icon name="chevronDown" size={13} />
+        </button>
+      </div>
+
+      {isOpen && (
+        <div className="searchable-item-dropdown">
+          <div className="searchable-item-dropdown-header">
+            Master Items ({filteredItems.length} matching)
+          </div>
+          {filteredItems.length > 0 ? (
+            filteredItems.map((item) => (
+              <div
+                key={item.id || item.itemCode}
+                className={`searchable-item-option ${item.itemName === value ? "is-selected" : ""}`}
+                onClick={() => {
+                  onSelect(item);
+                  setIsOpen(false);
+                }}
+              >
+                <div className="searchable-item-option-name">
+                  <span>{item.itemName}</span>
+                  <span className="searchable-item-badge">{item.smallestUnitCode}</span>
+                </div>
+                <div className="searchable-item-option-meta">
+                  <span className="code-pill">{item.itemCode}</span>
+                  <span>{item.classification}</span>
+                  <span className="searchable-item-badge--stock">
+                    Stock: {(item.stock || 0).toFixed(2)}
+                  </span>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="searchable-item-empty">
+              No matching master items found.
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export function PurchaseRequisitionCreate({
   onBack,
   onSaveSuccess,
   availableJobNumbers,
+  availableItems,
 }: PurchaseRequisitionCreateProps) {
+  const masterItems = availableItems && availableItems.length > 0 ? availableItems : initialItemRecords;
   const today = new Date().toISOString().slice(0, 10);
   const defaultDue = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
 
@@ -79,7 +207,7 @@ export function PurchaseRequisitionCreate({
   const handleAddFromMasterPicker = (selectedMasterItems: ItemRecord[]) => {
     const newRows: PRItemRow[] = selectedMasterItems.map((masterItem) => ({
       id: `pr-item-${Date.now()}-${masterItem.id}`,
-      jobNumber: jobOptions[0] || "—",
+      jobNumber: "",
       itemCode: masterItem.itemCode,
       itemName: masterItem.itemName,
       unit: masterItem.smallestUnitName || masterItem.smallestUnitCode || "PCE",
@@ -111,6 +239,13 @@ export function PurchaseRequisitionCreate({
     if (file) {
       if (file.size > 2 * 1024 * 1024) {
         alert("Attachment exceeds maximum allowed size of 2MB.");
+        e.target.value = "";
+        return;
+      }
+      const ext = "." + file.name.split(".").pop()?.toLowerCase();
+      const validExtensions = [".pdf", ".doc", ".docx", ".xls", ".xlsx", ".jpg", ".jpeg", ".png"];
+      if (!validExtensions.includes(ext)) {
+        alert("Invalid file format. Allowed formats: PDF, DOC, XLS, JPG, PNG.");
         e.target.value = "";
         return;
       }
@@ -345,7 +480,7 @@ export function PurchaseRequisitionCreate({
             {/* 5. Attachment File */}
             <div className="master-form-group">
               <label htmlFor="prAttachment" className="master-form-label">
-                Attachment file <span style={{ textTransform: "none", fontSize: "10.5px", color: "var(--muted)", fontWeight: 400 }}>(Max: 2MB)</span>
+                Attachment file <span style={{ textTransform: "none", fontSize: "10.5px", color: "var(--muted)", fontWeight: 400 }}>(Max: 2MB, Format: PDF, DOC, XLS, JPG, PNG)</span>
               </label>
               <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                 <label
@@ -366,7 +501,7 @@ export function PurchaseRequisitionCreate({
                     id="prAttachment"
                     type="file"
                     style={{ display: "none" }}
-                    accept=".doc,.docx,.xls,.xlsx,.jpg,.png,.pdf"
+                    accept=".doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.pdf"
                     onChange={handleFileChange}
                   />
                 </label>
@@ -458,12 +593,15 @@ export function PurchaseRequisitionCreate({
                         {index + 1}
                       </td>
 
-                      {/* 2. Job Number */}
+                      {/* 2. Job Number (Non-selectable) */}
                       <td>
                         <select
-                          className="tx-input-cell"
-                          value={row.jobNumber}
-                          onChange={(e) => handleUpdateRow(row.id, "jobNumber", e.target.value)}
+                          className="tx-input-cell tx-input-cell--disabled"
+                          disabled
+                          value={row.jobNumber || ""}
+                          tabIndex={-1}
+                          aria-disabled="true"
+                          title="Job Number selection is disabled"
                         >
                           <option value="">Select Data . . .</option>
                           <option value="—">— None —</option>
@@ -475,14 +613,40 @@ export function PurchaseRequisitionCreate({
                         </select>
                       </td>
 
-                      {/* 3. Item Name */}
+                      {/* 3. Item Name (Searchable Combobox / Dropdown) */}
                       <td>
-                        <input
-                          type="text"
-                          className={`tx-input-cell ${formErrors[`item_${index}_name`] ? "has-error" : ""}`}
-                          placeholder="Item name..."
+                        <SearchableItemCombobox
                           value={row.itemName}
-                          onChange={(e) => handleUpdateRow(row.id, "itemName", e.target.value)}
+                          hasError={Boolean(formErrors[`item_${index}_name`])}
+                          availableItems={masterItems}
+                          onSelect={(selectedItem) => {
+                            handleUpdateRow(row.id, "itemCode", selectedItem.itemCode);
+                            handleUpdateRow(row.id, "itemName", selectedItem.itemName);
+                            handleUpdateRow(
+                              row.id,
+                              "unit",
+                              selectedItem.smallestUnitCode || selectedItem.smallestUnitName || "PCE"
+                            );
+                            handleUpdateRow(
+                              row.id,
+                              "currentStock",
+                              typeof selectedItem.stock === "number" ? selectedItem.stock : 0
+                            );
+                            handleUpdateRow(
+                              row.id,
+                              "facility",
+                              selectedItem.facility === "FASILITAS" ? "Fasilitas" : "Non Fasilitas"
+                            );
+                            if (formErrors[`item_${index}_name`]) {
+                              setFormErrors((prev) => ({ ...prev, [`item_${index}_name`]: "" }));
+                            }
+                          }}
+                          onTextChange={(text) => {
+                            handleUpdateRow(row.id, "itemName", text);
+                            if (formErrors[`item_${index}_name`]) {
+                              setFormErrors((prev) => ({ ...prev, [`item_${index}_name`]: "" }));
+                            }
+                          }}
                         />
                         {formErrors[`item_${index}_name`] && (
                           <span style={{ color: "var(--red-600)", fontSize: "10.5px", display: "block" }}>
@@ -626,7 +790,7 @@ export function PurchaseRequisitionCreate({
       {/* Item Picker Modal from Master Items */}
       <ItemPickerModal
         isOpen={isItemPickerOpen}
-        items={initialItemRecords}
+        items={masterItems}
         alreadySelectedCodes={items.map((i) => i.itemCode || "").filter(Boolean)}
         onAddItems={handleAddFromMasterPicker}
         onClose={() => setIsItemPickerOpen(false)}
