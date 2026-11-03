@@ -5,6 +5,7 @@ import { Button } from "../../../components/ui/Button";
 import { SearchField } from "../../../components/ui/SearchField";
 import { Pagination } from "../../../components/ui/Pagination";
 import { ApprovalStatusBadge } from "../../../components/approval/ApprovalStatusBadge";
+import { formatDisplayDate } from "../../../data/masterApi";
 import {
   initialReceiveNoteReturnRecords,
   customerList,
@@ -476,15 +477,15 @@ export function ReceiveNoteReturnIndex({
                           {rnr.rnNumber}
                         </div>
                         <div className="text-xs text-muted">
-                          RN Date: {rnr.rnDate}
+                          RN Date: {formatDisplayDate(rnr.rnDate)}
                         </div>
                       </td>
                       <td>
                         <div className="text-ink">
-                          {rnr.deliveryOrder || "null"}
+                          {rnr.deliveryOrder && rnr.deliveryOrder !== "null" ? rnr.deliveryOrder : "-"}
                         </div>
                         <div className="text-xs text-muted">
-                          Date : {rnr.doDate || "null"}
+                          Date: {formatDisplayDate(rnr.doDate)}
                         </div>
                       </td>
                       <td className="font-medium text-ink">{rnr.customer}</td>

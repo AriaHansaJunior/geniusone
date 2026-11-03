@@ -179,9 +179,18 @@ class AuthApiController extends Controller
 
     /**
      * List active users for assignment and administration.
+     * Restricted to authenticated SuperAdmin users.
      */
-    public function users(): JsonResponse
+    public function users(Request $request): JsonResponse
     {
+        $user = $request->user() ?: Auth::user();
+        if (! $user || ! $user->isSuperAdmin()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Unauthorized. SuperAdmin privileges required to view user directory.',
+            ], 403);
+        }
+
         $users = User::where('status', 1)
             ->with('roleModel')
             ->select('id', 'name', 'username', 'email', 'role', 'status')

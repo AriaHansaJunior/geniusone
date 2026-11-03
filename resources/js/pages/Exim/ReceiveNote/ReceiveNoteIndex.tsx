@@ -5,6 +5,7 @@ import { Button } from "../../../components/ui/Button";
 import { SearchField } from "../../../components/ui/SearchField";
 import { Pagination } from "../../../components/ui/Pagination";
 import { ApprovalStatusBadge } from "../../../components/approval/ApprovalStatusBadge";
+import { formatDisplayDate } from "../../../data/masterApi";
 import {
   initialReceiveNoteRecords,
   suppliersList,
@@ -456,11 +457,11 @@ export function ReceiveNoteIndex({
                           <ApprovalStatusBadge status={rn.status || "WAITING_APPROVE_1"} showIcon={false} />
                         </div>
                         <div className="text-xs text-muted">
-                          Arrival Date: {rn.arrivalDate}
+                          Arrival Date: {formatDisplayDate(rn.arrivalDate)}
                         </div>
                       </td>
                       <td className="font-medium text-ink">{rn.poNumber}</td>
-                      <td>{rn.date}</td>
+                      <td>{formatDisplayDate(rn.date)}</td>
                       <td className="font-medium">{rn.supplier}</td>
                       <td>
                         <div className="rn-facility-cell">

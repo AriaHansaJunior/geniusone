@@ -31,6 +31,21 @@ import type { DocumentHistoryRecord } from "../pages/Exim/DocumentHistory/docume
 import type { UnitReferenceRecord } from "../pages/Exim/Master/UnitReference/unit-reference-types";
 import type { RequestMaterialRecord } from "../pages/Warehouse/Request/RequestMaterial/request-material-types";
 
+export function formatDisplayDate(val?: string | null): string {
+  if (!val || val === "-" || val === "null") return "-";
+  try {
+    const d = new Date(val);
+    if (isNaN(d.getTime())) return val;
+    return d.toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+  } catch {
+    return val;
+  }
+}
+
 // ============================================================================
 // 1. PROCUREMENT MASTER FETCH & MUTATION HELPERS
 // ============================================================================
@@ -976,15 +991,18 @@ export async function fetchMasterReceiveNoteReturns(): Promise<ReceiveNoteReturn
   return res.data.map((item: any, idx: number): ReceiveNoteReturnRecord => {
     const itemsList = Array.isArray(item.items) ? item.items : [];
     const grandTotal = Number(item.amount) || itemsList.reduce((sum: number, it: any) => sum + (Number(it.subtotal) || 0), 0);
-    const dateStr = item.rn_date || (item.created_at ? item.created_at.split("T")[0] : "");
+    const rawRnDate = item.rn_date || (item.created_at ? item.created_at.split("T")[0] : "");
+    const rawDoDate = item.do_date || "";
+    const formattedRnDate = formatDisplayDate(rawRnDate);
+    const formattedDoDate = formatDisplayDate(rawDoDate);
 
     return {
       id: String(item.id),
       no: idx + 1,
       rnNumber: item.rn_number || "",
-      rnDate: dateStr,
-      deliveryOrder: item.delivery_order || null,
-      doDate: item.do_date || "-",
+      rnDate: formattedRnDate !== "-" ? formattedRnDate : rawRnDate,
+      deliveryOrder: item.delivery_order && item.delivery_order !== "null" ? item.delivery_order : null,
+      doDate: formattedDoDate !== "-" ? formattedDoDate : "-",
       customer: item.customer || "-",
       facility: item.facility || "FASILITAS",
       bcCode: item.bc_code || "BC 4.0",
@@ -994,18 +1012,18 @@ export async function fetchMasterReceiveNoteReturns(): Promise<ReceiveNoteReturn
       amountFormatted: `IDR ${grandTotal.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
       description: item.notes || "-",
       warehouseTransaction: `0619/WHIN-IMLI/T/I/${new Date().getFullYear()}`,
-      warehouseReceiveDate: dateStr,
+      warehouseReceiveDate: formattedRnDate !== "-" ? formattedRnDate : "-",
       approvalStatus: item.approval_status || "Draft",
       userCreated: item.created_by_user?.name || "System",
-      createdAtTimestamp: `${dateStr} 10:00`,
-      arrivalDate: dateStr,
+      createdAtTimestamp: `${formattedRnDate !== "-" ? formattedRnDate : rawRnDate} 10:00`,
+      arrivalDate: formattedRnDate !== "-" ? formattedRnDate : "-",
       typeOfReturn: item.type_of_return || "Sales Delivery",
       salesDeliveryNumber: item.sales_delivery_number || "-",
       salesDeliveryLine: "01",
       vehicleType: item.vehicle_type || "-",
       licensePlate: item.license_plate || "-",
-      createdAt: `${dateStr} by ${item.created_by_user?.name || "System"}`,
-      lastUpdatedAt: `${dateStr} by ${item.created_by_user?.name || "System"}`,
+      createdAt: `${formattedRnDate !== "-" ? formattedRnDate : rawRnDate} by ${item.created_by_user?.name || "System"}`,
+      lastUpdatedAt: `${formattedRnDate !== "-" ? formattedRnDate : rawRnDate} by ${item.created_by_user?.name || "System"}`,
       releasedAt: "-",
       approvedAt: "-",
       items: itemsList.map((it: any, i: number) => ({

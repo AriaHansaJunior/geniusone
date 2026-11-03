@@ -21,7 +21,7 @@ export function Header({
   onLogoutRequest,
   onToggleMobileSidebar,
 }: HeaderProps) {
-  const { currentUser, isSuperAdmin, allUsers, switchUser } = useAuthPermission();
+  const { currentUser, isSuperAdmin } = useAuthPermission();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
 

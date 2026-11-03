@@ -125,8 +125,7 @@ export function AuthPermissionProvider({ children }: { children: React.ReactNode
 
   useEffect(() => {
     fetchCurrentUser();
-    fetchUsers();
-  }, [fetchCurrentUser, fetchUsers]);
+  }, [fetchCurrentUser]);
 
   const loginUser = useCallback((user: UserAccount, token?: string) => {
     const formattedUser: UserAccount = {

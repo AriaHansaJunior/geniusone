@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { AppLayout } from "./layout/AppLayout";
 import {
   Dashboard,
@@ -990,96 +990,115 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
   const [destinationLocationRecords, setDestinationLocationRecords] = useState<DestinationLocationRecord[]>(initialDestinationLocationRecords);
   const [editingDestinationLocation, setEditingDestinationLocation] = useState<DestinationLocationRecord | null>(null);
 
-  // Live database synchronization on mount
+  const loadedPagesRef = useRef<Set<string>>(new Set());
+
+  // On-demand route-based database synchronization
   useEffect(() => {
     let isMounted = true;
+    const page = viewState.type === "list" ? viewState.page : undefined;
+    const type = viewState.type;
 
-    fetchMasterSuppliers().then((data) => {
-      if (isMounted && data && data.length > 0) setSupplierRecords(data);
-    });
-    fetchMasterPaymentTerms().then((data) => {
-      if (isMounted && data && data.length > 0) setPaymentTermRecords(data);
-    });
-    fetchMasterPurchaseCategories().then((data) => {
-      if (isMounted && data && data.length > 0) setPurchaseCategoryRecords(data);
-    });
-    fetchMasterDeliveryTerms().then((data) => {
-      if (isMounted && data && data.length > 0) setDeliveryTermRecords(data);
-    });
-    fetchMasterAdditionalCosts().then((data) => {
-      if (isMounted && data && data.length > 0) setAdditionalCostRecords(data);
-    });
-    fetchMasterPph().then((data) => {
-      if (isMounted && data && data.length > 0) setPphRecords(data);
-    });
-    fetchMasterUnits().then((data) => {
-      if (isMounted && data && data.length > 0) setUnitRecords(data);
-    });
-    fetchMasterBrands().then((data) => {
-      if (isMounted && data && data.length > 0) setBrandRecords(data);
-    });
-    fetchMasterClassifications().then((data) => {
-      if (isMounted && data && data.length > 0) setClassificationRecords(data);
-    });
-    fetchMasterDepartments().then((data) => {
-      if (isMounted && data && data.length > 0) setDepartmentRecords(data);
-    });
-    fetchMasterFacilities().then((data) => {
-      if (isMounted && data && data.length > 0) setFacilityRecords(data);
-    });
-    fetchMasterHsCodes().then((data) => {
-      if (isMounted && data && data.length > 0) setHsRecords(data);
-    });
-    fetchMasterCategories().then((data) => {
-      if (isMounted && data && data.length > 0) setCategoryRecords(data);
-    });
-    fetchMasterStyles().then((data) => {
-      if (isMounted && data && data.length > 0) setStyleRecords(data);
-    });
-    fetchMasterColours().then((data) => {
-      if (isMounted && data && data.length > 0) setColorRecords(data);
-    });
-    fetchMasterItems().then((data) => {
-      if (isMounted && data && data.length > 0) setItemRecords(data);
-    });
-    fetchMasterWarehouses().then((data) => {
-      if (isMounted && data && data.length > 0) setWarehouseMasterRecords(data);
-    });
-    fetchMasterCountries().then((data) => {
-      if (isMounted && data && data.length > 0) setCountryRecords(data);
-    });
-    fetchMasterRafaksiTypes().then((data) => {
-      if (isMounted && data && data.length > 0) setRafaksiTypeRecords(data);
-    });
-    fetchMasterCurrencies().then((data) => {
-      if (isMounted && data && data.length > 0) setCurrencyRecords(data);
-    });
-    fetchMasterAccounts().then((data) => {
-      if (isMounted && data && data.length > 0) setAccountRecords(data);
-    });
-    fetchMasterJobNumbers().then((data) => {
-      if (isMounted && data && data.length > 0) setJobNumberRecords(data);
-    });
-    fetchMasterReceiveNotes().then((data) => {
-      if (isMounted && data && data.length > 0) setReceiveNoteRecords(data);
-    });
-    fetchMasterReceiveNoteReturns().then((data) => {
-      if (isMounted && data && data.length > 0) setReceiveNoteReturnRecords(data);
-    });
-    fetchMasterDocumentHistories().then((data) => {
-      if (isMounted && data && data.length > 0) setDocumentHistoryRecords(data);
-    });
-    fetchMasterUnitReferences().then((data) => {
-      if (isMounted && data && data.length > 0) setUnitReferenceRecords(data);
-    });
-    fetchRequestMaterials().then((data) => {
-      if (isMounted && data && data.length > 0) setRequestMaterialRecords(data);
-    });
+    const loadOnce = (key: string, fetcher: () => Promise<any[] | null>, setter: (data: any[]) => void) => {
+      if (loadedPagesRef.current.has(key)) return;
+      loadedPagesRef.current.add(key);
+      fetcher().then((data) => {
+        if (isMounted && data && data.length > 0) {
+          setter(data);
+        }
+      });
+    };
+
+    if (page === "supplier" || type === "supplier-create") {
+      loadOnce("suppliers", fetchMasterSuppliers, setSupplierRecords);
+    }
+    if (page === "payment-term" || type === "payment-term-create") {
+      loadOnce("payment-terms", fetchMasterPaymentTerms, setPaymentTermRecords);
+    }
+    if (page === "purchase-category" || type === "purchase-category-create") {
+      loadOnce("purchase-categories", fetchMasterPurchaseCategories, setPurchaseCategoryRecords);
+    }
+    if (page === "delivery-terms" || type === "delivery-terms-create") {
+      loadOnce("delivery-terms", fetchMasterDeliveryTerms, setDeliveryTermRecords);
+    }
+    if (page === "additional-costs" || type === "additional-costs-create") {
+      loadOnce("additional-costs", fetchMasterAdditionalCosts, setAdditionalCostRecords);
+    }
+    if (page === "pph" || type === "pph-create") {
+      loadOnce("pph", fetchMasterPph, setPphRecords);
+    }
+    if (page === "unit" || type === "unit-create" || type === "unit-edit") {
+      loadOnce("units", fetchMasterUnits, setUnitRecords);
+    }
+    if (page === "satuan" || page === "unit-reference") {
+      loadOnce("unit-references", fetchMasterUnitReferences, setUnitReferenceRecords);
+    }
+    if (page === "classification" || type === "classification-create" || type === "classification-edit") {
+      loadOnce("classifications", fetchMasterClassifications, setClassificationRecords);
+    }
+    if (page === "department" || type === "department-create" || type === "department-edit") {
+      loadOnce("departments", fetchMasterDepartments, setDepartmentRecords);
+    }
+    if (page === "brand" || type === "brand-create" || type === "brand-edit") {
+      loadOnce("brands", fetchMasterBrands, setBrandRecords);
+    }
+    if (page === "facility" || type === "facility-create" || type === "facility-edit") {
+      loadOnce("facilities", fetchMasterFacilities, setFacilityRecords);
+    }
+    if (page === "hs" || type === "hs-create" || type === "hs-edit") {
+      loadOnce("hs-codes", fetchMasterHsCodes, setHsRecords);
+    }
+    if (page === "category" || type === "category-create" || type === "category-edit") {
+      loadOnce("categories", fetchMasterCategories, setCategoryRecords);
+    }
+    if (page === "style" || type === "style-create" || type === "style-edit") {
+      loadOnce("styles", fetchMasterStyles, setStyleRecords);
+    }
+    if (page === "colour" || type === "colour-create") {
+      loadOnce("colours", fetchMasterColours, setColorRecords);
+    }
+    if (page === "item" || type === "item-create" || type === "item-edit") {
+      loadOnce("items", fetchMasterItems, setItemRecords);
+    }
+    if (
+      page === "warehouse-master" ||
+      type === "warehouse-coordinate" ||
+      type === "warehouse-master-create" ||
+      type === "warehouse-coordinate-create"
+    ) {
+      loadOnce("warehouses", fetchMasterWarehouses, setWarehouseMasterRecords);
+    }
+    if (page === "country") {
+      loadOnce("countries", fetchMasterCountries, setCountryRecords);
+    }
+    if (page === "rafaksi-type") {
+      loadOnce("rafaksi-types", fetchMasterRafaksiTypes, setRafaksiTypeRecords);
+    }
+    if (page === "currency") {
+      loadOnce("currencies", fetchMasterCurrencies, setCurrencyRecords);
+    }
+    if (page === "account") {
+      loadOnce("accounts", fetchMasterAccounts, setAccountRecords);
+    }
+    if (page === "job-number" || type === "pr-create") {
+      loadOnce("job-numbers", fetchMasterJobNumbers, setJobNumberRecords);
+    }
+    if (page === "receive-note" || type === "receive-note-detail") {
+      loadOnce("receive-notes", fetchMasterReceiveNotes, setReceiveNoteRecords);
+    }
+    if (page === "receive-note-return" || type === "receive-note-return-detail") {
+      loadOnce("receive-note-returns", fetchMasterReceiveNoteReturns, setReceiveNoteReturnRecords);
+    }
+    if (page === "document-history" || type === "document-history-detail") {
+      loadOnce("document-histories", fetchMasterDocumentHistories, setDocumentHistoryRecords);
+    }
+    if (page === "wh-req-material" || type === "wh-req-material-detail" || type === "wh-req-material-create") {
+      loadOnce("request-materials", fetchRequestMaterials, setRequestMaterialRecords);
+    }
 
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [viewState]);
 
   const handleTogglePphHide = useCallback((id: string) => {
     setPphRecords((prev) => {
