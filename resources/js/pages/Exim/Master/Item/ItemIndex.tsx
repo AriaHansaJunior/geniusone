@@ -27,6 +27,13 @@ interface ItemIndexProps {
 
 type SortDirection = "none" | "asc" | "desc";
 
+// Helper for defensive string extraction
+const safeStr = (val: any, fallback = "-"): string => {
+  if (val === null || val === undefined || val === "") return fallback;
+  if (typeof val === "object") return val.name || val.code || fallback;
+  return String(val);
+};
+
 export function ItemIndex({
   records = initialItemRecords,
   onAddNew,
@@ -78,11 +85,11 @@ export function ItemIndex({
       }
       if (search.trim()) {
         const q = search.toLowerCase().trim();
-        const matchCode = item.itemCode.toLowerCase().includes(q);
-        const matchName = item.itemName.toLowerCase().includes(q);
-        const matchExt = (item.kodeEksternal || "").toLowerCase().includes(q);
-        const matchBrand = (item.brand || "").toLowerCase().includes(q);
-        const matchHs = (item.hsCode || "").toLowerCase().includes(q);
+        const matchCode = safeStr(item.itemCode, "").toLowerCase().includes(q);
+        const matchName = safeStr(item.itemName, "").toLowerCase().includes(q);
+        const matchExt = safeStr(item.kodeEksternal, "").toLowerCase().includes(q);
+        const matchBrand = safeStr(item.brand, "").toLowerCase().includes(q);
+        const matchHs = safeStr(item.hsCode, "").toLowerCase().includes(q);
         if (!matchCode && !matchName && !matchExt && !matchBrand && !matchHs) {
           return false;
         }
@@ -611,24 +618,24 @@ export function ItemIndex({
                       )}
 
                       {visibleMap.classification && (
-                        <td>{item.classification}</td>
+                        <td>{safeStr(item.classification)}</td>
                       )}
 
                       {visibleMap.category && (
-                        <td>{item.category || "-"}</td>
+                        <td>{safeStr(item.category)}</td>
                       )}
 
                       {visibleMap.hsCode && (
                         <td style={{ fontFamily: "var(--font-mono, monospace)" }}>
-                          {item.hsCode || "-"}
+                          {safeStr(item.hsCode)}
                         </td>
                       )}
 
                       {visibleMap.smallestUnit && (
                         <td>
                           <div className="item-unit-multiline">
-                            <strong>{item.smallestUnitCode}</strong>
-                            <span>{item.smallestUnitName}</span>
+                            <strong>{safeStr(item.smallestUnitCode, "PCE")}</strong>
+                            <span>{safeStr(item.smallestUnitName, "Pieces")}</span>
                           </div>
                         </td>
                       )}
@@ -636,8 +643,8 @@ export function ItemIndex({
                       {visibleMap.greatestUnit && (
                         <td>
                           <div className="item-unit-multiline">
-                            <strong>{item.greatestUnitCode}</strong>
-                            <span>{item.greatestUnitName}</span>
+                            <strong>{safeStr(item.greatestUnitCode, "PCE")}</strong>
+                            <span>{safeStr(item.greatestUnitName, "Pieces")}</span>
                           </div>
                         </td>
                       )}
@@ -645,31 +652,31 @@ export function ItemIndex({
                       {visibleMap.facility && (
                         <td>
                           <span className="item-facility-badge">
-                            {item.facility}
+                            {safeStr(item.facility, "FASILITAS")}
                           </span>
                         </td>
                       )}
 
                       {visibleMap.groupScrap && (
-                        <td>{item.groupScrap || "-"}</td>
+                        <td>{safeStr(item.groupScrap)}</td>
                       )}
 
                       {visibleMap.specification && (
                         <td style={{ whiteSpace: "normal", maxWidth: "200px" }}>
-                          {item.specification || "-"}
+                          {safeStr(item.specification)}
                         </td>
                       )}
 
-                      {visibleMap.origin && <td>{item.origin || "-"}</td>}
+                      {visibleMap.origin && <td>{safeStr(item.origin)}</td>}
 
-                      {visibleMap.colour && <td>{item.colour || "-"}</td>}
+                      {visibleMap.colour && <td>{safeStr(item.colour)}</td>}
 
-                      {visibleMap.brand && <td>{item.brand}</td>}
+                      {visibleMap.brand && <td>{safeStr(item.brand)}</td>}
 
-                      {visibleMap.style && <td>{item.style}</td>}
+                      {visibleMap.style && <td>{safeStr(item.style)}</td>}
 
                       {visibleMap.customReport && (
-                        <td>{item.customReport || "-"}</td>
+                        <td>{safeStr(item.customReport)}</td>
                       )}
 
                       {visibleMap.traceByLot && (

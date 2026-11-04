@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import * as XLSX from "xlsx";
 import { Icon } from "../../../components/ui/Icon";
 import { Button } from "../../../components/ui/Button";
 import { Badge } from "../../../components/ui/Badge";
@@ -60,6 +61,84 @@ export function PurchaseRequisitionDetail({
 
   const isApproved = approvalState.status === "APPROVED";
 
+  const handleExportDetailXLSX = () => {
+    const wsData = [
+      ["PURCHASE REQUISITION SPECIFICATION", ""],
+      ["Document Number", docNumber],
+      ["Status", approvalState.status.replace(/_/g, " ")],
+      ["Requested By", createdBy],
+      ["Department", dept],
+      ["Requisition Date", reqDate],
+      ["Target Due Date", dueDate],
+      ["Total Items / Quantity", totalQty],
+      ["Remark / Purpose", remark],
+      [],
+      ["REQUESTED MATERIAL ITEMS"],
+      ["No", "Material Item Code", "Material Item Name", "Facility Type", "Quantity", "Unit", "Due Date", "Job Number", "Department", "Purpose / Remark"],
+      [
+        1,
+        "80.500.003.200",
+        "Safety Body Harness",
+        "NON FASILITAS",
+        15.0000,
+        "PCE",
+        dueDate,
+        "-",
+        `${dept} (Sec 2)`,
+        "U/APD Kry MTC dan Furnace"
+      ],
+      [],
+      ["APPROVAL WORKFLOW AUDIT TRAIL"],
+      ["Stage", "Approver / Role", "Decision", "Timestamp"],
+      ["Stage 1 (Department Lead)", "Arsyeila (HSE Department)", approvalState.approved1By ? "Approved" : "Pending", approvalState.approved1At || reqDate],
+      ["Stage 2 (Director / Final)", "Directorate Executive", approvalState.status === "APPROVED" ? "Approved" : "Pending", approvalState.approved2At || "-"]
+    ];
+
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+    ws["!cols"] = [
+      { wch: 8 },
+      { wch: 25 },
+      { wch: 30 },
+      { wch: 20 },
+      { wch: 14 },
+      { wch: 10 },
+      { wch: 15 },
+      { wch: 15 },
+      { wch: 22 },
+      { wch: 35 },
+    ];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "PR Detail");
+    const safeDoc = docNumber.replace(/[\/\\?%*:|"<>]/g, "_");
+    XLSX.writeFile(wb, `PR_${safeDoc}.xlsx`);
+  };
+
+  const handleDownloadAttachment = () => {
+    const content = `GENIUSONE TECHNICAL SPECIFICATION ATTACHMENT
+Document Reference: ${docNumber}
+Department: ${dept}
+Target Due Date: ${dueDate}
+Requested By: ${createdBy}
+Attachment Name: UGT-26-004_safety_specs.pdf
+
+SPECIFICATION DETAILS:
+- Item: Safety Body Harness (Code: 80.500.003.200)
+- Quantity: ${totalQty}
+- Mandatory Compliance: EN 361 / ANSI Z359.1 standard for furnace & smelting maintenance operators.
+- Purpose: Mandatory safety harness for elevated maintenance on Line 2 & furnace operations.
+- Verification: Approved under standard HSE consumable quota.
+`;
+    const blob = new Blob([content], { type: "application/pdf;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "UGT-26-004_safety_specs.pdf";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="full-page-detail">
       {/* Detail Navigation & Action Bar */}
@@ -80,10 +159,10 @@ export function PurchaseRequisitionDetail({
         <div className="detail-top-bar__right">
           <ApprovalStatusBadge status={approvalState.status} />
           <Badge tone="purple">{dept}</Badge>
-          <Button variant="secondary" icon="print">
+          <Button variant="secondary" icon="print" onClick={() => window.print()}>
             Print PDF
           </Button>
-          <Button variant="excel">Export XLSX</Button>
+          <Button variant="excel" onClick={handleExportDetailXLSX}>Export XLSX</Button>
         </div>
       </div>
 
@@ -106,7 +185,7 @@ export function PurchaseRequisitionDetail({
               <Icon name="lock" size={13} style={{ marginRight: "4px" }} /> Document Locked
             </Badge>
           ) : null}
-          <Button variant="secondary" icon="file">
+          <Button variant="secondary" icon="file" onClick={handleDownloadAttachment}>
             Download Attachments
           </Button>
         </div>
@@ -151,7 +230,7 @@ export function PurchaseRequisitionDetail({
 
         <div className="detail-kpi-card">
           <span>AUTHORIZATION STAGE</span>
-          <strong>{status}</strong>
+          <strong>{approvalState.status.replace(/_/g, " ")}</strong>
           <small>Verified by Section Head: Arsyeila</small>
         </div>
       </div>
@@ -322,7 +401,12 @@ export function PurchaseRequisitionDetail({
                     <small style={{ display: "block", color: "var(--muted)", fontSize: "10.5px" }}>1.4 MB · Uploaded by Arsyeila</small>
                   </div>
                 </div>
-                <Button variant="ghost" icon="download" style={{ padding: "6px 12px", fontSize: "11px" }}>
+                <Button
+                  variant="ghost"
+                  icon="download"
+                  style={{ padding: "6px 12px", fontSize: "11px" }}
+                  onClick={handleDownloadAttachment}
+                >
                   Download
                 </Button>
               </div>

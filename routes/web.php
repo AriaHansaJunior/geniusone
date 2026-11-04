@@ -351,6 +351,10 @@ Route::get('/admin/user-permissions', fn () => view('app', ['page' => 'user-perm
 Route::get('/admin/users', fn () => view('app', ['page' => 'user-permission-admin']))->name('admin.users');
 Route::get('/admin/permissions', fn () => view('app', ['page' => 'user-permission-admin']))->name('admin.permissions');
 Route::get('/user-permission-admin', fn () => view('app', ['page' => 'user-permission-admin']));
+Route::get('/admin/audit-logs', fn () => view('app', ['page' => 'audit-log-admin']))->name('admin.audit-logs');
+Route::get('/admin/audit-log', fn () => view('app', ['page' => 'audit-log-admin']));
+Route::get('/admin/audit', fn () => view('app', ['page' => 'audit-log-admin']));
+Route::get('/audit-log-admin', fn () => view('app', ['page' => 'audit-log-admin']));
 
 // Fallback Route for Unknown URLs (Requirement 5.3)
 Route::fallback(function () {

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import * as XLSX from "xlsx";
 import { Button } from "../../../components/ui/Button";
 import { SummaryCard } from "../../../components/ui/SummaryCard";
 import { SearchField } from "../../../components/ui/SearchField";
@@ -18,6 +19,12 @@ export function Warehouse({ onDetail, onCreate }: WarehouseProps) {
   const config = pageConfigs.warehouse;
   const [stats, setStats] = useState(config.stats);
   const [rows, setRows] = useState(config.rows);
+  const [whFilters, setWhFilters] = useState<Record<string, any>>({
+    dateRange: "all",
+    docType: "all",
+    bpbType: "all",
+    approval: "all",
+  });
 
   useEffect(() => {
     let isMounted = true;
@@ -33,12 +40,87 @@ export function Warehouse({ onDetail, onCreate }: WarehouseProps) {
   }, []);
 
   const filtered = useMemo(() => {
-    if (!search.trim()) return rows;
-    const q = search.toLowerCase();
-    return rows.filter((r) =>
-      (r._search || "").toLowerCase().includes(q)
-    );
-  }, [rows, search]);
+    return rows.filter((r) => {
+      if (search.trim()) {
+        const q = search.toLowerCase();
+        if (!(r._search || "").toLowerCase().includes(q)) return false;
+      }
+      if (whFilters.docType && whFilters.docType !== "all") {
+        const dt = String(r._rawDocType || r.docType || "").toLowerCase();
+        if (!dt.includes(whFilters.docType.toLowerCase())) return false;
+      }
+      if (whFilters.bpbType && whFilters.bpbType !== "all") {
+        const bt = String(r._rawBpbType || r.bpbType || "").toLowerCase();
+        if (!bt.includes(whFilters.bpbType.toLowerCase())) return false;
+      }
+      if (whFilters.approval && whFilters.approval !== "all") {
+        const ap = String(r._rawApproval || r.approval || "").toLowerCase();
+        if (!ap.includes(whFilters.approval.toLowerCase())) return false;
+      }
+      return true;
+    });
+  }, [rows, search, whFilters]);
+
+  const handleExportXLSX = () => {
+    if (filtered.length === 0) {
+      alert("No receive material records to export.");
+      return;
+    }
+    const headers = [
+      "No",
+      "RN Number",
+      "Delivery Order",
+      "BPB Type",
+      "Supplier",
+      "Document Type",
+      "Status Facility",
+      "Approval",
+      "Created By",
+    ];
+
+    const dataRows = filtered.map((r, idx) => [
+      idx + 1,
+      typeof r._rawRn === "string" ? r._rawRn : (typeof r.rnNumber === "string" ? r.rnNumber : ""),
+      typeof r._rawDo === "string" ? r._rawDo : (typeof r.deliveryOrder === "string" ? r.deliveryOrder : ""),
+      typeof r._rawBpbType === "string" ? r._rawBpbType : (typeof r.bpbType === "string" ? r.bpbType : ""),
+      typeof r._rawSupplier === "string" ? r._rawSupplier : (typeof r.supplier === "string" ? r.supplier : ""),
+      typeof r._rawDocType === "string" ? r._rawDocType : (typeof r.docType === "string" ? r.docType : ""),
+      typeof r._rawFacility === "string" ? r._rawFacility : "Non Fasilitas",
+      typeof r._rawApproval === "string" ? r._rawApproval : "Approved",
+      typeof r._rawCreatedBy === "string" ? r._rawCreatedBy : (typeof r.createdBy === "string" ? r.createdBy : ""),
+    ]);
+
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...dataRows]);
+    ws["!cols"] = [
+      { wch: 6 },
+      { wch: 22 },
+      { wch: 20 },
+      { wch: 18 },
+      { wch: 28 },
+      { wch: 18 },
+      { wch: 18 },
+      { wch: 18 },
+      { wch: 22 },
+    ];
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Receive Material BPB");
+    XLSX.writeFile(wb, `Receive_Material_BPB_${new Date().toISOString().slice(0, 10)}.xlsx`);
+  };
+
+  const handleResetFilters = () => {
+    setSearch("");
+    setWhFilters({
+      dateRange: "all",
+      docType: "all",
+      bpbType: "all",
+      approval: "all",
+    });
+  };
+
+  const handleApplyFilters = () => {
+    // Triggers search evaluation
+  };
 
   return (
     <>
@@ -62,19 +144,23 @@ export function Warehouse({ onDetail, onCreate }: WarehouseProps) {
             <strong>Filter documents</strong>
             <span>Refine the records shown in the table</span>
           </div>
-          <Button variant="ghost" onClick={() => setSearch("")}>
+          <Button variant="ghost" onClick={handleResetFilters}>
             Reset filters
           </Button>
         </div>
 
-        <FilterPanel page="warehouse" />
+        <FilterPanel
+          page="warehouse"
+          filters={whFilters}
+          onFilterChange={(k, v) => setWhFilters((prev) => ({ ...prev, [k]: v }))}
+        />
 
         <div className="filter-actions">
           <SearchField value={search} onChange={setSearch} />
           <Button variant="secondary" icon="filter">
             More filters
           </Button>
-          <Button>Apply filters</Button>
+          <Button onClick={handleApplyFilters}>Apply filters</Button>
         </div>
       </section>
 
@@ -86,7 +172,7 @@ export function Warehouse({ onDetail, onCreate }: WarehouseProps) {
             <span>{filtered.length} records shown</span>
           </div>
           <div className="button-row">
-            <Button variant="excel">
+            <Button variant="excel" onClick={handleExportXLSX}>
               Export XLSX
             </Button>
             <Button onClick={onCreate}>

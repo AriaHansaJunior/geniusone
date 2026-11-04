@@ -1,4 +1,5 @@
 import React, { useState, useRef, useMemo, useEffect } from "react";
+import * as XLSX from "xlsx";
 import { Button } from "../../../components/ui/Button";
 import { Icon } from "../../../components/ui/Icon";
 import { ConfirmDialog } from "../../../components/ui/ConfirmDialog";
@@ -176,16 +177,210 @@ export function PurchaseRequisitionCreate({
 
   // UI Dialog States
   const [isItemPickerOpen, setIsItemPickerOpen] = useState(false);
+  const [isUploadDropdownOpen, setIsUploadDropdownOpen] = useState(false);
+  const uploadDropdownRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [showSaveConfirm, setShowSaveConfirm] = useState(false);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [notification, setNotification] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
+  // Close upload dropdown on click outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (uploadDropdownRef.current && !uploadDropdownRef.current.contains(e.target as Node)) {
+        setIsUploadDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   // Available job numbers list
   const jobOptions = availableJobNumbers && availableJobNumbers.length > 0
     ? availableJobNumbers
     : initialJobNumberRecords.map((j) => j.jobNumber);
+
+  // Download Excel Template for PR Items
+  const handleDownloadExcelTemplate = () => {
+    setIsUploadDropdownOpen(false);
+    const headers = [
+      "No",
+      "Job Number",
+      "Item Code",
+      "Item Name",
+      "Unit",
+      "Quantity",
+      "Due Date",
+      "Fasilitas / Non Fasilitas",
+      "Remark",
+    ];
+
+    const sampleRows = [
+      [
+        1,
+        jobOptions[0] || "0112/JOB-IMLI/2026",
+        masterItems[0]?.itemCode || "60.154.300.101",
+        masterItems[0]?.itemName || 'Nozzle Jet Spray Spiral SUS 316 size ½" (Male thread)',
+        masterItems[0]?.smallestUnitName || masterItems[0]?.smallestUnitCode || "PCE",
+        10,
+        dueDate || today,
+        "Fasilitas",
+        "Urgent line maintenance",
+      ],
+      [
+        2,
+        jobOptions[0] || "0112/JOB-IMLI/2026",
+        masterItems[1]?.itemCode || "MAT-ST-001",
+        masterItems[1]?.itemName || "Steel Plate Grade SS400 10mm",
+        masterItems[1]?.smallestUnitName || masterItems[1]?.smallestUnitCode || "KG",
+        500,
+        dueDate || today,
+        "Non Fasilitas",
+        "Smelting furnace buffer stock",
+      ],
+    ];
+
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...sampleRows]);
+    ws["!cols"] = [
+      { wch: 6 },
+      { wch: 22 },
+      { wch: 18 },
+      { wch: 45 },
+      { wch: 10 },
+      { wch: 12 },
+      { wch: 15 },
+      { wch: 25 },
+      { wch: 35 },
+    ];
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "PR Items Template");
+    XLSX.writeFile(wb, "PR_Item_Upload_Template.xlsx");
+
+    setNotification({
+      type: "success",
+      message: "Template Excel PR berhasil diunduh. Silakan lengkapi data dan unggah kembali.",
+    });
+  };
+
+  // Upload and Automatically Parse Excel File for PR Items
+  const handleUploadExcelFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    setIsUploadDropdownOpen(false);
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const bstr = evt.target?.result;
+        const wb = XLSX.read(bstr, { type: "binary" });
+        const wsname = wb.SheetNames[0];
+        const ws = wb.Sheets[wsname];
+        const rawRows: any[] = XLSX.utils.sheet_to_json(ws, { defval: "" });
+
+        if (!rawRows || rawRows.length === 0) {
+          setNotification({
+            type: "error",
+            message: "File Excel yang diunggah tidak memiliki baris data.",
+          });
+          return;
+        }
+
+        const importedRows: PRItemRow[] = [];
+        rawRows.forEach((row, idx) => {
+          const getVal = (keys: string[]): string => {
+            for (const k of keys) {
+              const found = Object.keys(row).find(
+                (rk) => rk.trim().toLowerCase() === k.toLowerCase()
+              );
+              if (found && row[found] !== undefined && row[found] !== null && String(row[found]).trim()) {
+                return String(row[found]).trim();
+              }
+            }
+            return "";
+          };
+
+          const code = getVal(["Item Code", "Kode Barang", "Code", "itemCode", "item_code"]);
+          let name = getVal(["Item Name", "Nama Barang", "Name", "itemName", "item_name"]);
+          const job = getVal(["Job Number", "Job No", "No Job", "jobNumber"]);
+          let unit = getVal(["Unit", "Satuan", "UoM"]);
+          const qtyStr = getVal(["Quantity", "Qty", "Jumlah", "quantity"]);
+          let due = getVal(["Due Date", "Tanggal Dibutuhkan", "DueDate", "due_date"]) || dueDate || today;
+          if (due && !isNaN(Number(due)) && Number(due) > 20000 && Number(due) < 70000) {
+            try {
+              const d = new Date(Math.round((Number(due) - 25569) * 86400 * 1000));
+              if (!isNaN(d.getTime())) {
+                due = d.toISOString().slice(0, 10);
+              }
+            } catch {
+              // fallback
+            }
+          }
+          const facStr = getVal(["Fasilitas / Non Fasilitas", "Fasilitas", "Facility", "facility"]);
+          const rem = getVal(["Remark", "Keterangan", "Note", "Catatan", "remark"]);
+
+          // Match against master items by code or name
+          const matchedMaster = masterItems.find(
+            (m) =>
+              (code && m.itemCode.toLowerCase() === code.toLowerCase()) ||
+              (name && m.itemName.toLowerCase() === name.toLowerCase())
+          );
+
+          if (!name && matchedMaster) {
+            name = matchedMaster.itemName;
+          }
+          if (!unit && matchedMaster) {
+            unit = matchedMaster.smallestUnitName || matchedMaster.smallestUnitCode || "PCE";
+          }
+          const currentStock = matchedMaster && typeof matchedMaster.stock === "number" ? matchedMaster.stock : 0;
+          const facility: "Fasilitas" | "Non Fasilitas" = facStr.toLowerCase().includes("non")
+            ? "Non Fasilitas"
+            : facStr.toLowerCase().includes("fasilitas")
+            ? "Fasilitas"
+            : (matchedMaster?.facility === "FASILITAS" ? "Fasilitas" : "Non Fasilitas");
+
+          if (name || code) {
+            importedRows.push({
+              id: `pr-item-import-${Date.now()}-${idx}`,
+              jobNumber: job || jobOptions[0] || "",
+              itemCode: code || matchedMaster?.itemCode || "",
+              itemName: name || matchedMaster?.itemName || `Item ${idx + 1}`,
+              unit: unit || "PCE",
+              currentStock: currentStock,
+              quantity: Number(qtyStr) > 0 ? Number(qtyStr) : 1,
+              dueDate: due,
+              facility: facility,
+              remark: rem,
+            });
+          }
+        });
+
+        if (importedRows.length === 0) {
+          setNotification({
+            type: "error",
+            message: "Tidak ada baris barang yang valid terbaca dari file Excel. Pastikan menggunakan format template.",
+          });
+          return;
+        }
+
+        setItems((prev) => [...prev, ...importedRows]);
+        setNotification({
+          type: "success",
+          message: `Berhasil mengimpor ${importedRows.length} item dari file Excel secara otomatis!`,
+        });
+      } catch (err: any) {
+        setNotification({
+          type: "error",
+          message: "Gagal membaca file Excel: " + (err?.message || "Format file tidak didukung"),
+        });
+      } finally {
+        if (fileInputRef.current) fileInputRef.current.value = "";
+      }
+    };
+    reader.readAsBinaryString(file);
+  };
 
   // Add Empty Row
   const handleAddBlankRow = () => {
@@ -310,27 +505,13 @@ export function PurchaseRequisitionCreate({
       };
 
       const res = await createPurchaseRequisition(payload);
-      if (res && res.data) {
-        if (onSaveSuccess) {
-          onSaveSuccess(res.data);
-        }
+      setShowSaveConfirm(false);
+      setIsSubmitting(false);
+
+      if (onSaveSuccess) {
+        onSaveSuccess(res?.data);
       } else {
-        const prNumber = `${String(Math.floor(Math.random() * 9000) + 1000).padStart(4, "0")}/PR-IMLI/X/2026`;
-        const newPR = {
-          _id: `pr-${Date.now()}`,
-          _type: "pr",
-          _rawNumber: prNumber,
-          _rawStatus: "Ready",
-          _rawDate: date,
-          _rawDueDate: dueDate,
-          _rawDept: deptRequest,
-          _rawRemark: note || items[0]?.remark || "New Requisition",
-          _rawCreatedBy: "ADMINISTRATOR " + today,
-          _items: items,
-          totalItem: items.length,
-          totalQuantity: items.reduce((acc, it) => acc + (Number(it.quantity) || 0), 0),
-        };
-        if (onSaveSuccess) onSaveSuccess(newPR);
+        onBack();
       }
     } catch (err: any) {
       console.error("Failed to submit PR to backend:", err);
@@ -342,10 +523,6 @@ export function PurchaseRequisitionCreate({
       setShowSaveConfirm(false);
       return;
     }
-
-    setShowSaveConfirm(false);
-    setIsSubmitting(false);
-    onBack();
   };
 
   return (
@@ -519,6 +696,107 @@ export function PurchaseRequisitionCreate({
             </div>
 
             <div className="tx-context-actions">
+              {/* Dropdown: Upload From Master Item */}
+              <div ref={uploadDropdownRef} style={{ position: "relative", display: "inline-block" }}>
+                <button
+                  type="button"
+                  onClick={() => setIsUploadDropdownOpen((prev) => !prev)}
+                  style={{
+                    background: "#16a34a",
+                    color: "#ffffff",
+                    border: "1px solid #15803d",
+                    padding: "7px 14px",
+                    borderRadius: "var(--radius-sm)",
+                    fontSize: "12px",
+                    fontWeight: 700,
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    cursor: "pointer",
+                  }}
+                  title="Upload items via Excel template"
+                >
+                  <span>Upload From Master Item</span>
+                  <Icon name={isUploadDropdownOpen ? "chevronUp" : "chevronDown"} size={12} />
+                </button>
+
+                {isUploadDropdownOpen && (
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: "calc(100% + 4px)",
+                      left: 0,
+                      background: "#ffffff",
+                      border: "1px solid var(--line-strong, #cbd5e1)",
+                      borderRadius: "var(--radius-sm, 6px)",
+                      boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)",
+                      zIndex: 100,
+                      minWidth: "175px",
+                      overflow: "hidden",
+                    }}
+                  >
+                    <button
+                      type="button"
+                      onClick={handleDownloadExcelTemplate}
+                      style={{
+                        width: "100%",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px",
+                        padding: "9px 14px",
+                        background: "transparent",
+                        border: "none",
+                        borderBottom: "1px solid var(--line, #e2e8f0)",
+                        fontSize: "12px",
+                        fontWeight: 600,
+                        color: "var(--ink, #1e293b)",
+                        textAlign: "left",
+                        cursor: "pointer",
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")}
+                      onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                    >
+                      <Icon name="download" size={13} style={{ color: "#16a34a" }} />
+                      <span>Download Template</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      style={{
+                        width: "100%",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px",
+                        padding: "9px 14px",
+                        background: "transparent",
+                        border: "none",
+                        fontSize: "12px",
+                        fontWeight: 600,
+                        color: "var(--ink, #1e293b)",
+                        textAlign: "left",
+                        cursor: "pointer",
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")}
+                      onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                    >
+                      <Icon name="file" size={13} style={{ color: "#2563eb" }} />
+                      <span>Upload File</span>
+                    </button>
+                  </div>
+                )}
+
+                {/* Hidden File Input for Excel Import */}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".xlsx,.xls,.csv"
+                  style={{ display: "none" }}
+                  onChange={handleUploadExcelFile}
+                />
+              </div>
+
+              {/* Add Item Button: Directly Opens Pick Item Modal */}
               <button
                 type="button"
                 onClick={() => setIsItemPickerOpen(true)}
@@ -526,37 +804,41 @@ export function PurchaseRequisitionCreate({
                   background: "#16a34a",
                   color: "#ffffff",
                   border: "1px solid #15803d",
-                  padding: "6px 14px",
+                  padding: "7px 14px",
                   borderRadius: "var(--radius-sm)",
-                  fontSize: "11.5px",
+                  fontSize: "12px",
                   fontWeight: 700,
                   display: "inline-flex",
                   alignItems: "center",
                   gap: "6px",
                   cursor: "pointer",
                 }}
+                title="Add items directly from Master Item catalog"
               >
-                <span>Upload From Master Item</span>
+                <span>Add item</span>
               </button>
 
+              {/* Manual Blank Row Addition */}
               <button
                 type="button"
                 onClick={handleAddBlankRow}
                 style={{
-                  background: "#16a34a",
-                  color: "#ffffff",
-                  border: "1px solid #15803d",
-                  padding: "6px 14px",
+                  background: "#f8fafc",
+                  color: "var(--ink-soft, #475569)",
+                  border: "1px solid var(--line-strong, #cbd5e1)",
+                  padding: "7px 12px",
                   borderRadius: "var(--radius-sm)",
                   fontSize: "11.5px",
-                  fontWeight: 700,
+                  fontWeight: 600,
                   display: "inline-flex",
                   alignItems: "center",
-                  gap: "6px",
+                  gap: "4px",
                   cursor: "pointer",
                 }}
+                title="Add a manual blank row"
               >
-                <span>Add Item</span>
+                <Icon name="plus" size={12} />
+                <span>Blank Row</span>
               </button>
             </div>
           </div>

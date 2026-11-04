@@ -258,8 +258,8 @@ class PurchaseOrderApiController extends Controller
             '_type' => 'po',
             '_rawNumber' => $po->po_number,
             '_rawStatus' => $status,
-            '_rawDate' => $po->date ? Carbon::parse($po->date)->format('d-M-Y') : ($po->created_at?->format('d-M-Y') ?? '-'),
-            '_rawDueDate' => $po->due_date ? Carbon::parse($po->due_date)->format('d-M-Y') : '-',
+            '_rawDate' => $this->safeFormatDate($po->date, 'd-M-Y', $po->created_at?->format('d-M-Y') ?? '-'),
+            '_rawDueDate' => $this->safeFormatDate($po->due_date),
             '_rawSupplier' => $supplierName,
             '_rawTotal' => $currencyCode.' '.number_format((float) $po->grand_total, 2),
             '_rawPr' => $prNumber,
@@ -293,7 +293,7 @@ class PurchaseOrderApiController extends Controller
             '_history' => $history,
             'no' => $indexNo,
             'poNumber' => $po->po_number,
-            'date' => $po->date ? Carbon::parse($po->date)->format('d-M-Y') : ($po->created_at?->format('d-M-Y') ?? '-'),
+            'date' => $this->safeFormatDate($po->date, 'd-M-Y', $po->created_at?->format('d-M-Y') ?? '-'),
             'supplier' => $supplierName,
             'status' => $status,
             'paymentTerm' => $po->paymentTerm?->name ?? 'Cash On Delivery',
@@ -472,5 +472,25 @@ class PurchaseOrderApiController extends Controller
             'message' => 'Purchase Order rejected successfully',
             'data' => $po,
         ]);
+    }
+
+    /**
+     * Safely format dates, handling Excel serial numbers and irregular formats.
+     */
+    private function safeFormatDate($dateVal, string $format = 'd-M-Y', string $default = '-'): string
+    {
+        if (empty($dateVal)) {
+            return $default;
+        }
+
+        try {
+            if (is_numeric($dateVal) && (int) $dateVal > 20000 && (int) $dateVal < 70000) {
+                return Carbon::createFromTimestampUTC(((int) $dateVal - 25569) * 86400)->format($format);
+            }
+
+            return Carbon::parse($dateVal)->format($format);
+        } catch (\Throwable $e) {
+            return is_string($dateVal) ? $dateVal : $default;
+        }
     }
 }

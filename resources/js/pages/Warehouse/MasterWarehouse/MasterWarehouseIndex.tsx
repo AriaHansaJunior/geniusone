@@ -30,14 +30,21 @@ export function MasterWarehouseIndex({
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   const [exportNotice, setExportNotice] = useState<string | null>(null);
 
+  // Helper to extract clean type string
+  const getWarehouseTypeString = (val: any): string => {
+    if (!val) return "Raw Material";
+    if (typeof val === "object") return val.name || val.type || "Raw Material";
+    return String(val);
+  };
+
   // Search filter across Name, Type, and Description
   const filteredRecords = useMemo(() => {
     if (!search.trim()) return records;
     const query = search.toLowerCase().trim();
     return records.filter((rec) => {
-      const matchName = rec.name.toLowerCase().includes(query);
-      const matchType = rec.type.toLowerCase().includes(query);
-      const matchDesc = (rec.description || "").toLowerCase().includes(query);
+      const matchName = String(rec.name || "").toLowerCase().includes(query);
+      const matchType = getWarehouseTypeString(rec.type).toLowerCase().includes(query);
+      const matchDesc = String(rec.description || "").toLowerCase().includes(query);
       return matchName || matchType || matchDesc;
     });
   }, [records, search]);
@@ -53,16 +60,16 @@ export function MasterWarehouseIndex({
 
       switch (sortField) {
         case "name":
-          aVal = a.name.toLowerCase();
-          bVal = b.name.toLowerCase();
+          aVal = String(a.name || "").toLowerCase();
+          bVal = String(b.name || "").toLowerCase();
           break;
         case "type":
-          aVal = a.type.toLowerCase();
-          bVal = b.type.toLowerCase();
+          aVal = getWarehouseTypeString(a.type).toLowerCase();
+          bVal = getWarehouseTypeString(b.type).toLowerCase();
           break;
         case "description":
-          aVal = (a.description || "").toLowerCase();
-          bVal = (b.description || "").toLowerCase();
+          aVal = String(a.description || "").toLowerCase();
+          bVal = String(b.description || "").toLowerCase();
           break;
         case "status":
           aVal = a.status ? "active" : "inactive";
@@ -268,7 +275,7 @@ export function MasterWarehouseIndex({
                         {sequentialNumber}
                       </td>
                       <td className="font-medium text-ink">{wh.name}</td>
-                      <td>{wh.type}</td>
+                      <td>{getWarehouseTypeString(wh.type)}</td>
                       <td className="wh-td-desc">
                         {wh.description || "-"}
                       </td>

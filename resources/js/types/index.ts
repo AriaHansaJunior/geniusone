@@ -18,6 +18,7 @@ export type IconName =
   | "chevronDown"
   | "chevronLeft"
   | "chevronRight"
+  | "chevronUp"
   | "clock"
   | "close"
   | "copy"

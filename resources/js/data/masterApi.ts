@@ -299,8 +299,8 @@ export async function fetchMasterClassifications(): Promise<ClassificationRecord
     code: item.code || "",
     name: item.name || "",
     description: item.description || "",
-    reportingType: item.reporting_type || item.reportingType || "-",
-    account: item.account || undefined,
+    reportingType: item.reporting_type?.name || (typeof item.reporting_type === "string" ? item.reporting_type : (item.reportingType || "-")),
+    account: item.account?.name || item.account?.code || (typeof item.account === "string" ? item.account : undefined),
     status: item.status !== 0,
   }));
 }
@@ -536,27 +536,73 @@ export async function fetchMasterItems(): Promise<ItemRecord[] | null> {
   const res = await apiGet<{ data: any[] }>("/api/exim/master/items");
   if (!res || !Array.isArray(res.data)) return null;
 
-  return res.data.map((item: any, idx: number): ItemRecord => ({
-    id: String(item.id),
-    no: idx + 1,
-    itemCode: item.code || item.itemCode || "",
-    itemName: item.name || item.itemName || "",
-    classification: item.classification?.name || item.classification || "RAW MATERIAL",
-    category: item.category?.name || item.category || "GENERAL",
-    smallestUnitCode: item.unit?.code || item.smallestUnitCode || "PCS",
-    smallestUnitName: item.unit?.name || item.unit?.nama || item.smallestUnitName || "Pieces",
-    greatestUnitCode: item.greatestUnitCode || "PCS",
-    greatestUnitName: item.greatestUnitName || "Pieces",
-    facility: item.facility || "FASILITAS",
-    brand: item.brand?.name || item.brand || "-",
-    style: item.style?.name || item.style || "-",
-    traceByLot: item.trace_by_lot ?? item.traceByLot ?? false,
-    status: item.status === 0 || item.status === "Inactive" ? "Inactive" : "Active",
-    createdAt: item.created_at ? new Date(item.created_at).toLocaleDateString() : "",
-    createdBy: item.created_by || "System",
-    updatedAt: item.updated_at ? new Date(item.updated_at).toLocaleDateString() : "",
-    updatedBy: "System",
-  }));
+  return res.data.map((item: any, idx: number): ItemRecord => {
+    const classificationName =
+      item.classification?.name ||
+      (typeof item.classification === "string" ? item.classification : "RAW MATERIAL");
+    const categoryName =
+      item.category?.name ||
+      (typeof item.category === "string" ? item.category : "GENERAL");
+    const facilityName =
+      item.facility?.name ||
+      (typeof item.facility === "string" ? item.facility : "FASILITAS");
+    const brandName =
+      item.brand?.name ||
+      (typeof item.brand === "string" ? item.brand : "-");
+    const styleName =
+      item.style?.name ||
+      (typeof item.style === "string" ? item.style : "-");
+    const smallestUnitCode =
+      item.smallest_unit?.code ||
+      item.unit_of_measurement?.name ||
+      item.unit?.code ||
+      item.smallestUnitCode ||
+      "PCE";
+    const smallestUnitName =
+      item.smallest_unit?.name ||
+      item.unit_of_measurement?.name ||
+      item.unit?.name ||
+      item.unit?.nama ||
+      item.smallestUnitName ||
+      "Pieces";
+    const greatestUnitCode =
+      item.greatest_unit?.code ||
+      item.greatestUnitCode ||
+      "PCE";
+    const greatestUnitName =
+      item.greatest_unit?.name ||
+      item.greatestUnitName ||
+      "Pieces";
+
+    return {
+      id: String(item.id),
+      no: idx + 1,
+      itemCode: item.code || item.itemCode || "",
+      kodeEksternal: item.external_code || item.kodeEksternal || "-",
+      itemName: item.name || item.itemName || "",
+      classification: classificationName,
+      category: categoryName,
+      hsCode: item.hs_code?.code || (typeof item.hsCode === "string" ? item.hsCode : "-"),
+      smallestUnitCode,
+      smallestUnitName,
+      greatestUnitCode,
+      greatestUnitName,
+      facility: facilityName,
+      groupScrap: item.group_scrap_item?.name || (typeof item.groupScrap === "string" ? item.groupScrap : "-"),
+      specification: item.specification?.name || (typeof item.specification === "string" ? item.specification : "-"),
+      origin: item.origin?.name || (typeof item.origin === "string" ? item.origin : "-"),
+      colour: item.colour?.name || (typeof item.colour === "string" ? item.colour : "-"),
+      brand: brandName,
+      style: styleName,
+      customReport: item.customs_report?.name || (typeof item.customReport === "string" ? item.customReport : "-"),
+      traceByLot: Boolean(item.trace_by_lot ?? item.traceByLot ?? false),
+      status: item.status === 0 || item.status === "Inactive" ? "Inactive" : "Active",
+      createdAt: item.created_at ? new Date(item.created_at).toLocaleDateString() : "",
+      createdBy: item.created_by_user?.name || item.created_by || "System",
+      updatedAt: item.updated_at ? new Date(item.updated_at).toLocaleDateString() : "",
+      updatedBy: "System",
+    };
+  });
 }
 
 export async function saveItemApi(record: ItemRecord, isEdit: boolean): Promise<ItemRecord | null> {
@@ -588,21 +634,27 @@ export async function fetchMasterWarehouses(): Promise<WarehouseMasterRecord[] |
   const res = await apiGet<{ data: any[] }>("/api/warehouse/master/warehouses");
   if (!res || !Array.isArray(res.data)) return null;
 
-  return res.data.map((item: any, idx: number): WarehouseMasterRecord => ({
-    id: String(item.id),
-    no: idx + 1,
-    name: item.name || "",
-    type: (item.type as WarehouseType) || "Raw Material",
-    description: item.address || item.description || "",
-    status: item.status !== 0,
-    coordinates: Array.isArray(item.coordinates)
-      ? item.coordinates.map((c: any) => ({
-          id: String(c.id),
-          warehouseId: String(item.id),
-          name: c.name || c.code || "",
-        }))
-      : [],
-  }));
+  return res.data.map((item: any, idx: number): WarehouseMasterRecord => {
+    const typeStr =
+      item.type?.name ||
+      (typeof item.type === "string" ? item.type : "Raw Material");
+
+    return {
+      id: String(item.id),
+      no: idx + 1,
+      name: item.name || "",
+      type: (typeStr as WarehouseType),
+      description: item.description || item.address || "",
+      status: item.status !== 0,
+      coordinates: Array.isArray(item.coordinates)
+        ? item.coordinates.map((c: any) => ({
+            id: String(c.id),
+            warehouseId: String(item.id),
+            name: c.name || c.code || "",
+          }))
+        : [],
+    };
+  });
 }
 
 export async function saveWarehouseMasterApi(record: WarehouseMasterRecord): Promise<WarehouseMasterRecord | null> {
@@ -691,10 +743,14 @@ export async function fetchMasterAccounts(): Promise<AccountRecord[] | null> {
     no: idx + 1,
     accountCode: item.code || item.account_code || "",
     accountName: item.name || item.account_name || "",
-    category: item.category || item.type || "Current Asset",
+    category:
+      item.category?.name ||
+      (typeof item.category === "string"
+        ? item.category
+        : (item.type?.name || (typeof item.type === "string" ? item.type : "Current Asset"))),
     status: item.status !== 0,
     createdAt: item.created_at ? new Date(item.created_at).toISOString().replace("T", " ").substring(0, 19) : "",
-    createdBy: item.created_by || "ADMINISTRATOR",
+    createdBy: item.created_by_user?.name || item.created_by || "ADMINISTRATOR",
   }));
 }
 
@@ -707,10 +763,12 @@ export async function fetchMasterJobNumbers(): Promise<JobNumberRecord[] | null>
     no: idx + 1,
     jobNumber: item.code || item.job_number || item.name || "",
     jobName: item.name || item.job_name || "",
-    department: item.department || "Production",
+    department:
+      item.department?.name ||
+      (typeof item.department === "string" ? item.department : "Production"),
     status: item.status !== 0,
     createdAt: item.created_at ? new Date(item.created_at).toISOString().replace("T", " ").substring(0, 19) : "",
-    createdBy: item.created_by || "ADMINISTRATOR",
+    createdBy: item.created_by_user?.name || item.created_by || "ADMINISTRATOR",
   }));
 }
 

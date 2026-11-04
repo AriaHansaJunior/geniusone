@@ -468,17 +468,17 @@ export function AuditLogAdmin({ onNavigateUsers }: AuditLogAdminProps) {
                         <td>
                           <div className="audit-actor-cell">
                             <div
-                              className={`audit-actor-avatar ${item.user.is_super_admin ? "audit-actor-avatar--super" : ""}`}
-                              title={item.user.name}
+                              className={`audit-actor-avatar ${item.user?.is_super_admin ? "audit-actor-avatar--super" : ""}`}
+                              title={item.user?.name || "System"}
                             >
-                              {item.user.name.slice(0, 2).toUpperCase()}
+                              {(item.user?.name || "System").slice(0, 2).toUpperCase()}
                             </div>
                             <div className="audit-actor-info">
-                              <span className="audit-actor-name">{item.user.name}</span>
+                              <span className="audit-actor-name">{item.user?.name || "System"}</span>
                               <div className="audit-actor-meta">
-                                <span className="audit-actor-username">@{item.user.username}</span>
-                                <Badge tone={item.user.is_super_admin ? "purple" : "gray"} style={{ fontSize: "9.5px", padding: "0 5px" }}>
-                                  {item.user.role}
+                                <span className="audit-actor-username">@{item.user?.username || "system"}</span>
+                                <Badge tone={item.user?.is_super_admin ? "purple" : "gray"} style={{ fontSize: "9.5px", padding: "0 5px" }}>
+                                  {item.user?.role || "system"}
                                 </Badge>
                               </div>
                             </div>
@@ -638,22 +638,22 @@ export function AuditLogAdmin({ onNavigateUsers }: AuditLogAdminProps) {
                       <Icon name="user" size={12} />
                       <span>Initiator / Actor</span>
                     </span>
-                    <Badge tone={inspectingLog.user.is_super_admin ? "purple" : "gray"}>
-                      {inspectingLog.user.is_super_admin ? "SuperAdmin" : inspectingLog.user.role}
+                    <Badge tone={inspectingLog.user?.is_super_admin ? "purple" : "gray"}>
+                      {inspectingLog.user?.is_super_admin ? "SuperAdmin" : (inspectingLog.user?.role || "system")}
                     </Badge>
                   </div>
                   <div className="audit-overview-card__content">
                     <div className="audit-actor-avatar">
-                      {getInitials(inspectingLog.user.name)}
+                      {getInitials(inspectingLog.user?.name)}
                     </div>
                     <div className="audit-actor-info">
-                      <span className="audit-actor-name" title={inspectingLog.user.name}>
-                        {inspectingLog.user.name}
+                      <span className="audit-actor-name" title={inspectingLog.user?.name || "System"}>
+                        {inspectingLog.user?.name || "System"}
                       </span>
                       <div className="audit-actor-meta">
-                        <span className="audit-actor-username">@{inspectingLog.user.username}</span>
+                        <span className="audit-actor-username">@{inspectingLog.user?.username || "system"}</span>
                         <span style={{ fontSize: "11px", color: "var(--muted)" }}>
-                          • ID: {inspectingLog.user.id}
+                          • ID: {inspectingLog.user?.id ?? "-"}
                         </span>
                       </div>
                     </div>
@@ -725,7 +725,7 @@ export function AuditLogAdmin({ onNavigateUsers }: AuditLogAdminProps) {
                       {inspectingLog.created_at_wib}
                     </span>
                     <span className="audit-overview-subtext">
-                      UTC: {inspectingLog.created_at_utc ? new Date(inspectingLog.created_at_utc).toISOString() : "-"}
+                      UTC: {inspectingLog.created_at_utc ? (function() { try { return new Date(inspectingLog.created_at_utc).toISOString(); } catch { return "-"; } })() : "-"}
                     </span>
                   </div>
                 </div>

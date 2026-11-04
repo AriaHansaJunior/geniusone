@@ -69,7 +69,7 @@ class PurchaseRequisitionApiController extends Controller
                     'quantity' => number_format((float) $it->quantity, 4).' '.($it->item?->unitOfMeasurement?->name ?? 'PCE'),
                     'unit' => $it->item?->unitOfMeasurement?->name ?? 'PCE',
                     'remark' => $it->remark ?? $it->note ?? 'PP Sby Kebutuhan Operasional',
-                    'dueDate' => $it->due_date ? Carbon::parse($it->due_date)->format('d-M-Y') : '-',
+                    'dueDate' => $this->safeFormatDate($it->due_date),
                 ];
             })->toArray();
 
@@ -78,8 +78,8 @@ class PurchaseRequisitionApiController extends Controller
                 '_type' => 'pr',
                 '_rawNumber' => $pr->pr_number,
                 '_rawStatus' => $status,
-                '_rawDate' => $pr->date ? Carbon::parse($pr->date)->format('d-M-Y') : ($pr->created_at?->format('d-M-Y') ?? '-'),
-                '_rawDueDate' => $pr->due_date ? Carbon::parse($pr->due_date)->format('d-M-Y') : '-',
+                '_rawDate' => $this->safeFormatDate($pr->date, 'd-M-Y', $pr->created_at?->format('d-M-Y') ?? '-'),
+                '_rawDueDate' => $this->safeFormatDate($pr->due_date),
                 '_rawDept' => $pr->department?->name ?? 'General',
                 '_rawRemark' => $firstItem?->remark ?? 'PP Sby Pengadaan Material',
                 '_rawCreatedBy' => "{$creatorName} {$createdTime}",
@@ -89,8 +89,8 @@ class PurchaseRequisitionApiController extends Controller
                 '_items' => $lineItems,
                 'no' => $idx + 1,
                 'prNumber' => $pr->pr_number,
-                'date' => $pr->date ? Carbon::parse($pr->date)->format('d-M-Y') : ($pr->created_at?->format('d-M-Y') ?? '-'),
-                'dueDate' => $pr->due_date ? Carbon::parse($pr->due_date)->format('d-M-Y') : '-',
+                'date' => $this->safeFormatDate($pr->date, 'd-M-Y', $pr->created_at?->format('d-M-Y') ?? '-'),
+                'dueDate' => $this->safeFormatDate($pr->due_date),
                 'jobNumber' => '—',
                 'deptRequest' => $pr->department?->name ?? 'General',
                 'totalItem' => $pr->items->count(),
@@ -168,7 +168,7 @@ class PurchaseRequisitionApiController extends Controller
                 'quantity' => number_format((float) $it->quantity, 4).' '.($it->item?->unitOfMeasurement?->name ?? 'PCE'),
                 'unit' => $it->item?->unitOfMeasurement?->name ?? 'PCE',
                 'remark' => $it->remark ?? $it->note ?? 'PP Sby Kebutuhan Operasional',
-                'dueDate' => $it->due_date ? Carbon::parse($it->due_date)->format('d-M-Y') : '-',
+                'dueDate' => $this->safeFormatDate($it->due_date),
             ];
         })->toArray();
 
@@ -177,8 +177,8 @@ class PurchaseRequisitionApiController extends Controller
             '_type' => 'pr',
             '_rawNumber' => $pr->pr_number,
             '_rawStatus' => $pr->status ?? 'Draft',
-            '_rawDate' => $pr->date ? Carbon::parse($pr->date)->format('d-M-Y') : ($pr->created_at?->format('d-M-Y') ?? '-'),
-            '_rawDueDate' => $pr->due_date ? Carbon::parse($pr->due_date)->format('d-M-Y') : '-',
+            '_rawDate' => $this->safeFormatDate($pr->date, 'd-M-Y', $pr->created_at?->format('d-M-Y') ?? '-'),
+            '_rawDueDate' => $this->safeFormatDate($pr->due_date),
             '_rawDept' => $pr->department?->name ?? 'General',
             '_rawRemark' => $firstItem?->remark ?? 'PP Sby Pengadaan Material',
             '_rawCreatedBy' => "{$creatorName} {$createdTime}",
@@ -221,7 +221,12 @@ class PurchaseRequisitionApiController extends Controller
         if (is_numeric($deptInput) && Department::where('id', $deptInput)->exists()) {
             $deptId = (int) $deptInput;
         } elseif (! empty($deptInput)) {
-            $dept = Department::where('name', 'like', "%{$deptInput}%")->first();
+            $dept = Department::where('name', $deptInput)
+                ->orWhere('name', 'like', "%{$deptInput}%")
+                ->first();
+            if (! $dept) {
+                $dept = Department::firstOrCreate(['name' => trim($deptInput)], ['status' => 1]);
+            }
             $deptId = $dept?->id;
         }
         if (! $deptId) {
@@ -234,7 +239,12 @@ class PurchaseRequisitionApiController extends Controller
         if (is_numeric($secInput) && Section::where('id', $secInput)->exists()) {
             $secId = (int) $secInput;
         } elseif (! empty($secInput)) {
-            $sec = Section::where('name', 'like', "%{$secInput}%")->first();
+            $sec = Section::where('name', $secInput)
+                ->orWhere('name', 'like', "%{$secInput}%")
+                ->first();
+            if (! $sec) {
+                $sec = Section::firstOrCreate(['name' => trim($secInput)], ['status' => 1]);
+            }
             $secId = $sec?->id;
         }
         if (! $secId) {
@@ -253,6 +263,11 @@ class PurchaseRequisitionApiController extends Controller
         $firstDbItem = Item::first();
         $fallbackItemId = $firstDbItem?->id ?? 1;
 
+        // Resolve Document Dates & Number
+        $prNumber = $request->input('pr_number') ?? DocumentNumberGenerator::generatePrNumber();
+        $date = $this->safeToDatabaseDate($request->input('date'), now()->format('Y-m-d'));
+        $dueDate = $this->safeToDatabaseDate($request->input('due_date'), now()->addDays(14)->format('Y-m-d'));
+
         $processedItems = [];
         foreach ($rawItems as $idx => $it) {
             $itemId = null;
@@ -264,8 +279,27 @@ class PurchaseRequisitionApiController extends Controller
                 $itemId = $found?->id;
             } elseif (! empty($it['itemName']) || ! empty($it['name']) || ! empty($it['item_name'])) {
                 $name = $it['itemName'] ?? $it['name'] ?? $it['item_name'];
-                $found = Item::where('name', 'like', "%{$name}%")->first();
+                $found = Item::where('name', $name)->orWhere('name', 'like', "%{$name}%")->first();
                 $itemId = $found?->id;
+            }
+
+            if (! $itemId && (! empty($it['itemName']) || ! empty($it['name']) || ! empty($it['itemCode']))) {
+                $name = $it['itemName'] ?? $it['name'] ?? ('Item '.($it['itemCode'] ?? ''));
+                $code = $it['itemCode'] ?? $it['code'] ?? ('ITM-'.strtoupper(\Illuminate\Support\Str::random(6)));
+                $newItem = Item::firstOrCreate(
+                    ['code' => $code],
+                    [
+                        'name' => $name,
+                        'classifications_id' => $firstDbItem?->classifications_id ?? 1,
+                        'facilities_id' => $firstDbItem?->facilities_id ?? 1,
+                        'item_types_id' => $firstDbItem?->item_types_id ?? 1,
+                        'categories_id' => $firstDbItem?->categories_id ?? 1,
+                        'units_of_measurements_id' => $firstDbItem?->units_of_measurements_id ?? 1,
+                        'status' => 1,
+                        'stock' => 100,
+                    ]
+                );
+                $itemId = $newItem->id;
             }
 
             if (! $itemId) {
@@ -275,14 +309,10 @@ class PurchaseRequisitionApiController extends Controller
             $processedItems[] = [
                 'items_id' => $itemId,
                 'quantity' => (float) ($it['quantity'] ?? 1),
-                'due_date' => $it['dueDate'] ?? $it['due_date'] ?? $request->input('due_date', now()->addDays(14)->format('Y-m-d')),
+                'due_date' => $this->safeToDatabaseDate($it['dueDate'] ?? $it['due_date'] ?? null, $dueDate),
                 'remark' => $it['remark'] ?? $it['note'] ?? 'Purchase Requisition Item',
             ];
         }
-
-        $prNumber = $request->input('pr_number') ?? DocumentNumberGenerator::generatePrNumber();
-        $date = $request->input('date') ?? now()->format('Y-m-d');
-        $dueDate = $request->input('due_date') ?? now()->addDays(14)->format('Y-m-d');
 
         $pr = GeniusOneBackend::pr()->createPr(
             [
@@ -335,5 +365,45 @@ class PurchaseRequisitionApiController extends Controller
             'message' => 'Purchase Requisition rejected successfully',
             'data' => $pr,
         ]);
+    }
+
+    /**
+     * Safely format dates, handling Excel serial numbers and irregular formats.
+     */
+    private function safeFormatDate($dateVal, string $format = 'd-M-Y', string $default = '-'): string
+    {
+        if (empty($dateVal)) {
+            return $default;
+        }
+
+        try {
+            if (is_numeric($dateVal) && (int) $dateVal > 20000 && (int) $dateVal < 70000) {
+                return Carbon::createFromTimestampUTC(((int) $dateVal - 25569) * 86400)->format($format);
+            }
+
+            return Carbon::parse($dateVal)->format($format);
+        } catch (\Throwable $e) {
+            return is_string($dateVal) ? $dateVal : $default;
+        }
+    }
+
+    /**
+     * Safely normalize input date to YYYY-MM-DD for database persistence.
+     */
+    private function safeToDatabaseDate($dateVal, ?string $default = null): ?string
+    {
+        if (empty($dateVal)) {
+            return $default;
+        }
+
+        try {
+            if (is_numeric($dateVal) && (int) $dateVal > 20000 && (int) $dateVal < 70000) {
+                return Carbon::createFromTimestampUTC(((int) $dateVal - 25569) * 86400)->format('Y-m-d');
+            }
+
+            return Carbon::parse($dateVal)->format('Y-m-d');
+        } catch (\Throwable $e) {
+            return $default ?? now()->format('Y-m-d');
+        }
     }
 }

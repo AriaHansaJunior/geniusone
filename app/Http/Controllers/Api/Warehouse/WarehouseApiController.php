@@ -229,14 +229,14 @@ class WarehouseApiController extends Controller
 
         $supplierName = $supplier ? $supplier->name : 'PT. Hasil Fastindo';
         $rnNumber = $rn?->rn_number ?? '0131/RN-IMLI/X/2026';
-        $rnDate = $rn?->date ? Carbon::parse($rn->date)->format('d-m-Y') : '08-10-2026';
+        $rnDate = $this->safeFormatDate($rn?->date, 'd-m-Y', '08-10-2026');
         $poNumber = $po?->po_number ?? 'POL-0926-0332';
-        $poDate = $po?->date ? Carbon::parse($po->date)->format('d-m-Y') : '29-09-2026';
+        $poDate = $this->safeFormatDate($po?->date, 'd-m-Y', '29-09-2026');
 
         $firstPoItem = $po?->items->first();
         $pr = $firstPoItem?->requisitionItem?->purchaseRequisition;
         $prNumber = $pr?->pr_number ?? '0085/PR-IMLI/IX/2026';
-        $prDate = $pr?->date ? Carbon::parse($pr->date)->format('d-m-Y') : '29-09-2026';
+        $prDate = $this->safeFormatDate($pr?->date, 'd-m-Y', '29-09-2026');
 
         $totalQty = $bpb->mappings->sum(function ($m) {
             $prn = $m->purchaseOrderReceiveNote;
@@ -286,7 +286,7 @@ class WarehouseApiController extends Controller
             '_type' => 'warehouse',
             '_rawNumber' => $bpb->bpb_number,
             '_rawStatus' => $apprStatus,
-            '_rawDate' => $bpb->receive_date ? Carbon::parse($bpb->receive_date)->format('d-M-Y') : '08-Oct-2026',
+            '_rawDate' => $this->safeFormatDate($bpb->receive_date, 'd-M-Y', '08-Oct-2026'),
             '_rawDueDate' => '—',
             '_rawSupplier' => $supplierName,
             '_rawTotal' => number_format($totalQty, 4).' PCE',
@@ -307,7 +307,7 @@ class WarehouseApiController extends Controller
             'poDate' => $poDate,
             'bpbNumber' => $bpb->bpb_number,
             'bpbType' => 'Gudang',
-            'bpbDate' => $bpb->receive_date ? Carbon::parse($bpb->receive_date)->format('d-m-Y') : '08-10-2026',
+            'bpbDate' => $this->safeFormatDate($bpb->receive_date, 'd-m-Y', '08-10-2026'),
             'supplier' => $supplierName,
             'material' => $materialName,
             'itemCode' => $itemCode,
@@ -319,5 +319,25 @@ class WarehouseApiController extends Controller
             'actions' => '',
             '_search' => "{$bpb->bpb_number} {$rnNumber} {$poNumber} {$supplierName} {$materialName}",
         ];
+    }
+
+    /**
+     * Safely format dates, handling Excel serial numbers and irregular formats.
+     */
+    private function safeFormatDate($dateVal, string $format = 'd-M-Y', string $default = '-'): string
+    {
+        if (empty($dateVal)) {
+            return $default;
+        }
+
+        try {
+            if (is_numeric($dateVal) && (int) $dateVal > 20000 && (int) $dateVal < 70000) {
+                return Carbon::createFromTimestampUTC(((int) $dateVal - 25569) * 86400)->format($format);
+            }
+
+            return Carbon::parse($dateVal)->format($format);
+        } catch (\Throwable $e) {
+            return is_string($dateVal) ? $dateVal : $default;
+        }
     }
 }

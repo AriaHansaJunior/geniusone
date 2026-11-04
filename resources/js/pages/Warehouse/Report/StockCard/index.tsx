@@ -8,6 +8,7 @@ import {
   stockCardWarehousesList,
   stockCardUnitsList,
   initialStockCardRecords,
+  type StockCardItemOption,
 } from "./stock-card-data";
 import type { StockCardRecord } from "./stock-card-types";
 
@@ -34,13 +35,50 @@ export function StockCardIndex() {
     message: string;
   } | null>(null);
 
+  const [itemsList, setItemsList] = useState<StockCardItemOption[]>(stockCardItemsList);
+  const [warehousesList, setWarehousesList] = useState<string[]>(stockCardWarehousesList);
+
+  // Load real items and warehouses dynamically
+  React.useEffect(() => {
+    fetch("/api/exim/master/items", { headers: { Accept: "application/json" } })
+      .then((res) => res.json())
+      .then((json) => {
+        if (json?.data && Array.isArray(json.data) && json.data.length > 0) {
+          const mappedItems: StockCardItemOption[] = json.data.map((it: any) => ({
+            code: it.code || "",
+            name: it.name || "",
+            unit: it.unit?.name || it.unit_of_measurement?.name || "PCE",
+            defaultWarehouse: it.facility?.name || "Gudang Sparepart",
+          }));
+          const merged = [...stockCardItemsList];
+          mappedItems.forEach((m) => {
+            if (m.code && !merged.some((existing) => existing.code === m.code)) {
+              merged.push(m);
+            }
+          });
+          setItemsList(merged);
+        }
+      })
+      .catch(() => {});
+
+    fetch("/api/warehouse/master/warehouses", { headers: { Accept: "application/json" } })
+      .then((res) => res.json())
+      .then((json) => {
+        if (json?.data && Array.isArray(json.data) && json.data.length > 0) {
+          const names = json.data.map((w: any) => w.name).filter(Boolean);
+          setWarehousesList(Array.from(new Set(["All Warehouse", ...names, ...stockCardWarehousesList])));
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   // Selected item object for info header
   const currentItemInfo = useMemo(() => {
     return (
-      stockCardItemsList.find((i) => i.code === appliedFilters.itemCode) ||
-      stockCardItemsList[0]
+      itemsList.find((i) => i.code === appliedFilters.itemCode) ||
+      itemsList[0]
     );
-  }, [appliedFilters.itemCode]);
+  }, [itemsList, appliedFilters.itemCode]);
 
   // Handle clicking "Report" button
   const handleApplyReport = (e?: React.FormEvent) => {
@@ -155,7 +193,7 @@ export function StockCardIndex() {
       }
       return true;
     });
-  }, [appliedFilters]);
+  }, [appliedFilters, liveRecords]);
 
   // Totals for In, Out, and running Stock
   const totals = useMemo(() => {
@@ -223,7 +261,6 @@ export function StockCardIndex() {
         "Doc Out Ref",
         "No Lot",
         "Job Number",
-        "Last Update",
       ];
 
       const rowsData = filteredRecords.map((r, idx) => [
@@ -239,7 +276,6 @@ export function StockCardIndex() {
         r.docOutRef,
         r.noLot,
         r.jobNumber,
-        r.lastUpdate,
       ]);
 
       // Add summary total row
@@ -251,7 +287,6 @@ export function StockCardIndex() {
         totals.totalIn,
         totals.totalOut,
         totals.lastBalance,
-        "",
         "",
         "",
         "",
@@ -382,14 +417,14 @@ export function StockCardIndex() {
               onChange={(e) => {
                 const newCode = e.target.value;
                 setSelectedItemCode(newCode);
-                const found = stockCardItemsList.find((i) => i.code === newCode);
+                const found = itemsList.find((i) => i.code === newCode);
                 if (found) {
                   setSelectedUnit(found.unit);
                   setSelectedWarehouse(found.defaultWarehouse);
                 }
               }}
             >
-              {stockCardItemsList.map((item) => (
+              {itemsList.map((item) => (
                 <option key={item.code} value={item.code}>
                   {item.code} — {item.name}
                 </option>
@@ -421,7 +456,7 @@ export function StockCardIndex() {
               value={selectedWarehouse}
               onChange={(e) => setSelectedWarehouse(e.target.value)}
             >
-              {stockCardWarehousesList.map((wh) => (
+              {warehousesList.map((wh) => (
                 <option key={wh} value={wh}>
                   {wh}
                 </option>
@@ -540,7 +575,6 @@ export function StockCardIndex() {
                   <th style={{ minWidth: "130px" }}>Doc Out Ref</th>
                   <th style={{ minWidth: "120px" }}>No Lot</th>
                   <th style={{ minWidth: "120px" }}>Job Number</th>
-                  <th style={{ minWidth: "130px" }}>Last Update</th>
                 </tr>
               </thead>
               <tbody>
@@ -554,8 +588,8 @@ export function StockCardIndex() {
                           {rowNumber}
                         </td>
                         <td>{item.date}</td>
-                        <td>
-                          <span className="code-pill">{item.ref}</span>
+                        <td style={{ fontWeight: 600, fontFamily: "ui-monospace, monospace", fontSize: "12px" }}>
+                          {item.ref}
                         </td>
                         <td style={{ fontWeight: 500 }}>{item.description}</td>
                         <td style={{ textAlign: "right", fontVariantNumeric: "tabular-nums", color: item.in ? "var(--green-600)" : "var(--muted)" }}>
@@ -578,15 +612,12 @@ export function StockCardIndex() {
                         <td>
                           <span style={{ fontSize: "11px", fontWeight: 600 }}>{item.jobNumber}</span>
                         </td>
-                        <td style={{ fontSize: "11px", color: "var(--muted)" }}>
-                          {item.lastUpdate}
-                        </td>
                       </tr>
                     );
                   })
                 ) : (
                   <tr>
-                    <td colSpan={13} style={{ textAlign: "center", padding: "40px 16px" }}>
+                    <td colSpan={12} style={{ textAlign: "center", padding: "40px 16px" }}>
                       <div className="empty">
                         <div className="empty__icon">
                           <Icon name="search" />
@@ -615,7 +646,7 @@ export function StockCardIndex() {
                     <td style={{ textAlign: "right", color: "var(--ink)", fontVariantNumeric: "tabular-nums", fontWeight: 900 }}>
                       {totals.lastBalance.toFixed(2)}
                     </td>
-                    <td colSpan={6} style={{ color: "var(--muted)", fontSize: "11px" }}>
+                    <td colSpan={5} style={{ color: "var(--muted)", fontSize: "11px" }}>
                       Balance calculated for current filtered view
                     </td>
                   </tr>
