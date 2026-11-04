@@ -10,7 +10,7 @@ import { initialCurrencyRecords } from "../../Exim/Master/Currency/currency-type
 import { initialItemRecords } from "../../Exim/Master/Item/item-data";
 import type { ItemRecord } from "../../Exim/Master/Item/item-types";
 import { prRows } from "../../../data/mockData";
-import { fetchList, createPurchaseOrder } from "../../../data/api";
+import { fetchList, fetchDetail, createPurchaseOrder } from "../../../data/api";
 import { getLocalApprovalState, isPrItemClosed } from "../../../services/approvalApi";
 
 export interface POItemRow {
@@ -206,6 +206,38 @@ export function PurchaseOrderCreate({
           remark: prObj.remark || "",
         },
       ]);
+
+      if (prNum) {
+        fetchDetail("pr", prNum).then((detail) => {
+          const detailItems = getPrItemsList(detail);
+          if (detail && detailItems.length > 0) {
+            const mappedRows: POItemRow[] = detailItems.map((it: any, idx: number) => {
+              const reqQty = Number(it.rawQty || it.qty || parseFloat(String(it.quantity).replace(/[^0-9.]/g, "") || "1")) || 1;
+              return {
+                id: `po-item-${Date.now()}-${idx}`,
+                prNumber: prNum,
+                pr_has_items_id: it.pr_has_items_id || it.id,
+                itemName: it.item || it.itemName || "Material Item",
+                itemAlias: it.itemCode || it.itemAlias || "—",
+                price: 0,
+                unit: it.unit || "PCE",
+                requestedQty: reqQty,
+                purchasedQty: 0,
+                orderQty: reqQty,
+                discountPercent: 0,
+                subtotal: 0,
+                lme: 0,
+                optionalRate: 1.0,
+                percentageLme: 0,
+                pphRate: 0,
+                subtotalPph: 0,
+                remark: it.remark || detail.remark || "",
+              };
+            });
+            setItems(mappedRows);
+          }
+        });
+      }
       return;
     }
 
@@ -533,6 +565,55 @@ export function PurchaseOrderCreate({
             }
 
             return updated;
+          });
+          return;
+        } else {
+          // Fallback if PR summary row has empty _items: populate with basic info and fetchDetail
+          const totalQty = parseFloat(String(matchedPr.totalQuantity || matchedPr._totalQty || "1").replace(/[^0-9.]/g, "") || "1") || 1;
+          const reqRemark = matchedPr.remark || matchedPr._rawRemark || "Material Item";
+          setItems((prev) =>
+            prev.map((r) => {
+              if (r.id !== rowId) return r;
+              const sub = calculateLineSubtotal(r.price, totalQty, r.discountPercent);
+              return {
+                ...r,
+                prNumber: selectedPrNumber,
+                itemName: reqRemark,
+                requestedQty: totalQty,
+                purchasedQty: 0,
+                orderQty: totalQty,
+                remark: reqRemark,
+                subtotal: sub,
+                subtotalPph: sub * (Number(r.pphRate) || 0),
+              };
+            })
+          );
+
+          fetchDetail("pr", selectedPrNumber).then((detail) => {
+            const detailItems = getPrItemsList(detail);
+            if (detail && detailItems.length > 0) {
+              const first = detailItems[0];
+              const reqQty = Number(first.rawQty || first.qty || parseFloat(String(first.quantity).replace(/[^0-9.]/g, "") || "1")) || 1;
+              setItems((prev) =>
+                prev.map((r) => {
+                  if (r.id !== rowId) return r;
+                  const sub = calculateLineSubtotal(r.price, reqQty, r.discountPercent);
+                  return {
+                    ...r,
+                    pr_has_items_id: first.pr_has_items_id || first.id,
+                    itemName: first.item || first.itemName || "Material Item",
+                    itemAlias: first.itemCode || first.itemAlias || "—",
+                    unit: first.unit || "PCE",
+                    requestedQty: reqQty,
+                    purchasedQty: 0,
+                    orderQty: reqQty,
+                    remark: first.remark || detail.remark || "",
+                    subtotal: sub,
+                    subtotalPph: sub * (Number(r.pphRate) || 0),
+                  };
+                })
+              );
+            }
           });
           return;
         }

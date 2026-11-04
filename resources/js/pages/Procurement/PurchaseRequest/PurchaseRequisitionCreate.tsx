@@ -171,6 +171,36 @@ export function PurchaseRequisitionCreate({
   const [section, setSection] = useState("");
   const [attachmentName, setAttachmentName] = useState<string>("");
   const [note, setNote] = useState("");
+  const [dbDepartments, setDbDepartments] = useState<string[]>([]);
+  const [dbSections, setDbSections] = useState<string[]>([]);
+
+  // Load Departments and Sections from API on mount
+  useEffect(() => {
+    let isMounted = true;
+    fetch("/api/exim/master/departments?per_page=100", { headers: { Accept: "application/json" } })
+      .then((r) => r.json())
+      .then((d) => {
+        if (isMounted && d?.data && Array.isArray(d.data)) {
+          const names = d.data.map((item: any) => item.name || item.departmentName).filter(Boolean);
+          if (names.length > 0) setDbDepartments(names);
+        }
+      })
+      .catch(() => {});
+
+    fetch("/api/exim/master/sections?per_page=100", { headers: { Accept: "application/json" } })
+      .then((r) => r.json())
+      .then((d) => {
+        if (isMounted && d?.data && Array.isArray(d.data)) {
+          const names = d.data.map((item: any) => item.name || item.sectionName).filter(Boolean);
+          if (names.length > 0) setDbSections(names);
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   // Items Grid State
   const [items, setItems] = useState<PRItemRow[]>([]);
@@ -634,17 +664,26 @@ export function PurchaseRequisitionCreate({
                   }}
                 >
                   <option value="">Select Data . . .</option>
-                  <option value="REVERB">REVERB</option>
-                  <option value="SMELTING">SMELTING</option>
-                  <option value="REFINING">REFINING</option>
-                  <option value="MAINTENANCE">MAINTENANCE</option>
-                  <option value="LOGISTICS">LOGISTICS</option>
-                  <option value="LABORATORY">LABORATORY</option>
-                  <option value="PROCUREMENT">PROCUREMENT</option>
-                  <option value="HSE">HSE</option>
-                  <option value="TEKNIK">TEKNIK</option>
-                  <option value="PPIC">PPIC</option>
-                  <option value="HRD">HRD</option>
+                  {Array.from(
+                    new Set([
+                      ...dbDepartments,
+                      "REVERB",
+                      "SMELTING",
+                      "REFINING",
+                      "MAINTENANCE",
+                      "LOGISTICS",
+                      "LABORATORY",
+                      "PROCUREMENT",
+                      "HSE",
+                      "TEKNIK",
+                      "PPIC",
+                      "HRD",
+                    ])
+                  ).map((d) => (
+                    <option key={d} value={d}>
+                      {d}
+                    </option>
+                  ))}
                 </select>
                 {formErrors.deptRequest && <span className="master-form-error">{formErrors.deptRequest}</span>}
               </div>
@@ -664,12 +703,21 @@ export function PurchaseRequisitionCreate({
                   }}
                 >
                   <option value="">Select Data . . .</option>
-                  <option value="Section 01">Section 01</option>
-                  <option value="Section 02">Section 02</option>
-                  <option value="Furnace A">Furnace A</option>
-                  <option value="Furnace B">Furnace B</option>
-                  <option value="General Maintenance">General Maintenance</option>
-                  <option value="Utility">Utility</option>
+                  {Array.from(
+                    new Set([
+                      ...dbSections,
+                      "Section 01",
+                      "Section 02",
+                      "Furnace A",
+                      "Furnace B",
+                      "General Maintenance",
+                      "Utility",
+                    ])
+                  ).map((s) => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
+                  ))}
                 </select>
                 {formErrors.section && <span className="master-form-error">{formErrors.section}</span>}
               </div>
