@@ -104,12 +104,20 @@ export function PphIndex({ records = initialPphRecords, onAddNew, onToggleHide }
       <span
         style={{
           marginLeft: "6px",
-          fontSize: "11px",
-          color: isActive ? "var(--blue-600)" : "var(--muted)",
-          fontWeight: 800,
+          display: "inline-flex",
+          alignItems: "center",
+          color: isActive ? "var(--blue-600)" : "var(--muted-2)",
         }}
       >
-        {isActive ? (sortDirection === "asc" ? "▲" : "▼") : "⇅"}
+        {isActive ? (
+          sortDirection === "asc" ? (
+            <Icon name="arrowUp" size={12} />
+          ) : (
+            <Icon name="arrowDown" size={12} />
+          )
+        ) : (
+          <Icon name="arrowUpDown" size={12} />
+        )}
       </span>
     );
   };

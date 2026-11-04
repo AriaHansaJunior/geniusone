@@ -137,10 +137,10 @@ export function FacilityForm({
           <label htmlFor="facilityDescription" className="facility-form-label">
             Description
           </label>
-          <input
+          <textarea
             id="facilityDescription"
-            type="text"
-            className="facility-form-input"
+            className="facility-form-textarea master-form-textarea"
+            rows={3}
             placeholder="Optional facility description..."
             value={description}
             onChange={(e) => setDescription(e.target.value)}
@@ -148,11 +148,11 @@ export function FacilityForm({
         </div>
 
         {/* Form Action Buttons: Cancel and Save */}
-        <div className="facility-form-actions">
+        <div className="facility-form-actions" style={{ display: "flex", gap: "10px", marginTop: "12px" }}>
           <Button type="button" variant="ghost" onClick={onBack}>
             Cancel
           </Button>
-          <Button type="submit" variant="primary" icon="check">
+          <Button type="submit" variant="primary">
             Save
           </Button>
         </div>

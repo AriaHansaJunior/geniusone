@@ -146,12 +146,25 @@ export function DocumentHistoryIndex({
   };
 
   const renderSortIndicator = (field: DocumentHistorySortField) => {
-    if (sortField !== field || sortDirection === "none") {
-      return <span className="dh-sort-indicator text-muted">⇅</span>;
-    }
+    const isActive = sortField === field && sortDirection !== "none";
     return (
-      <span className="dh-sort-indicator text-primary font-bold">
-        {sortDirection === "asc" ? "▲" : "▼"}
+      <span
+        style={{
+          marginLeft: "6px",
+          display: "inline-flex",
+          alignItems: "center",
+          color: isActive ? "var(--blue-600)" : "var(--muted-2)",
+        }}
+      >
+        {isActive ? (
+          sortDirection === "asc" ? (
+            <Icon name="arrowUp" size={12} />
+          ) : (
+            <Icon name="arrowDown" size={12} />
+          )
+        ) : (
+          <Icon name="arrowUpDown" size={12} />
+        )}
       </span>
     );
   };
@@ -175,11 +188,6 @@ export function DocumentHistoryIndex({
 
   return (
     <div className="dh-page">
-      {/* Top Header: Title only (no Add New button) */}
-      <div className="dh-page-header">
-        <h1 className="dh-page-title">Document History</h1>
-      </div>
-
       {/* Notice Message */}
       {notice && (
         <div className="dh-alert dh-alert--info">

@@ -68,8 +68,44 @@ export function Header({
     onLogoutRequest?.();
   };
 
+  // Synchronize CSS animation start phase with system epoch time
+  // so page navigation or full page reloads seamlessly maintain the continuous flowing gradient
+  const [neonPhase] = useState(() => {
+    const cycle = 28; // 28-second smooth seamless loop
+    const nowSec = (Date.now() / 1000) % cycle;
+    return -Number(nowSec.toFixed(3));
+  });
+
+  const [neonEdgePhase] = useState(() => {
+    const cycle = 14; // 14-second edge highlight loop
+    const nowSec = (Date.now() / 1000) % cycle;
+    return -Number(nowSec.toFixed(3));
+  });
+
   return (
     <header className="topbar">
+      {/* Dynamic Looping Neon Ambient Background Layer */}
+      <div
+        className="topbar__neon-ambient"
+        aria-hidden="true"
+        style={
+          {
+            "--neon-phase": `${neonPhase}s`,
+            "--neon-edge-phase": `${neonEdgePhase}s`,
+          } as React.CSSProperties
+        }
+      >
+        <div className="topbar__neon-canvas">
+          <div className="topbar__neon-mesh" />
+          <div className="topbar__neon-orb topbar__neon-orb--1" />
+          <div className="topbar__neon-orb topbar__neon-orb--2" />
+          <div className="topbar__neon-orb topbar__neon-orb--3" />
+          <div className="topbar__neon-orb topbar__neon-orb--4" />
+        </div>
+        <div className="topbar__neon-glass" />
+        <div className="topbar__neon-edge" />
+      </div>
+
       {/* Mobile Drawer Hamburger Button */}
       {onToggleMobileSidebar && (
         <button

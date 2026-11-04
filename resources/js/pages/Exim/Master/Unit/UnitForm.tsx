@@ -120,11 +120,11 @@ export function UnitForm({ initialRecord, onBack, onSave }: UnitFormProps) {
         </div>
 
         {/* Consistently aligned action buttons */}
-        <div className="unit-form-actions">
+        <div className="unit-form-actions" style={{ display: "flex", gap: "10px", marginTop: "12px" }}>
           <Button type="button" variant="ghost" onClick={onBack}>
             Cancel
           </Button>
-          <Button type="submit" variant="primary" icon="check">
+          <Button type="submit" variant="primary">
             Save
           </Button>
         </div>

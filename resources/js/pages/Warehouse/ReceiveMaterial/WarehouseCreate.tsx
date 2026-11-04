@@ -26,6 +26,41 @@ export function WarehouseCreate({ onBack, onSaved }: WarehouseCreateProps) {
   const [remark, setRemark] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+  const [items, setItems] = useState([
+    {
+      id: "bpb-item-1",
+      name: "Mur Baut M 10 x 40 + ring pir",
+      code: "60.149.301.404",
+      jobNumber: "—",
+      poNumber: "POL-0926-0332",
+      deliveryNote: "SRA/H2/2610/00262",
+      receiveQty: 25.0,
+      unit: "PCE",
+      location: "Gudang Sparepart",
+      purpose: "U/ Periodic Maintenance : Tutup motor 11 kw; 18,5 kw",
+    },
+  ]);
+
+  const handleAddItemLine = () => {
+    const nextIdx = items.length + 1;
+    const newItem = {
+      id: `bpb-item-${Date.now()}`,
+      name: `Material Item ${nextIdx}`,
+      code: `60.100.200.${String(nextIdx).padStart(3, "0")}`,
+      jobNumber: "—",
+      poNumber: "POL-1026-0040",
+      deliveryNote: "SJ-2026-001",
+      receiveQty: 1.0,
+      unit: "PCE",
+      location: "Gudang Utama",
+      purpose: "Operational Receipt",
+    };
+    setItems((prev) => [...prev, newItem]);
+  };
+
+  const handleDeleteItemLine = (id: string) => {
+    setItems((prev) => prev.filter((i) => i.id !== id));
+  };
 
   const handleSubmit = async (e?: React.FormEvent | React.MouseEvent) => {
     e?.preventDefault();
@@ -91,6 +126,44 @@ export function WarehouseCreate({ onBack, onSaved }: WarehouseCreateProps) {
           </span>
         </div>
       </div>
+
+      {errorMsg && (
+        <div
+          style={{
+            padding: "10px 16px",
+            background: "#fef2f2",
+            border: "1px solid #fecaca",
+            borderRadius: "var(--radius-sm)",
+            color: "#b91c1c",
+            fontSize: "12.5px",
+            fontWeight: 600,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            marginBottom: "16px",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <Icon name="alertTriangle" size={16} />
+            <span>{errorMsg}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setErrorMsg("")}
+            style={{
+              border: 0,
+              background: "transparent",
+              cursor: "pointer",
+              fontWeight: 700,
+              color: "inherit",
+              fontSize: "16px",
+              lineHeight: 1,
+            }}
+          >
+            ×
+          </button>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} className="create-page-grid">
         {/* Card 1: Document & Supplier Header */}
@@ -278,7 +351,7 @@ export function WarehouseCreate({ onBack, onSaved }: WarehouseCreateProps) {
               variant="secondary"
               icon="plus"
               style={{ fontSize: "11px", padding: "6px 12px" }}
-              onClick={() => alert("Add line item modal or inline editor")}
+              onClick={handleAddItemLine}
             >
               Add Item Line
             </Button>
@@ -296,44 +369,63 @@ export function WarehouseCreate({ onBack, onSaved }: WarehouseCreateProps) {
                   <th style={{ width: "90px", textAlign: "right" }}>Receive Quantity</th>
                   <th style={{ width: "100px" }}>Warehouse Location</th>
                   <th style={{ minWidth: "120px" }}>Description / Purpose</th>
+                  <th style={{ width: "50px", textAlign: "center" }}>Action</th>
                 </tr>
               </thead>
               <tbody>
-                <tr>
-                  <td style={{ textAlign: "center", fontWeight: 700, color: "var(--muted)" }}>1</td>
-                  <td>
-                    <Material
-                      name="Mur Baut M 10 x 40 + ring pir"
-                      code="60.149.301.404"
-                    />
-                  </td>
-                  <td>—</td>
-                  <td>
-                    <strong style={{ color: "var(--ink)", fontSize: "11px" }}>POL-0926-0332</strong>
-                  </td>
-                  <td style={{ fontFamily: "ui-monospace, monospace", fontSize: "11px" }}>
-                    SRA/H2/2610/00262
-                  </td>
-                  <td style={{ textAlign: "right", fontFamily: "ui-monospace, monospace", fontWeight: 700 }}>
-                    25.00 PCE
-                  </td>
-                  <td>
-                    <input
-                      type="text"
-                      className="form-input"
-                      defaultValue="Gudang Sparepart"
-                      style={{ padding: "4px 8px", fontSize: "11px" }}
-                    />
-                  </td>
-                  <td>
-                    <input
-                      type="text"
-                      className="form-input"
-                      defaultValue="U/ Periodic Maintenance : Tutup motor 11 kw; 18,5 kw"
-                      style={{ padding: "4px 8px", fontSize: "11px", width: "100%" }}
-                    />
-                  </td>
-                </tr>
+                {items.map((it, idx) => (
+                  <tr key={it.id}>
+                    <td style={{ textAlign: "center", fontWeight: 700, color: "var(--muted)" }}>{idx + 1}</td>
+                    <td>
+                      <Material
+                        name={it.name}
+                        code={it.code}
+                      />
+                    </td>
+                    <td>{it.jobNumber}</td>
+                    <td>
+                      <strong style={{ color: "var(--ink)", fontSize: "11px" }}>{it.poNumber}</strong>
+                    </td>
+                    <td style={{ fontFamily: "ui-monospace, monospace", fontSize: "11px" }}>
+                      {it.deliveryNote}
+                    </td>
+                    <td style={{ textAlign: "right", fontFamily: "ui-monospace, monospace", fontWeight: 700 }}>
+                      {it.receiveQty.toFixed(2)} {it.unit}
+                    </td>
+                    <td>
+                      <input
+                        type="text"
+                        className="form-input"
+                        defaultValue={it.location}
+                        style={{ padding: "4px 8px", fontSize: "11px" }}
+                      />
+                    </td>
+                    <td>
+                      <input
+                        type="text"
+                        className="form-input"
+                        defaultValue={it.purpose}
+                        style={{ padding: "4px 8px", fontSize: "11px", width: "100%" }}
+                      />
+                    </td>
+                    <td style={{ textAlign: "center" }}>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteItemLine(it.id)}
+                        style={{
+                          background: "transparent",
+                          border: "none",
+                          color: "var(--red-600)",
+                          cursor: "pointer",
+                          padding: "4px",
+                        }}
+                        title="Remove item"
+                      >
+                        <Icon name="trash" size={14} />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>

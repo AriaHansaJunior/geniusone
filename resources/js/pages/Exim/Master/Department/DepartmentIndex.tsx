@@ -176,13 +176,22 @@ export function DepartmentIndex({
     const isActive = sortField === field && sortDirection !== "none";
     return (
       <span
-        className={`department-sort-indicator ${isActive ? "active" : "inactive"}`}
+        style={{
+          marginLeft: "6px",
+          display: "inline-flex",
+          alignItems: "center",
+          color: isActive ? "var(--blue-600)" : "var(--muted-2)",
+        }}
       >
-        {isActive
-          ? sortDirection === "asc"
-            ? "▲"
-            : "▼"
-          : "⇅"}
+        {isActive ? (
+          sortDirection === "asc" ? (
+            <Icon name="arrowUp" size={12} />
+          ) : (
+            <Icon name="arrowDown" size={12} />
+          )
+        ) : (
+          <Icon name="arrowUpDown" size={12} />
+        )}
       </span>
     );
   };
@@ -198,25 +207,6 @@ export function DepartmentIndex({
 
   return (
     <div className="department-page">
-      {/* Page Heading Area: Master Department title on left, Add New & Export on right */}
-      <div className="department-page-header">
-        <h1 className="department-page-title">Master Department</h1>
-
-        <div className="department-header-actions">
-          <Button variant="primary" onClick={onAddNew}>
-            Add New
-          </Button>
-
-          <Button
-            variant="excel"
-            onClick={handleExportToExcel}
-            title="Export filtered records to Excel-compatible CSV"
-          >
-            Export To Excel
-          </Button>
-        </div>
-      </div>
-
       {/* Export notification notice */}
       {exportNotice && (
         <div className="department-alert department-alert--info">
@@ -236,8 +226,8 @@ export function DepartmentIndex({
 
       {/* Main Table Panel */}
       <div className="department-table-panel panel">
-        {/* Table Toolbar: Search on Left */}
-        <div className="department-toolbar">
+        {/* Table Toolbar: Search on Left, Actions on Right */}
+        <div className="department-toolbar" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" }}>
           <SearchField
             value={search}
             onChange={(val) => {
@@ -246,6 +236,19 @@ export function DepartmentIndex({
             }}
             placeholder="Search..."
           />
+
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <Button variant="primary" onClick={onAddNew}>
+              Add New
+            </Button>
+            <Button
+              variant="excel"
+              onClick={handleExportToExcel}
+              title="Export filtered records to Excel-compatible CSV"
+            >
+              Export To Excel
+            </Button>
+          </div>
         </div>
 
         {/* Responsive Table Frame */}

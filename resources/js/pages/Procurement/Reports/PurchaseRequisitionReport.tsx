@@ -246,7 +246,8 @@ export function PurchaseRequisitionReport({
 
   const handleExportToExcel = () => {
     if (filteredAndSortedRecords.length === 0) {
-      alert("No records to export with the current filter selection.");
+      setExportNotice("No records to export with the current filter selection.");
+      setTimeout(() => setExportNotice(null), 4000);
       return;
     }
 
@@ -366,6 +367,30 @@ export function PurchaseRequisitionReport({
     }
     return pages;
   }, [totalPages, safeCurrentPage]);
+
+  const renderSortIndicator = (field: SortField) => {
+    const isActive = sortField === field && sortDirection !== null;
+    return (
+      <span
+        style={{
+          marginLeft: "6px",
+          display: "inline-flex",
+          alignItems: "center",
+          color: isActive ? "var(--blue-600)" : "var(--muted-2)",
+        }}
+      >
+        {isActive ? (
+          sortDirection === "asc" ? (
+            <Icon name="arrowUp" size={12} />
+          ) : (
+            <Icon name="arrowDown" size={12} />
+          )
+        ) : (
+          <Icon name="arrowUpDown" size={12} />
+        )}
+      </span>
+    );
+  };
 
   return (
     <div className="pr-report-page">
@@ -653,11 +678,7 @@ export function PurchaseRequisitionReport({
                 >
                   <span className="pr-sort-header">
                     Type
-                    {sortField === "facilityType" && (
-                      <span className="pr-sort-icon pr-sort-icon--active">
-                        {sortDirection === "asc" ? "▲" : "▼"}
-                      </span>
-                    )}
+                    {renderSortIndicator("facilityType")}
                   </span>
                 </th>
                 <th colSpan={2} className="th--center">
@@ -677,11 +698,7 @@ export function PurchaseRequisitionReport({
                 >
                   <span className="pr-sort-header">
                     Status
-                    {sortField === "status" && (
-                      <span className="pr-sort-icon pr-sort-icon--active">
-                        {sortDirection === "asc" ? "▲" : "▼"}
-                      </span>
-                    )}
+                    {renderSortIndicator("status")}
                   </span>
                 </th>
                 <th colSpan={3} className="th--center">
@@ -709,17 +726,7 @@ export function PurchaseRequisitionReport({
                 >
                   <span className="pr-sort-header">
                     Number
-                    <span
-                      className={`pr-sort-icon ${
-                        sortField === "prNumber" ? "pr-sort-icon--active" : ""
-                      }`}
-                    >
-                      {sortField === "prNumber"
-                        ? sortDirection === "asc"
-                          ? "▲"
-                          : "▼"
-                        : "⇅"}
-                    </span>
+                    {renderSortIndicator("prNumber")}
                   </span>
                 </th>
                 <th
@@ -729,11 +736,7 @@ export function PurchaseRequisitionReport({
                 >
                   <span className="pr-sort-header">
                     Date
-                    {sortField === "prDateRaw" && (
-                      <span className="pr-sort-icon pr-sort-icon--active">
-                        {sortDirection === "asc" ? "▲" : "▼"}
-                      </span>
-                    )}
+                    {renderSortIndicator("prDateRaw")}
                   </span>
                 </th>
                 <th
@@ -743,11 +746,7 @@ export function PurchaseRequisitionReport({
                 >
                   <span className="pr-sort-header">
                     Date Required
-                    {sortField === "dateRequiredRaw" && (
-                      <span className="pr-sort-icon pr-sort-icon--active">
-                        {sortDirection === "asc" ? "▲" : "▼"}
-                      </span>
-                    )}
+                    {renderSortIndicator("dateRequiredRaw")}
                   </span>
                 </th>
 
@@ -759,11 +758,7 @@ export function PurchaseRequisitionReport({
                 >
                   <span className="pr-sort-header">
                     Code
-                    {sortField === "itemCode" && (
-                      <span className="pr-sort-icon pr-sort-icon--active">
-                        {sortDirection === "asc" ? "▲" : "▼"}
-                      </span>
-                    )}
+                    {renderSortIndicator("itemCode")}
                   </span>
                 </th>
                 <th
@@ -773,11 +768,7 @@ export function PurchaseRequisitionReport({
                 >
                   <span className="pr-sort-header">
                     Name
-                    {sortField === "itemName" && (
-                      <span className="pr-sort-icon pr-sort-icon--active">
-                        {sortDirection === "asc" ? "▲" : "▼"}
-                      </span>
-                    )}
+                    {renderSortIndicator("itemName")}
                   </span>
                 </th>
 
@@ -789,11 +780,7 @@ export function PurchaseRequisitionReport({
                 >
                   <span className="pr-sort-header">
                     Request
-                    {sortField === "qtyRequest" && (
-                      <span className="pr-sort-icon pr-sort-icon--active">
-                        {sortDirection === "asc" ? "▲" : "▼"}
-                      </span>
-                    )}
+                    {renderSortIndicator("qtyRequest")}
                   </span>
                 </th>
                 <th
@@ -803,11 +790,7 @@ export function PurchaseRequisitionReport({
                 >
                   <span className="pr-sort-header">
                     Purchase
-                    {sortField === "qtyPurchase" && (
-                      <span className="pr-sort-icon pr-sort-icon--active">
-                        {sortDirection === "asc" ? "▲" : "▼"}
-                      </span>
-                    )}
+                    {renderSortIndicator("qtyPurchase")}
                   </span>
                 </th>
                 <th
@@ -817,11 +800,7 @@ export function PurchaseRequisitionReport({
                 >
                   <span className="pr-sort-header">
                     Remain
-                    {sortField === "qtyRemain" && (
-                      <span className="pr-sort-icon pr-sort-icon--active">
-                        {sortDirection === "asc" ? "▲" : "▼"}
-                      </span>
-                    )}
+                    {renderSortIndicator("qtyRemain")}
                   </span>
                 </th>
 
@@ -834,19 +813,7 @@ export function PurchaseRequisitionReport({
                 >
                   <span className="pr-sort-header">
                     Approval Date 2
-                    <span
-                      className={`pr-sort-icon ${
-                        sortField === "approvalDate2"
-                          ? "pr-sort-icon--active"
-                          : ""
-                      }`}
-                    >
-                      {sortField === "approvalDate2"
-                        ? sortDirection === "asc"
-                          ? "▲"
-                          : "▼"
-                        : "⇅"}
-                    </span>
+                    {renderSortIndicator("approvalDate2")}
                   </span>
                 </th>
                 <th
@@ -856,11 +823,7 @@ export function PurchaseRequisitionReport({
                 >
                   <span className="pr-sort-header">
                     Status Approval
-                    {sortField === "approvalStatus" && (
-                      <span className="pr-sort-icon pr-sort-icon--active">
-                        {sortDirection === "asc" ? "▲" : "▼"}
-                      </span>
-                    )}
+                    {renderSortIndicator("approvalStatus")}
                   </span>
                 </th>
               </tr>

@@ -228,13 +228,22 @@ export function ItemIndex({
     const isActive = sortField === field && sortDirection !== "none";
     return (
       <span
-        className={`item-sort-indicator ${isActive ? "active" : "inactive"}`}
+        style={{
+          marginLeft: "6px",
+          display: "inline-flex",
+          alignItems: "center",
+          color: isActive ? "var(--blue-600)" : "var(--muted-2)",
+        }}
       >
-        {isActive
-          ? sortDirection === "asc"
-            ? "▲"
-            : "▼"
-          : "⇅"}
+        {isActive ? (
+          sortDirection === "asc" ? (
+            <Icon name="arrowUp" size={12} />
+          ) : (
+            <Icon name="arrowDown" size={12} />
+          )
+        ) : (
+          <Icon name="arrowUpDown" size={12} />
+        )}
       </span>
     );
   };
@@ -263,35 +272,6 @@ export function ItemIndex({
 
   return (
     <div className="item-page">
-      {/* Page Header */}
-      <div className="item-page-header">
-        <h1 className="item-page-title">Master Item</h1>
-
-        <div className="item-header-actions">
-          {/* Positive Green Utility Button for Generate QR Code */}
-          <button
-            type="button"
-            className="btn-qr-utility"
-            onClick={onGenerateQr}
-            title="Generate and print standardized customs QR labels"
-          >
-            <span>Generate QR Code</span>
-          </button>
-
-          <Button variant="primary" onClick={onAddNew}>
-            Add New
-          </Button>
-
-          <Button
-            variant="excel"
-            onClick={handleExportToExcel}
-            title="Export filtered records to Excel-compatible CSV"
-          >
-            Export To Excel
-          </Button>
-        </div>
-      </div>
-
       {/* Export notification notice */}
       {exportNotice && (
         <div className="department-alert department-alert--info">
@@ -356,7 +336,29 @@ export function ItemIndex({
             </select>
           </div>
 
-          <div className="item-toolbar-right">
+          <div className="item-toolbar-right" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            {/* Positive Green Utility Button for Generate QR Code */}
+            <button
+              type="button"
+              className="btn-qr-utility"
+              onClick={onGenerateQr}
+              title="Generate and print standardized customs QR labels"
+            >
+              <span>Generate QR Code</span>
+            </button>
+
+            <Button variant="primary" onClick={onAddNew}>
+              Add New
+            </Button>
+
+            <Button
+              variant="excel"
+              onClick={handleExportToExcel}
+              title="Export filtered records to Excel-compatible CSV"
+            >
+              Export To Excel
+            </Button>
+
             {/* Column Settings Trigger Button */}
             <button
               type="button"

@@ -182,11 +182,22 @@ export function SupplierIndex({
   const renderSortIndicator = (field: SortField) => {
     const isActive = sortField === field;
     return (
-      <span className={`table-sort-arrow ${isActive ? "active" : ""}`}>
+      <span
+        style={{
+          marginLeft: "6px",
+          display: "inline-flex",
+          alignItems: "center",
+          color: isActive ? "var(--blue-600)" : "var(--muted-2)",
+        }}
+      >
         {isActive ? (
-          sortDirection === "asc" ? "▲" : "▼"
+          sortDirection === "asc" ? (
+            <Icon name="arrowUp" size={12} />
+          ) : (
+            <Icon name="arrowDown" size={12} />
+          )
         ) : (
-          "⇅"
+          <Icon name="arrowUpDown" size={12} />
         )}
       </span>
     );

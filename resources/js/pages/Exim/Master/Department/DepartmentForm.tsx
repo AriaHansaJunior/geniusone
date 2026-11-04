@@ -156,11 +156,11 @@ export function DepartmentForm({
         </div>
 
         {/* Form Action Buttons: Cancel and Save */}
-        <div className="department-form-actions">
+        <div className="department-form-actions" style={{ display: "flex", gap: "10px", marginTop: "12px" }}>
           <Button type="button" variant="ghost" onClick={onBack}>
             Cancel
           </Button>
-          <Button type="submit" variant="primary" icon="check">
+          <Button type="submit" variant="primary">
             Save
           </Button>
         </div>

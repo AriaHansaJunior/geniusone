@@ -195,13 +195,22 @@ export function ClassificationIndex({
     const isActive = sortField === field && sortDirection !== "none";
     return (
       <span
-        className={`classification-sort-indicator ${isActive ? "active" : "inactive"}`}
+        style={{
+          marginLeft: "6px",
+          display: "inline-flex",
+          alignItems: "center",
+          color: isActive ? "var(--blue-600)" : "var(--muted-2)",
+        }}
       >
-        {isActive
-          ? sortDirection === "asc"
-            ? "▲"
-            : "▼"
-          : "⇅"}
+        {isActive ? (
+          sortDirection === "asc" ? (
+            <Icon name="arrowUp" size={12} />
+          ) : (
+            <Icon name="arrowDown" size={12} />
+          )
+        ) : (
+          <Icon name="arrowUpDown" size={12} />
+        )}
       </span>
     );
   };
@@ -217,25 +226,6 @@ export function ClassificationIndex({
 
   return (
     <div className="classification-page">
-      {/* Page Heading Area: Master Classification title on left, Add New & Export on right */}
-      <div className="classification-page-header">
-        <h1 className="classification-page-title">Master Classification</h1>
-
-        <div className="classification-header-actions">
-          <Button variant="primary" onClick={onAddNew}>
-            Add New
-          </Button>
-
-          <Button
-            variant="excel"
-            onClick={handleExportToExcel}
-            title="Export filtered records to Excel-compatible CSV"
-          >
-            Export to Excel
-          </Button>
-        </div>
-      </div>
-
       {/* Export notification notice */}
       {exportNotice && (
         <div className="classification-alert classification-alert--info">
@@ -255,8 +245,8 @@ export function ClassificationIndex({
 
       {/* Main Table Panel */}
       <div className="classification-table-panel panel">
-        {/* Table Toolbar: Search on Left */}
-        <div className="classification-toolbar">
+        {/* Table Toolbar: Search on Left, Actions on Right */}
+        <div className="classification-toolbar" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" }}>
           <SearchField
             value={search}
             onChange={(val) => {
@@ -265,6 +255,19 @@ export function ClassificationIndex({
             }}
             placeholder="Search..."
           />
+
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <Button variant="primary" onClick={onAddNew}>
+              Add New
+            </Button>
+            <Button
+              variant="excel"
+              onClick={handleExportToExcel}
+              title="Export filtered records to Excel-compatible CSV"
+            >
+              Export to Excel
+            </Button>
+          </div>
         </div>
 
         {/* Responsive Table Frame */}

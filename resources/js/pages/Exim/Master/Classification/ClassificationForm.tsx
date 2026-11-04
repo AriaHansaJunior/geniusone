@@ -193,10 +193,10 @@ export function ClassificationForm({
           <label htmlFor="classificationDescription" className="classification-form-label">
             Description
           </label>
-          <input
+          <textarea
             id="classificationDescription"
-            type="text"
-            className="classification-form-input"
+            className="classification-form-textarea master-form-textarea"
+            rows={3}
             placeholder="e.g. Untuk Keperluan Kesejahteraan..."
             value={description}
             onChange={(e) => setDescription(e.target.value)}
@@ -242,11 +242,11 @@ export function ClassificationForm({
         </div>
 
         {/* Form Action Buttons: Cancel and Save */}
-        <div className="classification-form-actions">
+        <div className="classification-form-actions" style={{ display: "flex", gap: "10px", marginTop: "12px" }}>
           <Button type="button" variant="ghost" onClick={onBack}>
             Cancel
           </Button>
-          <Button type="submit" variant="primary" icon="check">
+          <Button type="submit" variant="primary">
             Save
           </Button>
         </div>

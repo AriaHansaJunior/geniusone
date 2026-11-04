@@ -176,10 +176,10 @@ export function StyleForm({
           <label htmlFor="styleDescription" className="style-form-label">
             Description
           </label>
-          <input
+          <textarea
             id="styleDescription"
-            type="text"
-            className="style-form-input"
+            className="style-form-textarea master-form-textarea"
+            rows={3}
             placeholder="Optional style specification remarks..."
             value={description}
             onChange={(e) => setDescription(e.target.value)}
@@ -187,11 +187,11 @@ export function StyleForm({
         </div>
 
         {/* Form Action Buttons: Cancel and Save */}
-        <div className="style-form-actions">
+        <div className="style-form-actions" style={{ display: "flex", gap: "10px", marginTop: "12px" }}>
           <Button type="button" variant="ghost" onClick={onBack}>
             Cancel
           </Button>
-          <Button type="submit" variant="primary" icon="check">
+          <Button type="submit" variant="primary">
             Save
           </Button>
         </div>

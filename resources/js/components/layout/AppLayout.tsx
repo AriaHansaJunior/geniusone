@@ -102,7 +102,6 @@ export function AppLayout({
               <div>
                 <span className="eyebrow">{meta.eyebrow}</span>
                 <h1>{meta.title}</h1>
-                <p>{meta.description}</p>
               </div>
               {(activePage === "pr" || activePage === "po" || activePage === "report" || activePage === "warehouse") && (
                 <div className="page-header__actions">

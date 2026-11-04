@@ -101,14 +101,6 @@ export function WarehouseCoordinateIndex({
 
   return (
     <div className="wh-page">
-      {/* Page Title with dynamic warehouse name matching Screenshot 2 */}
-      <div className="wh-page-header">
-        <h1 className="wh-page-title">
-          Warehouse Coordinate{" "}
-          <span className="text-muted font-normal">- {warehouse.name}</span>
-        </h1>
-      </div>
-
       {/* Content Card */}
       <div className="wh-table-card">
         {/* Top Action Buttons matching Screenshot 2 */}

@@ -225,7 +225,8 @@ export function ReportingPurchaseOrder({
 
   const handleExportToExcel = () => {
     if (filteredAndSortedRecords.length === 0) {
-      alert("No records to export with the current filter selection.");
+      setExportNotice("No records to export with the current filter selection.");
+      setTimeout(() => setExportNotice(null), 4000);
       return;
     }
 
@@ -351,6 +352,30 @@ export function ReportingPurchaseOrder({
     }
     return pages;
   }, [totalPages, safeCurrentPage]);
+
+  const renderSortIndicator = (field: SortField) => {
+    const isActive = sortField === field && sortDirection !== null;
+    return (
+      <span
+        style={{
+          marginLeft: "6px",
+          display: "inline-flex",
+          alignItems: "center",
+          color: isActive ? "var(--blue-600)" : "var(--muted-2)",
+        }}
+      >
+        {isActive ? (
+          sortDirection === "asc" ? (
+            <Icon name="arrowUp" size={12} />
+          ) : (
+            <Icon name="arrowDown" size={12} />
+          )
+        ) : (
+          <Icon name="arrowUpDown" size={12} />
+        )}
+      </span>
+    );
+  };
 
   return (
     <div className="po-report-page">
@@ -511,17 +536,7 @@ export function ReportingPurchaseOrder({
                 >
                   <span className="po-sort-header">
                     Purchase Order Number
-                    <span
-                      className={`po-sort-icon ${
-                        sortField === "poNumber" ? "po-sort-icon--active" : ""
-                      }`}
-                    >
-                      {sortField === "poNumber"
-                        ? sortDirection === "asc"
-                          ? "▲"
-                          : "▼"
-                        : "⇅"}
-                    </span>
+                    {renderSortIndicator("poNumber")}
                   </span>
                 </th>
 
@@ -533,11 +548,7 @@ export function ReportingPurchaseOrder({
                 >
                   <span className="po-sort-header">
                     Purchase Date
-                    {sortField === "purchaseDateRaw" && (
-                      <span className="po-sort-icon po-sort-icon--active">
-                        {sortDirection === "asc" ? "▲" : "▼"}
-                      </span>
-                    )}
+                    {renderSortIndicator("purchaseDateRaw")}
                   </span>
                 </th>
 
@@ -549,11 +560,7 @@ export function ReportingPurchaseOrder({
                 >
                   <span className="po-sort-header">
                     Supplier
-                    {sortField === "supplier" && (
-                      <span className="po-sort-icon po-sort-icon--active">
-                        {sortDirection === "asc" ? "▲" : "▼"}
-                      </span>
-                    )}
+                    {renderSortIndicator("supplier")}
                   </span>
                 </th>
 
@@ -565,11 +572,7 @@ export function ReportingPurchaseOrder({
                 >
                   <span className="po-sort-header">
                     Discount
-                    {sortField === "discount" && (
-                      <span className="po-sort-icon po-sort-icon--active">
-                        {sortDirection === "asc" ? "▲" : "▼"}
-                      </span>
-                    )}
+                    {renderSortIndicator("discount")}
                   </span>
                 </th>
 
@@ -581,11 +584,7 @@ export function ReportingPurchaseOrder({
                 >
                   <span className="po-sort-header">
                     Value Added Tax
-                    {sortField === "vat" && (
-                      <span className="po-sort-icon po-sort-icon--active">
-                        {sortDirection === "asc" ? "▲" : "▼"}
-                      </span>
-                    )}
+                    {renderSortIndicator("vat")}
                   </span>
                 </th>
 
@@ -597,11 +596,7 @@ export function ReportingPurchaseOrder({
                 >
                   <span className="po-sort-header">
                     Subtotal
-                    {sortField === "subtotal" && (
-                      <span className="po-sort-icon po-sort-icon--active">
-                        {sortDirection === "asc" ? "▲" : "▼"}
-                      </span>
-                    )}
+                    {renderSortIndicator("subtotal")}
                   </span>
                 </th>
 
@@ -616,11 +611,7 @@ export function ReportingPurchaseOrder({
                 >
                   <span className="po-sort-header">
                     PO Status
-                    {sortField === "poStatus" && (
-                      <span className="po-sort-icon po-sort-icon--active">
-                        {sortDirection === "asc" ? "▲" : "▼"}
-                      </span>
-                    )}
+                    {renderSortIndicator("poStatus")}
                   </span>
                 </th>
 
@@ -632,11 +623,7 @@ export function ReportingPurchaseOrder({
                 >
                   <span className="po-sort-header">
                     Receiving Status
-                    {sortField === "receivingStatus" && (
-                      <span className="po-sort-icon po-sort-icon--active">
-                        {sortDirection === "asc" ? "▲" : "▼"}
-                      </span>
-                    )}
+                    {renderSortIndicator("receivingStatus")}
                   </span>
                 </th>
 
@@ -648,11 +635,7 @@ export function ReportingPurchaseOrder({
                 >
                   <span className="po-sort-header">
                     Facility Type
-                    {sortField === "facilityType" && (
-                      <span className="po-sort-icon po-sort-icon--active">
-                        {sortDirection === "asc" ? "▲" : "▼"}
-                      </span>
-                    )}
+                    {renderSortIndicator("facilityType")}
                   </span>
                 </th>
 
@@ -664,11 +647,7 @@ export function ReportingPurchaseOrder({
                 >
                   <span className="po-sort-header">
                     Created By
-                    {sortField === "createdBy" && (
-                      <span className="po-sort-icon po-sort-icon--active">
-                        {sortDirection === "asc" ? "▲" : "▼"}
-                      </span>
-                    )}
+                    {renderSortIndicator("createdBy")}
                   </span>
                 </th>
 

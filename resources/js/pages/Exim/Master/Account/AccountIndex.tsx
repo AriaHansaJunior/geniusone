@@ -262,37 +262,26 @@ export function AccountIndex({
       <span
         style={{
           marginLeft: "6px",
-          fontSize: "11px",
-          color: isActive ? "var(--blue-600)" : "var(--muted)",
-          fontWeight: 800,
+          display: "inline-flex",
+          alignItems: "center",
+          color: isActive ? "var(--blue-600)" : "var(--muted-2)",
         }}
       >
-        {isActive ? (sortDirection === "asc" ? "▲" : "▼") : "⇅"}
+        {isActive ? (
+          sortDirection === "asc" ? (
+            <Icon name="arrowUp" size={12} />
+          ) : (
+            <Icon name="arrowDown" size={12} />
+          )
+        ) : (
+          <Icon name="arrowUpDown" size={12} />
+        )}
       </span>
     );
   };
 
   return (
     <div className="account-page">
-      {/* Header action bar */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "16px" }}>
-        <h1 style={{ margin: 0, fontSize: "20px", fontWeight: 800, color: "var(--ink)", letterSpacing: "-0.3px" }}>
-          Master Account
-        </h1>
-        <div style={{ display: "flex", gap: "10px" }}>
-          <Button variant="primary" onClick={handleOpenCreateModal}>
-            Add New
-          </Button>
-          <Button
-            variant="excel"
-            onClick={handleExportToExcel}
-            title="Export to Excel CSV"
-          >
-            Export to Excel
-          </Button>
-        </div>
-      </div>
-
       {exportNotice && (
         <div style={{ padding: "10px 14px", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: "var(--radius-sm)", color: "#166534", marginBottom: "14px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <span>{exportNotice}</span>
@@ -302,7 +291,7 @@ export function AccountIndex({
 
       {/* Main Table Panel */}
       <div className="panel table-panel">
-        <div className="table-toolbar" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 18px", borderBottom: "1px solid var(--line)", background: "var(--white)" }}>
+        <div className="table-toolbar" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 18px", borderBottom: "1px solid var(--line)", background: "var(--white)", gap: "12px" }}>
           <SearchField
             value={search}
             onChange={(val) => {
@@ -311,6 +300,18 @@ export function AccountIndex({
             }}
             placeholder="Search account code, name, category..."
           />
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <Button variant="primary" onClick={handleOpenCreateModal}>
+              Add New
+            </Button>
+            <Button
+              variant="excel"
+              onClick={handleExportToExcel}
+              title="Export to Excel CSV"
+            >
+              Export to Excel
+            </Button>
+          </div>
         </div>
 
         <div className="table-frame">

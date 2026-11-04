@@ -157,27 +157,6 @@ export function MasterWarehouseIndex({
 
   return (
     <div className="wh-page">
-      {/* Page Header matching Screenshot 1 */}
-      <div className="wh-page-header">
-        <h1 className="wh-page-title">Master Warehouse</h1>
-        <div className="wh-header-actions">
-          <Button
-            variant="primary"
-            onClick={onAddNew}
-            className="wh-btn-add-new"
-          >
-            Add New
-          </Button>
-          <Button
-            variant="excel"
-            onClick={handleExportExcel}
-            className="wh-btn-export-excel"
-          >
-            Export To Excel
-          </Button>
-        </div>
-      </div>
-
       {/* Export / Informational Notice */}
       {exportNotice && (
         <div className="wh-alert wh-alert--info" role="status">
@@ -199,7 +178,7 @@ export function MasterWarehouseIndex({
       {/* White Content Card */}
       <div className="wh-table-card">
         {/* Top Filter and Controls Bar */}
-        <div className="wh-controls-bar">
+        <div className="wh-controls-bar" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 18px", borderBottom: "1px solid var(--line)", background: "#ffffff", gap: "16px" }}>
           <div className="wh-search-box">
             <SearchField
               value={search}
@@ -209,6 +188,22 @@ export function MasterWarehouseIndex({
               }}
               placeholder="Search..."
             />
+          </div>
+          <div className="wh-header-actions" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <Button
+              variant="primary"
+              onClick={onAddNew}
+              className="wh-btn-add-new"
+            >
+              Add New
+            </Button>
+            <Button
+              variant="excel"
+              onClick={handleExportExcel}
+              className="wh-btn-export-excel"
+            >
+              Export To Excel
+            </Button>
           </div>
         </div>
 
