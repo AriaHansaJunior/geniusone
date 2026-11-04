@@ -395,6 +395,12 @@ export function WarehouseCreate({
       );
       if (foundPo) {
         populateFromPo(foundPo);
+      } else {
+        fetchDetail("po", poNum).then((detail) => {
+          if (detail) {
+            populateFromPo(detail);
+          }
+        });
       }
     } else if (val.startsWith("RN:")) {
       const rnNum = val.slice(3);
@@ -417,6 +423,17 @@ export function WarehouseCreate({
     const foundPo = approvedPos.find(
       (p) => (p._rawNumber || p._rawPo || p.poNumber) === selectedPoNumber
     );
+
+    if (!foundPo) {
+      handleUpdateItemField(rowId, "poNumber", selectedPoNumber);
+      fetchDetail("po", selectedPoNumber).then((detail) => {
+        if (detail) {
+          setApprovedPos((prev) => [...prev, detail]);
+          populateFromPo(detail);
+        }
+      });
+      return;
+    }
 
     if (foundPo) {
       const poNum = foundPo._rawNumber || foundPo._rawPo || foundPo.poNumber || selectedPoNumber;
