@@ -25,7 +25,41 @@ export function PurchaseRequisitionDetail({
   onNavigateDetail,
 }: PurchaseRequisitionDetailProps) {
   const [row, setRow] = useState<TableRow>(() => {
-    return findRowBySlug(prRows, code) || prRows[0];
+    if (typeof document !== "undefined") {
+      const rootEl = document.getElementById("root");
+      if (rootEl?.dataset?.initialJson) {
+        try {
+          const parsed = JSON.parse(rootEl.dataset.initialJson);
+          if (parsed?.item) {
+            const parsedNum = String(parsed.item._rawNumber || parsed.item.prNumber || "").replace(/[^A-Za-z0-9]/g, "").toLowerCase();
+            const targetCode = String(code || "").replace(/[^A-Za-z0-9]/g, "").toLowerCase();
+            if (!targetCode || parsedNum === targetCode) {
+              return parsed.item;
+            }
+          }
+        } catch (_) {}
+      }
+    }
+    const match = findRowBySlug(prRows, code);
+    if (match) return match;
+    const cleanDoc = code ? code.replace(/-/g, "/") : "PR";
+    return {
+      _id: `pr-${code}`,
+      _type: "pr",
+      prNumber: cleanDoc,
+      _rawNumber: cleanDoc,
+      status: "Waiting for Approve 1",
+      _rawStatus: "Waiting for Approve 1",
+      date: "-",
+      dueDate: "-",
+      deptRequest: "Loading...",
+      section: "Operations",
+      remark: "-",
+      createdBy: "-",
+      totalQuantity: "-",
+      items: [],
+      _items: [],
+    } as TableRow;
   });
 
   useEffect(() => {
@@ -40,24 +74,55 @@ export function PurchaseRequisitionDetail({
     };
   }, [code]);
 
-  const docNumber = row._rawNumber || "0026/PR-IMLI/X/2026";
-  const rawStatus = row._rawStatus || "Approved 1";
-  const reqDate = row._rawDate || "07-Oct-2026";
-  const dueDate = row._rawDueDate || "21-Oct-2026";
-  const dept = String(row._rawDept || "HSE");
-  const remark = row._rawRemark || "PP Sby (UGT-26-004)";
-  const createdBy = row._rawCreatedBy || "Arsyeila 07-10-2026 15:08";
-  const totalQty = String(row._totalQty || "15.0000 PCE");
+  const docNumber = typeof row._rawNumber === "string" && row._rawNumber
+    ? row._rawNumber
+    : typeof row.prNumber === "string" && row.prNumber
+    ? row.prNumber
+    : typeof code === "string"
+    ? code.replace(/-/g, "/")
+    : "PR";
+  const rawStatus = row._rawStatus || row.status || "Waiting for Approve 1";
+  const reqDate = row._rawDate || row.date || "-";
+  const dueDate = row._rawDueDate || row.dueDate || "-";
+  const dept = String(row._rawDept || row.deptRequest || "-");
+  const sectionName = String(row.section || row._rawSection || "Operations");
+  const remark = row._rawRemark || row.remark || "-";
+  const createdBy = row._rawCreatedBy || row.createdBy || "-";
+  const totalQty = String(row._totalQty || row.totalQuantity || "-");
 
-  const [approvalState, setApprovalState] = useState<DocumentApprovalState>(() =>
-    getLocalApprovalState("purchase_requisition", docNumber, normalizeApprovalStatus(rawStatus))
-  );
+  const items: any[] = (row._items && row._items.length > 0)
+    ? row._items
+    : (row.items && Array.isArray(row.items) && row.items.length > 0)
+    ? row.items
+    : [];
+
+  const backendNormalizedStatus = normalizeApprovalStatus(rawStatus);
+
+  const [approvalState, setApprovalState] = useState<DocumentApprovalState>(() => {
+    const local = getLocalApprovalState("purchase_requisition", docNumber, backendNormalizedStatus);
+    if (backendNormalizedStatus && local.status !== backendNormalizedStatus) {
+      return {
+        ...local,
+        status: backendNormalizedStatus,
+        currentTier: backendNormalizedStatus === "WAITING_APPROVE_2" ? 2 : backendNormalizedStatus === "APPROVED" ? 2 : 1,
+      };
+    }
+    return local;
+  });
 
   useEffect(() => {
-    setApprovalState(
-      getLocalApprovalState("purchase_requisition", docNumber, normalizeApprovalStatus(rawStatus))
-    );
-  }, [docNumber, rawStatus]);
+    const local = getLocalApprovalState("purchase_requisition", docNumber, backendNormalizedStatus);
+    if (local.status !== backendNormalizedStatus) {
+      const synchedState: DocumentApprovalState = {
+        ...local,
+        status: backendNormalizedStatus,
+        currentTier: backendNormalizedStatus === "WAITING_APPROVE_2" ? 2 : backendNormalizedStatus === "APPROVED" ? 2 : 1,
+      };
+      setApprovalState(synchedState);
+    } else {
+      setApprovalState(local);
+    }
+  }, [docNumber, rawStatus, backendNormalizedStatus]);
 
   const isApproved = approvalState.status === "APPROVED";
 
@@ -75,23 +140,23 @@ export function PurchaseRequisitionDetail({
       [],
       ["REQUESTED MATERIAL ITEMS"],
       ["No", "Material Item Code", "Material Item Name", "Facility Type", "Quantity", "Unit", "Due Date", "Job Number", "Department", "Purpose / Remark"],
-      [
-        1,
-        "80.500.003.200",
-        "Safety Body Harness",
-        "NON FASILITAS",
-        15.0000,
-        "PCE",
-        dueDate,
-        "-",
-        `${dept} (Sec 2)`,
-        "U/APD Kry MTC dan Furnace"
-      ],
+      ...items.map((it, idx) => [
+        idx + 1,
+        it.itemCode || "-",
+        it.item || it.itemName || "Material Item",
+        it.facility || "NON FASILITAS",
+        parseFloat(String(it.quantity).replace(/[^0-9.]/g, "") || "1") || 1,
+        it.unit || "PCE",
+        it.dueDate || dueDate,
+        it.jobNumber || "-",
+        dept,
+        it.remark || remark,
+      ]),
       [],
       ["APPROVAL WORKFLOW AUDIT TRAIL"],
       ["Stage", "Approver / Role", "Decision", "Timestamp"],
-      ["Stage 1 (Department Lead)", "Arsyeila (HSE Department)", approvalState.approved1By ? "Approved" : "Pending", approvalState.approved1At || reqDate],
-      ["Stage 2 (Director / Final)", "Directorate Executive", approvalState.status === "APPROVED" ? "Approved" : "Pending", approvalState.approved2At || "-"]
+      ["Stage 1 (Department Lead)", approvalState.approved1By || "Department Lead", approvalState.approved1By || approvalState.status === "WAITING_APPROVE_2" || approvalState.status === "APPROVED" ? "Approved" : "Pending", approvalState.approved1At || reqDate],
+      ["Stage 2 (Director / Final)", approvalState.approved2By || "Directorate Executive", approvalState.status === "APPROVED" ? "Approved" : "Pending", approvalState.approved2At || "-"]
     ];
 
     const ws = XLSX.utils.aoa_to_sheet(wsData);
@@ -119,20 +184,20 @@ Document Reference: ${docNumber}
 Department: ${dept}
 Target Due Date: ${dueDate}
 Requested By: ${createdBy}
-Attachment Name: UGT-26-004_safety_specs.pdf
+Attachment Name: PR_${docNumber.replace(/[\/\\?%*:|"<>]/g, "_")}_specs.txt
 
 SPECIFICATION DETAILS:
-- Item: Safety Body Harness (Code: 80.500.003.200)
-- Quantity: ${totalQty}
-- Mandatory Compliance: EN 361 / ANSI Z359.1 standard for furnace & smelting maintenance operators.
-- Purpose: Mandatory safety harness for elevated maintenance on Line 2 & furnace operations.
-- Verification: Approved under standard HSE consumable quota.
+- Total Items: ${items.length || 1}
+- Total Quantity: ${totalQty}
+- Department: ${dept} (${sectionName})
+- Requisition Purpose: ${remark}
+- Approval Status: ${approvalState.status.replace(/_/g, " ")}
 `;
-    const blob = new Blob([content], { type: "application/pdf;charset=utf-8" });
+    const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "UGT-26-004_safety_specs.pdf";
+    a.download = `PR_${docNumber.replace(/[\/\\?%*:|"<>]/g, "_")}_specs.txt`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -195,12 +260,12 @@ SPECIFICATION DETAILS:
       <div className="panel" style={{ padding: "14px 20px", marginBottom: "16px" }}>
         <ApprovalActionBar
           module="purchase_requisition"
-          documentId={docNumber}
+          documentId={row.id ? String(row.id) : docNumber}
           documentNumber={docNumber}
           state={approvalState}
           onStateChange={(newState) => {
             setApprovalState(newState);
-            setRow((prev) => ({ ...prev, _rawStatus: newState.status }));
+            setRow((prev) => ({ ...prev, _rawStatus: newState.status, status: newState.status }));
           }}
         />
       </div>
@@ -213,7 +278,7 @@ SPECIFICATION DETAILS:
         <div className="detail-kpi-card">
           <span>DEPARTMENT & SECTION</span>
           <strong>{dept}</strong>
-          <small>Section 2 Operations · Production Support</small>
+          <small>{sectionName}</small>
         </div>
 
         <div className="detail-kpi-card">
@@ -225,19 +290,27 @@ SPECIFICATION DETAILS:
         <div className="detail-kpi-card">
           <span>TOTAL ITEMS & QUANTITY</span>
           <strong>{totalQty}</strong>
-          <small>1 Material Item Record Requested</small>
+          <small>{items.length || 1} Material Item Record{items.length !== 1 ? "s" : ""} Requested</small>
         </div>
 
         <div className="detail-kpi-card">
           <span>AUTHORIZATION STAGE</span>
           <strong>{approvalState.status.replace(/_/g, " ")}</strong>
-          <small>Verified by Section Head: Arsyeila</small>
+          <small>
+            {approvalState.status === "APPROVED"
+              ? `Approved by ${approvalState.approved2By || "Director"}`
+              : approvalState.status === "WAITING_APPROVE_2"
+              ? `Verified by Stage 1: ${approvalState.approved1By || "Department Lead"}`
+              : approvalState.status === "REJECTED"
+              ? `Rejected by ${approvalState.rejectedBy || "Approver"}`
+              : "Awaiting Stage 1 verification"}
+          </small>
         </div>
       </div>
 
       {/* Document Relationship Workflow Pipeline */}
       <div className="detail-pipeline">
-        <div className="pipeline-node current">
+        <div className={`pipeline-node ${isApproved ? "complete" : "current"}`}>
           <div className="pipeline-node__icon">
             <Icon name="file" size={16} />
           </div>
@@ -250,16 +323,17 @@ SPECIFICATION DETAILS:
         <Icon name="arrowRight" size={16} className="pipeline-arrow" />
 
         <div
-          className="pipeline-node"
-          style={{ cursor: "pointer" }}
-          onClick={() => onNavigateDetail && onNavigateDetail("po", "POL-1026-0040")}
+          className={`pipeline-node ${isApproved ? "current" : ""}`}
+          style={{ cursor: isApproved ? "pointer" : "default", opacity: isApproved ? 1 : 0.6 }}
+          onClick={() => isApproved && onNavigateDetail && onNavigateDetail("po-create" as any, docNumber)}
+          title={isApproved ? "Proceed to Create Purchase Order from this PR" : "Locked: Requires Stage 2 Director Approval"}
         >
           <div className="pipeline-node__icon">
             <Icon name="archive" size={16} />
           </div>
           <div className="pipeline-node__text">
             <span>Step 2 · Purchase Order</span>
-            <strong>POL-1026-0040</strong>
+            <strong>{isApproved ? "Ready for PO Conversion" : "Pending PR Approval"}</strong>
           </div>
         </div>
 
@@ -267,15 +341,15 @@ SPECIFICATION DETAILS:
 
         <div
           className="pipeline-node"
-          style={{ cursor: "pointer" }}
-          onClick={() => onNavigateDetail && onNavigateDetail("warehouse", "0138-WHIN-IMLI-G-X-2026")}
+          style={{ opacity: 0.5 }}
+          title="Inbound Warehouse Gate Receiving"
         >
           <div className="pipeline-node__icon">
             <Icon name="box" size={16} />
           </div>
           <div className="pipeline-node__text">
             <span>Step 3 · Receive Material</span>
-            <strong>0138/WHIN-IMLI/G/X/2026</strong>
+            <strong>Pending Fulfillment</strong>
           </div>
         </div>
       </div>
@@ -285,7 +359,7 @@ SPECIFICATION DETAILS:
         <div className="detail-table-card__header">
           <div className="detail-table-card__title">
             <Icon name="list" size={16} />
-            <span>Requested Material Items (1)</span>
+            <span>Requested Material Items ({items.length})</span>
           </div>
           <span style={{ fontSize: "11.5px", color: "var(--muted)" }}>
             Document Reference: <strong style={{ color: "var(--ink)" }}>{docNumber}</strong>
@@ -308,25 +382,41 @@ SPECIFICATION DETAILS:
               </tr>
             </thead>
             <tbody>
-              <tr>
-                <td style={{ textAlign: "center", fontWeight: 700, color: "var(--muted)" }}>1</td>
-                <td>
-                  <Material name="Safety Body Harness" code="80.500.003.200" />
-                </td>
-                <td>
-                  <Badge tone="purple">NON FASILITAS</Badge>
-                </td>
-                <td style={{ textAlign: "right", fontFamily: "ui-monospace, monospace", fontWeight: 700 }}>
-                  15.0000
-                </td>
-                <td style={{ fontWeight: 600 }}>PCE</td>
-                <td>{dueDate}</td>
-                <td>—</td>
-                <td><strong style={{ color: "var(--ink)" }}>{dept}</strong> (Sec 2)</td>
-                <td style={{ fontSize: "11px", color: "var(--ink-soft)" }}>
-                  U/APD Kry MTC dan Furnace
-                </td>
-              </tr>
+              {items.length > 0 ? (
+                items.map((it: any, idx: number) => {
+                  const qtyStr = it.quantity ? String(it.quantity) : "1.0000";
+                  const qtyOnly = parseFloat(qtyStr.replace(/[^0-9.]/g, "") || "1").toFixed(4);
+                  const unitStr = it.unit || qtyStr.replace(/[0-9.\s]/g, "") || "PCE";
+                  const itFacility = it.facility === "FASILITAS" || it.facility === "Fasilitas" ? "FASILITAS" : "NON FASILITAS";
+                  return (
+                    <tr key={idx}>
+                      <td style={{ textAlign: "center", fontWeight: 700, color: "var(--muted)" }}>{idx + 1}</td>
+                      <td>
+                        <Material name={it.item || it.itemName || "Material Item"} code={it.itemCode || "-"} />
+                      </td>
+                      <td>
+                        <Badge tone={itFacility === "FASILITAS" ? "blue" : "purple"}>{itFacility}</Badge>
+                      </td>
+                      <td style={{ textAlign: "right", fontFamily: "ui-monospace, monospace", fontWeight: 700 }}>
+                        {qtyOnly}
+                      </td>
+                      <td style={{ fontWeight: 600 }}>{unitStr}</td>
+                      <td>{it.dueDate || dueDate}</td>
+                      <td>{it.jobNumber || "—"}</td>
+                      <td><strong style={{ color: "var(--ink)" }}>{dept}</strong></td>
+                      <td style={{ fontSize: "11px", color: "var(--ink-soft)" }}>
+                        {it.remark || remark}
+                      </td>
+                    </tr>
+                  );
+                })
+              ) : (
+                <tr>
+                  <td colSpan={9} style={{ textAlign: "center", padding: "16px", color: "var(--muted)" }}>
+                    No requisition line items found.
+                  </td>
+                </tr>
+              )}
             </tbody>
             <tfoot>
               <tr style={{ background: "#f8fafc", fontWeight: 700 }}>
@@ -334,11 +424,11 @@ SPECIFICATION DETAILS:
                   Total Requested Quantity:
                 </td>
                 <td style={{ textAlign: "right", padding: "8px 10px", fontFamily: "ui-monospace, monospace" }}>
-                  15.0000
+                  {items.reduce((sum: number, it: any) => sum + (parseFloat(String(it.quantity).replace(/[^0-9.]/g, "")) || 0), 0).toFixed(4)}
                 </td>
-                <td style={{ padding: "8px 10px" }}>PCE</td>
+                <td style={{ padding: "8px 10px" }}>{items[0]?.unit || "PCE"}</td>
                 <td colSpan={4} style={{ padding: "8px 10px", color: "var(--muted)", fontSize: "11px" }}>
-                  Complete single requisition item line
+                  {items.length} requisition item line{items.length !== 1 ? "s" : ""}
                 </td>
               </tr>
             </tfoot>

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import * as XLSX from "xlsx";
 import { Icon } from "../../../components/ui/Icon";
 import { Button } from "../../../components/ui/Button";
 import { Badge } from "../../../components/ui/Badge";
@@ -24,7 +25,47 @@ export function WarehouseDetail({
   onNavigateDetail,
 }: WarehouseDetailProps) {
   const [row, setRow] = useState<TableRow>(() => {
-    return findRowBySlug(warehouseRows, code) || warehouseRows[0];
+    if (typeof document !== "undefined") {
+      const rootEl = document.getElementById("root");
+      if (rootEl?.dataset?.initialJson) {
+        try {
+          const parsed = JSON.parse(rootEl.dataset.initialJson);
+          if (parsed?.item) {
+            const parsedNum = String(
+              parsed.item._rawNumber || parsed.item.receiveNumber || parsed.item.bpbNumber || ""
+            )
+              .replace(/[^A-Za-z0-9]/g, "")
+              .toLowerCase();
+            const targetCode = String(code || "")
+              .replace(/[^A-Za-z0-9]/g, "")
+              .toLowerCase();
+            if (!targetCode || parsedNum === targetCode) {
+              return parsed.item;
+            }
+          }
+        } catch (_) {}
+      }
+    }
+    const match = findRowBySlug(warehouseRows, code);
+    if (match) return match;
+    const cleanDoc = code ? code.replace(/-/g, "/") : "BPB";
+    return {
+      _id: `wh-${code}`,
+      _type: "warehouse",
+      receiveNumber: cleanDoc,
+      bpbNumber: cleanDoc,
+      _rawNumber: cleanDoc,
+      status: "Waiting for Approve 1",
+      _rawStatus: "Waiting for Approve 1",
+      _rawApproval: "Waiting for Approve 1",
+      _rawDate: "-",
+      _rawRn: "-",
+      _rawPo: "—",
+      _rawPr: "—",
+      _rawSupplier: "Loading...",
+      items: [],
+      _items: [],
+    } as TableRow;
   });
 
   useEffect(() => {
@@ -39,38 +80,145 @@ export function WarehouseDetail({
     };
   }, [code]);
 
-  const docNumber = String(row._rawNumber || "0138/WHIN-IMLI/G/X/2026");
-  const rnNumber = String(row._rawRn || "0131/RN-IMLI/X/2026");
-  const poNumber = String(row._rawPo || "POL-0926-0332");
-  const prNumber = String(row._rawPr || "0085/PR-IMLI/IX/2026");
-  const supplierName = String(row._rawSupplier || "PT. Hasil Fastindo");
-  const status = String(row._rawStatus || "Ready");
-  const receiveDate = String(row._rawDate || "08-10-2026");
-  const rnDate = String(row._rawRnDate || "08-10-2026");
-  const sjNumber = String(row._rawSj || "SRA/H2/2610/00262");
+  const docNumber =
+    typeof row._rawNumber === "string" && row._rawNumber
+      ? row._rawNumber
+      : typeof row.receiveNumber === "string" && row.receiveNumber
+      ? row.receiveNumber
+      : typeof row.bpbNumber === "string" && row.bpbNumber
+      ? row.bpbNumber
+      : typeof code === "string"
+      ? code.replace(/-/g, "/")
+      : "0138/WHIN-IMLI/G/X/2026";
+
+  const rnNumber = String(row._rawRn || row.rnNumber || "0131/RN-IMLI/X/2026");
+  const poNumber = String(row._rawPo || row.poNumber || "POL-0926-0332");
+  const prNumber = String(row._rawPr || row.prNumber || "0085/PR-IMLI/IX/2026");
+  const supplierName = String(row._rawSupplier || row.supplier || "PT. Hasil Fastindo");
+  const rawStatus = String(row._rawStatus || row._rawApproval || row.status || "Waiting for Approve 1");
+  const receiveDate = String(row._rawDate || row.date || "08-10-2026");
+  const rnDate = String(row._rawRnDate || receiveDate);
+  const sjNumber = String(row._rawSj || row.deliveryOrder || "SRA/H2/2610/00262");
   const ajuNumber = String(row._rawAju || "00004001456220261008004282");
   const plateNo = String(row._rawPlateNo || "L 8372 VQ");
   const noPen = String(row._rawNoPen || "088370");
-  const bcType = String(row._rawBc || "BC 4.0");
-  const bpbType = String(row._rawBpbType || "Gudang");
+  const bcType = String(row._rawBc || row.docType || "BC 4.0");
+  const bpbType = String(row._rawBpbType || row.bpbType || "Gudang");
   const location = String(row._rawWarehouseLocation || "Gudang Sparepart");
   const totalQty = String(row._rawTotalQty || "25.00");
-  const totalItem = String(row._rawTotalItem || "1");
-  const createdBy = String(row._rawCreatedBy || "MUKHANIFAH");
-  const createdAt = String(row._rawCreatedAt || "08-10-2026 15:50:49");
-  const remark = String(row._rawRemark || "U/ Periodic Maintenance : Tutup motor 11 kw; 18,5 kw");
+  const createdBy = String(row._rawCreatedBy || "ADMINISTRATOR");
+  const createdAt = String(row._rawCreatedAt || receiveDate);
+  const remark = String(row._rawRemark || "Inbound physical receipt verified at warehouse");
   const materialName = String(row._rawMaterialName || "Mur Baut M 10 x 40 + ring pir");
   const materialCode = String(row._rawMaterialCode || "60.149.301.404");
 
-  const [approvalState, setApprovalState] = useState<DocumentApprovalState>(() =>
-    getLocalApprovalState("receive_note", docNumber, normalizeApprovalStatus(status))
-  );
+  const backendNormalizedStatus = normalizeApprovalStatus(rawStatus);
+
+  const [approvalState, setApprovalState] = useState<DocumentApprovalState>(() => {
+    const local = getLocalApprovalState("bpb", docNumber, backendNormalizedStatus);
+    if (backendNormalizedStatus && local.status !== backendNormalizedStatus) {
+      return {
+        ...local,
+        status: backendNormalizedStatus,
+        currentTier:
+          backendNormalizedStatus === "WAITING_APPROVE_2"
+            ? 2
+            : backendNormalizedStatus === "APPROVED"
+            ? 2
+            : 1,
+      };
+    }
+    return local;
+  });
 
   useEffect(() => {
-    setApprovalState(getLocalApprovalState("receive_note", docNumber, normalizeApprovalStatus(status)));
-  }, [docNumber, status]);
+    const local = getLocalApprovalState("bpb", docNumber, backendNormalizedStatus);
+    if (local.status !== backendNormalizedStatus) {
+      setApprovalState({
+        ...local,
+        status: backendNormalizedStatus,
+        currentTier:
+          backendNormalizedStatus === "WAITING_APPROVE_2"
+            ? 2
+            : backendNormalizedStatus === "APPROVED"
+            ? 2
+            : 1,
+      });
+    } else {
+      setApprovalState(local);
+    }
+  }, [docNumber, rawStatus, backendNormalizedStatus]);
 
   const isApproved = approvalState.status === "APPROVED";
+
+  const bpbItems: any[] =
+    row._items && Array.isArray(row._items) && row._items.length > 0
+      ? row._items
+      : row.items && Array.isArray(row.items) && row.items.length > 0
+      ? row.items
+      : [
+          {
+            no: 1,
+            name: materialName,
+            code: materialCode,
+            jobNumber: "—",
+            poNumber,
+            prNumber,
+            deliveryNote: sjNumber,
+            receiveQty: parseFloat(totalQty.replace(/[^0-9.]/g, "")) || 25,
+            unit: "PCE",
+            location,
+            purpose: remark,
+          },
+        ];
+
+  const totalItemCount = bpbItems.length;
+  const computedTotalQty = bpbItems
+    .reduce((sum, it) => sum + (Number(it.receiveQty || it.rawQty || 0) || 0), 0)
+    .toFixed(2);
+  const displayTotalQty = Number(computedTotalQty) > 0 ? computedTotalQty : totalQty;
+  const primaryUnit = bpbItems[0]?.unit || "PCE";
+
+  const handlePrintPdf = () => {
+    window.print();
+  };
+
+  const handleExportXlsx = () => {
+    const headers = [
+      "No",
+      "BPB Number",
+      "RN Number",
+      "Material Code",
+      "Material Name",
+      "Job Number",
+      "PO Reference",
+      "PR Reference",
+      "Delivery Note (SJ)",
+      "Received Qty",
+      "Unit",
+      "Warehouse Location",
+      "Purpose / Remark",
+    ];
+    const dataRows = bpbItems.map((it, idx) => [
+      idx + 1,
+      docNumber,
+      rnNumber,
+      it.code || materialCode,
+      it.name || it.item || materialName,
+      it.jobNumber || "—",
+      it.poNumber || poNumber,
+      it.prNumber || prNumber,
+      it.deliveryNote || sjNumber,
+      Number(it.receiveQty || it.rawQty || 0).toFixed(2),
+      it.unit || "PCE",
+      it.location || location,
+      it.purpose || it.remark || remark,
+    ]);
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...dataRows]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "BPB Detail");
+    XLSX.writeFile(wb, `BPB_${docToSlug(docNumber)}.xlsx`);
+  };
 
   return (
     <div className="full-page-detail">
@@ -99,10 +247,12 @@ export function WarehouseDetail({
           <Badge tone="cyan">{bcType}</Badge>
           <Badge tone="blue">No Pen: {noPen}</Badge>
           <Badge tone="purple">{location}</Badge>
-          <Button variant="secondary">
+          <Button variant="secondary" icon="print" onClick={handlePrintPdf}>
             Print PDF
           </Button>
-          <Button variant="excel">Export XLSX</Button>
+          <Button variant="excel" onClick={handleExportXlsx}>
+            Export XLSX
+          </Button>
         </div>
       </div>
 
@@ -121,23 +271,32 @@ export function WarehouseDetail({
         </div>
 
         <div style={{ display: "flex", gap: "8px" }}>
-          <Button variant="secondary" icon="file">
+          <Button variant="secondary" icon="file" onClick={handleExportXlsx}>
             Download Delivery Note
           </Button>
         </div>
       </div>
 
       {/* Two-Stage Approval Action Bar & Timeline */}
-      <div style={{ display: "flex", flexDirection: "column", gap: "14px", marginBottom: "16px" }}>
+      <div className="panel" style={{ padding: "14px 20px", marginBottom: "16px" }}>
         <ApprovalActionBar
-          module="receive_note"
-          documentId={docNumber}
+          module="bpb"
+          documentId={row.id ? String(row.id) : docNumber}
           documentNumber={docNumber}
           state={approvalState}
-          onStateChange={setApprovalState}
+          onStateChange={(newState) => {
+            setApprovalState(newState);
+            setRow((prev) => ({
+              ...prev,
+              _rawStatus: newState.status,
+              _rawApproval: newState.status,
+              status: newState.status,
+            }));
+          }}
         />
-        <ApprovalTimeline state={approvalState} />
       </div>
+
+      <ApprovalTimeline state={approvalState} style={{ marginBottom: "16px" }} />
 
       {/* 6-Column Logistics & Customs Grid */}
       <div className="detail-kpi-grid">
@@ -173,8 +332,12 @@ export function WarehouseDetail({
 
         <div className="detail-kpi-card">
           <span>TOTAL RECEIVED QUANTITY</span>
-          <strong>{totalQty} PCE</strong>
-          <small>{totalItem} item recorded</small>
+          <strong>
+            {displayTotalQty} {primaryUnit}
+          </strong>
+          <small>
+            {totalItemCount} item{totalItemCount > 1 ? "s" : ""} recorded
+          </small>
         </div>
       </div>
 
@@ -182,8 +345,10 @@ export function WarehouseDetail({
       <div className="detail-pipeline">
         <div
           className="pipeline-node active"
-          style={{ cursor: "pointer" }}
-          onClick={() => onNavigateDetail && onNavigateDetail("pr", docToSlug(prNumber))}
+          style={{ cursor: prNumber !== "—" ? "pointer" : "default" }}
+          onClick={() =>
+            prNumber !== "—" && onNavigateDetail && onNavigateDetail("pr", docToSlug(prNumber))
+          }
         >
           <div className="pipeline-node__icon">
             <Icon name="file" size={16} />
@@ -198,8 +363,10 @@ export function WarehouseDetail({
 
         <div
           className="pipeline-node active"
-          style={{ cursor: "pointer" }}
-          onClick={() => onNavigateDetail && onNavigateDetail("po", docToSlug(poNumber))}
+          style={{ cursor: poNumber !== "—" ? "pointer" : "default" }}
+          onClick={() =>
+            poNumber !== "—" && onNavigateDetail && onNavigateDetail("po", docToSlug(poNumber))
+          }
         >
           <div className="pipeline-node__icon">
             <Icon name="archive" size={16} />
@@ -228,7 +395,7 @@ export function WarehouseDetail({
         <div className="detail-table-card__header">
           <div className="detail-table-card__title">
             <Icon name="box" size={16} />
-            <span>Material Items Received ({totalItem})</span>
+            <span>Material Items Received ({totalItemCount})</span>
           </div>
           <span style={{ fontSize: "11.5px", color: "var(--muted)" }}>
             Location: <strong style={{ color: "var(--ink)" }}>{location}</strong>
@@ -240,55 +407,90 @@ export function WarehouseDetail({
             <thead>
               <tr>
                 <th style={{ width: "36px", textAlign: "center" }}>No</th>
-                <th style={{ minWidth: "140px" }}>Material Item</th>
-                <th style={{ width: "75px" }}>Job Number</th>
-                <th style={{ minWidth: "110px" }}>PO Reference</th>
+                <th style={{ minWidth: "150px" }}>Material Item</th>
+                <th style={{ width: "85px" }}>Job Number</th>
+                <th style={{ minWidth: "115px" }}>PO Reference</th>
                 <th style={{ minWidth: "115px" }}>PR Reference</th>
-                <th style={{ minWidth: "110px" }}>Delivery Note (SJ)</th>
-                <th style={{ width: "85px", textAlign: "right" }}>Received Qty</th>
-                <th style={{ width: "90px" }}>Warehouse Loc</th>
-                <th style={{ minWidth: "120px" }}>Description / Purpose</th>
+                <th style={{ minWidth: "115px" }}>Delivery Note (SJ)</th>
+                <th style={{ width: "95px", textAlign: "right" }}>Received Qty</th>
+                <th style={{ width: "110px" }}>Warehouse Loc</th>
+                <th style={{ minWidth: "130px" }}>Description / Purpose</th>
               </tr>
             </thead>
             <tbody>
-              <tr>
-                <td style={{ textAlign: "center", fontWeight: 700, color: "var(--muted)" }}>1</td>
-                <td>
-                  <Material name={materialName} code={materialCode} />
-                </td>
-                <td>—</td>
-                <td>
-                  <strong style={{ color: "var(--ink)", fontSize: "11px" }}>{poNumber}</strong>
-                  <small style={{ display: "block", color: "var(--muted)", fontSize: "10px" }}>29-09-2026</small>
-                </td>
-                <td>
-                  <strong style={{ color: "var(--ink)", fontSize: "11px" }}>{prNumber}</strong>
-                  <small style={{ display: "block", color: "var(--muted)", fontSize: "10px" }}>29-09-2026</small>
-                </td>
-                <td style={{ fontFamily: "ui-monospace, monospace", fontSize: "11px" }}>
-                  {sjNumber}
-                </td>
-                <td style={{ textAlign: "right", fontFamily: "ui-monospace, monospace", fontWeight: 700, color: "var(--blue-700)" }}>
-                  {totalQty} PCE
-                </td>
-                <td>
-                  <Badge tone="blue">{location}</Badge>
-                </td>
-                <td style={{ fontSize: "11.5px", color: "var(--ink-soft)" }}>
-                  {remark}
-                </td>
-              </tr>
+              {bpbItems.map((it, idx) => {
+                const itemQty = Number(it.receiveQty ?? it.rawQty ?? 25).toFixed(2);
+                const itemUnit = it.unit || primaryUnit;
+                const itemLoc = it.location || location;
+                return (
+                  <tr key={it.id || idx}>
+                    <td style={{ textAlign: "center", fontWeight: 700, color: "var(--muted)" }}>
+                      {idx + 1}
+                    </td>
+                    <td>
+                      <Material
+                        name={it.name || it.item || materialName}
+                        code={it.code || it.itemCode || materialCode}
+                      />
+                    </td>
+                    <td>{it.jobNumber || "—"}</td>
+                    <td>
+                      <strong style={{ color: "var(--ink)", fontSize: "11px" }}>
+                        {it.poNumber || poNumber}
+                      </strong>
+                      <small style={{ display: "block", color: "var(--muted)", fontSize: "10px" }}>
+                        {receiveDate}
+                      </small>
+                    </td>
+                    <td>
+                      <strong style={{ color: "var(--ink)", fontSize: "11px" }}>
+                        {it.prNumber || prNumber}
+                      </strong>
+                      <small style={{ display: "block", color: "var(--muted)", fontSize: "10px" }}>
+                        {receiveDate}
+                      </small>
+                    </td>
+                    <td style={{ fontFamily: "ui-monospace, monospace", fontSize: "11px" }}>
+                      {it.deliveryNote || sjNumber}
+                    </td>
+                    <td
+                      style={{
+                        textAlign: "right",
+                        fontFamily: "ui-monospace, monospace",
+                        fontWeight: 700,
+                        color: "var(--blue-700)",
+                      }}
+                    >
+                      {itemQty} {itemUnit}
+                    </td>
+                    <td>
+                      <Badge tone="blue">{itemLoc}</Badge>
+                    </td>
+                    <td style={{ fontSize: "11.5px", color: "var(--ink-soft)" }}>
+                      {it.purpose || it.remark || remark}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
             <tfoot>
               <tr style={{ background: "#f8fafc", fontWeight: 700 }}>
                 <td colSpan={6} style={{ textAlign: "right", padding: "12px 14px" }}>
                   Total Received Items:
                 </td>
-                <td style={{ textAlign: "right", padding: "12px 14px", fontFamily: "ui-monospace, monospace" }}>
-                  {totalQty} PCE
+                <td
+                  style={{
+                    textAlign: "right",
+                    padding: "12px 14px",
+                    fontFamily: "ui-monospace, monospace",
+                  }}
+                >
+                  {displayTotalQty} {primaryUnit}
                 </td>
                 <td colSpan={2} style={{ padding: "12px 14px", color: "var(--muted)", fontSize: "11px" }}>
-                  Stock verified in inventory ledger
+                  {isApproved
+                    ? "Posted & verified in inventory stock ledger"
+                    : "Pending final approval for stock ledger posting"}
                 </td>
               </tr>
             </tfoot>
@@ -306,7 +508,15 @@ export function WarehouseDetail({
           </div>
           <div className="detail-section-card__body">
             <div>
-              <span style={{ fontSize: "10.5px", fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.4px" }}>
+              <span
+                style={{
+                  fontSize: "10.5px",
+                  fontWeight: 700,
+                  color: "var(--muted)",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.4px",
+                }}
+              >
                 Item Purpose / Maintenance Remark
               </span>
               <div
@@ -323,19 +533,55 @@ export function WarehouseDetail({
               >
                 <strong>{remark}</strong>
                 <p style={{ margin: "4px 0 0", color: "var(--ink-soft)", fontSize: "11.5px" }}>
-                  Goods physically received and inspected at Sparepart Receiving Dock. Packaging intact, quantity matches delivery note exactly.
+                  Goods physically received and inspected at {location}. Packaging intact, quantity matches delivery note.
                 </p>
               </div>
             </div>
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
-              <div style={{ background: "var(--white)", padding: "10px 14px", borderRadius: "var(--radius-sm)", border: "1px solid var(--line)" }}>
-                <span style={{ fontSize: "10px", color: "var(--muted)", textTransform: "uppercase", fontWeight: 700 }}>Registration No Pen</span>
-                <strong style={{ display: "block", fontSize: "12px", marginTop: "2px" }}>{noPen}</strong>
+              <div
+                style={{
+                  background: "var(--white)",
+                  padding: "10px 14px",
+                  borderRadius: "var(--radius-sm)",
+                  border: "1px solid var(--line)",
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: "10px",
+                    color: "var(--muted)",
+                    textTransform: "uppercase",
+                    fontWeight: 700,
+                  }}
+                >
+                  Registration No Pen
+                </span>
+                <strong style={{ display: "block", fontSize: "12px", marginTop: "2px" }}>
+                  {noPen}
+                </strong>
               </div>
-              <div style={{ background: "var(--white)", padding: "10px 14px", borderRadius: "var(--radius-sm)", border: "1px solid var(--line)" }}>
-                <span style={{ fontSize: "10px", color: "var(--muted)", textTransform: "uppercase", fontWeight: 700 }}>Customs Clearance Document</span>
-                <strong style={{ display: "block", fontSize: "12px", marginTop: "2px" }}>{bcType}</strong>
+              <div
+                style={{
+                  background: "var(--white)",
+                  padding: "10px 14px",
+                  borderRadius: "var(--radius-sm)",
+                  border: "1px solid var(--line)",
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: "10px",
+                    color: "var(--muted)",
+                    textTransform: "uppercase",
+                    fontWeight: 700,
+                  }}
+                >
+                  Customs Clearance Document
+                </span>
+                <strong style={{ display: "block", fontSize: "12px", marginTop: "2px" }}>
+                  {bcType}
+                </strong>
               </div>
             </div>
           </div>
@@ -361,7 +607,9 @@ export function WarehouseDetail({
                 <tr>
                   <td>
                     <strong>{createdBy}</strong>
-                    <small style={{ display: "block", color: "var(--muted)", fontSize: "10px" }}>Warehouse Staff</small>
+                    <small style={{ display: "block", color: "var(--muted)", fontSize: "10px" }}>
+                      Warehouse Staff
+                    </small>
                   </td>
                   <td>Receive Material Created</td>
                   <td style={{ fontFamily: "ui-monospace, monospace", fontSize: "11px" }}>
@@ -373,28 +621,43 @@ export function WarehouseDetail({
                 </tr>
                 <tr>
                   <td>
-                    <strong>Gudang Sparepart</strong>
-                    <small style={{ display: "block", color: "var(--muted)", fontSize: "10px" }}>Storage Verification</small>
+                    <strong>{approvalState.approved1By || "Warehouse Lead"}</strong>
+                    <small style={{ display: "block", color: "var(--muted)", fontSize: "10px" }}>
+                      Stage 1 Verification
+                    </small>
                   </td>
-                  <td>Quantity & Bin Verified</td>
+                  <td>Quantity & Bin Verification (Approve 1)</td>
                   <td style={{ fontFamily: "ui-monospace, monospace", fontSize: "11px" }}>
-                    08-10-2026 15:52:10
+                    {approvalState.approved1At ||
+                      (approvalState.status === "WAITING_APPROVE_2" || isApproved
+                        ? receiveDate
+                        : "Pending Stage 1")}
                   </td>
                   <td>
-                    <Badge tone="green">✓ Verified</Badge>
+                    {approvalState.status === "WAITING_APPROVE_2" || isApproved ? (
+                      <Badge tone="green">✓ Approved 1</Badge>
+                    ) : (
+                      <Badge tone="orange">Waiting 1</Badge>
+                    )}
                   </td>
                 </tr>
                 <tr>
                   <td>
-                    <strong>Warehouse Head</strong>
-                    <small style={{ display: "block", color: "var(--muted)", fontSize: "10px" }}>Pending Review</small>
+                    <strong>{approvalState.approved2By || "Warehouse Head"}</strong>
+                    <small style={{ display: "block", color: "var(--muted)", fontSize: "10px" }}>
+                      Stage 2 Final Sign-Off
+                    </small>
                   </td>
-                  <td>Final Stock Ledger Posting</td>
+                  <td>Final Stock Ledger Posting (Approve 2)</td>
                   <td style={{ fontFamily: "ui-monospace, monospace", fontSize: "11px" }}>
-                    Pending Sign-off
+                    {approvalState.approved2At || (isApproved ? receiveDate : "Pending Stage 2")}
                   </td>
                   <td>
-                    <Badge tone="orange">Ready</Badge>
+                    {isApproved ? (
+                      <Badge tone="green">✓ Approved</Badge>
+                    ) : (
+                      <Badge tone="orange">Pending</Badge>
+                    )}
                   </td>
                 </tr>
               </tbody>

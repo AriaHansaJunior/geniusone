@@ -260,7 +260,11 @@ function resolveViewStateFromPath(pathname: string, defaultPage: PageKey = "dash
     cleanPath === "/warehouse/incoming/receive-material-bpb/create" ||
     cleanPath === "/warehouse/incoming/receive-material-bpb/add"
   ) {
-    return { type: "warehouse-create" };
+    const poParam =
+      typeof window !== "undefined"
+        ? new URLSearchParams(window.location.search).get("po") || undefined
+        : undefined;
+    return { type: "warehouse-create", poNumber: poParam };
   }
 
   if (
@@ -381,7 +385,8 @@ function resolveViewStateFromPath(pathname: string, defaultPage: PageKey = "dash
     cleanPath === "/po/create" ||
     cleanPath === "/po/add"
   ) {
-    return { type: "po-create" };
+    const prParam = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("pr") || undefined : undefined;
+    return { type: "po-create", prNumber: prParam };
   }
 
   if (
@@ -926,7 +931,7 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
     (module: "pr" | "po" | "report" | "warehouse", identifier: string) => {
       const slug = docToSlug(identifier);
       let targetPath = `/${module}/detail/${slug}`;
-      let nextState: ViewState;
+      let nextState: ViewState = { type: "dashboard" };
 
       switch (module) {
         case "pr":
@@ -937,6 +942,10 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
           nextState = { type: "po-detail", code: slug };
           targetPath = `/procurement/transactions/purchase-order/detail/${slug}`;
           break;
+        case "po-create" as any:
+          nextState = { type: "po-create", prNumber: identifier };
+          targetPath = `/procurement/transactions/purchase-order/create?pr=${encodeURIComponent(identifier)}`;
+          break;
         case "report":
           nextState = { type: "report-detail", code: slug };
           targetPath = `/procurement/reports/report-pr-po/detail/${slug}`;
@@ -944,6 +953,10 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
         case "warehouse":
           nextState = { type: "warehouse-detail", code: slug };
           targetPath = `/warehouse/incoming/receive-material-bpb/detail/${slug}`;
+          break;
+        case "warehouse-create" as any:
+          nextState = { type: "warehouse-create", poNumber: identifier };
+          targetPath = `/warehouse/incoming/receive-material-bpb/create?po=${encodeURIComponent(identifier)}`;
           break;
       }
 
@@ -3131,6 +3144,7 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
 
         {viewState.type === "po-create" && (
           <PurchaseOrderCreate
+            initialPrNumber={viewState.prNumber}
             onBack={() => handleNavigateList("po", "/procurement/transactions/purchase-order")}
             onSaveSuccess={() => handleNavigateList("po", "/procurement/transactions/purchase-order")}
           />
@@ -3138,6 +3152,7 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
 
         {viewState.type === "warehouse-create" && (
           <WarehouseCreate
+            initialPoNumber={viewState.poNumber}
             onBack={() => handleNavigateList("warehouse", "/warehouse/incoming/receive-material-bpb")}
             onSaved={() => handleNavigateList("warehouse", "/warehouse/incoming/receive-material-bpb")}
           />

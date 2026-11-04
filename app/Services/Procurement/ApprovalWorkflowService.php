@@ -115,8 +115,8 @@ class ApprovalWorkflowService
 
         return DB::transaction(function () use ($poId, $userId, $tier, $note) {
             $po = PurchaseOrder::findOrFail($poId);
-            $previousStatus = $po->remark ?? 'Pending Approval';
-            $newStatus = ($tier === 1) ? 'Approved 1' : 'Approved 2';
+            $previousStatus = $po->status ?? 'Waiting for Approve 1';
+            $newStatus = ($tier === 1) ? 'Waiting for Approve 2' : 'Approved';
 
             ApprovalPo::updateOrCreate(
                 [
@@ -130,6 +130,7 @@ class ApprovalWorkflowService
             );
 
             $po->update([
+                'status' => $newStatus,
                 'updated_by' => $userId,
             ]);
 
@@ -167,6 +168,8 @@ class ApprovalWorkflowService
             );
 
             $po->update([
+                'status' => 'Rejected',
+                'rejection_note' => $reason,
                 'updated_by' => $userId,
             ]);
 

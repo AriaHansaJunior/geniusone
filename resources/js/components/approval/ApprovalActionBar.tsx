@@ -87,6 +87,7 @@ export function ApprovalActionBar({
       const res = await executeApprove({
         module,
         documentId,
+        documentNumber,
         tier,
         userId: currentUser.id,
         userName: currentUser.name,
@@ -119,6 +120,7 @@ export function ApprovalActionBar({
       const res = await executeReject({
         module,
         documentId,
+        documentNumber,
         tier: rejectTier,
         userId: currentUser.id,
         userName: currentUser.name,
@@ -153,6 +155,7 @@ export function ApprovalActionBar({
       const res = await executeUnapprove({
         module,
         documentId,
+        documentNumber,
         tier: unapproveTier,
         userId: currentUser.id,
         userName: currentUser.name,
@@ -187,6 +190,7 @@ export function ApprovalActionBar({
       const res = await executeResubmit({
         module,
         documentId,
+        documentNumber,
         userId: currentUser.id,
         userName: currentUser.name,
       });

@@ -22,6 +22,7 @@ export type ApprovalModule =
   | "purchase_requisition"
   | "purchase_order"
   | "receive_note"
+  | "bpb"
   | "request_material";
 
 export interface ApprovalHistoryEntry {

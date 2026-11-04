@@ -188,6 +188,36 @@ class GeniusOneBackend
     }
 
     /**
+     * Enterprise Audit Trail Logging Accessor (BE-06).
+     */
+    public static function audit(): object
+    {
+        return new class
+        {
+            public function logAction(
+                string $action,
+                string $modelName,
+                int|string|null $modelId = null,
+                ?array $before = null,
+                ?array $after = null,
+                ?string $notes = null,
+                ?int $userId = null
+            ): void {
+                try {
+                    \App\Models\System\Audit\Log::create([
+                        'tipe' => strtoupper($action).'_'.strtoupper($modelName),
+                        'users_id' => $userId ?? Auth::id() ?? 1,
+                        'before' => $before ? json_encode($before) : ($notes ?? ''),
+                        'after' => $after ? json_encode($after) : ($notes ?? ''),
+                    ]);
+                } catch (\Throwable $e) {
+                    // Fail-safe audit logging
+                }
+            }
+        };
+    }
+
+    /**
      * Check if the currently authenticated user has the specified permission.
      */
     public static function can(string $permission): bool

@@ -70,7 +70,7 @@ export const APPROVAL_MODULES: ModuleMeta[] = [
 
 export type ModulePermissions = Record<PermissionAction, boolean>;
 
-export type UserPermissionMap = Record<ApprovalModule, ModulePermissions>;
+export type UserPermissionMap = Record<string, ModulePermissions>;
 
 export interface UserAccount {
   id: string | number;

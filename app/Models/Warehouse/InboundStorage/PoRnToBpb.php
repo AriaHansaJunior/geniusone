@@ -35,4 +35,9 @@ class PoRnToBpb extends Model
     {
         return $this->belongsTo(PurchaseOrderReceiveNote::class, 'po_has_rn_id');
     }
+
+    public function poReceiveNote(): BelongsTo
+    {
+        return $this->belongsTo(PurchaseOrderReceiveNote::class, 'po_has_rn_id');
+    }
 }

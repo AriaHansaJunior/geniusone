@@ -61,12 +61,18 @@ class PurchaseRequisitionApiController extends Controller
 
             $lineItems = $pr->items->map(function ($it, $itIdx) use ($pr) {
                 return [
+                    'id' => $it->id,
+                    'pr_has_items_id' => $it->id,
+                    'items_id' => $it->items_id,
                     'no' => $itIdx + 1,
                     'prNumber' => $pr->pr_number,
                     'item' => $it->item?->name ?? 'Material Item',
+                    'itemName' => $it->item?->name ?? 'Material Item',
                     'itemCode' => $it->item?->code ?? '-',
                     'itemAlias' => '—',
                     'quantity' => number_format((float) $it->quantity, 4).' '.($it->item?->unitOfMeasurement?->name ?? 'PCE'),
+                    'qty' => (float) $it->quantity,
+                    'rawQty' => (float) $it->quantity,
                     'unit' => $it->item?->unitOfMeasurement?->name ?? 'PCE',
                     'remark' => $it->remark ?? $it->note ?? 'PP Sby Kebutuhan Operasional',
                     'dueDate' => $this->safeFormatDate($it->due_date),
@@ -74,6 +80,7 @@ class PurchaseRequisitionApiController extends Controller
             })->toArray();
 
             return [
+                'id' => $pr->id,
                 '_id' => "pr-{$pr->id}",
                 '_type' => 'pr',
                 '_rawNumber' => $pr->pr_number,
@@ -86,6 +93,7 @@ class PurchaseRequisitionApiController extends Controller
                 '_rawLastUpdated' => "{$creatorName} {$createdTime}",
                 '_rawPr' => $pr->pr_number,
                 '_totalQty' => number_format((float) $pr->items->sum('quantity'), 4).' '.($firstItem?->item?->unitOfMeasurement?->name ?? 'PCE'),
+                'items' => $lineItems,
                 '_items' => $lineItems,
                 'no' => $idx + 1,
                 'prNumber' => $pr->pr_number,
@@ -124,6 +132,8 @@ class PurchaseRequisitionApiController extends Controller
     public function show(Request $request, string $code)
     {
         $rawCode = str_replace('-', '/', $code);
+        $cleanCode = preg_replace('/[^A-Za-z0-9]/', '', $code);
+
         $pr = PurchaseRequisition::with([
             'department',
             'section',
@@ -133,25 +143,16 @@ class PurchaseRequisitionApiController extends Controller
         ])
             ->where('pr_number', $rawCode)
             ->orWhere('pr_number', $code)
-            ->orWhere('id', is_numeric($code) ? $code : null)
+            ->orWhere('id', is_numeric($code) ? (int) $code : null)
+            ->orWhereRaw("REPLACE(REPLACE(pr_number, '/', ''), '-', '') = ?", [$cleanCode])
             ->first();
 
         if (! $pr) {
-            $pr = PurchaseRequisition::with([
-                'department',
-                'section',
-                'creatorUser',
-                'items.item.unitOfMeasurement',
-                'approvals.user',
-            ])->first();
-        }
-
-        if (! $pr) {
-            if ($request->expectsJson() || $request->is('api/*')) {
-                return response()->json(['error' => 'Purchase Requisition not found'], 404);
+            if ($request->expectsJson() || $request->is('api/*') || $request->query('format') === 'json') {
+                return response()->json(['status' => 'error', 'message' => 'Purchase Requisition not found: '.$code], 404);
             }
 
-            return redirect('/pr')->withErrors(['error' => 'Purchase Requisition not found']);
+            return redirect('/procurement/transactions/purchase-requisition')->withErrors(['error' => 'Purchase Requisition not found']);
         }
 
         $creatorName = $pr->creatorUser?->name ?? 'System';
@@ -160,12 +161,18 @@ class PurchaseRequisitionApiController extends Controller
 
         $lineItems = $pr->items->map(function ($it, $itIdx) use ($pr) {
             return [
+                'id' => $it->id,
+                'pr_has_items_id' => $it->id,
+                'items_id' => $it->items_id,
                 'no' => $itIdx + 1,
                 'prNumber' => $pr->pr_number,
                 'item' => $it->item?->name ?? 'Material Item',
+                'itemName' => $it->item?->name ?? 'Material Item',
                 'itemCode' => $it->item?->code ?? '-',
                 'itemAlias' => '—',
                 'quantity' => number_format((float) $it->quantity, 4).' '.($it->item?->unitOfMeasurement?->name ?? 'PCE'),
+                'qty' => (float) $it->quantity,
+                'rawQty' => (float) $it->quantity,
                 'unit' => $it->item?->unitOfMeasurement?->name ?? 'PCE',
                 'remark' => $it->remark ?? $it->note ?? 'PP Sby Kebutuhan Operasional',
                 'dueDate' => $this->safeFormatDate($it->due_date),
@@ -173,24 +180,36 @@ class PurchaseRequisitionApiController extends Controller
         })->toArray();
 
         $detailRow = [
+            'id' => $pr->id,
             '_id' => "pr-{$pr->id}",
             '_type' => 'pr',
+            'prNumber' => $pr->pr_number,
             '_rawNumber' => $pr->pr_number,
-            '_rawStatus' => $pr->status ?? 'Draft',
+            'status' => $pr->status ?? 'Waiting for Approve 1',
+            '_rawStatus' => $pr->status ?? 'Waiting for Approve 1',
+            'date' => $this->safeFormatDate($pr->date, 'd-M-Y', $pr->created_at?->format('d-M-Y') ?? '-'),
             '_rawDate' => $this->safeFormatDate($pr->date, 'd-M-Y', $pr->created_at?->format('d-M-Y') ?? '-'),
+            'dueDate' => $this->safeFormatDate($pr->due_date),
             '_rawDueDate' => $this->safeFormatDate($pr->due_date),
+            'deptRequest' => $pr->department?->name ?? 'General',
             '_rawDept' => $pr->department?->name ?? 'General',
+            'section' => $pr->section?->name ?? 'General',
+            'remark' => $firstItem?->remark ?? 'PP Sby Pengadaan Material',
             '_rawRemark' => $firstItem?->remark ?? 'PP Sby Pengadaan Material',
+            'createdBy' => "{$creatorName} {$createdTime}",
             '_rawCreatedBy' => "{$creatorName} {$createdTime}",
             '_rawLastUpdated' => "{$creatorName} {$createdTime}",
             '_rawPr' => $pr->pr_number,
+            'totalQuantity' => number_format((float) $pr->items->sum('quantity'), 4).' '.($firstItem?->item?->unitOfMeasurement?->name ?? 'PCE'),
             '_totalQty' => number_format((float) $pr->items->sum('quantity'), 4).' '.($firstItem?->item?->unitOfMeasurement?->name ?? 'PCE'),
+            'items' => $lineItems,
             '_items' => $lineItems,
             'approvals' => $pr->approvals->map(fn ($a) => [
                 'tier' => (int) $a->approval_ke,
                 'status' => $a->status === 1 ? 'Approved' : 'Pending',
                 'user' => $a->user?->name ?? 'System',
                 'date' => $a->updated_at?->format('d-M-Y H:i') ?? '-',
+                'note' => $a->note,
             ])->toArray(),
         ];
 
@@ -321,6 +340,7 @@ class PurchaseRequisitionApiController extends Controller
                 'sections_id' => $secId,
                 'date' => $date,
                 'due_date' => $dueDate,
+                'status' => 'Waiting for Approve 1',
             ],
             $processedItems,
             $userId
@@ -336,15 +356,22 @@ class PurchaseRequisitionApiController extends Controller
     /**
      * Approve Purchase Requisition.
      */
-    public function approve(Request $request, int $id)
+    public function approve(Request $request, $id)
     {
         $userId = $request->user()?->id ?? 1;
         $tier = (int) $request->input('tier', 1);
         $note = $request->input('note');
 
-        $pr = GeniusOneBackend::procurement()->approvePr($id, $userId, $tier, $note);
+        if (! is_numeric($id)) {
+            $clean = preg_replace('/[^A-Za-z0-9]/', '', (string) $id);
+            $found = PurchaseRequisition::whereRaw("REPLACE(REPLACE(pr_number, '/', ''), '-', '') = ?", [$clean])->first();
+            $id = $found?->id ?? $id;
+        }
+
+        $pr = GeniusOneBackend::procurement()->approvePr((int) $id, $userId, $tier, $note);
 
         return response()->json([
+            'status' => 'success',
             'message' => "Purchase Requisition Tier {$tier} approved successfully",
             'data' => $pr,
         ]);
@@ -353,15 +380,22 @@ class PurchaseRequisitionApiController extends Controller
     /**
      * Reject Purchase Requisition.
      */
-    public function reject(Request $request, int $id)
+    public function reject(Request $request, $id)
     {
         $userId = $request->user()?->id ?? 1;
         $tier = (int) $request->input('tier', 1);
         $reason = $request->input('reason', 'Rejected by approver');
 
-        $pr = GeniusOneBackend::procurement()->rejectPr($id, $userId, $tier, $reason);
+        if (! is_numeric($id)) {
+            $clean = preg_replace('/[^A-Za-z0-9]/', '', (string) $id);
+            $found = PurchaseRequisition::whereRaw("REPLACE(REPLACE(pr_number, '/', ''), '-', '') = ?", [$clean])->first();
+            $id = $found?->id ?? $id;
+        }
+
+        $pr = GeniusOneBackend::procurement()->rejectPr((int) $id, $userId, $tier, $reason);
 
         return response()->json([
+            'status' => 'success',
             'message' => 'Purchase Requisition rejected successfully',
             'data' => $pr,
         ]);

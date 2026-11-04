@@ -70,13 +70,14 @@ export interface ApprovalApiResponse {
 export async function executeApprove(params: {
   module: ApprovalModule;
   documentId: string | number;
+  documentNumber?: string;
   tier: ApprovalTier;
   userId: string | number;
   userName: string;
   userRole?: string;
   note?: string;
 }): Promise<ApprovalApiResponse> {
-  const { module, documentId, tier, userId, userName, userRole, note } = params;
+  const { module, documentId, documentNumber, tier, userId, userName, userRole, note } = params;
   const docIdStr = String(documentId);
 
   // Try calling real backend API first if numeric ID or available endpoint
@@ -85,14 +86,15 @@ export async function executeApprove(params: {
 
   try {
     const endpointMap: Record<ApprovalModule, string> = {
-      purchase_requisition: `/api/procurement/pr/${documentId}/approve`,
-      purchase_order: `/api/procurement/po/${documentId}/approve`,
-      receive_note: `/api/warehouse/rn/${documentId}/approve`,
-      request_material: `/api/warehouse/request-materials/${documentId}/approve`,
+      purchase_requisition: `/api/approval/pr/${encodeURIComponent(documentId)}/approve`,
+      purchase_order: `/api/approval/po/${encodeURIComponent(documentId)}/approve`,
+      receive_note: `/api/approval/rn/${encodeURIComponent(documentId)}/approve`,
+      bpb: `/api/approval/bpb/${encodeURIComponent(documentId)}/approve`,
+      request_material: `/api/approval/request-materials/${encodeURIComponent(documentId)}/approve`,
     };
 
     const endpoint = endpointMap[module];
-    if (endpoint && !isNaN(Number(documentId))) {
+    if (endpoint) {
       const response = await fetch(endpoint, {
         method: "POST",
         headers: {
@@ -153,6 +155,9 @@ export async function executeApprove(params: {
   };
 
   saveLocalApprovalState(module, docIdStr, updatedState);
+  if (documentNumber && documentNumber !== docIdStr) {
+    saveLocalApprovalState(module, documentNumber, updatedState);
+  }
 
   return {
     success: true,
@@ -169,13 +174,14 @@ export async function executeApprove(params: {
 export async function executeReject(params: {
   module: ApprovalModule;
   documentId: string | number;
+  documentNumber?: string;
   tier: ApprovalTier;
   userId: string | number;
   userName: string;
   userRole?: string;
   reason: string;
 }): Promise<ApprovalApiResponse> {
-  const { module, documentId, tier, userId, userName, userRole, reason } = params;
+  const { module, documentId, documentNumber, tier, userId, userName, userRole, reason } = params;
   const docIdStr = String(documentId);
 
   if (!reason || !reason.trim()) {
@@ -192,14 +198,15 @@ export async function executeReject(params: {
   let backendData: any = null;
   try {
     const endpointMap: Record<ApprovalModule, string> = {
-      purchase_requisition: `/api/procurement/pr/${documentId}/reject`,
-      purchase_order: `/api/procurement/po/${documentId}/reject`,
-      receive_note: `/api/warehouse/rn/${documentId}/reject`,
-      request_material: `/api/warehouse/request-materials/${documentId}/reject`,
+      purchase_requisition: `/api/approval/pr/${encodeURIComponent(documentId)}/reject`,
+      purchase_order: `/api/approval/po/${encodeURIComponent(documentId)}/reject`,
+      receive_note: `/api/approval/rn/${encodeURIComponent(documentId)}/reject`,
+      bpb: `/api/approval/bpb/${encodeURIComponent(documentId)}/reject`,
+      request_material: `/api/approval/request-materials/${encodeURIComponent(documentId)}/reject`,
     };
 
     const endpoint = endpointMap[module];
-    if (endpoint && !isNaN(Number(documentId))) {
+    if (endpoint) {
       const response = await fetch(endpoint, {
         method: "POST",
         headers: {
@@ -250,6 +257,9 @@ export async function executeReject(params: {
   };
 
   saveLocalApprovalState(module, docIdStr, updatedState);
+  if (documentNumber && documentNumber !== docIdStr) {
+    saveLocalApprovalState(module, documentNumber, updatedState);
+  }
 
   return {
     success: true,
@@ -266,14 +276,42 @@ export async function executeReject(params: {
 export async function executeUnapprove(params: {
   module: ApprovalModule;
   documentId: string | number;
+  documentNumber?: string;
   tier: ApprovalTier;
   userId: string | number;
   userName: string;
   userRole?: string;
   reason?: string;
 }): Promise<ApprovalApiResponse> {
-  const { module, documentId, tier, userId, userName, userRole, reason } = params;
+  const { module, documentId, documentNumber, tier, userId, userName, userRole, reason } = params;
   const docIdStr = String(documentId);
+
+  // Call real backend API unapproval
+  try {
+    const endpointMap: Record<ApprovalModule, string> = {
+      purchase_requisition: `/api/approval/pr/${encodeURIComponent(documentId)}/unapprove`,
+      purchase_order: `/api/approval/po/${encodeURIComponent(documentId)}/unapprove`,
+      receive_note: `/api/approval/rn/${encodeURIComponent(documentId)}/unapprove`,
+      bpb: `/api/approval/bpb/${encodeURIComponent(documentId)}/unapprove`,
+      request_material: `/api/approval/request-materials/${encodeURIComponent(documentId)}/unapprove`,
+    };
+
+    const endpoint = endpointMap[module];
+    if (endpoint) {
+      await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          "X-CSRF-TOKEN":
+            (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || "",
+        },
+        body: JSON.stringify({ tier, reason }),
+      });
+    }
+  } catch (err) {
+    console.info("Backend unapprove API error or offline:", err);
+  }
 
   const currentState = getLocalApprovalState(module, docIdStr);
   const now = new Date();
@@ -315,6 +353,9 @@ export async function executeUnapprove(params: {
   };
 
   saveLocalApprovalState(module, docIdStr, updatedState);
+  if (documentNumber && documentNumber !== docIdStr) {
+    saveLocalApprovalState(module, documentNumber, updatedState);
+  }
 
   return {
     success: true,
@@ -330,10 +371,11 @@ export async function executeUnapprove(params: {
 export async function executeResubmit(params: {
   module: ApprovalModule;
   documentId: string | number;
+  documentNumber?: string;
   userId: string | number;
   userName: string;
 }): Promise<ApprovalApiResponse> {
-  const { module, documentId, userId, userName } = params;
+  const { module, documentId, documentNumber, userId, userName } = params;
   const docIdStr = String(documentId);
 
   const currentState = getLocalApprovalState(module, docIdStr);
@@ -368,6 +410,9 @@ export async function executeResubmit(params: {
   };
 
   saveLocalApprovalState(module, docIdStr, updatedState);
+  if (documentNumber && documentNumber !== docIdStr) {
+    saveLocalApprovalState(module, documentNumber, updatedState);
+  }
 
   return {
     success: true,

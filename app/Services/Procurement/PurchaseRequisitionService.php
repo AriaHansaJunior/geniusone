@@ -47,7 +47,7 @@ class PurchaseRequisitionService
                 'due_date' => $dueDate,
                 'sections_id' => $secId,
                 'attachment_file' => $headerData['attachment_file'] ?? null,
-                'status' => $headerData['status'] ?? 'Draft',
+                'status' => $headerData['status'] ?? 'Waiting for Approve 1',
                 'revision' => $headerData['revision'] ?? 0,
             ]);
 
@@ -74,6 +74,7 @@ class PurchaseRequisitionService
         // Normalize slash or hyphen formats
         $normalizedSlash = str_replace('-', '/', $code);
         $normalizedHyphen = str_replace('/', '-', $code);
+        $cleanCode = preg_replace('/[^A-Za-z0-9]/', '', $code);
 
         return PurchaseRequisition::with([
             'department',
@@ -87,6 +88,7 @@ class PurchaseRequisitionService
             ->orWhere('pr_number', $normalizedSlash)
             ->orWhere('pr_number', $normalizedHyphen)
             ->orWhere('id', is_numeric($code) ? $code : null)
+            ->orWhereRaw("REPLACE(REPLACE(pr_number, '/', ''), '-', '') = ?", [$cleanCode])
             ->first();
     }
 

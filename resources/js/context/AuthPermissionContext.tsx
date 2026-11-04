@@ -198,6 +198,7 @@ export function AuthPermissionProvider({ children }: { children: React.ReactNode
           purchase_requisition: "pr",
           purchase_order: "po",
           receive_note: "rn",
+          bpb: "bpb",
           request_material: "rm",
         };
         const prefix = modPrefixMap[module] || module;
@@ -206,7 +207,13 @@ export function AuthPermissionProvider({ children }: { children: React.ReactNode
           currentUser.permissions.includes(`${prefix}.${action}`) ||
           currentUser.permissions.includes(`${prefix}.*`) ||
           currentUser.permissions.includes(`${module}.${action}`) ||
-          currentUser.permissions.includes(`${module}.*`)
+          currentUser.permissions.includes(`${module}.*`) ||
+          ((module === "bpb" || module === "receive_note") &&
+            (currentUser.permissions.includes(`rn.${action}`) ||
+              currentUser.permissions.includes("rn.*") ||
+              currentUser.permissions.includes(`bpb.${action}`) ||
+              currentUser.permissions.includes("bpb.*") ||
+              currentUser.permissions.includes(`receive_note.${action}`)))
         ) {
           return true;
         }
@@ -214,7 +221,9 @@ export function AuthPermissionProvider({ children }: { children: React.ReactNode
 
       // If permissions is an object map
       if (typeof currentUser.permissions === "object" && !Array.isArray(currentUser.permissions)) {
-        const modPerms = (currentUser.permissions as any)[module];
+        const modPerms =
+          (currentUser.permissions as any)[module] ||
+          (module === "bpb" ? (currentUser.permissions as any)["receive_note"] : undefined);
         if (modPerms && modPerms[action] !== undefined) {
           return Boolean(modPerms[action]);
         }

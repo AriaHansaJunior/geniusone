@@ -36,8 +36,35 @@ class ReceiveNote extends Model
         'pl_date',
         'dn_status',
         'service_subkon',
+        'status',
+        'rejection_note',
         'updated_by',
     ];
+
+    public function getStatusAttribute(): string
+    {
+        if (! empty($this->attributes['status'])) {
+            return $this->attributes['status'];
+        }
+
+        $appr2 = $this->approvals->where('approval_ke', '2')->first();
+        if ($appr2 && $appr2->status === 1) {
+            return 'Approved';
+        }
+        if ($appr2 && $appr2->status === 2) {
+            return 'Rejected';
+        }
+
+        $appr1 = $this->approvals->where('approval_ke', '1')->first();
+        if ($appr1 && $appr1->status === 1) {
+            return 'Waiting for Approve 2';
+        }
+        if ($appr1 && $appr1->status === 2) {
+            return 'Rejected';
+        }
+
+        return 'Waiting for Approve 1';
+    }
 
     public function supplier(): BelongsTo
     {

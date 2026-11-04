@@ -52,17 +52,33 @@ class DocumentApprovalWorkflowService
     /**
      * Resolve document model instance and metadata by module and ID.
      */
-    public function resolveDocument(string $module, int $id): Model
+    public function resolveDocument(string $module, int|string $id): Model
     {
         $mod = strtolower(trim($module));
 
+        if (is_numeric($id)) {
+            return match ($mod) {
+                'pr', 'purchase-requisition', 'purchase_requisition' => PurchaseRequisition::findOrFail((int) $id),
+                'po', 'purchase-order', 'purchase_order' => PurchaseOrder::findOrFail((int) $id),
+                'rn', 'receive-note', 'receive_note' => ReceiveNote::find((int) $id) ?? BpbReceiveMaterial::findOrFail((int) $id),
+                'bpb', 'bpb-receive-material', 'bpb_receive_material', 'warehouse' => BpbReceiveMaterial::find((int) $id) ?? ReceiveNote::findOrFail((int) $id),
+                'rm', 'request-material', 'request_material' => RequestMaterial::findOrFail((int) $id),
+                'return', 'receive-note-return', 'receive_note_return' => ReceiveNoteReturn::findOrFail((int) $id),
+                default => throw new InvalidArgumentException("Unknown document module '{$module}'. Only operational transactions support approval."),
+            };
+        }
+
+        $clean = preg_replace('/[^A-Za-z0-9]/', '', (string) $id);
+
         return match ($mod) {
-            'pr', 'purchase-requisition', 'purchase_requisition' => PurchaseRequisition::findOrFail($id),
-            'po', 'purchase-order', 'purchase_order' => PurchaseOrder::findOrFail($id),
-            'rn', 'receive-note', 'receive_note' => ReceiveNote::findOrFail($id),
-            'bpb', 'bpb-receive-material', 'bpb_receive_material' => BpbReceiveMaterial::findOrFail($id),
-            'rm', 'request-material', 'request_material' => RequestMaterial::findOrFail($id),
-            'return', 'receive-note-return', 'receive_note_return' => ReceiveNoteReturn::findOrFail($id),
+            'pr', 'purchase-requisition', 'purchase_requisition' => PurchaseRequisition::whereRaw("REPLACE(REPLACE(pr_number, '/', ''), '-', '') = ?", [$clean])->firstOrFail(),
+            'po', 'purchase-order', 'purchase_order' => PurchaseOrder::whereRaw("REPLACE(REPLACE(po_number, '/', ''), '-', '') = ?", [$clean])->firstOrFail(),
+            'rn', 'receive-note', 'receive_note' => ReceiveNote::whereRaw("REPLACE(REPLACE(rn_number, '/', ''), '-', '') = ?", [$clean])->first()
+                ?? BpbReceiveMaterial::whereRaw("REPLACE(REPLACE(bpb_number, '/', ''), '-', '') = ?", [$clean])->firstOrFail(),
+            'bpb', 'bpb-receive-material', 'bpb_receive_material', 'warehouse' => BpbReceiveMaterial::whereRaw("REPLACE(REPLACE(bpb_number, '/', ''), '-', '') = ?", [$clean])->first()
+                ?? ReceiveNote::whereRaw("REPLACE(REPLACE(rn_number, '/', ''), '-', '') = ?", [$clean])->firstOrFail(),
+            'rm', 'request-material', 'request_material' => RequestMaterial::whereRaw("REPLACE(REPLACE(request_number, '/', ''), '-', '') = ?", [$clean])->firstOrFail(),
+            'return', 'receive-note-return', 'receive_note_return' => ReceiveNoteReturn::whereRaw("REPLACE(REPLACE(rn_number, '/', ''), '-', '') = ?", [$clean])->firstOrFail(),
             default => throw new InvalidArgumentException("Unknown document module '{$module}'. Only operational transactions support approval."),
         };
     }
@@ -78,7 +94,7 @@ class DocumentApprovalWorkflowService
             'pr', 'purchase-requisition', 'purchase_requisition' => 'PR',
             'po', 'purchase-order', 'purchase_order' => 'PO',
             'rn', 'receive-note', 'receive_note' => 'RN',
-            'bpb', 'bpb-receive-material', 'bpb_receive_material' => 'BPB',
+            'bpb', 'bpb-receive-material', 'bpb_receive_material', 'warehouse' => 'BPB',
             'rm', 'request-material', 'request_material' => 'RM',
             'return', 'receive-note-return', 'receive_note_return' => 'RETURN',
             default => strtoupper($module),
@@ -88,7 +104,7 @@ class DocumentApprovalWorkflowService
     /**
      * BE-03: Execute Stage 1 or Stage 2 Approval.
      */
-    public function approve(string $module, int $id, int $userId, int $tier = 1, ?string $note = null): Model
+    public function approve(string $module, int|string $id, int $userId, int $tier = 1, ?string $note = null): Model
     {
         if (! in_array($tier, [1, 2], true)) {
             throw new InvalidArgumentException('Approval tier must be 1 or 2.');
@@ -98,12 +114,21 @@ class DocumentApprovalWorkflowService
         $normKey = $this->normalizeModuleKey($module);
         $permKey = strtolower($normKey).".approve_{$tier}";
 
-        if (! $user->hasPermission($permKey) && ! $user->hasPermission(strtolower($normKey).'.*')) {
+        $hasPerm = $user->hasPermission($permKey)
+            || $user->hasPermission(strtolower($normKey).'.*')
+            || ($normKey === 'BPB' && ($user->hasPermission("rn.approve_{$tier}") || $user->hasPermission('rn.*')));
+
+        if (! $hasPerm) {
             throw new InvalidArgumentException("User does not have permission '{$permKey}' to approve {$normKey} Stage {$tier}.");
         }
 
         return DB::transaction(function () use ($module, $normKey, $id, $user, $tier, $note) {
             $doc = $this->resolveDocument($module, $id);
+            if ($doc instanceof BpbReceiveMaterial) {
+                $normKey = 'BPB';
+            } elseif ($doc instanceof ReceiveNote) {
+                $normKey = 'RN';
+            }
             $currentStatus = $this->getDocumentStatus($doc);
 
             // Gating Rule: Tier 1 approval requires Waiting 1 or Draft
@@ -172,7 +197,7 @@ class DocumentApprovalWorkflowService
     /**
      * BE-04: Execute UnApprove 1 or UnApprove 2.
      */
-    public function unapprove(string $module, int $id, int $userId, int $tier = 1, ?string $reason = null): Model
+    public function unapprove(string $module, int|string $id, int $userId, int $tier = 1, ?string $reason = null): Model
     {
         if (! in_array($tier, [1, 2], true)) {
             throw new InvalidArgumentException('UnApprove tier must be 1 or 2.');
@@ -182,12 +207,21 @@ class DocumentApprovalWorkflowService
         $normKey = $this->normalizeModuleKey($module);
         $permKey = strtolower($normKey).".unapprove_{$tier}";
 
-        if (! $user->hasPermission($permKey) && ! $user->hasPermission(strtolower($normKey).'.*')) {
+        $hasPerm = $user->hasPermission($permKey)
+            || $user->hasPermission(strtolower($normKey).'.*')
+            || ($normKey === 'BPB' && ($user->hasPermission("rn.unapprove_{$tier}") || $user->hasPermission('rn.*')));
+
+        if (! $hasPerm) {
             throw new InvalidArgumentException("User does not have permission '{$permKey}' to unapprove {$normKey} Stage {$tier}.");
         }
 
         return DB::transaction(function () use ($module, $normKey, $id, $user, $tier, $reason) {
             $doc = $this->resolveDocument($module, $id);
+            if ($doc instanceof BpbReceiveMaterial) {
+                $normKey = 'BPB';
+            } elseif ($doc instanceof ReceiveNote) {
+                $normKey = 'RN';
+            }
             $currentStatus = $this->getDocumentStatus($doc);
 
             // BE-05: Verify Downstream Dependencies before allowing UnApprove
@@ -265,7 +299,7 @@ class DocumentApprovalWorkflowService
     /**
      * BE-04: Reject Document with Mandatory Reason.
      */
-    public function reject(string $module, int $id, int $userId, int $tier = 1, string $reason = ''): Model
+    public function reject(string $module, int|string $id, int $userId, int $tier = 1, string $reason = ''): Model
     {
         $reason = trim($reason);
         if (strlen($reason) < 3) {
@@ -276,12 +310,21 @@ class DocumentApprovalWorkflowService
         $normKey = $this->normalizeModuleKey($module);
         $permKey = strtolower($normKey).".approve_{$tier}";
 
-        if (! $user->hasPermission($permKey) && ! $user->hasPermission(strtolower($normKey).'.*')) {
+        $hasPerm = $user->hasPermission($permKey)
+            || $user->hasPermission(strtolower($normKey).'.*')
+            || ($normKey === 'BPB' && ($user->hasPermission("rn.approve_{$tier}") || $user->hasPermission('rn.*')));
+
+        if (! $hasPerm) {
             throw new InvalidArgumentException("User does not have authority to reject {$normKey} Stage {$tier}.");
         }
 
         return DB::transaction(function () use ($module, $normKey, $id, $user, $tier, $reason) {
             $doc = $this->resolveDocument($module, $id);
+            if ($doc instanceof BpbReceiveMaterial) {
+                $normKey = 'BPB';
+            } elseif ($doc instanceof ReceiveNote) {
+                $normKey = 'RN';
+            }
             $currentStatus = $this->getDocumentStatus($doc);
 
             if (in_array($currentStatus, [self::STATUS_APPROVED, 'Approved 2'])) {
@@ -328,13 +371,18 @@ class DocumentApprovalWorkflowService
     /**
      * BE-04: Resubmit Document after Revision back to Waiting for Approve 1.
      */
-    public function resubmit(string $module, int $id, int $userId, ?string $note = null): Model
+    public function resubmit(string $module, int|string $id, int $userId, ?string $note = null): Model
     {
         $user = User::findOrFail($userId);
         $normKey = $this->normalizeModuleKey($module);
 
         return DB::transaction(function () use ($module, $normKey, $id, $user, $note) {
             $doc = $this->resolveDocument($module, $id);
+            if ($doc instanceof BpbReceiveMaterial) {
+                $normKey = 'BPB';
+            } elseif ($doc instanceof ReceiveNote) {
+                $normKey = 'RN';
+            }
             $currentStatus = $this->getDocumentStatus($doc);
 
             if ($currentStatus !== self::STATUS_REJECTED && $currentStatus !== self::STATUS_DRAFT) {

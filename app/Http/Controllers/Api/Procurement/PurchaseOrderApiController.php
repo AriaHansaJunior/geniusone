@@ -89,6 +89,8 @@ class PurchaseOrderApiController extends Controller
     public function show(Request $request, string $code)
     {
         $rawCode = str_replace('-', '/', $code);
+        $cleanCode = preg_replace('/[^A-Za-z0-9]/', '', $code);
+
         $po = PurchaseOrder::with([
             'supplier',
             'creator',
@@ -106,33 +108,16 @@ class PurchaseOrderApiController extends Controller
         ])
             ->where('po_number', $rawCode)
             ->orWhere('po_number', $code)
-            ->orWhere('id', is_numeric($code) ? $code : null)
+            ->orWhere('id', is_numeric($code) ? (int) $code : null)
+            ->orWhereRaw("REPLACE(REPLACE(po_number, '/', ''), '-', '') = ?", [$cleanCode])
             ->first();
 
         if (! $po) {
-            $po = PurchaseOrder::with([
-                'supplier',
-                'creator',
-                'updatedByUser',
-                'poType',
-                'currency',
-                'paymentTerm',
-                'paymentMethod',
-                'deliveryTerm',
-                'items.requisitionItem.item.unitOfMeasurement',
-                'items.requisitionItem.purchaseRequisition',
-                'approvals.user',
-                'additionalCosts',
-                'receiveNotes.receiveNote',
-            ])->first();
-        }
-
-        if (! $po) {
-            if ($request->expectsJson() || $request->is('api/*')) {
-                return response()->json(['error' => 'Purchase Order not found'], 404);
+            if ($request->expectsJson() || $request->is('api/*') || $request->query('format') === 'json') {
+                return response()->json(['status' => 'error', 'message' => 'Purchase Order not found: '.$code], 404);
             }
 
-            return redirect('/po')->withErrors(['error' => 'Purchase Order not found']);
+            return redirect('/procurement/transactions/purchase-order')->withErrors(['error' => 'Purchase Order not found']);
         }
 
         $detailRow = $this->formatPoRow($po, 1, true);
@@ -163,7 +148,8 @@ class PurchaseOrderApiController extends Controller
         $firstPr = $firstItem?->requisitionItem?->purchaseRequisition;
         $prNumber = $firstPr?->pr_number ?? '—';
         $rnRecord = $po->receiveNotes->first();
-        $rnNumber = $rnRecord?->receiveNote?->rn_number ?? '—';
+        $bpbNumber = $rnRecord?->bpbRecords?->first()?->bpbReceiveMaterial?->bpb_number;
+        $rnNumber = $bpbNumber ?? $rnRecord?->receiveNote?->rn_number ?? '—';
 
         $creatorName = $po->creator?->name ?? 'Michelle';
         $createdTime = $po->created_at ? $po->created_at->format('d-m-Y H:i') : ($po->date ?? '-');
@@ -188,11 +174,16 @@ class PurchaseOrderApiController extends Controller
             $sub = (float) $it->subtotal;
 
             return [
+                'id' => $it->id,
+                'po_has_items_id' => $it->id,
                 'no' => $itIdx + 1,
                 'prNumber' => $prNum,
-                'item' => $itemObj?->name ?? 'Industrial Material',
+                'item' => $itemObj?->name ?? $it->item_alias ?? 'Industrial Material',
+                'itemName' => $itemObj?->name ?? $it->item_alias ?? 'Industrial Material',
                 'itemCode' => $itemObj?->code ?? '-',
                 'itemAlias' => $it->item_alias ?? '—',
+                'rawQty' => $qty,
+                'orderQty' => $qty,
                 'quantity' => number_format($qty, 4).' '.$unitName,
                 'unit' => $unitName,
                 'price' => number_format($price, 2),
@@ -254,17 +245,34 @@ class PurchaseOrderApiController extends Controller
         }
 
         return [
+            'id' => $po->id,
             '_id' => "po-{$po->id}",
             '_type' => 'po',
+            'poNumber' => $po->po_number,
             '_rawNumber' => $po->po_number,
+            'status' => $status,
             '_rawStatus' => $status,
+            'date' => $this->safeFormatDate($po->date, 'd-M-Y', $po->created_at?->format('d-M-Y') ?? '-'),
             '_rawDate' => $this->safeFormatDate($po->date, 'd-M-Y', $po->created_at?->format('d-M-Y') ?? '-'),
+            'dueDate' => $this->safeFormatDate($po->due_date),
             '_rawDueDate' => $this->safeFormatDate($po->due_date),
+            'supplier' => $supplierName,
             '_rawSupplier' => $supplierName,
+            'total' => $currencyCode.' '.number_format((float) $po->grand_total, 2),
             '_rawTotal' => $currencyCode.' '.number_format((float) $po->grand_total, 2),
+            'prNumber' => $prNumber,
             '_rawPr' => $prNumber,
-            '_rawPo' => $po->po_number,
+            'rnNumber' => $rnNumber,
             '_rawRn' => $rnNumber,
+            'items' => $lineItems,
+            '_items' => $lineItems,
+            'approvals' => $po->approvals->map(fn ($a) => [
+                'tier' => (int) $a->approval_ke,
+                'status' => $a->status === 1 ? 'Approved' : 'Pending',
+                'user' => $a->user?->name ?? 'System',
+                'date' => $a->updated_at?->format('d-M-Y H:i') ?? '-',
+                'note' => $a->note,
+            ])->toArray(),
             '_rawCurrency' => $currencyCode,
             '_rawRate' => number_format((float) $po->rate, 2),
             '_rawPaymentMethod' => $po->paymentMethod?->name ?? 'Cash On Delivery',
@@ -390,9 +398,21 @@ class PurchaseOrderApiController extends Controller
             $price = (float) ($it['price'] ?? 0);
             $prHasItemId = ! empty($it['pr_has_items_id']) && is_numeric($it['pr_has_items_id']) ? (int) $it['pr_has_items_id'] : null;
 
+            // Resolve pr_has_items_id from prNumber if provided
+            if (! $prHasItemId && ! empty($it['prNumber']) && $it['prNumber'] !== '—' && $it['prNumber'] !== '-') {
+                $cleanPr = preg_replace('/[^A-Za-z0-9]/', '', (string) $it['prNumber']);
+                $matchedPr = \App\Models\Procurement\PurchaseRequest\PurchaseRequisition::whereRaw("REPLACE(REPLACE(pr_number, '/', ''), '-', '') = ?", [$cleanPr])
+                    ->orWhere('pr_number', $it['prNumber'])
+                    ->first();
+                if ($matchedPr) {
+                    $matchedPrItem = $matchedPr->items->first();
+                    $prHasItemId = $matchedPrItem?->id;
+                }
+            }
+
             $processedItems[] = [
                 'pr_has_items_id' => $prHasItemId,
-                'item_alias' => $it['item_alias'] ?? $it['itemName'] ?? $it['item_name'] ?? null,
+                'item_alias' => $it['item_alias'] ?? $it['itemAlias'] ?? $it['itemName'] ?? $it['item_name'] ?? null,
                 'price' => $price,
                 'order' => $orderQty,
                 'purchased' => (float) ($it['purchased'] ?? $orderQty),
@@ -423,6 +443,7 @@ class PurchaseOrderApiController extends Controller
             'latest_delivery' => $latestDeliv,
             'service_subkon' => $request->boolean('service_subkon', false) ? 1 : 0,
             'facility_status' => $request->input('facility_status') ?? $request->input('statusFacility') ?? 'FASILITAS',
+            'status' => 'Waiting for Approve 1',
             'remark' => $request->input('remark') ?? $request->input('remarkPo') ?? '',
         ];
 
@@ -443,15 +464,22 @@ class PurchaseOrderApiController extends Controller
     /**
      * Approve Purchase Order.
      */
-    public function approve(Request $request, int $id)
+    public function approve(Request $request, $id)
     {
         $userId = $request->user()?->id ?? 1;
         $tier = (int) $request->input('tier', 1);
         $note = $request->input('note');
 
-        $po = GeniusOneBackend::procurement()->approvePo($id, $userId, $tier, $note);
+        if (! is_numeric($id)) {
+            $cleanCode = preg_replace('/[^A-Za-z0-9]/', '', (string) $id);
+            $found = PurchaseOrder::whereRaw("REPLACE(REPLACE(po_number, '/', ''), '-', '') = ?", [$cleanCode])->first();
+            $id = $found ? $found->id : $id;
+        }
+
+        $po = GeniusOneBackend::procurement()->approvePo((int) $id, $userId, $tier, $note);
 
         return response()->json([
+            'status' => 'success',
             'message' => "Purchase Order Tier {$tier} approved successfully",
             'data' => $po,
         ]);
@@ -460,15 +488,22 @@ class PurchaseOrderApiController extends Controller
     /**
      * Reject Purchase Order.
      */
-    public function reject(Request $request, int $id)
+    public function reject(Request $request, $id)
     {
         $userId = $request->user()?->id ?? 1;
         $tier = (int) $request->input('tier', 1);
         $reason = $request->input('reason', 'Rejected by approver');
 
-        $po = GeniusOneBackend::procurement()->rejectPo($id, $userId, $tier, $reason);
+        if (! is_numeric($id)) {
+            $cleanCode = preg_replace('/[^A-Za-z0-9]/', '', (string) $id);
+            $found = PurchaseOrder::whereRaw("REPLACE(REPLACE(po_number, '/', ''), '-', '') = ?", [$cleanCode])->first();
+            $id = $found ? $found->id : $id;
+        }
+
+        $po = GeniusOneBackend::procurement()->rejectPo((int) $id, $userId, $tier, $reason);
 
         return response()->json([
+            'status' => 'success',
             'message' => 'Purchase Order rejected successfully',
             'data' => $po,
         ]);

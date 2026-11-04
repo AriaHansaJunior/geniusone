@@ -36,6 +36,7 @@ class PurchaseOrder extends Model
         'payment_methods_id',
         'service_subkon',
         'facility_status',
+        'status',
         'delivery_terms_id',
         'latest_delivery',
         'remark',
@@ -151,22 +152,39 @@ class PurchaseOrder extends Model
 
     public function getStatusAttribute(): string
     {
-        $appr2 = $this->approvals->where('approval_ke', '2')->first();
-        if ($appr2 && $appr2->status === 1) {
-            return 'Approved 2';
+        $rawAttr = $this->attributes['status'] ?? '';
+
+        if (in_array($rawAttr, ['Approved', 'Approved 2'], true)) {
+            return 'Approved';
         }
-        if ($appr2 && $appr2->status === 2) {
+        if ($rawAttr === 'Rejected') {
             return 'Rejected';
+        }
+
+        $appr2 = $this->approvals->where('approval_ke', '2')->first();
+        if ($appr2 && (int) $appr2->status === 1) {
+            return 'Approved';
+        }
+        if ($appr2 && (int) $appr2->status === 2) {
+            return 'Rejected';
+        }
+
+        if (in_array($rawAttr, ['Waiting for Approve 2', 'Approved 1'], true)) {
+            return 'Waiting for Approve 2';
         }
 
         $appr1 = $this->approvals->where('approval_ke', '1')->first();
-        if ($appr1 && $appr1->status === 1) {
-            return 'Approved 1';
+        if ($appr1 && (int) $appr1->status === 1) {
+            return 'Waiting for Approve 2';
         }
-        if ($appr1 && $appr1->status === 2) {
+        if ($appr1 && (int) $appr1->status === 2) {
             return 'Rejected';
         }
 
-        return 'Draft';
+        if (! empty($rawAttr)) {
+            return $rawAttr;
+        }
+
+        return 'Waiting for Approve 1';
     }
 }

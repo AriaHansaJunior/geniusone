@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import * as XLSX from "xlsx";
 import { Button } from "../../../components/ui/Button";
-import { SummaryCard } from "../../../components/ui/SummaryCard";
 import { SearchField } from "../../../components/ui/SearchField";
 import { DataTable } from "../../../components/ui/DataTable";
 import { FilterPanel } from "../../../components/common/FilterPanel";
@@ -17,7 +16,6 @@ interface WarehouseProps {
 export function Warehouse({ onDetail, onCreate }: WarehouseProps) {
   const [search, setSearch] = useState("");
   const config = pageConfigs.warehouse;
-  const [stats, setStats] = useState(config.stats);
   const [rows, setRows] = useState(config.rows);
   const [whFilters, setWhFilters] = useState<Record<string, any>>({
     dateRange: "all",
@@ -30,7 +28,6 @@ export function Warehouse({ onDetail, onCreate }: WarehouseProps) {
     let isMounted = true;
     fetchList("warehouse").then((res) => {
       if (isMounted && res.rows && res.rows.length > 0) {
-        setStats(res.stats);
         setRows(res.rows);
       }
     });
@@ -46,7 +43,7 @@ export function Warehouse({ onDetail, onCreate }: WarehouseProps) {
         if (!(r._search || "").toLowerCase().includes(q)) return false;
       }
       if (whFilters.docType && whFilters.docType !== "all") {
-        const dt = String(r._rawDocType || r.docType || "").toLowerCase();
+        const dt = String(r._rawDocType || r._rawBc || r.docType || r.bcType || "").toLowerCase();
         if (!dt.includes(whFilters.docType.toLowerCase())) return false;
       }
       if (whFilters.bpbType && whFilters.bpbType !== "all") {
@@ -54,7 +51,7 @@ export function Warehouse({ onDetail, onCreate }: WarehouseProps) {
         if (!bt.includes(whFilters.bpbType.toLowerCase())) return false;
       }
       if (whFilters.approval && whFilters.approval !== "all") {
-        const ap = String(r._rawApproval || r.approval || "").toLowerCase();
+        const ap = String(r._rawApproval || r._rawStatus || r.statusApprove || r.status || r.approval || "").toLowerCase();
         if (!ap.includes(whFilters.approval.toLowerCase())) return false;
       }
       return true;
@@ -68,8 +65,9 @@ export function Warehouse({ onDetail, onCreate }: WarehouseProps) {
     }
     const headers = [
       "No",
+      "Receive Number (BPB)",
       "RN Number",
-      "Delivery Order",
+      "Delivery Order (SJ)",
       "BPB Type",
       "Supplier",
       "Document Type",
@@ -80,26 +78,28 @@ export function Warehouse({ onDetail, onCreate }: WarehouseProps) {
 
     const dataRows = filtered.map((r, idx) => [
       idx + 1,
+      typeof r._rawNumber === "string" ? r._rawNumber : (typeof r.receiveNumber === "string" ? r.receiveNumber : ""),
       typeof r._rawRn === "string" ? r._rawRn : (typeof r.rnNumber === "string" ? r.rnNumber : ""),
-      typeof r._rawDo === "string" ? r._rawDo : (typeof r.deliveryOrder === "string" ? r.deliveryOrder : ""),
+      typeof r._rawSj === "string" ? r._rawSj : (typeof r.deliveryOrder === "string" ? r.deliveryOrder : ""),
       typeof r._rawBpbType === "string" ? r._rawBpbType : (typeof r.bpbType === "string" ? r.bpbType : ""),
       typeof r._rawSupplier === "string" ? r._rawSupplier : (typeof r.supplier === "string" ? r.supplier : ""),
-      typeof r._rawDocType === "string" ? r._rawDocType : (typeof r.docType === "string" ? r.docType : ""),
+      typeof r._rawBc === "string" ? r._rawBc : (typeof r.docType === "string" ? r.docType : "BC 4.0"),
       typeof r._rawFacility === "string" ? r._rawFacility : "Non Fasilitas",
-      typeof r._rawApproval === "string" ? r._rawApproval : "Approved",
-      typeof r._rawCreatedBy === "string" ? r._rawCreatedBy : (typeof r.createdBy === "string" ? r.createdBy : ""),
+      typeof r._rawApproval === "string" ? r._rawApproval : (typeof r._rawStatus === "string" ? r._rawStatus : "Waiting for Approve 1"),
+      typeof r._rawCreatedBy === "string" ? r._rawCreatedBy : (typeof r.created === "string" ? r.created : ""),
     ]);
 
     const ws = XLSX.utils.aoa_to_sheet([headers, ...dataRows]);
     ws["!cols"] = [
       { wch: 6 },
+      { wch: 24 },
       { wch: 22 },
       { wch: 20 },
       { wch: 18 },
       { wch: 28 },
       { wch: 18 },
       { wch: 18 },
-      { wch: 18 },
+      { wch: 20 },
       { wch: 22 },
     ];
 
@@ -124,25 +124,11 @@ export function Warehouse({ onDetail, onCreate }: WarehouseProps) {
 
   return (
     <>
-      {/* Metric Cards Summary Grid */}
-      <div className="summary-grid">
-        {stats.map(([label, value, sub], i) => (
-          <SummaryCard
-            key={label}
-            label={label}
-            value={value}
-            sub={sub}
-            tone={i === 3 ? "accent" : undefined}
-          />
-        ))}
-      </div>
-
       {/* Filter Panel */}
       <section className="panel filter-panel">
         <div className="panel__heading">
           <div>
             <strong>Filter documents</strong>
-            <span>Refine the records shown in the table</span>
           </div>
           <Button variant="ghost" onClick={handleResetFilters}>
             Reset filters
@@ -169,7 +155,6 @@ export function Warehouse({ onDetail, onCreate }: WarehouseProps) {
         <div className="panel__heading table-panel__heading">
           <div>
             <strong>Receive material documents</strong>
-            <span>{filtered.length} records shown</span>
           </div>
           <div className="button-row">
             <Button variant="excel" onClick={handleExportXLSX}>

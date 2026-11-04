@@ -582,145 +582,244 @@ export function PurchaseRequisitionCreate({
       <div className="tx-panel">
         <form onSubmit={handleSaveClick}>
           {/* Header 5-column layout */}
-          <div className="tx-header-grid">
-            {/* 1. Date */}
-            <div className="master-form-group">
-              <label htmlFor="prDate" className="master-form-label">
-                Date <span className="required-asterisk">*</span>
-              </label>
-              <input
-                id="prDate"
-                type="date"
-                className={`master-form-input ${formErrors.date ? "has-error" : ""}`}
-                value={date}
-                onChange={(e) => {
-                  setDate(e.target.value);
-                  if (formErrors.date) setFormErrors((prev) => ({ ...prev, date: "" }));
-                }}
-              />
-              {formErrors.date && <span className="master-form-error">{formErrors.date}</span>}
-            </div>
+            <div className="tx-header-grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))" }}>
+              {/* 1. Date */}
+              <div className="master-form-group">
+                <label htmlFor="prDate" className="master-form-label">
+                  Date <span className="required-asterisk">*</span>
+                </label>
+                <input
+                  id="prDate"
+                  type="date"
+                  className={`master-form-input ${formErrors.date ? "has-error" : ""}`}
+                  value={date}
+                  onChange={(e) => {
+                    setDate(e.target.value);
+                    if (formErrors.date) setFormErrors((prev) => ({ ...prev, date: "" }));
+                  }}
+                />
+                {formErrors.date && <span className="master-form-error">{formErrors.date}</span>}
+              </div>
 
-            {/* 2. Due Date */}
-            <div className="master-form-group">
-              <label htmlFor="prDueDate" className="master-form-label">
-                Due Date <span className="required-asterisk">*</span>
-              </label>
-              <input
-                id="prDueDate"
-                type="date"
-                className={`master-form-input ${formErrors.dueDate ? "has-error" : ""}`}
-                value={dueDate}
-                onChange={(e) => {
-                  setDueDate(e.target.value);
-                  if (formErrors.dueDate) setFormErrors((prev) => ({ ...prev, dueDate: "" }));
-                }}
-              />
-              {formErrors.dueDate && <span className="master-form-error">{formErrors.dueDate}</span>}
-            </div>
+              {/* 2. Due Date */}
+              <div className="master-form-group">
+                <label htmlFor="prDueDate" className="master-form-label">
+                  Due Date <span className="required-asterisk">*</span>
+                </label>
+                <input
+                  id="prDueDate"
+                  type="date"
+                  className={`master-form-input ${formErrors.dueDate ? "has-error" : ""}`}
+                  value={dueDate}
+                  onChange={(e) => {
+                    setDueDate(e.target.value);
+                    if (formErrors.dueDate) setFormErrors((prev) => ({ ...prev, dueDate: "" }));
+                  }}
+                />
+                {formErrors.dueDate && <span className="master-form-error">{formErrors.dueDate}</span>}
+              </div>
 
-            {/* 3. Dept. Request */}
-            <div className="master-form-group">
-              <label htmlFor="prDept" className="master-form-label">
-                Dept. Request <span className="required-asterisk">*</span>
-              </label>
-              <select
-                id="prDept"
-                className={`master-form-select ${formErrors.deptRequest ? "has-error" : ""}`}
-                value={deptRequest}
-                onChange={(e) => {
-                  setDeptRequest(e.target.value);
-                  if (formErrors.deptRequest) setFormErrors((prev) => ({ ...prev, deptRequest: "" }));
-                }}
-              >
-                <option value="">Select Data . . .</option>
-                <option value="REVERB">REVERB</option>
-                <option value="SMELTING">SMELTING</option>
-                <option value="REFINING">REFINING</option>
-                <option value="MAINTENANCE">MAINTENANCE</option>
-                <option value="LOGISTICS">LOGISTICS</option>
-                <option value="LABORATORY">LABORATORY</option>
-                <option value="PROCUREMENT">PROCUREMENT</option>
-                <option value="HSE">HSE</option>
-                <option value="TEKNIK">TEKNIK</option>
-                <option value="PPIC">PPIC</option>
-                <option value="HRD">HRD</option>
-              </select>
-              {formErrors.deptRequest && <span className="master-form-error">{formErrors.deptRequest}</span>}
-            </div>
-
-            {/* 4. Section */}
-            <div className="master-form-group">
-              <label htmlFor="prSection" className="master-form-label">
-                Section <span className="required-asterisk">*</span>
-              </label>
-              <select
-                id="prSection"
-                className={`master-form-select ${formErrors.section ? "has-error" : ""}`}
-                value={section}
-                onChange={(e) => {
-                  setSection(e.target.value);
-                  if (formErrors.section) setFormErrors((prev) => ({ ...prev, section: "" }));
-                }}
-              >
-                <option value="">Select Data . . .</option>
-                <option value="Section 01">Section 01</option>
-                <option value="Section 02">Section 02</option>
-                <option value="Furnace A">Furnace A</option>
-                <option value="Furnace B">Furnace B</option>
-                <option value="General Maintenance">General Maintenance</option>
-                <option value="Utility">Utility</option>
-              </select>
-              {formErrors.section && <span className="master-form-error">{formErrors.section}</span>}
-            </div>
-
-            {/* 5. Attachment File */}
-            <div className="master-form-group">
-              <label htmlFor="prAttachment" className="master-form-label">
-                Attachment file <span style={{ textTransform: "none", fontSize: "10.5px", color: "var(--muted)", fontWeight: 400 }}>(Max: 2MB, Format: PDF, DOC, XLS, JPG, PNG)</span>
-              </label>
-              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <label
-                  style={{
-                    padding: "6px 12px",
-                    background: "#f1f5f9",
-                    border: "1px solid var(--line-strong)",
-                    borderRadius: "var(--radius-sm)",
-                    fontSize: "11.5px",
-                    fontWeight: 700,
-                    cursor: "pointer",
-                    color: "var(--ink)",
-                    whiteSpace: "nowrap",
+              {/* 3. Dept. Request */}
+              <div className="master-form-group">
+                <label htmlFor="prDept" className="master-form-label">
+                  Dept. Request <span className="required-asterisk">*</span>
+                </label>
+                <select
+                  id="prDept"
+                  className={`master-form-select ${formErrors.deptRequest ? "has-error" : ""}`}
+                  value={deptRequest}
+                  onChange={(e) => {
+                    setDeptRequest(e.target.value);
+                    if (formErrors.deptRequest) setFormErrors((prev) => ({ ...prev, deptRequest: "" }));
                   }}
                 >
-                  Choose File
-                  <input
-                    id="prAttachment"
-                    type="file"
-                    style={{ display: "none" }}
-                    accept=".doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.pdf"
-                    onChange={handleFileChange}
-                  />
+                  <option value="">Select Data . . .</option>
+                  <option value="REVERB">REVERB</option>
+                  <option value="SMELTING">SMELTING</option>
+                  <option value="REFINING">REFINING</option>
+                  <option value="MAINTENANCE">MAINTENANCE</option>
+                  <option value="LOGISTICS">LOGISTICS</option>
+                  <option value="LABORATORY">LABORATORY</option>
+                  <option value="PROCUREMENT">PROCUREMENT</option>
+                  <option value="HSE">HSE</option>
+                  <option value="TEKNIK">TEKNIK</option>
+                  <option value="PPIC">PPIC</option>
+                  <option value="HRD">HRD</option>
+                </select>
+                {formErrors.deptRequest && <span className="master-form-error">{formErrors.deptRequest}</span>}
+              </div>
+
+              {/* 4. Section */}
+              <div className="master-form-group">
+                <label htmlFor="prSection" className="master-form-label">
+                  Section <span className="required-asterisk">*</span>
                 </label>
-                <span style={{ fontSize: "11px", color: "var(--muted)", textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }}>
-                  {attachmentName || "No file chosen"}
-                </span>
+                <select
+                  id="prSection"
+                  className={`master-form-select ${formErrors.section ? "has-error" : ""}`}
+                  value={section}
+                  onChange={(e) => {
+                    setSection(e.target.value);
+                    if (formErrors.section) setFormErrors((prev) => ({ ...prev, section: "" }));
+                  }}
+                >
+                  <option value="">Select Data . . .</option>
+                  <option value="Section 01">Section 01</option>
+                  <option value="Section 02">Section 02</option>
+                  <option value="Furnace A">Furnace A</option>
+                  <option value="Furnace B">Furnace B</option>
+                  <option value="General Maintenance">General Maintenance</option>
+                  <option value="Utility">Utility</option>
+                </select>
+                {formErrors.section && <span className="master-form-error">{formErrors.section}</span>}
+              </div>
+
+              {/* 5. Attachment File */}
+              <div className="master-form-group">
+                <label htmlFor="prAttachment" className="master-form-label">
+                  Attachment file <span style={{ textTransform: "none", fontSize: "10.5px", color: "var(--muted)", fontWeight: 400 }}>(Max: 2MB, Format: PDF, DOC, XLS, JPG, PNG)</span>
+                </label>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <label
+                    style={{
+                      padding: "6px 12px",
+                      background: "#f1f5f9",
+                      border: "1px solid var(--line-strong)",
+                      borderRadius: "var(--radius-sm)",
+                      fontSize: "11.5px",
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      color: "var(--ink)",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    Choose File
+                    <input
+                      id="prAttachment"
+                      type="file"
+                      style={{ display: "none" }}
+                      accept=".doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.pdf"
+                      onChange={handleFileChange}
+                    />
+                  </label>
+                  <span style={{ fontSize: "11px", color: "var(--muted)", textOverflow: "ellipsis", overflow: "hidden", whiteSpace: "nowrap" }}>
+                    {attachmentName || "No file chosen"}
+                  </span>
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Context bar with Dept. Create and Action Buttons */}
-          <div className="tx-context-bar">
-            <div className="tx-context-text">
-              Dept. Create: <strong>{deptRequest || "—"}</strong>
-            </div>
+            {/* Context bar with Dept. Create and Action Buttons */}
+            <div className="tx-context-bar">
+              <div className="tx-context-text">
+                Dept. Create: <strong>{deptRequest || "—"}</strong>
+              </div>
 
-            <div className="tx-context-actions">
-              {/* Dropdown: Upload From Master Item */}
-              <div ref={uploadDropdownRef} style={{ position: "relative", display: "inline-block" }}>
+              <div className="tx-context-actions">
+                {/* Dropdown: Upload From Master Item */}
+                <div ref={uploadDropdownRef} style={{ position: "relative", display: "inline-block" }}>
+                  <button
+                    type="button"
+                    onClick={() => setIsUploadDropdownOpen((prev) => !prev)}
+                    style={{
+                      background: "#16a34a",
+                      color: "#ffffff",
+                      border: "1px solid #15803d",
+                      padding: "7px 14px",
+                      borderRadius: "var(--radius-sm)",
+                      fontSize: "12px",
+                      fontWeight: 700,
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      cursor: "pointer",
+                    }}
+                    title="Upload items via Excel template"
+                  >
+                    <span>Upload From Master Item</span>
+                    <Icon name={isUploadDropdownOpen ? "chevronUp" : "chevronDown"} size={12} />
+                  </button>
+
+                  {isUploadDropdownOpen && (
+                    <div
+                      style={{
+                        position: "absolute",
+                        top: "calc(100% + 4px)",
+                        left: 0,
+                        background: "#ffffff",
+                        border: "1px solid var(--line-strong, #cbd5e1)",
+                        borderRadius: "var(--radius-sm, 6px)",
+                        boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)",
+                        zIndex: 100,
+                        minWidth: "175px",
+                        overflow: "hidden",
+                      }}
+                    >
+                      <button
+                        type="button"
+                        onClick={handleDownloadExcelTemplate}
+                        style={{
+                          width: "100%",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "8px",
+                          padding: "9px 14px",
+                          background: "transparent",
+                          border: "none",
+                          borderBottom: "1px solid var(--line, #e2e8f0)",
+                          fontSize: "12px",
+                          fontWeight: 600,
+                          color: "var(--ink, #1e293b)",
+                          textAlign: "left",
+                          cursor: "pointer",
+                        }}
+                        onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")}
+                        onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                      >
+                        <Icon name="download" size={13} style={{ color: "#16a34a" }} />
+                        <span>Download Template</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        style={{
+                          width: "100%",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "8px",
+                          padding: "9px 14px",
+                          background: "transparent",
+                          border: "none",
+                          fontSize: "12px",
+                          fontWeight: 600,
+                          color: "var(--ink, #1e293b)",
+                          textAlign: "left",
+                          cursor: "pointer",
+                        }}
+                        onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")}
+                        onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                      >
+                        <Icon name="file" size={13} style={{ color: "#2563eb" }} />
+                        <span>Upload File</span>
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Hidden File Input for Excel Import */}
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".xlsx,.xls,.csv"
+                    style={{ display: "none" }}
+                    onChange={handleUploadExcelFile}
+                  />
+                </div>
+
+                {/* Add Item Button: Directly Opens Pick Item Modal */}
                 <button
                   type="button"
-                  onClick={() => setIsUploadDropdownOpen((prev) => !prev)}
+                  onClick={() => setIsItemPickerOpen(true)}
                   style={{
                     background: "#16a34a",
                     color: "#ffffff",
@@ -734,358 +833,259 @@ export function PurchaseRequisitionCreate({
                     gap: "6px",
                     cursor: "pointer",
                   }}
-                  title="Upload items via Excel template"
+                  title="Add items directly from Master Item catalog"
                 >
-                  <span>Upload From Master Item</span>
-                  <Icon name={isUploadDropdownOpen ? "chevronUp" : "chevronDown"} size={12} />
+                  <span>Add item</span>
                 </button>
 
-                {isUploadDropdownOpen && (
-                  <div
-                    style={{
-                      position: "absolute",
-                      top: "calc(100% + 4px)",
-                      left: 0,
-                      background: "#ffffff",
-                      border: "1px solid var(--line-strong, #cbd5e1)",
-                      borderRadius: "var(--radius-sm, 6px)",
-                      boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)",
-                      zIndex: 100,
-                      minWidth: "175px",
-                      overflow: "hidden",
-                    }}
-                  >
-                    <button
-                      type="button"
-                      onClick={handleDownloadExcelTemplate}
-                      style={{
-                        width: "100%",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "8px",
-                        padding: "9px 14px",
-                        background: "transparent",
-                        border: "none",
-                        borderBottom: "1px solid var(--line, #e2e8f0)",
-                        fontSize: "12px",
-                        fontWeight: 600,
-                        color: "var(--ink, #1e293b)",
-                        textAlign: "left",
-                        cursor: "pointer",
-                      }}
-                      onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")}
-                      onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-                    >
-                      <Icon name="download" size={13} style={{ color: "#16a34a" }} />
-                      <span>Download Template</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      style={{
-                        width: "100%",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "8px",
-                        padding: "9px 14px",
-                        background: "transparent",
-                        border: "none",
-                        fontSize: "12px",
-                        fontWeight: 600,
-                        color: "var(--ink, #1e293b)",
-                        textAlign: "left",
-                        cursor: "pointer",
-                      }}
-                      onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")}
-                      onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-                    >
-                      <Icon name="file" size={13} style={{ color: "#2563eb" }} />
-                      <span>Upload File</span>
-                    </button>
-                  </div>
-                )}
-
-                {/* Hidden File Input for Excel Import */}
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".xlsx,.xls,.csv"
-                  style={{ display: "none" }}
-                  onChange={handleUploadExcelFile}
-                />
+                {/* Manual Blank Row Addition */}
+                <button
+                  type="button"
+                  onClick={handleAddBlankRow}
+                  style={{
+                    background: "#f8fafc",
+                    color: "var(--ink-soft, #475569)",
+                    border: "1px solid var(--line-strong, #cbd5e1)",
+                    padding: "7px 12px",
+                    borderRadius: "var(--radius-sm)",
+                    fontSize: "11.5px",
+                    fontWeight: 600,
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "4px",
+                    cursor: "pointer",
+                  }}
+                  title="Add a manual blank row"
+                >
+                  <Icon name="plus" size={12} />
+                  <span>Blank Row</span>
+                </button>
               </div>
-
-              {/* Add Item Button: Directly Opens Pick Item Modal */}
-              <button
-                type="button"
-                onClick={() => setIsItemPickerOpen(true)}
-                style={{
-                  background: "#16a34a",
-                  color: "#ffffff",
-                  border: "1px solid #15803d",
-                  padding: "7px 14px",
-                  borderRadius: "var(--radius-sm)",
-                  fontSize: "12px",
-                  fontWeight: 700,
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  cursor: "pointer",
-                }}
-                title="Add items directly from Master Item catalog"
-              >
-                <span>Add item</span>
-              </button>
-
-              {/* Manual Blank Row Addition */}
-              <button
-                type="button"
-                onClick={handleAddBlankRow}
-                style={{
-                  background: "#f8fafc",
-                  color: "var(--ink-soft, #475569)",
-                  border: "1px solid var(--line-strong, #cbd5e1)",
-                  padding: "7px 12px",
-                  borderRadius: "var(--radius-sm)",
-                  fontSize: "11.5px",
-                  fontWeight: 600,
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: "4px",
-                  cursor: "pointer",
-                }}
-                title="Add a manual blank row"
-              >
-                <Icon name="plus" size={12} />
-                <span>Blank Row</span>
-              </button>
             </div>
-          </div>
 
-          {formErrors.items && (
-            <div style={{ color: "var(--red-600)", fontSize: "12px", fontWeight: 700, marginBottom: "8px" }}>
-              {formErrors.items}
-            </div>
-          )}
+            {formErrors.items && (
+              <div style={{ color: "var(--red-600)", fontSize: "12px", fontWeight: 700, marginBottom: "8px" }}>
+                {formErrors.items}
+              </div>
+            )}
 
-          {/* Item Table Grid */}
-          <div className="tx-table-container">
-            <table className="tx-grid-table">
-              <thead>
-                <tr>
-                  <th style={{ width: "50px", textAlign: "center" }}>No</th>
-                  <th style={{ width: "170px" }}>Job Number</th>
-                  <th style={{ minWidth: "260px" }}>Item Name</th>
-                  <th style={{ width: "100px" }}>Unit</th>
-                  <th style={{ width: "110px", textAlign: "right" }}>Current Stock</th>
-                  <th style={{ width: "110px", textAlign: "right" }}>Quantity *</th>
-                  <th style={{ width: "140px" }}>Due Date</th>
-                  <th style={{ width: "140px" }}>Fasilitas / Non Fasilitas</th>
-                  <th style={{ minWidth: "200px" }}>Remark</th>
-                  <th style={{ width: "60px", textAlign: "center" }}>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.length > 0 ? (
-                  items.map((row, index) => (
-                    <tr key={row.id}>
-                      {/* 1. Sequential No */}
-                      <td style={{ textAlign: "center", fontWeight: 600, color: "var(--muted)" }}>
-                        {index + 1}
-                      </td>
+            {/* Item Table Grid */}
+            <div className="tx-table-container">
+              <table className="tx-grid-table">
+                <thead>
+                  <tr>
+                    <th style={{ minWidth: "48px", width: "48px", textAlign: "center" }}>No</th>
+                    <th style={{ minWidth: "170px" }}>Job Number</th>
+                    <th style={{ minWidth: "260px" }}>Item Name *</th>
+                    <th style={{ minWidth: "100px" }}>Unit</th>
+                    <th style={{ minWidth: "110px", textAlign: "right" }}>Current Stock</th>
+                    <th style={{ minWidth: "115px", textAlign: "right" }}>Quantity *</th>
+                    <th style={{ minWidth: "145px" }}>Due Date</th>
+                    <th style={{ minWidth: "160px" }}>Facility Status</th>
+                    <th style={{ minWidth: "200px" }}>Remark</th>
+                    <th style={{ minWidth: "52px", width: "52px", textAlign: "center" }}>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {items.length > 0 ? (
+                    items.map((row, index) => (
+                      <tr key={row.id}>
+                        {/* 1. Sequential No */}
+                        <td style={{ textAlign: "center", fontWeight: 600, color: "var(--muted)" }}>
+                          {index + 1}
+                        </td>
 
-                      {/* 2. Job Number (Non-selectable) */}
-                      <td>
-                        <select
-                          className="tx-input-cell tx-input-cell--disabled"
-                          disabled
-                          value={row.jobNumber || ""}
-                          tabIndex={-1}
-                          aria-disabled="true"
-                          title="Job Number selection is disabled"
-                        >
-                          <option value="">Select Data . . .</option>
-                          <option value="—">— None —</option>
-                          {jobOptions.map((job) => (
-                            <option key={job} value={job}>
-                              {job}
-                            </option>
-                          ))}
-                        </select>
-                      </td>
+                        {/* 2. Job Number (Non-selectable) */}
+                        <td>
+                          <select
+                            className="tx-input-cell tx-input-cell--disabled"
+                            disabled
+                            value={row.jobNumber || ""}
+                            tabIndex={-1}
+                            aria-disabled="true"
+                            title="Job Number selection is disabled"
+                          >
+                            <option value="">Select Data . . .</option>
+                            <option value="—">— None —</option>
+                            {jobOptions.map((job) => (
+                              <option key={job} value={job}>
+                                {job}
+                              </option>
+                            ))}
+                          </select>
+                        </td>
 
-                      {/* 3. Item Name (Searchable Combobox / Dropdown) */}
-                      <td>
-                        <SearchableItemCombobox
-                          value={row.itemName}
-                          hasError={Boolean(formErrors[`item_${index}_name`])}
-                          availableItems={masterItems}
-                          onSelect={(selectedItem) => {
-                            handleUpdateRow(row.id, "itemCode", selectedItem.itemCode);
-                            handleUpdateRow(row.id, "itemName", selectedItem.itemName);
-                            handleUpdateRow(
-                              row.id,
-                              "unit",
-                              selectedItem.smallestUnitCode || selectedItem.smallestUnitName || "PCE"
-                            );
-                            handleUpdateRow(
-                              row.id,
-                              "currentStock",
-                              typeof selectedItem.stock === "number" ? selectedItem.stock : 0
-                            );
-                            handleUpdateRow(
-                              row.id,
-                              "facility",
-                              selectedItem.facility === "FASILITAS" ? "Fasilitas" : "Non Fasilitas"
-                            );
-                            if (formErrors[`item_${index}_name`]) {
-                              setFormErrors((prev) => ({ ...prev, [`item_${index}_name`]: "" }));
-                            }
-                          }}
-                          onTextChange={(text) => {
-                            handleUpdateRow(row.id, "itemName", text);
-                            if (formErrors[`item_${index}_name`]) {
-                              setFormErrors((prev) => ({ ...prev, [`item_${index}_name`]: "" }));
-                            }
-                          }}
-                        />
-                        {formErrors[`item_${index}_name`] && (
-                          <span style={{ color: "var(--red-600)", fontSize: "10.5px", display: "block" }}>
-                            {formErrors[`item_${index}_name`]}
-                          </span>
-                        )}
-                      </td>
+                        {/* 3. Item Name (Searchable Combobox / Dropdown) */}
+                        <td>
+                          <SearchableItemCombobox
+                            value={row.itemName}
+                            hasError={Boolean(formErrors[`item_${index}_name`])}
+                            availableItems={masterItems}
+                            onSelect={(selectedItem) => {
+                              handleUpdateRow(row.id, "itemCode", selectedItem.itemCode);
+                              handleUpdateRow(row.id, "itemName", selectedItem.itemName);
+                              handleUpdateRow(
+                                row.id,
+                                "unit",
+                                selectedItem.smallestUnitCode || selectedItem.smallestUnitName || "PCE"
+                              );
+                              handleUpdateRow(
+                                row.id,
+                                "currentStock",
+                                typeof selectedItem.stock === "number" ? selectedItem.stock : 0
+                              );
+                              handleUpdateRow(
+                                row.id,
+                                "facility",
+                                selectedItem.facility === "FASILITAS" ? "Fasilitas" : "Non Fasilitas"
+                              );
+                              if (formErrors[`item_${index}_name`]) {
+                                setFormErrors((prev) => ({ ...prev, [`item_${index}_name`]: "" }));
+                              }
+                            }}
+                            onTextChange={(text) => {
+                              handleUpdateRow(row.id, "itemName", text);
+                              if (formErrors[`item_${index}_name`]) {
+                                setFormErrors((prev) => ({ ...prev, [`item_${index}_name`]: "" }));
+                              }
+                            }}
+                          />
+                          {formErrors[`item_${index}_name`] && (
+                            <span style={{ color: "var(--red-600)", fontSize: "10.5px", display: "block" }}>
+                              {formErrors[`item_${index}_name`]}
+                            </span>
+                          )}
+                        </td>
 
-                      {/* 4. Unit */}
-                      <td>
-                        <select
-                          className="tx-input-cell"
-                          value={row.unit}
-                          onChange={(e) => handleUpdateRow(row.id, "unit", e.target.value)}
-                        >
-                          <option value="PCE">PCE</option>
-                          <option value="KG">KG</option>
-                          <option value="SET">SET</option>
-                          <option value="ROLL">ROLL</option>
-                          <option value="MTR">MTR</option>
-                          <option value="BOX">BOX</option>
-                          <option value="LTR">LTR</option>
-                        </select>
-                      </td>
+                        {/* 4. Unit */}
+                        <td>
+                          <select
+                            className="tx-input-cell"
+                            value={row.unit}
+                            onChange={(e) => handleUpdateRow(row.id, "unit", e.target.value)}
+                          >
+                            <option value="PCE">PCE</option>
+                            <option value="KG">KG</option>
+                            <option value="SET">SET</option>
+                            <option value="ROLL">ROLL</option>
+                            <option value="MTR">MTR</option>
+                            <option value="BOX">BOX</option>
+                            <option value="LTR">LTR</option>
+                          </select>
+                        </td>
 
-                      {/* 5. Current Stock (Read-only Reference) */}
-                      <td style={{ textAlign: "right", fontFamily: "ui-monospace, monospace", fontWeight: 700, color: "var(--ink-soft)" }}>
-                        {row.currentStock.toFixed(2)}
-                      </td>
+                        {/* 5. Current Stock (Read-only Reference) */}
+                        <td style={{ textAlign: "right", fontFamily: "ui-monospace, monospace", fontWeight: 700, color: "var(--ink-soft)" }}>
+                          {row.currentStock.toFixed(2)}
+                        </td>
 
-                      {/* 6. Quantity */}
-                      <td>
-                        <input
-                          type="number"
-                          step="any"
-                          min="0.0001"
-                          className={`tx-input-cell tx-input-cell--num ${formErrors[`item_${index}_qty`] ? "has-error" : ""}`}
-                          value={row.quantity}
-                          onChange={(e) => handleUpdateRow(row.id, "quantity", parseFloat(e.target.value) || 0)}
-                        />
-                        {formErrors[`item_${index}_qty`] && (
-                          <span style={{ color: "var(--red-600)", fontSize: "10.5px", display: "block" }}>
-                            {formErrors[`item_${index}_qty`]}
-                          </span>
-                        )}
-                      </td>
+                        {/* 6. Quantity */}
+                        <td>
+                          <input
+                            type="number"
+                            step="any"
+                            min="0.0001"
+                            className={`tx-input-cell tx-input-cell--num ${formErrors[`item_${index}_qty`] ? "has-error" : ""}`}
+                            value={row.quantity}
+                            onChange={(e) => handleUpdateRow(row.id, "quantity", parseFloat(e.target.value) || 0)}
+                          />
+                          {formErrors[`item_${index}_qty`] && (
+                            <span style={{ color: "var(--red-600)", fontSize: "10.5px", display: "block" }}>
+                              {formErrors[`item_${index}_qty`]}
+                            </span>
+                          )}
+                        </td>
 
-                      {/* 7. Due Date */}
-                      <td>
-                        <input
-                          type="date"
-                          className="tx-input-cell"
-                          value={row.dueDate}
-                          onChange={(e) => handleUpdateRow(row.id, "dueDate", e.target.value)}
-                        />
-                      </td>
+                        {/* 7. Due Date */}
+                        <td>
+                          <input
+                            type="date"
+                            className="tx-input-cell"
+                            value={row.dueDate}
+                            onChange={(e) => handleUpdateRow(row.id, "dueDate", e.target.value)}
+                          />
+                        </td>
 
-                      {/* 8. Fasilitas / Non Fasilitas */}
-                      <td>
-                        <select
-                          className="tx-input-cell"
-                          value={row.facility}
-                          onChange={(e) => handleUpdateRow(row.id, "facility", e.target.value as any)}
-                        >
-                          <option value="Non Fasilitas">Non Fasilitas</option>
-                          <option value="Fasilitas">Fasilitas</option>
-                        </select>
-                      </td>
+                        {/* 8. Fasilitas / Non Fasilitas */}
+                        <td>
+                          <select
+                            className="tx-input-cell"
+                            value={row.facility}
+                            onChange={(e) => handleUpdateRow(row.id, "facility", e.target.value as any)}
+                          >
+                            <option value="Non Fasilitas">Non Fasilitas</option>
+                            <option value="Fasilitas">Fasilitas</option>
+                          </select>
+                        </td>
 
-                      {/* 9. Remark */}
-                      <td>
-                        <input
-                          type="text"
-                          className="tx-input-cell"
-                          placeholder="Item remark..."
-                          value={row.remark}
-                          onChange={(e) => handleUpdateRow(row.id, "remark", e.target.value)}
-                        />
-                      </td>
+                        {/* 9. Remark */}
+                        <td>
+                          <input
+                            type="text"
+                            className="tx-input-cell"
+                            placeholder="Item remark..."
+                            value={row.remark}
+                            onChange={(e) => handleUpdateRow(row.id, "remark", e.target.value)}
+                          />
+                        </td>
 
-                      {/* 10. Action */}
-                      <td style={{ textAlign: "center" }}>
-                        <button
-                          type="button"
-                          className="tx-row-delete-btn"
-                          title="Remove item row"
-                          onClick={() => handleDeleteRow(row.id)}
-                        >
-                          <Icon name="trash" size={13} />
-                        </button>
+                        {/* 10. Action */}
+                        <td style={{ textAlign: "center" }}>
+                          <button
+                            type="button"
+                            className="tx-row-delete-btn"
+                            title="Remove item row"
+                            onClick={() => handleDeleteRow(row.id)}
+                          >
+                            <Icon name="trash" size={13} />
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={10} style={{ padding: "24px", textAlign: "center", color: "var(--muted)" }}>
+                        No items added yet. Click "Add Item" or "Upload From Master Item" above.
                       </td>
                     </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan={10} style={{ padding: "24px", textAlign: "center", color: "var(--muted)" }}>
-                      No items added yet. Click "Add Item" or "Upload From Master Item" above.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+                  )}
+                </tbody>
+              </table>
+            </div>
 
-          {/* Form-level Note */}
-          <div className="master-form-group" style={{ marginBottom: "20px" }}>
-            <label htmlFor="prNote" className="master-form-label">
-              Note
-            </label>
-            <textarea
-              id="prNote"
-              className="master-form-textarea"
-              placeholder="Enter purchase requisition general notes..."
-              rows={3}
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-            />
-          </div>
+            {/* Form-level Note */}
+            <div className="master-form-group" style={{ marginBottom: "20px" }}>
+              <label htmlFor="prNote" className="master-form-label">
+                Note
+              </label>
+              <textarea
+                id="prNote"
+                className="master-form-textarea"
+                placeholder="Enter purchase requisition general notes..."
+                rows={3}
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+              />
+            </div>
 
-          {/* Bottom Action Bar */}
-          <div className="tx-actions-bar">
-            <button
-              type="submit"
-              className="btn-tx-save"
-              disabled={isSubmitting}
-            >
-              <span>{isSubmitting ? "Saving..." : "Save"}</span>
-            </button>
+            {/* Bottom Action Bar */}
+            <div className="tx-actions-bar">
+              <button
+                type="submit"
+                className="btn-tx-save"
+                disabled={isSubmitting}
+              >
+                <span>{isSubmitting ? "Saving..." : "Save"}</span>
+              </button>
 
-            <button
-              type="button"
-              className="btn-tx-cancel"
-              onClick={() => setShowCancelConfirm(true)}
-            >
-              <span>Cancel</span>
-            </button>
-          </div>
+              <button
+                type="button"
+                className="btn-tx-cancel"
+                onClick={() => setShowCancelConfirm(true)}
+              >
+                <span>Cancel</span>
+              </button>
+            </div>
         </form>
       </div>
 

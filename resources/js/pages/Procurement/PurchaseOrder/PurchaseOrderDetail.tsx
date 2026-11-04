@@ -26,7 +26,37 @@ export function PurchaseOrderDetail({
   const [activeTab, setActiveTab] = useState<"material" | "otherCosts">("material");
 
   const [row, setRow] = useState<TableRow>(() => {
-    return findRowBySlug(poRows, code) || poRows[3] || poRows[0];
+    if (typeof document !== "undefined") {
+      const rootEl = document.getElementById("root");
+      if (rootEl?.dataset?.initialJson) {
+        try {
+          const parsed = JSON.parse(rootEl.dataset.initialJson);
+          if (parsed?.item) {
+            const parsedNum = String(parsed.item._rawNumber || parsed.item.poNumber || "").replace(/[^A-Za-z0-9]/g, "").toLowerCase();
+            const targetCode = String(code || "").replace(/[^A-Za-z0-9]/g, "").toLowerCase();
+            if (!targetCode || parsedNum === targetCode) {
+              return parsed.item;
+            }
+          }
+        } catch (_) {}
+      }
+    }
+    const match = findRowBySlug(poRows, code);
+    if (match) return match;
+    const cleanDoc = code ? code.replace(/-/g, "/") : "PO";
+    return {
+      _id: `po-${code}`,
+      _type: "po",
+      poNumber: cleanDoc,
+      _rawNumber: cleanDoc,
+      status: "Waiting for Approve 1",
+      _rawStatus: "Waiting for Approve 1",
+      date: "-",
+      dueDate: "-",
+      supplier: "Loading...",
+      items: [],
+      _items: [],
+    } as TableRow;
   });
 
   useEffect(() => {
@@ -41,62 +71,70 @@ export function PurchaseOrderDetail({
     };
   }, [code]);
 
-  const docNumber = row._rawNumber || "POL-1026-0040";
-  const prNumber = row._rawPr || "0135/PR-IMLI/IX/2026";
-  const rmNumber = row._rawRn || "RM-1026-0018";
-  const supplierName = row._rawSupplier || "[ASSL.0002] PT. Astra Otoparts, Tbk";
-  const orderTotal = row._rawTotal || "IDR 260,112,910.68";
-  const rawStatus = row._rawStatus || "Approved 2";
-  const dateStr = row._rawDate || "08-Oct-2026";
-  const dueDate = row._rawDueDate || "09-Nov-2026";
+  const docNumber = typeof row._rawNumber === "string" && row._rawNumber
+    ? row._rawNumber
+    : typeof row.poNumber === "string" && row.poNumber
+    ? row.poNumber
+    : typeof code === "string"
+    ? code.replace(/-/g, "/")
+    : "PO";
+  const prNumber = String(row._rawPr || row.prNumber || "—");
+  const rmNumber = String(row._rawRn || row.rnNumber || "—");
+  const supplierName = String(row._rawSupplier || row.supplier || "—");
+  const orderTotal = String(row._rawTotal || row.total || "-");
+  const rawStatus = row._rawStatus || row.status || "Waiting for Approve 1";
+  const dateStr = row._rawDate || row.date || "-";
+  const dueDate = row._rawDueDate || row.dueDate || "-";
   const facility = String(row._rawFacility || "FASILITAS");
   const currency = String(row._rawCurrency || "IDR");
   const rate = String(row._rawRate || "1.00");
   const paymentMethod = String(row._rawPaymentMethod || "TRANSFER");
   const paymentTerm = String(row._rawPaymentTerm || "Full amount within 14 days after received invoice");
-  const createdBy = String(row._rawCreatedBy || "08-10-2026 13:44 by Michelle");
-  const releasedBy = String(row._rawReleasedBy || "08-10-2026 13:57 by YUSTINA");
-  const approvedBy = String(row._rawApprovedBy || "08-10-2026 14:04 by AWI L");
-  const remark = String(row._rawRemark || "U/ Proses BB");
+  const createdBy = String(row._rawCreatedBy || "-");
+  const releasedBy = String(row._rawReleasedBy || "-");
+  const approvedBy = String(row._rawApprovedBy || "-");
+  const remark = String(row._rawRemark || "-");
+
+  const backendNormalizedStatus = normalizeApprovalStatus(rawStatus);
+
+  const resolveSyncedApprovalState = (): DocumentApprovalState => {
+    const localByNum = getLocalApprovalState("purchase_order", docNumber, backendNormalizedStatus);
+    const localById = row.id
+      ? getLocalApprovalState("purchase_order", String(row.id), backendNormalizedStatus)
+      : localByNum;
+    const local = localByNum.history.length >= localById.history.length ? localByNum : localById;
+
+    if (backendNormalizedStatus !== "WAITING_APPROVE_1" && local.status !== backendNormalizedStatus) {
+      return {
+        ...local,
+        status: backendNormalizedStatus,
+        currentTier:
+          backendNormalizedStatus === "WAITING_APPROVE_2"
+            ? 2
+            : backendNormalizedStatus === "APPROVED"
+            ? 2
+            : 1,
+      };
+    }
+    return local;
+  };
 
   const [approvalState, setApprovalState] = useState<DocumentApprovalState>(() =>
-    getLocalApprovalState("purchase_order", docNumber, normalizeApprovalStatus(rawStatus))
+    resolveSyncedApprovalState()
   );
 
   useEffect(() => {
-    setApprovalState(
-      getLocalApprovalState("purchase_order", docNumber, normalizeApprovalStatus(rawStatus))
-    );
-  }, [docNumber, rawStatus]);
+    setApprovalState(resolveSyncedApprovalState());
+  }, [docNumber, row.id, rawStatus, backendNormalizedStatus]);
 
   const isApproved = approvalState.status === "APPROVED";
 
   const poItems =
     row._items && row._items.length > 0
       ? row._items
-      : [
-          {
-            no: 1,
-            prNumber: prNumber,
-            item: "Battery Scrap",
-            itemCode: "10.100.100.001",
-            itemAlias: "—",
-            quantity: String(row._totalQty || "17,693.01000 KGM"),
-            unit: "KGM",
-            price: "13,244.55000",
-            discount: "0.00000",
-            subtotal: "234,335,955.60",
-            priceRp: "13,244.55",
-            discountRp: "0.00",
-            subtotalRp: "234,335,955.60",
-            lme: "1,855",
-            optionalRate: "17,849",
-            lmePercentage: "40.00%",
-            subtotalPph: "0.00",
-            currency: currency,
-            remark: remark,
-          },
-        ];
+      : (row.items && Array.isArray(row.items) && row.items.length > 0)
+      ? row.items
+      : [];
 
   const otherCosts = row._otherCosts || [];
 
@@ -171,12 +209,12 @@ export function PurchaseOrderDetail({
       <div className="panel" style={{ padding: "14px 20px", marginBottom: "16px" }}>
         <ApprovalActionBar
           module="purchase_order"
-          documentId={docNumber}
+          documentId={row.id ? String(row.id) : docNumber}
           documentNumber={docNumber}
           state={approvalState}
           onStateChange={(newState) => {
             setApprovalState(newState);
-            setRow((prev) => ({ ...prev, _rawStatus: newState.status }));
+            setRow((prev) => ({ ...prev, _rawStatus: newState.status, status: newState.status }));
           }}
         />
       </div>
@@ -254,16 +292,38 @@ export function PurchaseOrderDetail({
         <Icon name="arrowRight" size={16} className="pipeline-arrow" />
 
         <div
-          className="pipeline-node"
-          style={{ cursor: "pointer" }}
-          onClick={() => onNavigateDetail && onNavigateDetail("warehouse", "0138-WHIN-IMLI-G-X-2026")}
+          className={`pipeline-node ${rmNumber !== "—" ? "active" : ""}`}
+          style={{
+            cursor: rmNumber !== "—" || isApproved ? "pointer" : "not-allowed",
+            opacity: rmNumber !== "—" || isApproved ? 1 : 0.6,
+          }}
+          title={
+            !isApproved && rmNumber === "—"
+              ? "PO must be fully approved (Stage 2) before receiving material (BPB)"
+              : rmNumber !== "—"
+              ? "View Receive Material (BPB)"
+              : "Click to Receive Material (BPB) from this Approved PO"
+          }
+          onClick={() => {
+            if (rmNumber !== "—" && onNavigateDetail) {
+              onNavigateDetail("warehouse", docToSlug(rmNumber));
+            } else if (isApproved && onNavigateDetail) {
+              onNavigateDetail("warehouse-create" as any, docNumber);
+            }
+          }}
         >
           <div className="pipeline-node__icon">
             <Icon name="box" size={16} />
           </div>
           <div className="pipeline-node__text">
             <span>Step 3 · Receive Material</span>
-            <strong>{rmNumber}</strong>
+            <strong>
+              {rmNumber !== "—"
+                ? rmNumber
+                : isApproved
+                ? "+ Create BPB from PO"
+                : "Awaiting PO Approval"}
+            </strong>
           </div>
         </div>
       </div>

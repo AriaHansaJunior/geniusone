@@ -130,25 +130,11 @@ export function PurchaseOrder({ onDetail, onCreate }: PurchaseOrderProps) {
 
   return (
     <>
-      {/* Metric Cards Summary Grid */}
-      <div className="summary-grid">
-        {stats.map(([label, value, sub], i) => (
-          <SummaryCard
-            key={label}
-            label={label}
-            value={value}
-            sub={sub}
-            tone={i === 3 ? "accent" : undefined}
-          />
-        ))}
-      </div>
-
       {/* Filter Panel */}
       <section className="panel filter-panel">
         <div className="panel__heading">
           <div>
             <strong>Filter documents</strong>
-            <span>Refine the records shown in the table</span>
           </div>
           <Button variant="ghost" onClick={handleResetFilters}>
             Reset filters
@@ -175,7 +161,6 @@ export function PurchaseOrder({ onDetail, onCreate }: PurchaseOrderProps) {
         <div className="panel__heading table-panel__heading">
           <div>
             <strong>PO documents</strong>
-            <span>{filtered.length} records shown</span>
           </div>
           <div className="button-row">
             <Button variant="excel" onClick={handleExportXLSX}>

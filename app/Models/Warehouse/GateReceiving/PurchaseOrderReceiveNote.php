@@ -2,6 +2,7 @@
 
 namespace App\Models\Warehouse\GateReceiving;
 
+use App\Models\Master\Organization\JobNumber;
 use App\Models\Procurement\PurchaseOrder\PurchaseOrder;
 use App\Models\Warehouse\InboundStorage\PoRnToBpb;
 use Illuminate\Database\Eloquent\Factories\HasFactory;

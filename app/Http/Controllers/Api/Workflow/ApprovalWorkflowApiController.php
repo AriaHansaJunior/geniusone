@@ -40,12 +40,37 @@ class ApprovalWorkflowApiController extends Controller
         return 1;
     }
 
+    protected function resolveModuleAndId(Request $request, $module, $id): array
+    {
+        $resolvedModule = $request->route('module') ?? $module;
+        $resolvedId = $request->route('id') ?? $id;
+
+        // If module was swapped with id (e.g. route had only {id} with defaults)
+        if (is_numeric($resolvedModule) && (! is_numeric($resolvedId) || empty($resolvedId))) {
+            $temp = $resolvedModule;
+            $resolvedModule = $resolvedId ?: $request->route('module');
+            $resolvedId = $temp;
+        }
+
+        // Also check if module can be inferred from URL path
+        if (empty($resolvedModule) || is_numeric($resolvedModule)) {
+            $path = $request->path();
+            if (preg_match('#(?:^|/)(pr|po|rn|bpb|warehouse|request-materials|returns)(?:/|$)#i', $path, $m)) {
+                $resolvedModule = strtolower($m[1]);
+            }
+        }
+
+        return [(string) $resolvedModule, $resolvedId];
+    }
+
     /**
      * BE-03: Approve a document (Tier 1 or Tier 2).
      * POST /api/v1/approval/{module}/{id}/approve
      */
-    public function approve(Request $request, string $module, int $id): JsonResponse
+    public function approve(Request $request, string $module = '', $id = null): JsonResponse
     {
+        [$module, $id] = $this->resolveModuleAndId($request, $module, $id);
+
         $validated = $request->validate([
             'tier' => 'nullable|integer|in:1,2',
             'note' => 'nullable|string|max:500',
@@ -83,8 +108,10 @@ class ApprovalWorkflowApiController extends Controller
      * BE-04: UnApprove a document (Rollback Tier 1 or Tier 2).
      * POST /api/v1/approval/{module}/{id}/unapprove
      */
-    public function unapprove(Request $request, string $module, int $id): JsonResponse
+    public function unapprove(Request $request, string $module = '', $id = null): JsonResponse
     {
+        [$module, $id] = $this->resolveModuleAndId($request, $module, $id);
+
         $validated = $request->validate([
             'tier' => 'nullable|integer|in:1,2',
             'reason' => 'nullable|string|max:500',
@@ -122,8 +149,10 @@ class ApprovalWorkflowApiController extends Controller
      * BE-04: Reject a document with mandatory reason.
      * POST /api/v1/approval/{module}/{id}/reject
      */
-    public function reject(Request $request, string $module, int $id): JsonResponse
+    public function reject(Request $request, string $module = '', $id = null): JsonResponse
     {
+        [$module, $id] = $this->resolveModuleAndId($request, $module, $id);
+
         $validated = $request->validate([
             'tier' => 'nullable|integer|in:1,2',
             'reason' => 'required|string|min:3|max:1000',
@@ -164,8 +193,10 @@ class ApprovalWorkflowApiController extends Controller
      * BE-04: Resubmit a document after revision.
      * POST /api/v1/approval/{module}/{id}/resubmit
      */
-    public function resubmit(Request $request, string $module, int $id): JsonResponse
+    public function resubmit(Request $request, string $module = '', $id = null): JsonResponse
     {
+        [$module, $id] = $this->resolveModuleAndId($request, $module, $id);
+
         $validated = $request->validate([
             'note' => 'nullable|string|max:500',
             'user_id' => 'nullable|integer',
@@ -199,8 +230,10 @@ class ApprovalWorkflowApiController extends Controller
      * BE-06: Retrieve complete approval audit trail history for a document.
      * GET /api/v1/approval/{module}/{id}/history
      */
-    public function history(Request $request, string $module, int $id): JsonResponse
+    public function history(Request $request, string $module = '', $id = null): JsonResponse
     {
+        [$module, $id] = $this->resolveModuleAndId($request, $module, $id);
+
         try {
             $history = $this->workflowService->getApprovalHistory($module, $id);
 

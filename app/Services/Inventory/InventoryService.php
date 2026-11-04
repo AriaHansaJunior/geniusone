@@ -106,4 +106,34 @@ class InventoryService
             extraMetadata: ['document' => $referenceDoc]
         );
     }
+
+    /**
+     * Unified stock movement handler used by DocumentApprovalWorkflowService.
+     */
+    public function recordStockMovement(
+        Item $item,
+        ?int $warehouseId,
+        string $movementType,
+        float $quantity,
+        string $referenceType,
+        string $referenceNumber,
+        int $userId = 1,
+        ?string $notes = null
+    ): Item {
+        $delta = strtoupper($movementType) === 'OUT' ? -$quantity : $quantity;
+        $reason = $notes ?? "{$referenceType} ({$referenceNumber})";
+
+        return $this->adjustStock(
+            itemId: $item->id,
+            quantityDelta: $delta,
+            reason: $reason,
+            userId: $userId,
+            extraMetadata: [
+                'warehouse_id' => $warehouseId,
+                'movement_type' => $movementType,
+                'reference_type' => $referenceType,
+                'reference_number' => $referenceNumber,
+            ]
+        );
+    }
 }

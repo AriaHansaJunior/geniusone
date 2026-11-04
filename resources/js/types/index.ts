@@ -135,10 +135,10 @@ export type ViewState =
   | { type: "pr-detail"; code: string }
   | { type: "po-detail"; code: string }
   | { type: "pr-create" }
-  | { type: "po-create" }
+  | { type: "po-create"; prNumber?: string }
   | { type: "report-detail"; code: string }
   | { type: "warehouse-detail"; code: string }
-  | { type: "warehouse-create" }
+  | { type: "warehouse-create"; poNumber?: string }
   | { type: "supplier-create" }
   | { type: "payment-term-create" }
   | { type: "purchase-category-create" }
