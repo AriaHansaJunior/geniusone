@@ -13,6 +13,7 @@ import type {
 
 interface ReportingPurchaseOrderProps {
   onDetail?: (poNumber: string) => void;
+  onNavigatePr?: (prNumber: string) => void;
 }
 
 type SortField =
@@ -55,6 +56,7 @@ function fromDisplayDate(displayDate: string): string {
 
 export function ReportingPurchaseOrder({
   onDetail,
+  onNavigatePr,
 }: ReportingPurchaseOrderProps) {
   // ---------------------------------------------------------------------------
   // Filter States
@@ -650,11 +652,6 @@ export function ReportingPurchaseOrder({
                     {renderSortIndicator("createdBy")}
                   </span>
                 </th>
-
-                {/* 13. Purchase Order Details Action */}
-                <th className="th--center" style={{ width: "130px" }}>
-                  Purchase Order Details
-                </th>
               </tr>
             </thead>
 
@@ -662,7 +659,7 @@ export function ReportingPurchaseOrder({
               {paginatedRecords.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={13}
+                    colSpan={12}
                     style={{ textAlign: "center", padding: "36px" }}
                   >
                     <div style={{ color: "#64748b", fontSize: "13px" }}>
@@ -678,7 +675,12 @@ export function ReportingPurchaseOrder({
                   return (
                     <tr key={record.id} style={{ display: "contents" }}>
                       {/* Main Record Row */}
-                      <tr className={isExpanded ? "po-row--expanded" : ""}>
+                      <tr
+                        className={isExpanded ? "po-row--expanded" : ""}
+                        onClick={() => toggleRowDetail(record.id)}
+                        style={{ cursor: "pointer" }}
+                        title="Click row to view/toggle related transaction details"
+                      >
                         {/* 1. Sequential Number */}
                         <td className="td--center">{sequentialNo}</td>
 
@@ -686,10 +688,11 @@ export function ReportingPurchaseOrder({
                         <td>
                           <span
                             className="po-link"
-                            onClick={() =>
-                              onDetail ? onDetail(record.poNumber) : undefined
-                            }
-                            title="View Purchase Order"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (onDetail) onDetail(record.poNumber);
+                            }}
+                            title="Open Purchase Order"
                           >
                             {record.poNumber}
                           </span>
@@ -756,32 +759,12 @@ export function ReportingPurchaseOrder({
                             <span>{record.createdAt}</span>
                           </div>
                         </td>
-
-                        {/* 13. Purchase Order Details (Show / Close Detail Toggle) */}
-                        <td className="td--center">
-                          <button
-                            type="button"
-                            className={`btn-po-detail-toggle ${
-                              isExpanded
-                                ? "btn-po-detail-toggle--close"
-                                : "btn-po-detail-toggle--show"
-                            }`}
-                            onClick={() => toggleRowDetail(record.id)}
-                            title={
-                              isExpanded
-                                ? "Close Purchase Order Details"
-                                : "Show Purchase Order Details"
-                            }
-                          >
-                            {isExpanded ? "Close Detail" : "Show Detail"}
-                          </button>
-                        </td>
                       </tr>
 
                       {/* Nested PO Line Items Detail Table when Expanded */}
                       {isExpanded && (
                         <tr className="po-nested-row">
-                          <td colSpan={13}>
+                          <td colSpan={12}>
                             <div className="nested-po-items-wrapper">
                               {record.items && record.items.length > 0 ? (
                                 <div className="nested-po-items-card">
@@ -807,7 +790,22 @@ export function ReportingPurchaseOrder({
                                         <td>{item.itemCode}</td>
                                         <td>{item.itemName}</td>
                                         <td>
-                                          <span className="po-link">{item.prNumber}</span>
+                                          <span
+                                            className="po-link"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              if (
+                                                onNavigatePr &&
+                                                item.prNumber &&
+                                                item.prNumber !== "-"
+                                              ) {
+                                                onNavigatePr(item.prNumber);
+                                              }
+                                            }}
+                                            title="Open Purchase Requisition"
+                                          >
+                                            {item.prNumber}
+                                          </span>
                                         </td>
                                         <td className="td--center">{item.unit}</td>
                                         <td className="td--right">

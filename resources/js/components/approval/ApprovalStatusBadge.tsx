@@ -22,7 +22,7 @@ interface ApprovalStatusBadgeProps {
 export function ApprovalStatusBadge({
   status,
   className = "",
-  showIcon = true,
+  showIcon = false,
 }: ApprovalStatusBadgeProps) {
   const normalized = normalizeApprovalStatus(status);
   const tone = getApprovalStatusBadgeTone(normalized);
@@ -38,10 +38,19 @@ export function ApprovalStatusBadge({
   }
 
   return (
-    <Badge tone={tone} className={`approval-status-badge approval-status--${normalized.toLowerCase()} ${className}`.trim()}>
+    <Badge
+      tone={tone}
+      className={`approval-status-badge approval-status--${normalized.toLowerCase()} ${className}`.trim()}
+      style={{
+        fontSize: "11px",
+        padding: "2px 8px",
+        lineHeight: 1.3,
+        fontWeight: 600,
+      }}
+    >
       {showIcon && (
         <span style={{ display: "inline-flex", marginRight: "4px", verticalAlign: "middle" }}>
-          <Icon name={iconName} size={12} strokeWidth={2.5} />
+          <Icon name={iconName} size={11} strokeWidth={2.2} />
         </span>
       )}
       <span>{label}</span>

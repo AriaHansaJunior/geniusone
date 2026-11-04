@@ -2622,6 +2622,9 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
             onDetail={(row: TableRow) =>
               handleNavigateDetail("po", row._rawNumber || row._rawPo || row._id || "")
             }
+            onSelectPr={(prNumber: string) =>
+              handleNavigateDetail("pr", prNumber)
+            }
           />
         )}
 
@@ -2629,6 +2632,12 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
           <PurchaseOrderReport
             onDetail={(row: TableRow) =>
               handleNavigateDetail("report", row._rawPo || row._rawPr || row._rawNumber || row._id || "")
+            }
+            onSelectPo={(poNumber: string) =>
+              handleNavigateDetail("po", poNumber)
+            }
+            onSelectPr={(prNumber: string) =>
+              handleNavigateDetail("pr", prNumber)
             }
           />
         )}
@@ -2639,6 +2648,9 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
             onDetail={(prNumber: string) =>
               handleNavigateDetail("pr", prNumber)
             }
+            onNavigatePo={(poNumber: string) =>
+              handleNavigateDetail("po", poNumber)
+            }
           />
         )}
 
@@ -2647,6 +2659,9 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
           <ReportingPurchaseOrder
             onDetail={(poNumber: string) =>
               handleNavigateDetail("po", poNumber)
+            }
+            onNavigatePr={(prNumber: string) =>
+              handleNavigateDetail("pr", prNumber)
             }
           />
         )}
@@ -3145,6 +3160,8 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
         {viewState.type === "po-create" && (
           <PurchaseOrderCreate
             initialPrNumber={viewState.prNumber}
+            availableAdditionalCosts={additionalCostRecords}
+            availableItems={itemRecords}
             onBack={() => handleNavigateList("po", "/procurement/transactions/purchase-order")}
             onSaveSuccess={() => handleNavigateList("po", "/procurement/transactions/purchase-order")}
           />

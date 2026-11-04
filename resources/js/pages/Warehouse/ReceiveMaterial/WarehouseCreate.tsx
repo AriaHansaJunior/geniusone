@@ -438,7 +438,7 @@ export function WarehouseCreate({
       const poItems = getPoItemsList(foundPo);
       const defaultWh =
         warehouses[0]?.name ||
-        initialWarehouseMasterRecords[0]?.warehouseName ||
+        (initialWarehouseMasterRecords[0] as any)?.name ||
         "Gudang Sparepart";
       const defaultSj = `SJ-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 900) + 100)}`;
 
@@ -566,7 +566,7 @@ export function WarehouseCreate({
   const handleAddItemLine = () => {
     const defaultWh =
       warehouses[0]?.name ||
-      initialWarehouseMasterRecords[0]?.warehouseName ||
+      (initialWarehouseMasterRecords[0] as any)?.name ||
       "Gudang Sparepart";
     const newItem: BPBItemRow = {
       id: `bpb-item-${Date.now()}-${items.length + 1}`,
@@ -618,7 +618,7 @@ export function WarehouseCreate({
             );
             if (foundMockItem) {
               updated.code = foundMockItem.itemCode || updated.code;
-              updated.unit = foundMockItem.unitCode || updated.unit;
+              updated.unit = foundMockItem.smallestUnitCode || updated.unit;
             }
           }
         }
@@ -739,8 +739,8 @@ export function WarehouseCreate({
     warehouses.forEach((w) => {
       if (w.name) locs.add(w.name);
     });
-    initialWarehouseMasterRecords.forEach((w) => {
-      if (w.warehouseName) locs.add(w.warehouseName);
+    initialWarehouseMasterRecords.forEach((w: any) => {
+      if (w.warehouseName || w.name) locs.add(w.warehouseName || w.name);
     });
     return Array.from(locs);
   }, [warehouses]);

@@ -4,7 +4,12 @@
  */
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
-import type { ApprovalModule, PermissionAction, UserAccount } from "../types/permissions";
+import {
+  resolveRoleDefinition,
+  type ApprovalModule,
+  type PermissionAction,
+  type UserAccount,
+} from "../types/permissions";
 
 interface AuthPermissionContextValue {
   currentUser: UserAccount;
@@ -190,11 +195,36 @@ export function AuthPermissionProvider({ children }: { children: React.ReactNode
         return true;
       }
 
+      // Check assigned Role definition permissions (UI-03: users inherit permissions from their assigned Role)
+      const roleDef = resolveRoleDefinition(currentUser.role);
+      if (roleDef) {
+        if (
+          (module === "master_item" || module === "item") &&
+          roleDef.canManageMasterItem &&
+          (action === "create" || action === "view" || action === "update")
+        ) {
+          return true;
+        }
+        const targetMod = module === "item" ? "master_item" : module === "bpb" ? "receive_note" : module;
+        const roleModPerms = (roleDef.permissions as any)?.[targetMod];
+        if (roleModPerms) {
+          if (action === "approve") {
+            if (roleModPerms.approve_1 || roleModPerms.approve_2) return true;
+          } else if (action === "unapprove") {
+            if (roleModPerms.unapprove_1 || roleModPerms.unapprove_2) return true;
+          } else if (roleModPerms[action]) {
+            return true;
+          }
+        }
+      }
+
       // If permissions is an array of strings from Laravel (e.g. ['pr.view', 'po.create', ...])
       if (Array.isArray(currentUser.permissions)) {
         if (currentUser.permissions.includes("*")) return true;
 
         const modPrefixMap: Record<string, string> = {
+          master_item: "master_item",
+          item: "master_item",
           purchase_requisition: "pr",
           purchase_order: "po",
           receive_note: "rn",
@@ -208,6 +238,11 @@ export function AuthPermissionProvider({ children }: { children: React.ReactNode
           currentUser.permissions.includes(`${prefix}.*`) ||
           currentUser.permissions.includes(`${module}.${action}`) ||
           currentUser.permissions.includes(`${module}.*`) ||
+          ((module === "master_item" || module === "item") &&
+            (currentUser.permissions.includes(`item.${action}`) ||
+              currentUser.permissions.includes("item.*") ||
+              currentUser.permissions.includes(`master_item.${action}`) ||
+              currentUser.permissions.includes("master_item.*"))) ||
           ((module === "bpb" || module === "receive_note") &&
             (currentUser.permissions.includes(`rn.${action}`) ||
               currentUser.permissions.includes("rn.*") ||

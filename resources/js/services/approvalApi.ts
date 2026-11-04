@@ -5,6 +5,7 @@
 
 import type {
   ApprovalAction,
+  ApprovalHistoryAction,
   ApprovalHistoryEntry,
   ApprovalModule,
   ApprovalStatus,
@@ -85,7 +86,7 @@ export async function executeApprove(params: {
   let backendData: any = null;
 
   try {
-    const endpointMap: Record<ApprovalModule, string> = {
+    const endpointMap: Partial<Record<ApprovalModule, string>> = {
       purchase_requisition: `/api/approval/pr/${encodeURIComponent(documentId)}/approve`,
       purchase_order: `/api/approval/po/${encodeURIComponent(documentId)}/approve`,
       receive_note: `/api/approval/rn/${encodeURIComponent(documentId)}/approve`,
@@ -197,7 +198,7 @@ export async function executeReject(params: {
   // Attempt backend API
   let backendData: any = null;
   try {
-    const endpointMap: Record<ApprovalModule, string> = {
+    const endpointMap: Partial<Record<ApprovalModule, string>> = {
       purchase_requisition: `/api/approval/pr/${encodeURIComponent(documentId)}/reject`,
       purchase_order: `/api/approval/po/${encodeURIComponent(documentId)}/reject`,
       receive_note: `/api/approval/rn/${encodeURIComponent(documentId)}/reject`,
@@ -288,7 +289,7 @@ export async function executeUnapprove(params: {
 
   // Call real backend API unapproval
   try {
-    const endpointMap: Record<ApprovalModule, string> = {
+    const endpointMap: Partial<Record<ApprovalModule, string>> = {
       purchase_requisition: `/api/approval/pr/${encodeURIComponent(documentId)}/unapprove`,
       purchase_order: `/api/approval/po/${encodeURIComponent(documentId)}/unapprove`,
       receive_note: `/api/approval/rn/${encodeURIComponent(documentId)}/unapprove`,
@@ -391,7 +392,7 @@ export async function executeResubmit(params: {
   const historyEntry: ApprovalHistoryEntry = {
     id: `resubmit_${Date.now()}`,
     tier: 1,
-    action: "unapproved",
+    action: "revised",
     userId,
     userName,
     userRole: "Document Creator",
@@ -419,5 +420,256 @@ export async function executeResubmit(params: {
     status: "WAITING_APPROVE_1",
     message: "Document revised and resubmitted. Approval workflow restarted at Stage 1.",
     state: updatedState,
+  };
+}
+
+/**
+ * Records a general transaction activity (e.g. printed, revised, created, closed_item, unclosed_item)
+ * into the document's activity history.
+ */
+export function recordDocumentActivity(params: {
+  module: ApprovalModule;
+  documentId: string | number;
+  documentNumber?: string;
+  action: ApprovalHistoryAction;
+  userId: string | number;
+  userName: string;
+  userRole?: string;
+  note?: string;
+  tier?: ApprovalTier;
+}): DocumentApprovalState {
+  const { module, documentId, documentNumber, action, userId, userName, userRole, note, tier } = params;
+  const docIdStr = String(documentId);
+  const currentState = getLocalApprovalState(module, documentNumber || docIdStr);
+
+  const now = new Date();
+  const timestamp = now.toLocaleDateString("id-ID", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+  const entry: ApprovalHistoryEntry = {
+    id: `act_${action}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+    tier,
+    action,
+    userId,
+    userName,
+    userRole: userRole || "User",
+    timestamp,
+    note,
+  };
+
+  const updatedState: DocumentApprovalState = {
+    ...currentState,
+    history: [entry, ...currentState.history],
+  };
+
+  saveLocalApprovalState(module, docIdStr, updatedState);
+  if (documentNumber && documentNumber !== docIdStr) {
+    saveLocalApprovalState(module, documentNumber, updatedState);
+  }
+
+  // Optional async notification to backend activity log if available
+  try {
+    const endpointMap: Partial<Record<ApprovalModule, string>> = {
+      purchase_requisition: `/api/approval/pr/${encodeURIComponent(documentId)}/activity`,
+      purchase_order: `/api/approval/po/${encodeURIComponent(documentId)}/activity`,
+    };
+    const ep = endpointMap[module];
+    if (ep && typeof fetch !== "undefined") {
+      fetch(ep, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          "X-CSRF-TOKEN":
+            (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || "",
+        },
+        body: JSON.stringify({ action, note, documentNumber }),
+      }).catch(() => {});
+    }
+  } catch {
+    // ignore
+  }
+
+  return updatedState;
+}
+
+// ============================================================================
+// PR ITEM CLOSING / UNCLOSING PERSISTENCE ADAPTER (UI-05)
+// ============================================================================
+
+const PR_CLOSED_ITEMS_KEY = "geniusone_pr_closed_items_v1";
+
+export interface PrClosedItemInfo {
+  closed: boolean;
+  closedBy: string;
+  closedAt: string;
+  itemName?: string;
+  itemCode?: string;
+}
+
+function normalizePrKey(prNumber: string): string {
+  return String(prNumber || "")
+    .trim()
+    .replace(/[-\\]/g, "/")
+    .toUpperCase();
+}
+
+export function getPrItemKey(item: any, index?: number): string {
+  const code = String(item?.itemCode || item?.code || "").trim();
+  const name = String(item?.item || item?.itemName || item?.name || "").trim();
+  if (item?.id) return `id_${item.id}`;
+  if (code && code !== "-") return `code_${code.toUpperCase()}_${index ?? 0}`;
+  if (name) return `name_${name.toUpperCase()}_${index ?? 0}`;
+  return `idx_${index ?? 0}`;
+}
+
+export function getPrClosedItemsMap(prNumber: string): Record<string, PrClosedItemInfo> {
+  const normPr = normalizePrKey(prNumber);
+  if (!normPr) return {};
+  try {
+    const raw = localStorage.getItem(PR_CLOSED_ITEMS_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      return parsed[normPr] || {};
+    }
+  } catch {
+    // ignore
+  }
+  return {};
+}
+
+export function isPrItemClosed(prNumber: string, item: any, index?: number): boolean {
+  if (!item) return false;
+  // Check backend item flags first
+  if (
+    item.is_closed === true ||
+    item.is_closed === 1 ||
+    item.isClosed === true ||
+    String(item.status || "").toLowerCase() === "closing" ||
+    String(item.status || "").toLowerCase() === "closed" ||
+    String(item.closing_status || "").toLowerCase() === "closing" ||
+    String(item.closing_status || "").toLowerCase() === "closed"
+  ) {
+    return true;
+  }
+
+  const map = getPrClosedItemsMap(prNumber);
+  const key = getPrItemKey(item, index);
+  if (map[key]?.closed) return true;
+
+  // Also check by itemCode or itemName without index so PO population matches reliably
+  const code = String(item?.itemCode || item?.code || "").trim().toUpperCase();
+  const name = String(item?.item || item?.itemName || item?.name || "").trim().toUpperCase();
+  for (const [k, info] of Object.entries(map)) {
+    if (!info?.closed) continue;
+    if (code && code !== "-" && info.itemCode?.toUpperCase() === code) return true;
+    if (name && info.itemName?.toUpperCase() === name) return true;
+    if (code && k.startsWith(`code_${code}_`)) return true;
+    if (name && k.startsWith(`name_${name}_`)) return true;
+  }
+
+  return false;
+}
+
+export function togglePrItemClosing(params: {
+  prNumber: string;
+  prId?: string | number;
+  item: any;
+  index: number;
+  close: boolean;
+  userId: string | number;
+  userName: string;
+  userRole?: string;
+}): {
+  closedMap: Record<string, PrClosedItemInfo>;
+  approvalState: DocumentApprovalState;
+} {
+  const { prNumber, prId, item, index, close, userId, userName, userRole } = params;
+  const normPr = normalizePrKey(prNumber);
+  const key = getPrItemKey(item, index);
+  const itemName = String(item?.item || item?.itemName || item?.name || "Material Item");
+  const itemCode = String(item?.itemCode || item?.code || "-");
+
+  const now = new Date();
+  const timestamp = now.toLocaleDateString("id-ID", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+  let allMaps: Record<string, Record<string, PrClosedItemInfo>> = {};
+  try {
+    const raw = localStorage.getItem(PR_CLOSED_ITEMS_KEY);
+    if (raw) allMaps = JSON.parse(raw) || {};
+  } catch {
+    allMaps = {};
+  }
+
+  const currentPrMap = { ...(allMaps[normPr] || {}) };
+  if (close) {
+    currentPrMap[key] = {
+      closed: true,
+      closedBy: userName,
+      closedAt: timestamp,
+      itemName,
+      itemCode,
+    };
+  } else {
+    delete currentPrMap[key];
+    // Also remove any matching code/name entry
+    for (const k of Object.keys(currentPrMap)) {
+      if (
+        (itemCode !== "-" && currentPrMap[k]?.itemCode?.toUpperCase() === itemCode.toUpperCase()) ||
+        currentPrMap[k]?.itemName?.toUpperCase() === itemName.toUpperCase()
+      ) {
+        delete currentPrMap[k];
+      }
+    }
+  }
+
+  allMaps[normPr] = currentPrMap;
+  try {
+    localStorage.setItem(PR_CLOSED_ITEMS_KEY, JSON.stringify(allMaps));
+  } catch {
+    // ignore
+  }
+
+  // Attempt backend sync if endpoint exists
+  if (typeof fetch !== "undefined") {
+    const targetId = prId || prNumber;
+    const itemId = item?.id || index;
+    fetch(`/api/procurement/purchase-requisitions/${encodeURIComponent(targetId)}/items/${encodeURIComponent(itemId)}/${close ? "close" : "unclose"}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        "X-CSRF-TOKEN":
+          (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || "",
+      },
+      body: JSON.stringify({ itemCode, itemName, is_closed: close }),
+    }).catch(() => {});
+  }
+
+  const approvalState = recordDocumentActivity({
+    module: "purchase_requisition",
+    documentId: prId || prNumber,
+    documentNumber: prNumber,
+    action: close ? "closed_item" : "unclosed_item",
+    userId,
+    userName,
+    userRole,
+    note: `${close ? "Closed" : "Unclosed (reactivated)"} PR item: ${itemName} (${itemCode})`,
+  });
+
+  return {
+    closedMap: currentPrMap,
+    approvalState,
   };
 }

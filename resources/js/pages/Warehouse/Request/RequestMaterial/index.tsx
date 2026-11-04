@@ -510,7 +510,6 @@ export function RequestMaterialIndex({
                   <th style={{ minWidth: "140px" }}>Project Type</th>
                   <th style={{ minWidth: "130px" }}>Created Date</th>
                   <th style={{ minWidth: "130px" }}>Last Updated Date</th>
-                  <th style={{ width: "80px", textAlign: "center" }}>Option</th>
                 </tr>
               </thead>
               <tbody>
@@ -519,14 +518,22 @@ export function RequestMaterialIndex({
                     const rowNumber =
                       (safeCurrentPage - 1) * pageSize + index + 1;
                     return (
-                      <tr key={item.id}>
+                      <tr
+                        key={item.id}
+                        onClick={() => handleOpenDetailSafe(item.id)}
+                        style={{ cursor: "pointer" }}
+                        title="Click row to open request material details"
+                      >
                         <td style={{ textAlign: "center", color: "var(--muted)", fontWeight: 600 }}>
                           {rowNumber}
                         </td>
                         <td>
                           <button
                             type="button"
-                            onClick={() => handleOpenDetailSafe(item.id)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenDetailSafe(item.id);
+                            }}
                             style={{
                               background: "none",
                               border: "none",
@@ -568,24 +575,12 @@ export function RequestMaterialIndex({
                         <td style={{ fontSize: "11px", color: "var(--muted)" }}>
                           {item.lastUpdatedDate}
                         </td>
-                        <td style={{ textAlign: "center" }}>
-                          <button
-                            type="button"
-                            className="icon-action"
-                            style={{ margin: "0 auto", color: "var(--orange-700, #c2410c)" }}
-                            title="Open Request Detail"
-                            aria-label={`Open details for ${item.requestCode}`}
-                            onClick={() => handleOpenDetailSafe(item.id)}
-                          >
-                            <Icon name="eye" size={15} />
-                          </button>
-                        </td>
                       </tr>
                     );
                   })
                 ) : (
                   <tr>
-                    <td colSpan={15} style={{ textAlign: "center", padding: "40px 16px" }}>
+                    <td colSpan={14} style={{ textAlign: "center", padding: "40px 16px" }}>
                       <div className="empty">
                         <div className="empty__icon">
                           <Icon name="search" />

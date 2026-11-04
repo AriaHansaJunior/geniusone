@@ -5,10 +5,13 @@ import { ConfirmDialog } from "../../../components/ui/ConfirmDialog";
 import { initialSupplierRecords } from "../PurchaseMaster/Supplier/supplier-types";
 import { initialPaymentTermRecords } from "../PurchaseMaster/PaymentTerm/payment-term-types";
 import { initialDeliveryTermRecords } from "../PurchaseMaster/DeliveryTerms/delivery-terms-types";
+import { initialAdditionalCostRecords, type AdditionalCostRecord } from "../PurchaseMaster/AdditionalCosts/additional-costs-types";
 import { initialCurrencyRecords } from "../../Exim/Master/Currency/currency-types";
+import { initialItemRecords } from "../../Exim/Master/Item/item-data";
+import type { ItemRecord } from "../../Exim/Master/Item/item-types";
 import { prRows } from "../../../data/mockData";
 import { fetchList, createPurchaseOrder } from "../../../data/api";
-import { getLocalApprovalState } from "../../../services/approvalApi";
+import { getLocalApprovalState, isPrItemClosed } from "../../../services/approvalApi";
 
 export interface POItemRow {
   id: string;
@@ -41,12 +44,16 @@ export interface POAdditionalCostRow {
 
 interface PurchaseOrderCreateProps {
   initialPrNumber?: string;
+  availableAdditionalCosts?: AdditionalCostRecord[];
+  availableItems?: ItemRecord[];
   onBack: () => void;
   onSaveSuccess?: (newPO: any) => void;
 }
 
 export function PurchaseOrderCreate({
   initialPrNumber,
+  availableAdditionalCosts,
+  availableItems,
   onBack,
   onSaveSuccess,
 }: PurchaseOrderCreateProps) {
@@ -62,6 +69,13 @@ export function PurchaseOrderCreate({
   const [paymentTerms, setPaymentTerms] = useState<any[]>([]);
   const [deliveryTerms, setDeliveryTerms] = useState<any[]>([]);
   const [currencies, setCurrencies] = useState<any[]>([]);
+  const [masterAdditionalCosts, setMasterAdditionalCosts] = useState<AdditionalCostRecord[]>(
+    () => (availableAdditionalCosts && availableAdditionalCosts.length > 0 ? availableAdditionalCosts : initialAdditionalCostRecords)
+  );
+  const masterItems = useMemo(
+    () => (availableItems && availableItems.length > 0 ? availableItems : initialItemRecords),
+    [availableItems]
+  );
 
   // Header State
   const [poType, setPoType] = useState("PO Standard");
@@ -117,25 +131,60 @@ export function PurchaseOrderCreate({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [notification, setNotification] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
-  // Helper to extract items from a PR row object
+  // Helper to resolve Facility status from Master Item or PR item
+  const resolveFacilityFromItem = (itemObjOrName: any): "Facility" | "Non Facility" | null => {
+    if (!itemObjOrName) return null;
+    if (typeof itemObjOrName === "object") {
+      const rawFac = String(itemObjOrName.facility || "").toUpperCase();
+      if (rawFac === "FASILITAS" || rawFac === "FACILITY") return "Facility";
+      if (rawFac.includes("NON")) return "Non Facility";
+    }
+    const code = typeof itemObjOrName === "object" ? String(itemObjOrName.itemCode || itemObjOrName.itemAlias || "") : "";
+    const name = typeof itemObjOrName === "object" ? String(itemObjOrName.item || itemObjOrName.itemName || "") : String(itemObjOrName);
+    const match = masterItems.find(
+      (m) =>
+        (code && code !== "—" && m.itemCode.toLowerCase() === code.trim().toLowerCase()) ||
+        (name && m.itemName.toLowerCase() === name.trim().toLowerCase())
+    );
+    if (match) {
+      return match.facility === "FASILITAS" ? "Facility" : "Non Facility";
+    }
+    return null;
+  };
+
+  // Helper to extract open (non-Closed) items from a PR row object (UI-05)
   const getPrItemsList = (prObj: any): any[] => {
-    if (prObj.items && Array.isArray(prObj.items) && prObj.items.length > 0) {
-      return prObj.items;
-    }
-    if (prObj._items && Array.isArray(prObj._items) && prObj._items.length > 0) {
-      return prObj._items;
-    }
-    return [];
+    const prNum = prObj._rawNumber || prObj.prNumber || "";
+    const rawList =
+      prObj.items && Array.isArray(prObj.items) && prObj.items.length > 0
+        ? prObj.items
+        : prObj._items && Array.isArray(prObj._items) && prObj._items.length > 0
+        ? prObj._items
+        : [];
+    return rawList.filter((it: any, idx: number) => !isPrItemClosed(prNum, it, idx));
   };
 
   // Populate items from a given PR
   const populateFromPr = (prObj: any) => {
     const prNum = prObj._rawNumber || prObj.prNumber || "";
+    const rawTotalItems =
+      (prObj.items && Array.isArray(prObj.items) ? prObj.items.length : 0) ||
+      (prObj._items && Array.isArray(prObj._items) ? prObj._items.length : 0);
     const prItems = getPrItemsList(prObj);
+
+    if (rawTotalItems > 0 && prItems.length === 0) {
+      setNotification({
+        type: "error",
+        message: `All items in PR ${prNum} are marked as Closing and cannot be forwarded to Purchase Order.`,
+      });
+      return;
+    }
 
     if (prItems.length === 0) {
       // Fallback single line item if PR items array was empty
       const totalQuantity = parseFloat(String(prObj.totalQuantity || prObj._totalQty || "1").replace(/[^0-9.]/g, "") || "1") || 1;
+      const derivedFac = resolveFacilityFromItem(prObj.remark);
+      if (derivedFac) setStatusFacility(derivedFac);
       setItems([
         {
           id: `po-item-${Date.now()}`,
@@ -158,6 +207,11 @@ export function PurchaseOrderCreate({
         },
       ]);
       return;
+    }
+
+    const firstFac = resolveFacilityFromItem(prItems[0]);
+    if (firstFac) {
+      setStatusFacility(firstFac);
     }
 
     const newRows: POItemRow[] = prItems.map((it: any, idx: number) => {
@@ -271,10 +325,34 @@ export function PurchaseOrderCreate({
         })
         .catch(() => { });
 
+      // 6. Fetch master additional costs for dropdown (UI-01)
+      fetch("/api/procurement/master/additional-costs", { headers: { Accept: "application/json" } })
+        .then((r) => r.json())
+        .then((d) => {
+          if (isMounted && d?.data && Array.isArray(d.data) && d.data.length > 0) {
+            const mapped: AdditionalCostRecord[] = d.data.map((c: any) => ({
+              id: String(c.id || `ac-${c.code}`),
+              costCode: String(c.code || c.costCode || ""),
+              costName: String(c.name || c.costName || ""),
+              hidden: Boolean(c.hidden || c.status === 0),
+            })).filter((c: AdditionalCostRecord) => c.costName && !c.hidden);
+            if (mapped.length > 0) {
+              setMasterAdditionalCosts(mapped);
+            }
+          }
+        })
+        .catch(() => { });
+
       return () => {
         isMounted = false;
       };
     }, [initialPrNumber]);
+
+    useEffect(() => {
+      if (availableAdditionalCosts && availableAdditionalCosts.length > 0) {
+        setMasterAdditionalCosts(availableAdditionalCosts);
+      }
+    }, [availableAdditionalCosts]);
 
     // Handle supplier change: auto-fill address and default payment term
     const handleSupplierChange = (supplierId: string) => {
@@ -343,6 +421,12 @@ export function PurchaseOrderCreate({
 
     // Update Item Field
     const handleUpdateItemField = (id: string, field: keyof POItemRow, val: any) => {
+      if (field === "itemName" || field === "itemAlias") {
+        const derivedFac = resolveFacilityFromItem(val);
+        if (derivedFac) {
+          setStatusFacility(derivedFac);
+        }
+      }
       setItems((prev) =>
         prev.map((r) => {
           if (r.id !== id) return r;
@@ -376,9 +460,23 @@ export function PurchaseOrderCreate({
       );
 
       if (matchedPr) {
+        const rawCount =
+          (matchedPr.items && Array.isArray(matchedPr.items) ? matchedPr.items.length : 0) ||
+          (matchedPr._items && Array.isArray(matchedPr._items) ? matchedPr._items.length : 0);
         const prItems = getPrItemsList(matchedPr);
+        if (rawCount > 0 && prItems.length === 0) {
+          setNotification({
+            type: "error",
+            message: `All items in PR ${selectedPrNumber} are marked as Closing and excluded from PO.`,
+          });
+          return;
+        }
         if (prItems.length > 0) {
           const first = prItems[0];
+          const derivedFac = resolveFacilityFromItem(first);
+          if (derivedFac) {
+            setStatusFacility(derivedFac);
+          }
           const reqQty = Number(first.rawQty || first.qty || parseFloat(String(first.quantity).replace(/[^0-9.]/g, "") || "1")) || 1;
           const itemName = first.item || first.itemName || "Material Item";
           const itemAlias = first.itemCode || first.itemAlias || "—";
@@ -954,30 +1052,17 @@ export function PurchaseOrderCreate({
 
               <div className="master-form-group">
                 <label className="master-form-label">
-                  Facility Status <span className="required-asterisk">*</span>
+                  Facility Status <span style={{ fontSize: "10.5px", color: "var(--muted)", fontWeight: 500 }}>(Master Item)</span>
                 </label>
-                <div style={{ display: "flex", gap: "14px", height: "38px", alignItems: "center" }}>
-                  <label className="master-checkbox-label" style={{ fontSize: "12px" }}>
-                    <input
-                      type="radio"
-                      name="statusFacility"
-                      value="Non Facility"
-                      checked={statusFacility === "Non Facility"}
-                      onChange={() => setStatusFacility("Non Facility")}
-                    />
-                    <span>Non Facility</span>
-                  </label>
-                  <label className="master-checkbox-label" style={{ fontSize: "12px" }}>
-                    <input
-                      type="radio"
-                      name="statusFacility"
-                      value="Facility"
-                      checked={statusFacility === "Facility"}
-                      onChange={() => setStatusFacility("Facility")}
-                    />
-                    <span>Facility</span>
-                  </label>
-                </div>
+                <input
+                  type="text"
+                  className="master-form-input"
+                  value={statusFacility === "Facility" ? "Fasilitas" : "Non Fasilitas"}
+                  readOnly
+                  disabled
+                  title="Facility status is configured via Master Item"
+                  style={{ background: "var(--surface-muted, #f8fafc)", color: "var(--ink-soft)", fontWeight: 600, cursor: "not-allowed" }}
+                />
               </div>
 
               <div className="master-form-group">
@@ -1341,13 +1426,24 @@ export function PurchaseOrderCreate({
                             {idx + 1}
                           </td>
                           <td>
-                            <input
-                              type="text"
+                            <select
                               className="tx-input-cell"
-                              placeholder="e.g. Inbound Shipping, Handling, Insurance..."
                               value={cost.costName}
                               onChange={(e) => handleUpdateCostField(cost.id, "costName", e.target.value)}
-                            />
+                            >
+                              <option value="">Select Additional Cost...</option>
+                              {masterAdditionalCosts
+                                .filter((ac) => !ac.hidden)
+                                .map((ac) => (
+                                  <option key={ac.id} value={ac.costName}>
+                                    {ac.costCode ? `${ac.costCode} — ${ac.costName}` : ac.costName}
+                                  </option>
+                                ))}
+                              {cost.costName &&
+                                !masterAdditionalCosts.some((ac) => ac.costName === cost.costName) && (
+                                  <option value={cost.costName}>{cost.costName}</option>
+                                )}
+                            </select>
                           </td>
                           <td>
                             <input

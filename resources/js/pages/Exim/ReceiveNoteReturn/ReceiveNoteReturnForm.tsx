@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Icon } from "../../../components/ui/Icon";
 import { Button } from "../../../components/ui/Button";
 import { PickSalesDeliveryItemModal } from "./PickSalesDeliveryItemModal";
+import { initialAdditionalCostRecords } from "../../Procurement/PurchaseMaster/AdditionalCosts/additional-costs-types";
 import {
   customerList,
   docTypesList,
@@ -603,14 +604,21 @@ export function ReceiveNoteReturnForm({
               </div>
               <div className="tx-header-grid">
                 <div className="master-form-group">
-                  <label className="master-form-label">Cost Description</label>
-                  <input
-                    type="text"
-                    className="master-form-input"
+                  <label className="master-form-label">Additional Cost</label>
+                  <select
+                    className="master-form-select"
                     value={additionalCostRemark}
                     onChange={(e) => setAdditionalCostRemark(e.target.value)}
-                    placeholder="e.g. Transport inspection fee, repackaging"
-                  />
+                  >
+                    <option value="">Select Additional Cost...</option>
+                    {initialAdditionalCostRecords
+                      .filter((ac) => !ac.hidden)
+                      .map((ac) => (
+                        <option key={ac.id} value={ac.costName}>
+                          {ac.costCode ? `${ac.costCode} — ${ac.costName}` : ac.costName}
+                        </option>
+                      ))}
+                  </select>
                 </div>
                 <div className="master-form-group">
                   <label className="master-form-label">Amount (IDR)</label>

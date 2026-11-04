@@ -209,28 +209,13 @@ export function ApprovalActionBar({
 
   return (
     <div className={`approval-action-bar ${compact ? "approval-action-bar--compact" : ""} ${className}`.trim()}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "10px" }}>
-        {/* Status display & Waiting messages */}
-        <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "8px" }}>
+        {/* Compact Status Display */}
+        <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+          <span style={{ fontSize: "11.5px", fontWeight: 600, color: "var(--muted)" }}>
+            Approval Status:
+          </span>
           <ApprovalStatusBadge status={status} />
-
-          {status === "WAITING_APPROVE_1" && !canApprove1 && (
-            <span style={{ fontSize: "12px", color: "var(--muted)", fontWeight: 500 }}>
-              (Awaiting Stage 1 approval by Department Head)
-            </span>
-          )}
-
-          {status === "WAITING_APPROVE_2" && !canApprove2 && (
-            <span style={{ fontSize: "12px", color: "var(--muted)", fontWeight: 500 }}>
-              (Awaiting Stage 2 approval by Executive Director)
-            </span>
-          )}
-
-          {status === "APPROVED" && (
-            <span style={{ fontSize: "12px", color: "#059669", fontWeight: 600 }}>
-              ✓ Fully Approved · Document is locked from editing
-            </span>
-          )}
         </div>
 
         {/* Dynamic Action Buttons */}

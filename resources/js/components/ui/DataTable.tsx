@@ -47,6 +47,8 @@ interface DataTableProps {
   columns: Column[];
   rows: TableRow[];
   onDetail: (row: TableRow) => void;
+  onSelectPo?: (poNumber: string, row: TableRow) => void;
+  onSelectPr?: (prNumber: string, row: TableRow) => void;
   emptyTitle?: string;
 }
 
@@ -54,10 +56,17 @@ export function DataTable({
   columns,
   rows,
   onDetail,
+  onSelectPo,
+  onSelectPr,
   emptyTitle = "No matching documents",
 }: DataTableProps) {
   const [currentPage, setCurrentPage] = React.useState(1);
   const [pageSize, setPageSize] = React.useState(25);
+
+  const visibleColumns = React.useMemo(
+    () => columns.filter((col) => col.key !== "actions"),
+    [columns]
+  );
 
   React.useEffect(() => {
     setCurrentPage(1);
@@ -76,7 +85,7 @@ export function DataTable({
         <table role="table" aria-label="Data Table">
           <thead>
             <tr>
-              {columns.map((col) => (
+              {visibleColumns.map((col) => (
                 <th
                   key={col.key}
                   className={col.align === "right" ? "align-right" : col.key === "no" || col.key === "num" ? "cell-center" : ""}
@@ -93,36 +102,79 @@ export function DataTable({
           <tbody>
             {displayedRows.length ? (
               displayedRows.map((row, index) => (
-                <tr key={row._id || index}>
-                  {columns.map((col) => (
-                    <td
-                      key={col.key}
-                      className={col.align === "right" ? "align-right" : col.key === "no" || col.key === "num" ? "cell-center" : ""}
-                    >
-                      {col.key === "actions" ? (
-                        <button
-                          type="button"
-                          className="icon-action"
-                          aria-label="View details"
-                          title="View details"
-                          onClick={() => onDetail(row)}
-                        >
-                          <Icon name="eye" size={17} />
-                        </button>
-                      ) : col.key === "no" || col.key === "num" ? (
-                        <span className="cell-num">
-                          {(safeCurrentPage - 1) * pageSize + index + 1}
-                        </span>
-                      ) : (
-                        formatCell(col.key, row[col.key])
-                      )}
-                    </td>
-                  ))}
+                <tr
+                  key={row._id || index}
+                  onClick={() => onDetail(row)}
+                  style={{ cursor: "pointer" }}
+                  title="Click row to open transaction details"
+                >
+                  {visibleColumns.map((col) => {
+                    const rawVal = row[col.key];
+                    const isPoCol = col.key === "poNumber" && rawVal && rawVal !== "—";
+                    const isPrCol = col.key === "prNumber" && rawVal && rawVal !== "—";
+
+                    return (
+                      <td
+                        key={col.key}
+                        className={col.align === "right" ? "align-right" : col.key === "no" || col.key === "num" ? "cell-center" : ""}
+                      >
+                        {col.key === "no" || col.key === "num" ? (
+                          <span className="cell-num">
+                            {(safeCurrentPage - 1) * pageSize + index + 1}
+                          </span>
+                        ) : isPoCol ? (
+                          <strong
+                            className="cell-code"
+                            style={{
+                              color: "var(--blue-700, #1d4ed8)",
+                              textDecoration: "underline",
+                              cursor: "pointer",
+                            }}
+                            title="Open Purchase Order"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const targetPo = String(row._rawPo || row.poNumber || "").trim();
+                              if (onSelectPo && targetPo && targetPo !== "—") {
+                                onSelectPo(targetPo, row);
+                              } else {
+                                onDetail(row);
+                              }
+                            }}
+                          >
+                            {React.isValidElement(rawVal) ? rawVal : String(rawVal)}
+                          </strong>
+                        ) : isPrCol ? (
+                          <strong
+                            className="cell-code"
+                            style={{
+                              color: "var(--blue-700, #1d4ed8)",
+                              textDecoration: "underline",
+                              cursor: "pointer",
+                            }}
+                            title="Open Purchase Requisition"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const targetPr = String(row._rawPr || row.prNumber || "").trim();
+                              if (onSelectPr && targetPr && targetPr !== "—") {
+                                onSelectPr(targetPr, row);
+                              } else {
+                                onDetail(row);
+                              }
+                            }}
+                          >
+                            {React.isValidElement(rawVal) ? rawVal : String(rawVal)}
+                          </strong>
+                        ) : (
+                          formatCell(col.key, rawVal)
+                        )}
+                      </td>
+                    );
+                  })}
                 </tr>
               ))
             ) : (
               <tr>
-                <td colSpan={columns.length}>
+                <td colSpan={visibleColumns.length}>
                   <div className="empty">
                     <div className="empty__icon">
                       <Icon name="search" />

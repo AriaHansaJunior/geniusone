@@ -495,7 +495,6 @@ export function StockItemIndex() {
                   <th style={{ minWidth: "120px" }}>Facility</th>
                   <th style={{ minWidth: "120px" }}>Coordinate</th>
                   <th style={{ minWidth: "120px", textAlign: "right" }}>Quantity</th>
-                  <th style={{ width: "90px", textAlign: "center" }}>Option</th>
                 </tr>
               </thead>
               <tbody>
@@ -504,7 +503,12 @@ export function StockItemIndex() {
                     const rowNumber =
                       (safeCurrentPage - 1) * pageSize + index + 1;
                     return (
-                      <tr key={item.id}>
+                      <tr
+                        key={item.id}
+                        onClick={() => handleShowDetailSafe(item)}
+                        style={{ cursor: "pointer" }}
+                        title="Click row to open stock item details"
+                      >
                         <td style={{ textAlign: "center", color: "var(--muted)", fontWeight: 600 }}>
                           {rowNumber}
                         </td>
@@ -536,24 +540,12 @@ export function StockItemIndex() {
                             {item.quantity.toFixed(2)} {item.unit}
                           </strong>
                         </td>
-                        <td style={{ textAlign: "center" }}>
-                          <button
-                            type="button"
-                            className="icon-action"
-                            style={{ margin: "0 auto" }}
-                            title="Show stock item details"
-                            aria-label={`Show details for ${item.materialItem}`}
-                            onClick={() => handleShowDetailSafe(item)}
-                          >
-                            <Icon name="eye" size={15} />
-                          </button>
-                        </td>
                       </tr>
                     );
                   })
                 ) : (
                   <tr>
-                    <td colSpan={9} style={{ textAlign: "center", padding: "40px 16px" }}>
+                    <td colSpan={8} style={{ textAlign: "center", padding: "40px 16px" }}>
                       <div className="empty">
                         <div className="empty__icon">
                           <Icon name="search" />

@@ -945,6 +945,16 @@ export function PurchaseRequisitionCreate({
                             }}
                             onTextChange={(text) => {
                               handleUpdateRow(row.id, "itemName", text);
+                              const matched = masterItems.find(
+                                (m) => m.itemName.toLowerCase() === text.trim().toLowerCase()
+                              );
+                              if (matched) {
+                                handleUpdateRow(
+                                  row.id,
+                                  "facility",
+                                  matched.facility === "FASILITAS" ? "Fasilitas" : "Non Fasilitas"
+                                );
+                              }
                               if (formErrors[`item_${index}_name`]) {
                                 setFormErrors((prev) => ({ ...prev, [`item_${index}_name`]: "" }));
                               }
@@ -1006,16 +1016,16 @@ export function PurchaseRequisitionCreate({
                           />
                         </td>
 
-                        {/* 8. Fasilitas / Non Fasilitas */}
+                        {/* 8. Fasilitas / Non Fasilitas (Derived from Master Item — Read-only) */}
                         <td>
-                          <select
-                            className="tx-input-cell"
+                          <input
+                            type="text"
+                            className="tx-input-cell tx-input-cell--disabled"
                             value={row.facility}
-                            onChange={(e) => handleUpdateRow(row.id, "facility", e.target.value as any)}
-                          >
-                            <option value="Non Fasilitas">Non Fasilitas</option>
-                            <option value="Fasilitas">Fasilitas</option>
-                          </select>
+                            readOnly
+                            disabled
+                            title="Facility status is configured via Master Item"
+                          />
                         </td>
 
                         {/* 9. Remark */}

@@ -11,9 +11,15 @@ import type { TableRow } from "../../../types";
 
 interface PurchaseOrderReportProps {
   onDetail: (row: TableRow) => void;
+  onSelectPo?: (poNumber: string) => void;
+  onSelectPr?: (prNumber: string) => void;
 }
 
-export function PurchaseOrderReport({ onDetail }: PurchaseOrderReportProps) {
+export function PurchaseOrderReport({
+  onDetail,
+  onSelectPo,
+  onSelectPr,
+}: PurchaseOrderReportProps) {
   const [search, setSearch] = useState("");
   const config = pageConfigs.report;
   const [stats, setStats] = useState(config.stats);
@@ -200,6 +206,8 @@ export function PurchaseOrderReport({ onDetail }: PurchaseOrderReportProps) {
           columns={config.columns}
           rows={filtered}
           onDetail={onDetail}
+          onSelectPo={(po) => (onSelectPo ? onSelectPo(po) : undefined)}
+          onSelectPr={(pr) => (onSelectPr ? onSelectPr(pr) : undefined)}
         />
       </section>
     </>

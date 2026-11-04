@@ -19,19 +19,32 @@ export type ApprovalAction =
   | "reject";
 
 export type ApprovalModule =
+  | "master_item"
   | "purchase_requisition"
   | "purchase_order"
   | "receive_note"
   | "bpb"
   | "request_material";
 
+export type ApprovalHistoryAction =
+  | "created"
+  | "revised"
+  | "approved"
+  | "rejected"
+  | "unapproved"
+  | "printed"
+  | "closed_item"
+  | "unclosed_item";
+
 export interface ApprovalHistoryEntry {
   id: string;
-  tier: ApprovalTier;
-  action: "approved" | "rejected" | "unapproved";
+  tier?: ApprovalTier;
+  action: ApprovalHistoryAction;
   userId: string | number;
   userName: string;
   userRole?: string;
+  actedByName?: string;
+  actedByRole?: string;
   timestamp: string;
   note?: string;
 }
@@ -79,15 +92,15 @@ export function normalizeApprovalStatus(rawStatus?: string | null): ApprovalStat
 export function getApprovalStatusLabel(status: ApprovalStatus): string {
   switch (status) {
     case "WAITING_APPROVE_1":
-      return "Waiting for Approve 1";
+      return "Waiting Approve 1";
     case "WAITING_APPROVE_2":
-      return "Waiting for Approve 2";
+      return "Waiting Approve 2";
     case "APPROVED":
       return "Approved";
     case "REJECTED":
       return "Rejected";
     default:
-      return "Waiting for Approve 1";
+      return "Waiting Approve 1";
   }
 }
 

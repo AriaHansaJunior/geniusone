@@ -22,43 +22,34 @@ export function ApprovalTimeline({ state, className = "", style }: ApprovalTimel
   const isRejectedStage2 = status === "REJECTED" && state.currentTier === 2;
 
   return (
-    <div className={`approval-timeline-card panel ${className}`.trim()} style={{ padding: "16px 20px", ...style }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "16px" }}>
-        <h4 style={{ margin: 0, fontSize: "12px", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.5px", color: "var(--ink)" }}>
-          Two-Stage Approval Workflow
-        </h4>
-        <span style={{ fontSize: "11px", color: "var(--muted)", fontWeight: 600 }}>
-          Enterprise Governance
-        </span>
-      </div>
-
-      <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", alignItems: "center", gap: "16px" }}>
+    <div className={`approval-timeline-card panel ${className}`.trim()} style={{ padding: "10px 16px", ...style }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr auto 1fr", alignItems: "center", gap: "12px" }}>
         {/* Stage 1 Step */}
         <div
           style={{
             display: "flex",
-            alignItems: "flex-start",
-            gap: "12px",
-            padding: "12px 14px",
-            borderRadius: "var(--radius-md, 8px)",
+            alignItems: "center",
+            gap: "10px",
+            padding: "8px 12px",
+            borderRadius: "var(--radius-sm, 6px)",
             background: isRejectedStage1
-              ? "rgba(239, 68, 68, 0.08)"
+              ? "rgba(239, 68, 68, 0.06)"
               : isStage1Done
-              ? "rgba(16, 185, 129, 0.08)"
-              : "rgba(245, 158, 11, 0.08)",
+              ? "rgba(16, 185, 129, 0.06)"
+              : "rgba(245, 158, 11, 0.06)",
             border: `1px solid ${
               isRejectedStage1
-                ? "rgba(239, 68, 68, 0.25)"
+                ? "rgba(239, 68, 68, 0.22)"
                 : isStage1Done
-                ? "rgba(16, 185, 129, 0.25)"
-                : "rgba(245, 158, 11, 0.25)"
+                ? "rgba(16, 185, 129, 0.22)"
+                : "rgba(245, 158, 11, 0.22)"
             }`,
           }}
         >
           <span
             style={{
-              width: "28px",
-              height: "28px",
+              width: "22px",
+              height: "22px",
               borderRadius: "50%",
               display: "grid",
               placeItems: "center",
@@ -69,80 +60,79 @@ export function ApprovalTimeline({ state, className = "", style }: ApprovalTimel
                 ? "#059669"
                 : "#d97706",
               color: "#ffffff",
-              fontSize: "12px",
-              fontWeight: 800,
+              fontSize: "11px",
+              fontWeight: 700,
             }}
           >
             {isRejectedStage1 ? (
-              <Icon name="close" size={14} strokeWidth={2.5} />
+              <Icon name="close" size={12} strokeWidth={2.5} />
             ) : isStage1Done ? (
-              <Icon name="check" size={14} strokeWidth={2.5} />
+              <Icon name="check" size={12} strokeWidth={2.5} />
             ) : (
               "1"
             )}
           </span>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-              <span style={{ fontSize: "12px", fontWeight: 700, color: "var(--ink)" }}>
-                Stage 1: Department Lead
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: "8px" }}>
+              <span style={{ fontSize: "11.5px", fontWeight: 700, color: "var(--ink)" }}>
+                Stage 1 Approval
               </span>
               <span
                 style={{
                   fontSize: "10px",
                   fontWeight: 700,
-                  textTransform: "uppercase",
                   color: isRejectedStage1 ? "#dc2626" : isStage1Done ? "#059669" : "#d97706",
                 }}
               >
                 {isRejectedStage1 ? "Rejected" : isStage1Done ? "Approved" : "Pending"}
               </span>
             </div>
-            <p style={{ margin: "2px 0 0 0", fontSize: "11px", color: "var(--muted)" }}>
+            <p style={{ margin: "1px 0 0 0", fontSize: "11px", color: "var(--muted)" }}>
               {isRejectedStage1
-                ? `Rejected by ${rejectedBy || "Lead"} · ${rejectedAt || ""}`
+                ? `${rejectedBy || "Approver 1"} · ${rejectedAt || ""}`
                 : approved1By
-                ? `Approved by ${approved1By} · ${approved1At || ""}`
-                : "Awaiting initial verification"}
+                ? `${approved1By} · ${approved1At || ""}`
+                : "Waiting Approve 1"}
             </p>
           </div>
         </div>
 
         {/* Arrow connector */}
         <div style={{ color: "var(--muted-2)", display: "flex", alignItems: "center" }}>
-          <Icon name="chevronRight" size={18} />
+          <Icon name="chevronRight" size={15} />
         </div>
 
         {/* Stage 2 Step */}
         <div
           style={{
             display: "flex",
-            alignItems: "flex-start",
-            gap: "12px",
-            padding: "12px 14px",
-            borderRadius: "var(--radius-md, 8px)",
+            alignItems: "center",
+            gap: "10px",
+            padding: "8px 12px",
+            borderRadius: "var(--radius-sm, 6px)",
             background: isRejectedStage2
-              ? "rgba(239, 68, 68, 0.08)"
+              ? "rgba(239, 68, 68, 0.06)"
               : isStage2Done
-              ? "rgba(16, 185, 129, 0.08)"
+              ? "rgba(16, 185, 129, 0.06)"
               : isStage1Done
-              ? "rgba(0, 113, 227, 0.08)"
+              ? "rgba(0, 113, 227, 0.06)"
               : "rgba(0, 0, 0, 0.02)",
             border: `1px solid ${
               isRejectedStage2
-                ? "rgba(239, 68, 68, 0.25)"
+                ? "rgba(239, 68, 68, 0.22)"
                 : isStage2Done
-                ? "rgba(16, 185, 129, 0.25)"
+                ? "rgba(16, 185, 129, 0.22)"
                 : isStage1Done
-                ? "rgba(0, 113, 227, 0.25)"
+                ? "rgba(0, 113, 227, 0.22)"
                 : "var(--line)"
             }`,
-            opacity: isStage1Done || isRejectedStage2 ? 1 : 0.6,
+            opacity: isStage1Done || isRejectedStage2 ? 1 : 0.65,
           }}
         >
           <span
             style={{
-              width: "28px",
-              height: "28px",
+              width: "22px",
+              height: "22px",
               borderRadius: "50%",
               display: "grid",
               placeItems: "center",
@@ -155,28 +145,27 @@ export function ApprovalTimeline({ state, className = "", style }: ApprovalTimel
                 ? "#0071e3"
                 : "var(--muted-2)",
               color: "#ffffff",
-              fontSize: "12px",
-              fontWeight: 800,
+              fontSize: "11px",
+              fontWeight: 700,
             }}
           >
             {isRejectedStage2 ? (
-              <Icon name="close" size={14} strokeWidth={2.5} />
+              <Icon name="close" size={12} strokeWidth={2.5} />
             ) : isStage2Done ? (
-              <Icon name="check" size={14} strokeWidth={2.5} />
+              <Icon name="check" size={12} strokeWidth={2.5} />
             ) : (
               "2"
             )}
           </span>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-              <span style={{ fontSize: "12px", fontWeight: 700, color: "var(--ink)" }}>
-                Stage 2: Director / Final
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: "8px" }}>
+              <span style={{ fontSize: "11.5px", fontWeight: 700, color: "var(--ink)" }}>
+                Stage 2 Approval
               </span>
               <span
                 style={{
                   fontSize: "10px",
                   fontWeight: 700,
-                  textTransform: "uppercase",
                   color: isRejectedStage2
                     ? "#dc2626"
                     : isStage2Done
@@ -186,17 +175,17 @@ export function ApprovalTimeline({ state, className = "", style }: ApprovalTimel
                     : "var(--muted)",
                 }}
               >
-                {isRejectedStage2 ? "Rejected" : isStage2Done ? "Approved" : isStage1Done ? "Ready" : "Waiting Stage 1"}
+                {isRejectedStage2 ? "Rejected" : isStage2Done ? "Approved" : isStage1Done ? "Waiting Approve 2" : "Waiting Stage 1"}
               </span>
             </div>
-            <p style={{ margin: "2px 0 0 0", fontSize: "11px", color: "var(--muted)" }}>
+            <p style={{ margin: "1px 0 0 0", fontSize: "11px", color: "var(--muted)" }}>
               {isRejectedStage2
-                ? `Rejected by ${rejectedBy || "Director"} · ${rejectedAt || ""}`
+                ? `${rejectedBy || "Approver 2"} · ${rejectedAt || ""}`
                 : approved2By
-                ? `Approved by ${approved2By} · ${approved2At || ""}`
+                ? `${approved2By} · ${approved2At || ""}`
                 : isStage1Done
-                ? "Awaiting final executive approval"
-                : "Locked until Stage 1 approval"}
+                ? "Waiting Approve 2"
+                : "Pending Stage 1"}
             </p>
           </div>
         </div>

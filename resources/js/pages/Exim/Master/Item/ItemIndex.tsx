@@ -4,6 +4,7 @@ import { SearchField } from "../../../../components/ui/SearchField";
 import { Icon } from "../../../../components/ui/Icon";
 import { ConfirmDialog } from "../../../../components/ui/ConfirmDialog";
 import { Pagination } from "../../../../components/ui/Pagination";
+import { useAuthPermission } from "../../../../context/AuthPermissionContext";
 import { ColumnSettingsPanel } from "./ColumnSettingsPanel";
 import {
   initialItemRecords,
@@ -41,6 +42,11 @@ export function ItemIndex({
   onEdit,
   onDelete,
 }: ItemIndexProps) {
+  const { can, currentUser } = useAuthPermission();
+  const canCreateMasterItem = can("master_item", "create");
+  const canUpdateMasterItem = can("master_item", "update");
+  const canDeleteMasterItem = can("master_item", "delete");
+
   const [localRecords, setLocalRecords] = useState<ItemRecord[]>(records);
   const [columns, setColumns] = useState<ItemColumnConfig[]>(defaultItemColumns);
   const [isColumnSettingsOpen, setIsColumnSettingsOpen] = useState(false);
@@ -347,9 +353,25 @@ export function ItemIndex({
               <span>Generate QR Code</span>
             </button>
 
-            <Button variant="primary" onClick={onAddNew}>
-              Add New
-            </Button>
+            {canCreateMasterItem ? (
+              <Button variant="primary" onClick={onAddNew}>
+                Add New
+              </Button>
+            ) : (
+              <span
+                style={{
+                  fontSize: "11px",
+                  color: "var(--muted)",
+                  padding: "4px 8px",
+                  border: "1px solid var(--line)",
+                  borderRadius: "6px",
+                  background: "var(--canvas)",
+                }}
+                title={`Role '${currentUser?.role || "User"}' has View-Only access to Master Item`}
+              >
+                View Only ({currentUser?.role_label || currentUser?.role || "Role"})
+              </span>
+            )}
 
             <Button
               variant="excel"
@@ -717,7 +739,7 @@ export function ItemIndex({
                       {visibleMap.option && (
                         <td style={{ textAlign: "center" }}>
                           <div className="item-row-actions">
-                            {onEdit && (
+                            {onEdit && canUpdateMasterItem && (
                               <button
                                 type="button"
                                 className="item-action-btn item-action-btn--edit"
@@ -727,14 +749,19 @@ export function ItemIndex({
                                 <Icon name="edit" size={12} />
                               </button>
                             )}
-                            <button
-                              type="button"
-                              className="item-action-btn item-action-btn--delete"
-                              title={`Delete ${item.itemName}`}
-                              onClick={() => setItemToDelete(item)}
-                            >
-                              <Icon name="trash" size={12} />
-                            </button>
+                            {canDeleteMasterItem && (
+                              <button
+                                type="button"
+                                className="item-action-btn item-action-btn--delete"
+                                title={`Delete ${item.itemName}`}
+                                onClick={() => setItemToDelete(item)}
+                              >
+                                <Icon name="trash" size={12} />
+                              </button>
+                            )}
+                            {!canUpdateMasterItem && !canDeleteMasterItem && (
+                              <span style={{ fontSize: "11px", color: "var(--muted)" }}>—</span>
+                            )}
                           </div>
                         </td>
                       )}
