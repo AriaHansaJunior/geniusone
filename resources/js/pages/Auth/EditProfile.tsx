@@ -1,23 +1,29 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Icon } from "../../components/ui/Icon";
 import { Button } from "../../components/ui/Button";
 import { Badge } from "../../components/ui/Badge";
 import { ConfirmDialog } from "../../components/ui/ConfirmDialog";
+import { CustomSelect } from "../../components/ui/CustomSelect";
 
 interface EditProfileProps {
   onBack: () => void;
   onSaveConfirmed: () => void;
 }
 
+const LANGUAGE_OPTIONS = [
+  "English (US) — Default",
+  "English (UK)",
+  "Bahasa Indonesia",
+];
+
 export function EditProfile({ onBack, onSaveConfirmed }: EditProfileProps) {
   // Temporary component state for profile fields
-  const [name, setName] = useState("Rizky Aditya");
-  const [username, setUsername] = useState("rizky.aditya");
-  const [email, setEmail] = useState("rizky.aditya@geniusone.com");
+  const [name, setName] = useState("Super Administrator GeniusOne");
+  const [username, setUsername] = useState("superadmin");
+  const [email, setEmail] = useState("superadmin@geniusone.internal");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [language, setLanguage] = useState("English (US)");
-  const [photoName, setPhotoName] = useState<string>("");
+  const [language, setLanguage] = useState("English (US) — Default");
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
 
   // Confirmation dialog state
@@ -25,7 +31,7 @@ export function EditProfile({ onBack, onSaveConfirmed }: EditProfileProps) {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  React.useEffect(() => {
+  useEffect(() => {
     fetch("/api/user/profile", { headers: { Accept: "application/json" } })
       .then((r) => r.json())
       .then((data) => {
@@ -42,7 +48,6 @@ export function EditProfile({ onBack, onSaveConfirmed }: EditProfileProps) {
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      setPhotoName(file.name);
       const reader = new FileReader();
       reader.onload = () => {
         if (typeof reader.result === "string") {
@@ -57,8 +62,8 @@ export function EditProfile({ onBack, onSaveConfirmed }: EditProfileProps) {
     fileInputRef.current?.click();
   };
 
-  const handleRemovePhoto = () => {
-    setPhotoName("");
+  const handleRemovePhoto = (e: React.MouseEvent) => {
+    e.stopPropagation();
     setPhotoPreview(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
@@ -92,11 +97,28 @@ export function EditProfile({ onBack, onSaveConfirmed }: EditProfileProps) {
 
   const handleCancelDialog = () => {
     setShowSaveDialog(false);
-    // User remains on the page with unsaved form values preserved in component state
   };
+
+  // Get initials for avatar placeholder
+  const initials = name
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase())
+    .join("") || "AG";
 
   return (
     <div className="full-page-detail edit-profile-page">
+      {/* Hidden File Input */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/png, image/jpeg, image/webp"
+        onChange={handlePhotoChange}
+        style={{ display: "none" }}
+        id="profile-photo-upload"
+      />
+
       {/* Main Header Card */}
       <div className="detail-header-card">
         <div className="detail-header-card__info">
@@ -104,231 +126,240 @@ export function EditProfile({ onBack, onSaveConfirmed }: EditProfileProps) {
             <h2 className="detail-header-card__title">Edit Profile</h2>
           </div>
           <span className="detail-header-card__meta">
-            Manage your personal profile details, credentials, and profile photo.
+            Manage your personal profile details, credentials, and system preferences.
           </span>
         </div>
       </div>
 
-      {/* Main Content Layout: Profile Info Panel + Edit Form */}
+      {/* Main Content Layout: Balanced Two-Column Structure */}
       <div className="edit-profile-layout">
-        {/* Panel A: Profile Information Panel */}
-        <aside className="profile-info-panel">
-          <div className="profile-info-panel__header">
-            <div className="profile-info-avatar-wrapper">
+        {/* Left Column: Profile Photo & Identity Card */}
+        <aside className="profile-photo-card">
+          <div className="profile-photo-card__header">
+            <span className="profile-photo-card__label">PROFILE PHOTO</span>
+          </div>
+
+          <div className="profile-photo-card__body">
+            {/* Interactive Circular Avatar Dropzone */}
+            <div
+              className={`profile-avatar-dropzone ${photoPreview ? "has-photo" : ""}`}
+              onClick={handleTriggerUpload}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  handleTriggerUpload();
+                }
+              }}
+              title="Click to choose or change profile photo"
+            >
               {photoPreview ? (
-                <img
-                  src={photoPreview}
-                  alt="Profile Avatar Preview"
-                  className="profile-info-avatar-img"
-                />
+                <>
+                  <img
+                    src={photoPreview}
+                    alt="Profile Avatar Preview"
+                    className="profile-avatar-img"
+                  />
+                  <div className="profile-avatar-overlay">
+                    <Icon name="upload" size={16} />
+                    <span>Change</span>
+                  </div>
+                </>
               ) : (
-                <div className="profile-info-avatar">RA</div>
+                <div className="profile-avatar-empty">
+                  <div className="profile-avatar-initials">{initials}</div>
+                  <div className="profile-avatar-action-text">
+                    <Icon name="upload" size={14} />
+                    <strong>Choose Photo</strong>
+                    <small>Click to upload</small>
+                  </div>
+                </div>
               )}
-              <span className="profile-status-indicator" title="Status: Active" />
             </div>
 
-            <h3 className="profile-info-name">{name || "Rizky Aditya"}</h3>
-            <span className="profile-info-username">@{username || "rizky.aditya"}</span>
-            <div className="profile-info-badge-row">
-              <Badge tone="green">Procurement Manager</Badge>
+            {/* Quick Action Button if photo exists */}
+            {photoPreview && (
+              <button
+                type="button"
+                className="profile-avatar-remove-btn"
+                onClick={handleRemovePhoto}
+              >
+                <Icon name="close" size={12} />
+                <span>Remove Photo</span>
+              </button>
+            )}
+
+            {/* User Identity Highlights */}
+            <div className="profile-photo-card__identity">
+              <h3 className="profile-photo-card__name">{name || "Administrator"}</h3>
+              <span className="profile-photo-card__username">@{username || "admin"}</span>
+              <div className="profile-photo-card__badge-wrap">
+                <Badge tone="green">Procurement Manager</Badge>
+              </div>
+            </div>
+
+            {/* Metadata Summary List */}
+            <div className="profile-photo-card__meta-list">
+              <div className="profile-meta-row">
+                <span className="profile-meta-label">Organization</span>
+                <span className="profile-meta-value">PT GENIUS ONE</span>
+              </div>
+              <div className="profile-meta-row">
+                <span className="profile-meta-label">Department</span>
+                <span className="profile-meta-value">Procurement & Supply Chain</span>
+              </div>
+              <div className="profile-meta-row">
+                <span className="profile-meta-label">User ID</span>
+                <span className="profile-meta-value code-pill">USR-2026-0842</span>
+              </div>
             </div>
           </div>
 
-          <div className="profile-info-panel__details">
-            <div className="profile-info-item">
-              <span className="profile-info-item__label">Email Address</span>
-              <strong className="profile-info-item__value">{email || "—"}</strong>
-            </div>
-
-            <div className="profile-info-item">
-              <span className="profile-info-item__label">Department</span>
-              <strong className="profile-info-item__value">Procurement & Supply Chain</strong>
-            </div>
-
-            <div className="profile-info-item">
-              <span className="profile-info-item__label">Organization</span>
-              <strong className="profile-info-item__value">PT GENIUS ONE</strong>
-            </div>
-
-            <div className="profile-info-item">
-              <span className="profile-info-item__label">Current Language</span>
-              <strong className="profile-info-item__value">{language}</strong>
-            </div>
-
-            <div className="profile-info-item">
-              <span className="profile-info-item__label">User ID</span>
-              <strong className="profile-info-item__value code-pill">USR-2026-0842</strong>
-            </div>
-          </div>
-
-          <div className="profile-info-panel__footer-notice">
-            <Icon name="alertTriangle" size={13} />
-            <span>Profile updates are subject to enterprise auditing policies.</span>
+          <div className="profile-photo-card__footer">
+            <span>Supports JPG, PNG, WEBP (Max 2MB)</span>
           </div>
         </aside>
 
-        {/* Panel B: Edit Profile Form */}
-        <section className="profile-edit-section">
-          <form onSubmit={handleFormSubmit} className="create-form-card">
-            <div className="create-form-card__header">
-              <h3>
-                <Icon name="user" size={15} />
-                <span>Personal & Account Information</span>
-              </h3>
-              <span className="create-form-card__subtitle">All changes will be reviewed before applying</span>
-            </div>
-
-            <div className="profile-form-grid">
-              {/* Row 1: Name & Username */}
-              <div className="form-group">
-                <label htmlFor="profile-name">Name</label>
-                <input
-                  id="profile-name"
-                  type="text"
-                  className="form-input"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Enter full name"
-                  required
-                />
+        {/* Right Column: Structured Information Sections */}
+        <section className="profile-form-section">
+          <form onSubmit={handleFormSubmit} className="profile-form-card">
+            {/* Step 1: Personal Information */}
+            <div className="profile-form-group-card">
+              <div className="profile-form-group-header">
+                <div className="profile-step-tag">STEP 1</div>
+                <h3 className="profile-form-group-title">Personal Information</h3>
+                <p className="profile-form-group-desc">
+                  Corporate identity and employee account details.
+                </p>
               </div>
 
-              <div className="form-group">
-                <label htmlFor="profile-username">Username</label>
-                <input
-                  id="profile-username"
-                  type="text"
-                  className="form-input"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  placeholder="Enter username"
-                  required
-                />
-              </div>
-
-              {/* Row 2: Email & Password */}
-              <div className="form-group">
-                <label htmlFor="profile-email">Email</label>
-                <input
-                  id="profile-email"
-                  type="email"
-                  className="form-input"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Enter corporate email address"
-                  required
-                />
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="profile-password">Change Password</label>
-                <div className="password-input-wrapper">
+              <div className="profile-form-fields-grid">
+                <div className="master-form-group">
+                  <label className="master-form-label">
+                    Full Name <span style={{ color: "var(--red-600)" }}>*</span>
+                  </label>
                   <input
-                    id="profile-password"
-                    type={showPassword ? "text" : "password"}
-                    className="form-input form-input--password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="New password (blank = keep current)"
-                    autoComplete="new-password"
+                    type="text"
+                    className="master-form-input"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Enter full name"
+                    required
                   />
-                  <button
-                    type="button"
-                    className="password-toggle-btn"
-                    onClick={() => setShowPassword(!showPassword)}
-                    aria-label={showPassword ? "Hide password" : "Show password"}
-                    title={showPassword ? "Hide password" : "Show password"}
-                  >
-                    <Icon name={showPassword ? "eyeOff" : "eye"} size={15} />
-                  </button>
                 </div>
-                <small className="form-helper-text">
-                  Min. 8 chars with uppercase and number.
-                </small>
-              </div>
 
-              {/* Row 3: Photo & Language */}
-              <div className="form-group">
-                <label>Change Photo Profile</label>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/png, image/jpeg, image/webp"
-                  onChange={handlePhotoChange}
-                  style={{ display: "none" }}
-                  id="profile-photo-upload"
-                />
-
-                <div className="photo-upload-container">
-                  <div className="photo-upload-preview-area">
-                    {photoPreview ? (
-                      <img
-                        src={photoPreview}
-                        alt="Photo Preview"
-                        className="photo-upload-thumbnail"
-                      />
-                    ) : (
-                      <div className="photo-upload-placeholder">
-                        <Icon name="user" size={18} />
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="photo-upload-actions">
-                    <div className="photo-upload-btn-row">
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        icon="upload"
-                        onClick={handleTriggerUpload}
-                      >
-                        Choose Photo
-                      </Button>
-                      {photoPreview && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          icon="close"
-                          onClick={handleRemovePhoto}
-                        >
-                          Remove
-                        </Button>
-                      )}
-                    </div>
-                    <span className="photo-upload-hint">
-                      {photoName
-                        ? `Selected: ${photoName}`
-                        : "JPG, PNG, WEBP. Max 2MB."}
-                    </span>
-                  </div>
+                <div className="master-form-group">
+                  <label className="master-form-label">
+                    Username <span style={{ color: "var(--red-600)" }}>*</span>
+                  </label>
+                  <input
+                    type="text"
+                    className="master-form-input"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    placeholder="Enter username"
+                    required
+                  />
                 </div>
-              </div>
 
-              <div className="form-group">
-                <label htmlFor="profile-language">Change Language</label>
-                <div className="select-with-icon">
-                  <select
-                    id="profile-language"
-                    className="form-select"
-                    value={language}
-                    onChange={(e) => setLanguage(e.target.value)}
-                  >
-                    <option value="English (US)">English (US) — Default</option>
-                    <option value="English (UK)">English (UK)</option>
-                    <option value="Bahasa Indonesia">Bahasa Indonesia</option>
-                  </select>
+                <div className="master-form-group">
+                  <label className="master-form-label">
+                    Corporate Email <span style={{ color: "var(--red-600)" }}>*</span>
+                  </label>
+                  <input
+                    type="email"
+                    className="master-form-input"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="Enter corporate email address"
+                    required
+                  />
                 </div>
-                <small className="form-helper-text">
-                  Interface language across all modules.
-                </small>
+
+                <div className="master-form-group">
+                  <label className="master-form-label">Role & Department</label>
+                  <input
+                    type="text"
+                    className="master-form-input"
+                    value="Procurement Manager • Supply Chain"
+                    readOnly
+                    disabled
+                  />
+                </div>
               </div>
             </div>
 
-            <div className="create-actions-footer">
+            {/* Step 2: Security & System Preferences */}
+            <div className="profile-form-group-card">
+              <div className="profile-form-group-header">
+                <div className="profile-step-tag">STEP 2</div>
+                <h3 className="profile-form-group-title">Security & System Preferences</h3>
+                <p className="profile-form-group-desc">
+                  Manage login credentials and default display language.
+                </p>
+              </div>
+
+              <div className="profile-form-fields-grid">
+                <div className="master-form-group">
+                  <label className="master-form-label">Change Password</label>
+                  <div className="password-input-wrapper" style={{ position: "relative" }}>
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      className="master-form-input"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="New password (blank = keep current)"
+                      autoComplete="new-password"
+                      style={{ paddingRight: "40px" }}
+                    />
+                    <button
+                      type="button"
+                      className="password-toggle-btn"
+                      onClick={() => setShowPassword(!showPassword)}
+                      aria-label={showPassword ? "Hide password" : "Show password"}
+                      title={showPassword ? "Hide password" : "Show password"}
+                      style={{
+                        position: "absolute",
+                        right: "10px",
+                        top: "50%",
+                        transform: "translateY(-50%)",
+                        background: "transparent",
+                        border: "none",
+                        color: "var(--slate-400)",
+                        cursor: "pointer",
+                        display: "grid",
+                        placeItems: "center",
+                      }}
+                    >
+                      <Icon name={showPassword ? "eyeOff" : "eye"} size={16} />
+                    </button>
+                  </div>
+                  <small style={{ fontSize: "11px", color: "var(--muted)", marginTop: "3px", display: "block" }}>
+                    Min. 8 chars with uppercase and number.
+                  </small>
+                </div>
+
+                <div className="master-form-group">
+                  <label className="master-form-label">Change Language</label>
+                  <CustomSelect
+                    value={language}
+                    onChange={(val) => setLanguage(val)}
+                    options={LANGUAGE_OPTIONS}
+                  />
+                  <small style={{ fontSize: "11px", color: "var(--muted)", marginTop: "3px", display: "block" }}>
+                    Interface language across all modules.
+                  </small>
+                </div>
+              </div>
+            </div>
+
+            {/* Form Action Buttons: Cancel & Save Changes */}
+            <div className="profile-form-actions">
               <Button type="button" variant="secondary" onClick={onBack}>
                 Cancel
               </Button>
-              <Button type="submit" variant="primary" icon="check">
+              <Button type="submit" variant="primary">
                 Save Changes
               </Button>
             </div>
@@ -336,16 +367,15 @@ export function EditProfile({ onBack, onSaveConfirmed }: EditProfileProps) {
         </section>
       </div>
 
-      {/* Save Confirmation Dialog (Temporary Frontend Simulation) */}
+      {/* Save Confirmation Dialog */}
       <ConfirmDialog
         isOpen={showSaveDialog}
         title="Confirm Profile Changes"
-        message="Are you sure the information is correct? Your changes will not be saved permanently in this version."
-        confirmLabel="Confirm & Continue"
+        message="Are you sure the updated profile information is correct?"
+        confirmLabel="Confirm & Save"
         cancelLabel="Cancel"
         confirmVariant="primary"
         icon="alertTriangle"
-        notice="Temporary simulation: Profile changes will reset upon navigating away."
         onConfirm={handleConfirmSave}
         onCancel={handleCancelDialog}
       />
