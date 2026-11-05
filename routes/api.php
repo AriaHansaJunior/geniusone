@@ -74,6 +74,12 @@ Route::prefix('procurement')->group(function () {
     Route::get('/pr/{code}', [PurchaseRequisitionApiController::class, 'show']);
     Route::post('/pr/{id}/approve', [PurchaseRequisitionApiController::class, 'approve']);
     Route::post('/pr/{id}/reject', [PurchaseRequisitionApiController::class, 'reject']);
+    Route::post('/pr/{id}/items/{itemId}/close', [PurchaseRequisitionApiController::class, 'closeItem']);
+    Route::post('/pr/{id}/items/{itemId}/unclose', [PurchaseRequisitionApiController::class, 'uncloseItem']);
+    Route::post('/pr/{id}/items/{itemId}/toggle-close', [PurchaseRequisitionApiController::class, 'toggleCloseItem']);
+    Route::post('/purchase-requisitions/{id}/items/{itemId}/close', [PurchaseRequisitionApiController::class, 'closeItem']);
+    Route::post('/purchase-requisitions/{id}/items/{itemId}/unclose', [PurchaseRequisitionApiController::class, 'uncloseItem']);
+    Route::post('/purchase-requisitions/{id}/items/{itemId}/toggle-close', [PurchaseRequisitionApiController::class, 'toggleCloseItem']);
 
     // Purchase Order (PO)
     Route::get('/po', [PurchaseOrderApiController::class, 'index']);
@@ -276,6 +282,7 @@ Route::prefix('approval')->group(function () {
     Route::post('/{module}/{id}/unapprove', [ApprovalWorkflowApiController::class, 'unapprove']);
     Route::post('/{module}/{id}/reject', [ApprovalWorkflowApiController::class, 'reject']);
     Route::post('/{module}/{id}/resubmit', [ApprovalWorkflowApiController::class, 'resubmit']);
+    Route::post('/{module}/{id}/activity', [ApprovalWorkflowApiController::class, 'recordActivity']);
     Route::get('/{module}/{id}/history', [ApprovalWorkflowApiController::class, 'history']);
 });
 
@@ -284,6 +291,7 @@ Route::prefix('v1/approval')->group(function () {
     Route::post('/{module}/{id}/unapprove', [ApprovalWorkflowApiController::class, 'unapprove']);
     Route::post('/{module}/{id}/reject', [ApprovalWorkflowApiController::class, 'reject']);
     Route::post('/{module}/{id}/resubmit', [ApprovalWorkflowApiController::class, 'resubmit']);
+    Route::post('/{module}/{id}/activity', [ApprovalWorkflowApiController::class, 'recordActivity']);
     Route::get('/{module}/{id}/history', [ApprovalWorkflowApiController::class, 'history']);
 });
 
@@ -294,5 +302,6 @@ foreach ($workflowModules as $mod) {
     Route::post("{$mod}/{id}/unapprove", [ApprovalWorkflowApiController::class, 'unapprove'])->defaults('module', $mod);
     Route::post("{$mod}/{id}/reject", [ApprovalWorkflowApiController::class, 'reject'])->defaults('module', $mod);
     Route::post("{$mod}/{id}/resubmit", [ApprovalWorkflowApiController::class, 'resubmit'])->defaults('module', $mod);
+    Route::post("{$mod}/{id}/activity", [ApprovalWorkflowApiController::class, 'recordActivity'])->defaults('module', $mod);
     Route::get("{$mod}/{id}/approval-history", [ApprovalWorkflowApiController::class, 'history'])->defaults('module', $mod);
 }

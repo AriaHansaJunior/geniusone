@@ -45,9 +45,15 @@ class PurchaseOrderService
             throw new InvalidArgumentException("Cannot create Purchase Order: Purchase Requisition '{$pr->pr_number}' must be fully Approved first (Current status: {$pr->status}).");
         }
 
-        // If items are not customized, convert all PR items directly
+        // BE-05: Exclude Closed PR items from downstream PO generation
+        $activePrItems = $pr->items->filter(fn ($it) => ! $it->is_closed);
+        if ($activePrItems->isEmpty()) {
+            throw new InvalidArgumentException("Cannot create Purchase Order: All line items in PR '{$pr->pr_number}' have been marked as Closed.");
+        }
+
+        // If items are not customized, convert all active PR items directly
         if (empty($itemsData)) {
-            $itemsData = $pr->items->map(function ($prItem) {
+            $itemsData = $activePrItems->map(function ($prItem) {
                 return [
                     'pr_has_items_id' => $prItem->id,
                     'items_id' => $prItem->items_id,
@@ -85,17 +91,46 @@ class PurchaseOrderService
             throw new InvalidArgumentException('A Purchase Order must contain at least one item.');
         }
 
-        // BE-05: Enforce that any explicitly linked PR items belong to an Approved PR
+        // BE-05: Enforce that any explicitly linked PR items belong to an Approved PR and are NOT Closed
         foreach ($items as $it) {
             if (! empty($it['pr_has_items_id'])) {
-                $prItem = PurchaseRequisitionItem::with('purchaseRequisition')->find($it['pr_has_items_id']);
+                $prItem = PurchaseRequisitionItem::with('purchaseRequisition', 'item')->find($it['pr_has_items_id']);
                 if ($prItem && ! in_array($prItem->purchaseRequisition?->status, ['Approved', 'Approved 2'], true)) {
                     throw new InvalidArgumentException("Cannot create Purchase Order: Linked PR '{$prItem->purchaseRequisition?->pr_number}' is not fully Approved.");
+                }
+                if ($prItem && $prItem->is_closed) {
+                    throw new InvalidArgumentException("Cannot create Purchase Order: Linked PR item '{$prItem->item?->name}' has been marked as Closed.");
                 }
             }
         }
 
-        return DB::transaction(function () use ($headerData, $items, $additionalCosts, $userId) {
+        // BE-01: Resolve Facility Status directly from Master Item
+        $resolvedFacility = $headerData['facility_status'] ?? null;
+        if (empty($resolvedFacility) || $resolvedFacility === 'FASILITAS') {
+            $masterItemFacilities = collect();
+            foreach ($items as $it) {
+                if (! empty($it['items_id'])) {
+                    $mItem = \App\Models\Master\Material\Item::with('facility')->find($it['items_id']);
+                    if ($mItem?->facility) {
+                        $masterItemFacilities->push(strtoupper($mItem->facility->name));
+                    }
+                } elseif (! empty($it['pr_has_items_id'])) {
+                    $pItem = PurchaseRequisitionItem::with('item.facility')->find($it['pr_has_items_id']);
+                    if ($pItem?->item?->facility) {
+                        $masterItemFacilities->push(strtoupper($pItem->item->facility->name));
+                    }
+                }
+            }
+
+            if ($masterItemFacilities->isNotEmpty()) {
+                $hasFasilitas = $masterItemFacilities->contains(fn ($f) => str_contains($f, 'FASILITAS') || str_contains($f, 'BERIKAT'));
+                $resolvedFacility = $hasFasilitas ? 'FASILITAS' : 'NON FASILITAS';
+            } else {
+                $resolvedFacility = 'FASILITAS';
+            }
+        }
+
+        return DB::transaction(function () use ($headerData, $items, $additionalCosts, $userId, $resolvedFacility) {
             $poNumber = $headerData['po_number'] ?? DocumentNumberGenerator::generatePoNumber();
 
             $poTypeId = $headerData['po_types_id'] ?? PoType::firstOrCreate(['code' => 'STD'], ['name' => 'PO Standard'])->id;
@@ -119,7 +154,7 @@ class PurchaseOrderService
                 'payment_terms_id' => $payTermId,
                 'payment_methods_id' => $payMethodId,
                 'service_subkon' => $headerData['service_subkon'] ?? 0,
-                'facility_status' => $headerData['facility_status'] ?? 'FASILITAS',
+                'facility_status' => $resolvedFacility,
                 'delivery_terms_id' => $delivTermId,
                 'latest_delivery' => $latestDeliv,
                 'status' => $headerData['status'] ?? 'Waiting for Approve 1',
@@ -171,12 +206,33 @@ class PurchaseOrderService
             }
 
             foreach ($additionalCosts as $cost) {
-                AdditionalCost::create([
-                    'purchase_order_id' => $order->id,
-                    'additional_cost_types_id' => $cost['additional_cost_types_id'],
-                    'value' => (float) ($cost['value'] ?? 0),
-                ]);
+                $typeId = $cost['additional_cost_types_id'] ?? null;
+                if (! $typeId && ! empty($cost['name'] ?? $cost['item'] ?? null)) {
+                    $cName = $cost['name'] ?? $cost['item'];
+                    $type = AdditionalCostType::firstOrCreate(
+                        ['name' => $cName],
+                        ['code' => strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', $cName), 0, 5)), 'status' => 1]
+                    );
+                    $typeId = $type->id;
+                }
+                if ($typeId) {
+                    AdditionalCost::create([
+                        'purchase_order_id' => $order->id,
+                        'additional_cost_types_id' => $typeId,
+                        'value' => (float) ($cost['value'] ?? $cost['nominal'] ?? 0),
+                    ]);
+                }
             }
+
+            \App\Services\AuditLogger::logWorkflow(
+                documentType: 'PO',
+                documentNumber: $order->po_number,
+                action: 'CREATED',
+                fromStatus: null,
+                toStatus: $order->status,
+                userId: $userId,
+                extra: ['facility_status' => $order->facility_status, 'total_items' => count($items)]
+            );
 
             return $order->load([
                 'supplier',

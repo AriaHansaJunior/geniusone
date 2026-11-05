@@ -37,6 +37,10 @@ class Role extends Model
 
     public const PROCUREMENT = 'procurement';
 
+    public const ACCOUNTING = 'accounting';
+
+    public const MASTER_ITEM_MANAGER = 'master_item_manager';
+
     public const WAREHOUSE = 'warehouse';
 
     public const REQUESTER = 'requester';

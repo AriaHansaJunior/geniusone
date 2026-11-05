@@ -35,15 +35,31 @@ class TraceabilityReportApiController extends Controller
         ];
 
         $rows = $matrix->map(function ($item, $index) {
+            $firstPr = ! empty($item['linked_prs']) ? $item['linked_prs'][0] : null;
+            $prNumber = $firstPr['pr_number'] ?? '—';
+            $prId = $firstPr['pr_id'] ?? null;
+
             return [
                 'no' => $index + 1,
+                'po_id' => $item['po_id'],
                 'po_number' => $item['po_number'],
+                'poNumber' => $item['po_number'],
+                'pr_id' => $prId,
+                'pr_number' => $prNumber,
+                'prNumber' => $prNumber,
+                'linked_prs' => $item['linked_prs'] ?? [],
                 'date' => $item['po_date'],
                 'supplier' => $item['supplier_name'],
+                'item_code' => $item['item_code'] ?? '-',
+                'itemCode' => $item['item_code'] ?? '-',
                 'item_name' => $item['item_name'],
+                'itemName' => $item['item_name'],
+                'unit' => $item['unit'] ?? 'PCS',
                 'qty_ordered' => number_format($item['ordered_quantity'], 2),
                 'qty_received' => number_format($item['net_received_quantity'], 2),
                 'outstanding' => number_format($item['outstanding_quantity'], 2),
+                'price' => (float) ($item['price'] ?? 0),
+                'subtotal' => (float) (($item['price'] ?? 0) * $item['ordered_quantity']),
                 'status' => $item['fulfillment_status'],
                 'badge' => match ($item['fulfillment_status']) {
                     'FULLY_RECEIVED' => 'success',
@@ -52,7 +68,24 @@ class TraceabilityReportApiController extends Controller
                 },
                 '_id' => (string) $item['po_id'],
                 '_rawPo' => $item['po_number'],
-                '_search' => strtolower("{$item['po_number']} {$item['supplier_name']} {$item['item_name']}"),
+                '_rawPr' => $prNumber,
+                '_search' => strtolower("{$item['po_number']} {$prNumber} {$item['supplier_name']} {$item['item_name']}"),
+                'items' => [
+                    [
+                        'id' => "item-{$item['po_id']}-{$index}",
+                        'itemCode' => $item['item_code'] ?? '-',
+                        'itemName' => $item['item_name'],
+                        'prNumber' => $prNumber,
+                        'unit' => $item['unit'] ?? 'PCS',
+                        'qty' => (float) $item['ordered_quantity'],
+                        'unitPrice' => (float) ($item['price'] ?? 0),
+                        'discount' => 0.0,
+                        'subtotal' => (float) (($item['price'] ?? 0) * $item['ordered_quantity']),
+                        'qtyBpb' => (float) $item['net_received_quantity'],
+                        'qtyOutstanding' => (float) $item['outstanding_quantity'],
+                        'remark' => 'Traceability tracking',
+                    ],
+                ],
             ];
         })->values();
 

@@ -24,6 +24,8 @@ class User extends Authenticatable
     /** @use HasFactory<UserFactory> */
     use HasFactory, LogsActivity, Notifiable, SoftDeletes;
 
+    protected $appends = ['effective_permissions'];
+
     public const ROLE_SUPERADMIN = 'superadmin';
 
     public const ROLE_ADMIN = 'admin';
@@ -33,6 +35,10 @@ class User extends Authenticatable
     public const ROLE_APPROVER_TIER2 = 'approver_tier2';
 
     public const ROLE_PROCUREMENT = 'procurement';
+
+    public const ROLE_ACCOUNTING = 'accounting';
+
+    public const ROLE_MASTER_ITEM_MANAGER = 'master_item_manager';
 
     public const ROLE_WAREHOUSE = 'warehouse';
 
@@ -66,7 +72,15 @@ class User extends Authenticatable
         self::ROLE_PROCUREMENT => [
             'pr.view', 'pr.create', 'pr.update', 'pr.delete',
             'po.view', 'po.create', 'po.update', 'po.delete',
-            'report.view',
+            'master_item.view', 'master_item.create', 'master_item.update',
+            'master_supplier.view', 'report.view',
+        ],
+        self::ROLE_ACCOUNTING => [
+            'master_item.view', 'master_item.create', 'master_item.update',
+            'master_finance.*', 'report.view', 'reports.*', 'pr.view', 'po.view',
+        ],
+        self::ROLE_MASTER_ITEM_MANAGER => [
+            'master_item.*', 'master_supplier.view', 'report.view',
         ],
         self::ROLE_APPROVER => [
             'pr.view', 'pr.approve_1', 'pr.unapprove_1', 'pr.approve_2', 'pr.unapprove_2',
@@ -275,5 +289,13 @@ class User extends Authenticatable
         }
 
         return $perms->unique()->values()->all();
+    }
+
+    /**
+     * Effective permissions accessor for serialized user models.
+     */
+    public function getEffectivePermissionsAttribute(): array
+    {
+        return $this->getAllPermissions();
     }
 }

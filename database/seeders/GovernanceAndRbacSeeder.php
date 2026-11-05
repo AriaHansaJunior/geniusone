@@ -43,7 +43,19 @@ class GovernanceAndRbacSeeder extends Seeder
             [
                 'name' => Role::PROCUREMENT,
                 'label' => 'Procurement Officer',
-                'description' => 'Purchasing staff responsible for PR handling and PO creation',
+                'description' => 'Purchasing staff responsible for PR handling, PO creation, and Master Item management',
+                'is_system' => true,
+            ],
+            [
+                'name' => Role::ACCOUNTING,
+                'label' => 'Accounting & Finance Officer',
+                'description' => 'Financial staff responsible for costing, tax verification, and Master Item management',
+                'is_system' => true,
+            ],
+            [
+                'name' => Role::MASTER_ITEM_MANAGER,
+                'label' => 'Master Item Specialist',
+                'description' => 'Dedicated master data manager maintaining item specifications, customs classifications, and facilities',
                 'is_system' => true,
             ],
             [
@@ -177,13 +189,29 @@ class GovernanceAndRbacSeeder extends Seeder
         })->pluck('id')->toArray();
         $roles[Role::APPROVER_TIER2]->permissions()->sync($tier2Perms);
 
-        // Procurement Staff
+        // Procurement Staff (includes Master Item management)
         $procPerms = Permission::where(function ($q) {
-            $q->whereIn('module', ['pr', 'po', 'master_supplier'])
+            $q->whereIn('module', ['pr', 'po', 'master_supplier', 'master_item'])
                 ->whereIn('action', ['view', 'create', 'update', 'delete'])
                 ->orWhereIn('module', ['reports']);
         })->pluck('id')->toArray();
         $roles[Role::PROCUREMENT]->permissions()->sync($procPerms);
+
+        // Accounting Staff (includes Master Item and Finance management)
+        $accPerms = Permission::where(function ($q) {
+            $q->whereIn('module', ['master_item', 'master_finance', 'master_supplier'])
+                ->whereIn('action', ['view', 'create', 'update', 'delete'])
+                ->orWhereIn('module', ['reports', 'pr', 'po'])
+                ->whereIn('action', ['view']);
+        })->pluck('id')->toArray();
+        $roles[Role::ACCOUNTING]->permissions()->sync($accPerms);
+
+        // Dedicated Master Item Manager (Full Master Item authority)
+        $itemMgrPerms = Permission::where(function ($q) {
+            $q->where('module', 'master_item')
+                ->orWhere('module', 'master_supplier');
+        })->pluck('id')->toArray();
+        $roles[Role::MASTER_ITEM_MANAGER]->permissions()->sync($itemMgrPerms);
 
         // Warehouse Staff
         $whPerms = Permission::where(function ($q) {

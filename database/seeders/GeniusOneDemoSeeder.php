@@ -63,9 +63,9 @@ class GeniusOneDemoSeeder extends Seeder
 
         // 1. Users
         $admin = User::updateOrCreate(
-            ['email' => 'admin@geniusone.test'],
+            ['username' => 'admin'],
             [
-                'username' => 'admin',
+                'email' => 'admin@geniusone.test',
                 'name' => 'Administrator GeniusOne',
                 'password' => Hash::make('secret123'),
                 'role' => User::ROLE_ADMIN,
@@ -74,9 +74,9 @@ class GeniusOneDemoSeeder extends Seeder
         );
 
         $procurementUser = User::updateOrCreate(
-            ['email' => 'procurement@geniusone.test'],
+            ['username' => 'arsyeila'],
             [
-                'username' => 'arsyeila',
+                'email' => 'procurement@geniusone.test',
                 'name' => 'Arsyeila (Purchasing)',
                 'password' => Hash::make('secret123'),
                 'role' => User::ROLE_PROCUREMENT,
@@ -85,9 +85,9 @@ class GeniusOneDemoSeeder extends Seeder
         );
 
         $approverUser = User::updateOrCreate(
-            ['email' => 'manager@geniusone.test'],
+            ['username' => 'hendra_mgr'],
             [
-                'username' => 'hendra_mgr',
+                'email' => 'manager@geniusone.test',
                 'name' => 'Hendra Setiawan (Operations Head)',
                 'password' => Hash::make('secret123'),
                 'role' => User::ROLE_APPROVER,
@@ -96,9 +96,9 @@ class GeniusOneDemoSeeder extends Seeder
         );
 
         $warehouseUser = User::updateOrCreate(
-            ['email' => 'warehouse@geniusone.test'],
+            ['username' => 'budi_wh'],
             [
-                'username' => 'budi_wh',
+                'email' => 'warehouse@geniusone.test',
                 'name' => 'Budi Santoso (Warehouse Supervisor)',
                 'password' => Hash::make('secret123'),
                 'role' => User::ROLE_WAREHOUSE,

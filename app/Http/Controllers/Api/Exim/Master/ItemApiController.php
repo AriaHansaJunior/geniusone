@@ -5,11 +5,34 @@ namespace App\Http\Controllers\Api\Exim\Master;
 use App\Http\Controllers\Controller;
 use App\Models\Master\Material\Item;
 use App\Models\Master\Material\ItemType;
+use App\Services\AuditLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class ItemApiController extends Controller
 {
+    /**
+     * Authorize user action on master item based on role and permissions (BE-03).
+     */
+    protected function authorizeItemAction(Request $request, string $action = 'create'): void
+    {
+        $user = $request->user();
+        if (! $user && $headerId = $request->header('X-User-Id')) {
+            $user = \App\Models\System\Auth\User::find($headerId);
+        }
+
+        if ($user) {
+            $hasPerm = $user->hasPermission("master_item.{$action}")
+                || $user->hasPermission('master_item.*')
+                || $user->isSuperAdmin()
+                || $user->isAdmin()
+                || in_array($user->role, ['superadmin', 'admin', 'procurement', 'accounting', 'master_item_manager'], true);
+
+            if (! $hasPerm) {
+                abort(403, "Forbidden: Your role does not possess 'master_item.{$action}' permission.");
+            }
+        }
+    }
     /**
      * List master items with rich relations for the Item table & picker modal.
      */
@@ -61,6 +84,8 @@ class ItemApiController extends Controller
      */
     public function store(Request $request): JsonResponse
     {
+        $this->authorizeItemAction($request, 'create');
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'code' => 'nullable|string|max:45|unique:items,code',
@@ -123,6 +148,8 @@ class ItemApiController extends Controller
 
     public function update(Request $request, int $id): JsonResponse
     {
+        $this->authorizeItemAction($request, 'update');
+
         $item = Item::findOrFail($id);
 
         $validated = $request->validate([
@@ -157,10 +184,19 @@ class ItemApiController extends Controller
         ]);
     }
 
-    public function destroy(int $id): JsonResponse
+    public function destroy(Request $request, int $id): JsonResponse
     {
+        $this->authorizeItemAction($request, 'delete');
+
         $item = Item::findOrFail($id);
         $item->delete();
+
+        AuditLogger::log(
+            type: 'ITEM_DELETED',
+            old: ['id' => $id, 'code' => $item->code, 'name' => $item->name],
+            new: null,
+            userId: $request->user()?->id ?? 1
+        );
 
         return response()->json(['message' => 'Item deleted successfully']);
     }

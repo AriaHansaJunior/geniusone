@@ -114,9 +114,14 @@ class DocumentApprovalWorkflowService
         $normKey = $this->normalizeModuleKey($module);
         $permKey = strtolower($normKey).".approve_{$tier}";
 
-        $hasPerm = $user->hasPermission($permKey)
+        $hasPerm = $user->isSuperAdmin()
+            || $user->isAdmin()
+            || $user->hasPermission($permKey)
+            || $user->hasPermission(strtolower($normKey).'.approve')
             || $user->hasPermission(strtolower($normKey).'.*')
-            || ($normKey === 'BPB' && ($user->hasPermission("rn.approve_{$tier}") || $user->hasPermission('rn.*')));
+            || ($normKey === 'BPB' && ($user->hasPermission("rn.approve_{$tier}") || $user->hasPermission('rn.approve') || $user->hasPermission('rn.*')))
+            || ($tier === 1 && $user->hasRole(['approver_tier1', 'approver', 'manager']))
+            || ($tier === 2 && $user->hasRole(['approver_tier2', 'approver', 'director']));
 
         if (! $hasPerm) {
             throw new InvalidArgumentException("User does not have permission '{$permKey}' to approve {$normKey} Stage {$tier}.");
@@ -207,9 +212,14 @@ class DocumentApprovalWorkflowService
         $normKey = $this->normalizeModuleKey($module);
         $permKey = strtolower($normKey).".unapprove_{$tier}";
 
-        $hasPerm = $user->hasPermission($permKey)
+        $hasPerm = $user->isSuperAdmin()
+            || $user->isAdmin()
+            || $user->hasPermission($permKey)
+            || $user->hasPermission(strtolower($normKey).'.unapprove')
             || $user->hasPermission(strtolower($normKey).'.*')
-            || ($normKey === 'BPB' && ($user->hasPermission("rn.unapprove_{$tier}") || $user->hasPermission('rn.*')));
+            || ($normKey === 'BPB' && ($user->hasPermission("rn.unapprove_{$tier}") || $user->hasPermission('rn.unapprove') || $user->hasPermission('rn.*')))
+            || ($tier === 1 && $user->hasRole(['approver_tier1', 'approver', 'manager']))
+            || ($tier === 2 && $user->hasRole(['approver_tier2', 'approver', 'director']));
 
         if (! $hasPerm) {
             throw new InvalidArgumentException("User does not have permission '{$permKey}' to unapprove {$normKey} Stage {$tier}.");
@@ -310,9 +320,15 @@ class DocumentApprovalWorkflowService
         $normKey = $this->normalizeModuleKey($module);
         $permKey = strtolower($normKey).".approve_{$tier}";
 
-        $hasPerm = $user->hasPermission($permKey)
+        $hasPerm = $user->isSuperAdmin()
+            || $user->isAdmin()
+            || $user->hasPermission($permKey)
+            || $user->hasPermission(strtolower($normKey).'.reject')
+            || $user->hasPermission(strtolower($normKey).'.approve')
             || $user->hasPermission(strtolower($normKey).'.*')
-            || ($normKey === 'BPB' && ($user->hasPermission("rn.approve_{$tier}") || $user->hasPermission('rn.*')));
+            || ($normKey === 'BPB' && ($user->hasPermission("rn.approve_{$tier}") || $user->hasPermission('rn.approve') || $user->hasPermission('rn.*')))
+            || ($tier === 1 && $user->hasRole(['approver_tier1', 'approver', 'manager']))
+            || ($tier === 2 && $user->hasRole(['approver_tier2', 'approver', 'director']));
 
         if (! $hasPerm) {
             throw new InvalidArgumentException("User does not have authority to reject {$normKey} Stage {$tier}.");
@@ -416,33 +432,53 @@ class DocumentApprovalWorkflowService
     /**
      * BE-06: Get Complete Approval History for a Document.
      */
-    public function getApprovalHistory(string $module, int $id): array
+    public function getApprovalHistory(string $module, int|string $id): array
     {
         $normKey = $this->normalizeModuleKey($module);
+        $doc = $this->resolveDocument($module, $id);
+        $docNumber = $this->getDocumentNumber($doc);
 
         return ApprovalHistory::where('document_type', $normKey)
-            ->where('document_id', $id)
+            ->where(function ($q) use ($doc, $docNumber) {
+                $q->where('document_id', $doc->id);
+                if (! empty($docNumber)) {
+                    $q->orWhere('document_number', $docNumber);
+                }
+            })
             ->with('user:id,name,username,role')
-            ->orderBy('created_at', 'asc')
+            ->orderBy('created_at', 'desc')
             ->get()
             ->map(function ($h) {
+                $meta = is_array($h->metadata) ? $h->metadata : [];
+                $actorName = $h->user?->name ?? ($meta['actor_name'] ?? 'User');
+                $actorRole = $h->user?->role ?? ($meta['actor_role'] ?? 'Staff');
+
                 return [
-                    'id' => $h->id,
+                    'id' => (string) $h->id,
+                    'tier' => $h->tier,
+                    'action' => strtolower($h->action),
+                    'userId' => $h->user_id,
+                    'userName' => $actorName,
+                    'userRole' => $actorRole,
+                    'timestamp' => $h->created_at?->format('d-M-Y H:i') ?? '-',
+                    'note' => $h->note,
                     'documentType' => $h->document_type,
                     'documentId' => $h->document_id,
                     'documentNumber' => $h->document_number,
-                    'action' => $h->action,
-                    'tier' => $h->tier,
                     'fromStatus' => $h->from_status,
                     'toStatus' => $h->to_status,
-                    'note' => $h->note,
                     'createdAt' => $h->created_at?->format('Y-m-d H:i:s'),
                     'user' => $h->user ? [
                         'id' => $h->user->id,
                         'name' => $h->user->name,
                         'username' => $h->user->username,
                         'role' => $h->user->role,
-                    ] : null,
+                    ] : [
+                        'id' => $h->user_id,
+                        'name' => $actorName,
+                        'username' => strtolower(str_replace(' ', '.', $actorName)),
+                        'role' => $actorRole,
+                    ],
                 ];
             })
             ->toArray();

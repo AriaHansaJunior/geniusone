@@ -3,6 +3,9 @@
 namespace App\Http\Controllers\Api\Workflow;
 
 use App\Http\Controllers\Controller;
+use App\Models\System\Auth\User;
+use App\Models\System\Governance\ApprovalHistory;
+use App\Services\AuditLogger;
 use App\Services\Workflow\DocumentApprovalWorkflowService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -218,6 +221,84 @@ class ApprovalWorkflowApiController extends Controller
                     'updatedAt' => $updatedDoc->updated_at?->format('Y-m-d H:i:s'),
                 ],
             ]);
+        } catch (Throwable $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => $e->getMessage(),
+            ], 422);
+        }
+    }
+
+    /**
+     * BE-04: Record document activity (e.g. printed, revised, closed_item, unclosed_item).
+     * POST /api/approval/{module}/{id}/activity
+     */
+    public function recordActivity(Request $request, string $module = '', $id = null): JsonResponse
+    {
+        [$module, $id] = $this->resolveModuleAndId($request, $module, $id);
+
+        $validated = $request->validate([
+            'action' => 'required|string|max:100',
+            'note' => 'nullable|string|max:1000',
+            'tier' => 'nullable|integer',
+            'user_id' => 'nullable|integer',
+            'documentNumber' => 'nullable|string|max:100',
+            'metadata' => 'nullable|array',
+        ]);
+
+        $userId = $this->resolveUserId($request);
+        $user = User::find($userId) ?? User::first();
+        $action = strtoupper(trim($validated['action']));
+        $note = $validated['note'] ?? null;
+        $tier = (int) ($validated['tier'] ?? 1);
+
+        try {
+            $doc = $this->workflowService->resolveDocument($module, $id);
+            $normKey = $this->workflowService->normalizeModuleKey($module);
+            $currentStatus = $this->workflowService->getDocumentStatus($doc);
+            $docNumber = $validated['documentNumber'] ?? $this->workflowService->getDocumentNumber($doc);
+
+            $actorName = $user?->name ?? 'System User';
+            $actorRole = $user?->role ?? 'User';
+
+            $history = ApprovalHistory::create([
+                'document_type' => $normKey,
+                'document_id' => $doc->id,
+                'document_number' => $docNumber,
+                'user_id' => $user?->id ?? 1,
+                'action' => $action,
+                'tier' => $tier,
+                'from_status' => $currentStatus,
+                'to_status' => $currentStatus,
+                'note' => $note ?? "{$action} by {$actorName}",
+                'metadata' => array_merge([
+                    'actor_name' => $actorName,
+                    'actor_role' => $actorRole,
+                    'recorded_at' => now()->toIso8601String(),
+                ], $validated['metadata'] ?? []),
+            ]);
+
+            AuditLogger::logWorkflow(
+                documentType: $normKey,
+                documentNumber: $docNumber,
+                action: $action,
+                fromStatus: $currentStatus,
+                toStatus: $currentStatus,
+                userId: $user?->id ?? 1,
+                extra: ['note' => $note, 'tier' => $tier]
+            );
+
+            return response()->json([
+                'status' => 'success',
+                'message' => "Activity '{$action}' recorded successfully.",
+                'data' => [
+                    'id' => $history->id,
+                    'action' => $action,
+                    'documentNumber' => $docNumber,
+                    'actor' => $actorName,
+                    'timestamp' => $history->created_at?->format('d-M-Y H:i'),
+                ],
+            ], 201);
         } catch (Throwable $e) {
             return response()->json([
                 'status' => 'error',

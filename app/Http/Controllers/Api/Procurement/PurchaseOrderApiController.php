@@ -33,9 +33,12 @@ class PurchaseOrderApiController extends Controller
             'paymentMethod',
             'deliveryTerm',
             'items.requisitionItem.item.unitOfMeasurement',
+            'items.requisitionItem.item.facility',
             'items.requisitionItem.purchaseRequisition',
+            'items.item.unitOfMeasurement',
+            'items.item.facility',
             'approvals.user',
-            'additionalCosts',
+            'additionalCosts.type',
             'receiveNotes.receiveNote',
         ]);
 
@@ -101,9 +104,12 @@ class PurchaseOrderApiController extends Controller
             'paymentMethod',
             'deliveryTerm',
             'items.requisitionItem.item.unitOfMeasurement',
+            'items.requisitionItem.item.facility',
             'items.requisitionItem.purchaseRequisition',
+            'items.item.unitOfMeasurement',
+            'items.item.facility',
             'approvals.user',
-            'additionalCosts',
+            'additionalCosts.type',
             'receiveNotes.receiveNote',
         ])
             ->where('po_number', $rawCode)
@@ -201,33 +207,48 @@ class PurchaseOrderApiController extends Controller
             ];
         })->toArray();
 
-        // Other Costs
+        // Other Costs (BE-01: Master Additional Cost Integration)
         $otherCosts = $po->additionalCosts->map(function ($ac, $acIdx) use ($currencyCode) {
+            $costName = $ac->type?->name ?? 'Operational Freight / Handling';
+            $costCode = $ac->type?->code ?? '-';
+
             return [
                 'no' => $acIdx + 1,
-                'item' => $ac->name ?? 'Operational Freight / Handling',
-                'itemCode' => '-',
+                'id' => $ac->id,
+                'additional_cost_types_id' => $ac->additional_cost_types_id,
+                'item' => $costName,
+                'itemCode' => $costCode,
+                'name' => $costName,
                 'nominal' => $currencyCode.' '.number_format((float) $ac->value, 2),
+                'value' => (float) $ac->value,
                 'currency' => $currencyCode,
                 'remark' => $ac->note ?? '-',
             ];
         })->toArray();
 
-        // History / Audit Trail
+        // History / Audit Trail (BE-04 & BE-06: Real Centralized Audit Trail)
         $history = [];
-        $logs = Log::where('tipe', 'like', '%PURCHASE_ORDER%')
-            ->orWhere('tipe', 'like', '%PO%')
-            ->orderBy('id', 'asc')
-            ->take(10)
+        $approvalHistories = \App\Models\System\Governance\ApprovalHistory::where('document_type', 'PO')
+            ->where(function ($q) use ($po) {
+                $q->where('document_id', $po->id)
+                    ->orWhere('document_number', $po->po_number);
+            })
+            ->with('user')
+            ->orderBy('created_at', 'asc')
             ->get();
 
-        if ($logs->isNotEmpty()) {
-            $history = $logs->map(function ($log) {
+        if ($approvalHistories->isNotEmpty()) {
+            $history = $approvalHistories->map(function ($h) {
+                $meta = is_array($h->metadata) ? $h->metadata : [];
+                $userName = $h->user?->name ?? ($meta['actor_name'] ?? 'System');
+                $actionLabel = ucwords(str_replace('_', ' ', strtolower($h->action)));
+
                 return [
-                    'user' => $log->user?->name ?? 'System',
-                    'activity' => $log->tipe ?? 'PO Operation',
-                    'logTime' => $log->created_at ? $log->created_at->format('d-m-Y h:i:s a') : '-',
-                    'badgeTone' => str_contains($log->tipe, 'APPROVE') ? 'blue' : (str_contains($log->tipe, 'CREATE') ? 'green' : 'gray'),
+                    'user' => $userName,
+                    'activity' => $actionLabel,
+                    'logTime' => $h->created_at ? $h->created_at->format('d-m-Y H:i') : '-',
+                    'badgeTone' => str_contains($h->action, 'APPROVE') ? 'blue' : (str_contains($h->action, 'PRINT') ? 'purple' : (str_contains($h->action, 'CREATE') ? 'green' : 'gray')),
+                    'note' => $h->note,
                 ];
             })->toArray();
         }
@@ -237,10 +258,10 @@ class PurchaseOrderApiController extends Controller
                 ['user' => $creatorName, 'activity' => 'Transaction Created', 'logTime' => "{$createdTime} pm", 'badgeTone' => 'green'],
             ];
             if ($appr1 && $appr1->user) {
-                $history[] = ['user' => $appr1->user->name, 'activity' => 'Approve 1 Purchase Order', 'logTime' => ($appr1->updated_at?->format('d-m-Y h:i:s a') ?? "{$createdTime} pm"), 'badgeTone' => 'blue'];
+                $history[] = ['user' => $appr1->user->name, 'activity' => 'Approve 1 Purchase Order', 'logTime' => ($appr1->updated_at?->format('d-m-Y H:i') ?? "{$createdTime} pm"), 'badgeTone' => 'blue'];
             }
             if ($appr2 && $appr2->user) {
-                $history[] = ['user' => $appr2->user->name, 'activity' => 'Approve 2 Purchase Order', 'logTime' => ($appr2->updated_at?->format('d-m-Y h:i:s a') ?? "{$createdTime} pm"), 'badgeTone' => 'cyan'];
+                $history[] = ['user' => $appr2->user->name, 'activity' => 'Approve 2 Purchase Order', 'logTime' => ($appr2->updated_at?->format('d-m-Y H:i') ?? "{$createdTime} pm"), 'badgeTone' => 'cyan'];
             }
         }
 

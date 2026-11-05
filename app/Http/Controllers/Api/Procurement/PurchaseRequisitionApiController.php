@@ -7,6 +7,9 @@ use App\Models\Master\Material\Item;
 use App\Models\Master\Organization\Department;
 use App\Models\Master\Organization\Section;
 use App\Models\Procurement\PurchaseRequest\PurchaseRequisition;
+use App\Models\Procurement\PurchaseRequest\PurchaseRequisitionItem;
+use App\Models\System\Governance\ApprovalHistory;
+use App\Services\AuditLogger;
 use App\Services\DocumentNumber\DocumentNumberGenerator;
 use App\Services\GeniusOneBackend;
 use Carbon\Carbon;
@@ -24,6 +27,8 @@ class PurchaseRequisitionApiController extends Controller
             'section',
             'creatorUser',
             'items.item.unitOfMeasurement',
+            'items.item.facility',
+            'items.closedByUser',
             'approvals.user',
         ]);
 
@@ -60,6 +65,9 @@ class PurchaseRequisitionApiController extends Controller
             $status = $pr->status ?? 'Draft';
 
             $lineItems = $pr->items->map(function ($it, $itIdx) use ($pr) {
+                $isClosed = (bool) ($it->is_closed ?? false);
+                $facilityName = $it->item?->facility?->name ?? 'FASILITAS';
+
                 return [
                     'id' => $it->id,
                     'pr_has_items_id' => $it->id,
@@ -76,6 +84,14 @@ class PurchaseRequisitionApiController extends Controller
                     'unit' => $it->item?->unitOfMeasurement?->name ?? 'PCE',
                     'remark' => $it->remark ?? $it->note ?? 'PP Sby Kebutuhan Operasional',
                     'dueDate' => $this->safeFormatDate($it->due_date),
+                    'is_closed' => $isClosed,
+                    'isClosed' => $isClosed,
+                    'closing_status' => $isClosed ? 'Closing' : 'Open',
+                    'status' => $isClosed ? 'Closing' : ($pr->status ?? 'Draft'),
+                    'closed_at' => $it->closed_at ? $it->closed_at->format('d-M-Y H:i') : null,
+                    'closed_by' => $it->closedByUser?->name,
+                    'facility' => $facilityName,
+                    'facility_status' => $facilityName,
                 ];
             })->toArray();
 
@@ -139,6 +155,8 @@ class PurchaseRequisitionApiController extends Controller
             'section',
             'creatorUser',
             'items.item.unitOfMeasurement',
+            'items.item.facility',
+            'items.closedByUser',
             'approvals.user',
         ])
             ->where('pr_number', $rawCode)
@@ -160,6 +178,9 @@ class PurchaseRequisitionApiController extends Controller
         $firstItem = $pr->items->first();
 
         $lineItems = $pr->items->map(function ($it, $itIdx) use ($pr) {
+            $isClosed = (bool) ($it->is_closed ?? false);
+            $facilityName = $it->item?->facility?->name ?? 'FASILITAS';
+
             return [
                 'id' => $it->id,
                 'pr_has_items_id' => $it->id,
@@ -176,6 +197,14 @@ class PurchaseRequisitionApiController extends Controller
                 'unit' => $it->item?->unitOfMeasurement?->name ?? 'PCE',
                 'remark' => $it->remark ?? $it->note ?? 'PP Sby Kebutuhan Operasional',
                 'dueDate' => $this->safeFormatDate($it->due_date),
+                'is_closed' => $isClosed,
+                'isClosed' => $isClosed,
+                'closing_status' => $isClosed ? 'Closing' : 'Open',
+                'status' => $isClosed ? 'Closing' : ($pr->status ?? 'Draft'),
+                'closed_at' => $it->closed_at ? $it->closed_at->format('d-M-Y H:i') : null,
+                'closed_by' => $it->closedByUser?->name,
+                'facility' => $facilityName,
+                'facility_status' => $facilityName,
             ];
         })->toArray();
 
@@ -211,6 +240,8 @@ class PurchaseRequisitionApiController extends Controller
                 'date' => $a->updated_at?->format('d-M-Y H:i') ?? '-',
                 'note' => $a->note,
             ])->toArray(),
+            '_history' => $this->getPrActivityHistory($pr, $creatorName, $createdTime),
+            'history' => $this->getPrActivityHistory($pr, $creatorName, $createdTime),
         ];
 
         if ($request->expectsJson() || $request->is('api/*') || $request->query('format') === 'json') {
@@ -225,6 +256,41 @@ class PurchaseRequisitionApiController extends Controller
             'code' => $code,
             'initialData' => ['item' => $detailRow],
         ]);
+    }
+
+    /**
+     * Build real chronological activity history for PR (BE-04 & BE-06).
+     */
+    protected function getPrActivityHistory(PurchaseRequisition $pr, string $creatorName, string $createdTime): array
+    {
+        $prHistories = ApprovalHistory::where('document_type', 'PR')
+            ->where(function ($q) use ($pr) {
+                $q->where('document_id', $pr->id)
+                    ->orWhere('document_number', $pr->pr_number);
+            })
+            ->with('user')
+            ->orderBy('created_at', 'asc')
+            ->get();
+
+        if ($prHistories->isNotEmpty()) {
+            return $prHistories->map(function ($h) {
+                $meta = is_array($h->metadata) ? $h->metadata : [];
+                $userName = $h->user?->name ?? ($meta['actor_name'] ?? 'System');
+                $actionLabel = ucwords(str_replace('_', ' ', strtolower($h->action)));
+
+                return [
+                    'user' => $userName,
+                    'activity' => $actionLabel,
+                    'logTime' => $h->created_at ? $h->created_at->format('d-M-Y H:i') : '-',
+                    'badgeTone' => str_contains($h->action, 'APPROVE') ? 'blue' : (str_contains($h->action, 'PRINT') ? 'purple' : (str_contains($h->action, 'CREATE') ? 'green' : (str_contains($h->action, 'CLOSE') ? 'orange' : 'gray'))),
+                    'note' => $h->note,
+                ];
+            })->toArray();
+        }
+
+        return [
+            ['user' => $creatorName, 'activity' => 'Transaction Created', 'logTime' => "{$createdTime} pm", 'badgeTone' => 'green'],
+        ];
     }
 
     /**
@@ -399,6 +465,198 @@ class PurchaseRequisitionApiController extends Controller
             'message' => 'Purchase Requisition rejected successfully',
             'data' => $pr,
         ]);
+    }
+
+    /**
+     * Resolve PR model and PR Line Item instance (BE-05).
+     */
+    protected function resolvePrAndItem(Request $request, $prId, $itemId): array
+    {
+        $rawPrId = str_replace('-', '/', (string) $prId);
+        $cleanPrId = preg_replace('/[^A-Za-z0-9]/', '', (string) $prId);
+
+        $pr = is_numeric($prId)
+            ? PurchaseRequisition::find((int) $prId)
+            : PurchaseRequisition::where('pr_number', $prId)
+                ->orWhere('pr_number', $rawPrId)
+                ->orWhereRaw("REPLACE(REPLACE(pr_number, '/', ''), '-', '') = ?", [$cleanPrId])
+                ->first();
+
+        if (! $pr) {
+            abort(404, "Purchase Requisition '{$prId}' not found.");
+        }
+
+        $prItem = null;
+        if (is_numeric($itemId)) {
+            $prItem = PurchaseRequisitionItem::where('id', (int) $itemId)
+                ->where('purchase_requisitions_id', $pr->id)
+                ->first();
+        }
+
+        if (! $prItem) {
+            $itemCode = $request->input('itemCode') ?? $request->input('code') ?? $itemId;
+            $itemName = $request->input('itemName') ?? $request->input('name');
+
+            $prItem = $pr->items()->where(function ($iq) use ($itemCode, $itemName) {
+                if ($itemCode && $itemCode !== '-') {
+                    $iq->whereHas('item', fn ($m) => $m->where('code', $itemCode));
+                }
+                if ($itemName) {
+                    $iq->orWhereHas('item', fn ($m) => $m->where('name', $itemName));
+                }
+            })->first();
+
+            if (! $prItem && is_numeric($itemId)) {
+                $prItem = $pr->items()->skip((int) $itemId)->first();
+            }
+        }
+
+        if (! $prItem) {
+            abort(404, "PR Item '{$itemId}' not found in PR '{$pr->pr_number}'.");
+        }
+
+        return [$pr, $prItem];
+    }
+
+    /**
+     * BE-05: Mark specific PR item as Closed.
+     * Item remains visible with Closing status but is excluded from PO generation.
+     * POST /api/procurement/purchase-requisitions/{id}/items/{itemId}/close
+     */
+    public function closeItem(Request $request, $id, $itemId)
+    {
+        [$pr, $prItem] = $this->resolvePrAndItem($request, $id, $itemId);
+        $userId = $request->user()?->id ?? (int) ($request->header('X-User-Id') ?? 1);
+        $user = \App\Models\System\Auth\User::find($userId);
+
+        $prItem->close($userId);
+
+        // Record in centralized audit trail (BE-04 & BE-06)
+        $itemName = $prItem->item?->name ?? 'PR Item';
+        $itemCode = $prItem->item?->code ?? '-';
+
+        ApprovalHistory::create([
+            'document_type' => 'PR',
+            'document_id' => $pr->id,
+            'document_number' => $pr->pr_number,
+            'user_id' => $userId,
+            'action' => 'CLOSED_ITEM',
+            'tier' => 1,
+            'from_status' => $pr->status ?? 'Approved',
+            'to_status' => $pr->status ?? 'Approved',
+            'note' => "Closed PR line item: {$itemName} ({$itemCode})",
+            'metadata' => [
+                'actor_name' => $user?->name ?? 'User',
+                'actor_role' => $user?->role ?? 'Procurement',
+                'item_id' => $prItem->id,
+                'item_code' => $itemCode,
+                'item_name' => $itemName,
+            ],
+        ]);
+
+        AuditLogger::logWorkflow(
+            documentType: 'PR',
+            documentNumber: $pr->pr_number,
+            action: 'ITEM_CLOSED',
+            fromStatus: $pr->status,
+            toStatus: $pr->status,
+            userId: $userId,
+            extra: ['item_id' => $prItem->id, 'item_name' => $itemName, 'item_code' => $itemCode]
+        );
+
+        return response()->json([
+            'status' => 'success',
+            'message' => "PR item '{$itemName}' marked as Closed.",
+            'data' => [
+                'pr_id' => $pr->id,
+                'pr_number' => $pr->pr_number,
+                'item_id' => $prItem->id,
+                'is_closed' => true,
+                'status' => 'Closing',
+                'closing_status' => 'Closing',
+                'closed_at' => $prItem->closed_at?->format('d-M-Y H:i'),
+                'closed_by' => $user?->name ?? 'User',
+            ],
+        ]);
+    }
+
+    /**
+     * BE-05: Reactivate (Unclose) specific PR item.
+     * POST /api/procurement/purchase-requisitions/{id}/items/{itemId}/unclose
+     */
+    public function uncloseItem(Request $request, $id, $itemId)
+    {
+        [$pr, $prItem] = $this->resolvePrAndItem($request, $id, $itemId);
+        $userId = $request->user()?->id ?? (int) ($request->header('X-User-Id') ?? 1);
+        $user = \App\Models\System\Auth\User::find($userId);
+
+        $prItem->unclose();
+
+        $itemName = $prItem->item?->name ?? 'PR Item';
+        $itemCode = $prItem->item?->code ?? '-';
+
+        ApprovalHistory::create([
+            'document_type' => 'PR',
+            'document_id' => $pr->id,
+            'document_number' => $pr->pr_number,
+            'user_id' => $userId,
+            'action' => 'UNCLOSED_ITEM',
+            'tier' => 1,
+            'from_status' => $pr->status ?? 'Approved',
+            'to_status' => $pr->status ?? 'Approved',
+            'note' => "Unclosed (reactivated) PR line item: {$itemName} ({$itemCode})",
+            'metadata' => [
+                'actor_name' => $user?->name ?? 'User',
+                'actor_role' => $user?->role ?? 'Procurement',
+                'item_id' => $prItem->id,
+                'item_code' => $itemCode,
+                'item_name' => $itemName,
+            ],
+        ]);
+
+        AuditLogger::logWorkflow(
+            documentType: 'PR',
+            documentNumber: $pr->pr_number,
+            action: 'ITEM_UNCLOSED',
+            fromStatus: $pr->status,
+            toStatus: $pr->status,
+            userId: $userId,
+            extra: ['item_id' => $prItem->id, 'item_name' => $itemName, 'item_code' => $itemCode]
+        );
+
+        return response()->json([
+            'status' => 'success',
+            'message' => "PR item '{$itemName}' reactivated (unclosed).",
+            'data' => [
+                'pr_id' => $pr->id,
+                'pr_number' => $pr->pr_number,
+                'item_id' => $prItem->id,
+                'is_closed' => false,
+                'status' => 'Open',
+                'closing_status' => 'Open',
+            ],
+        ]);
+    }
+
+    /**
+     * BE-05: Toggle PR item closing status.
+     * POST /api/procurement/purchase-requisitions/{id}/items/{itemId}/toggle-close
+     */
+    public function toggleCloseItem(Request $request, $id, $itemId)
+    {
+        [$pr, $prItem] = $this->resolvePrAndItem($request, $id, $itemId);
+
+        if ($request->has('is_closed')) {
+            $shouldClose = (bool) $request->boolean('is_closed');
+        } else {
+            $shouldClose = ! $prItem->is_closed;
+        }
+
+        if ($shouldClose) {
+            return $this->closeItem($request, $id, $itemId);
+        }
+
+        return $this->uncloseItem($request, $id, $itemId);
     }
 
     /**
