@@ -69,12 +69,9 @@ export function ReceiveNoteDetail({
 
   return (
     <div className="rn-detail-page">
-      {/* Top Header with Navigation */}
+      {/* Top Header */}
       <div className="rn-detail-header" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", marginBottom: "16px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-          <button type="button" className="btn-back-pill" onClick={onBack}>
-            <span>Back to Receive Notes</span>
-          </button>
           <h1 className="rn-detail-title" style={{ margin: 0 }}>
             Detail Receive Note - {rnData.rnNumber}
           </h1>
@@ -96,7 +93,7 @@ export function ReceiveNoteDetail({
       {/* Main Content Card */}
       <div className="rn-detail-card">
         {/* Dynamic Two-Stage Approval Action Bar & Timeline */}
-        <div className="rn-detail-status-bar" style={{ display: "flex", flexDirection: "column", gap: "14px", padding: "16px", background: "rgba(0,0,0,0.01)", borderBottom: "1px solid var(--line)" }}>
+        <div className="rn-detail-status-bar">
           <ApprovalActionBar
             module="receive_note"
             documentId={rnData.rnNumber}
@@ -111,6 +108,11 @@ export function ReceiveNoteDetail({
         <div className="rn-detail-meta-grid">
           {/* Column 1 */}
           <div className="rn-meta-col">
+            <div className="rn-meta-section-title">
+              <Icon name="file" size={13} />
+              <span>Document & Supplier</span>
+            </div>
+
             <div className="rn-meta-item">
               <span className="rn-meta-label">RN Number</span>
               <span className="rn-meta-value font-medium text-ink">
@@ -157,6 +159,11 @@ export function ReceiveNoteDetail({
 
           {/* Column 2 */}
           <div className="rn-meta-col">
+            <div className="rn-meta-section-title">
+              <Icon name="box" size={13} />
+              <span>Invoice & Logistics</span>
+            </div>
+
             <div className="rn-meta-item">
               <span className="rn-meta-label">Invoice Number</span>
               <span className="rn-meta-value">{rnData.invoiceNumber}</span>
@@ -223,6 +230,11 @@ export function ReceiveNoteDetail({
 
           {/* Column 3 */}
           <div className="rn-meta-col">
+            <div className="rn-meta-section-title">
+              <Icon name="clock" size={13} />
+              <span>Customs & Timestamps</span>
+            </div>
+
             <div className="rn-meta-item">
               <span className="rn-meta-label">Created at</span>
               <span className="rn-meta-value">{rnData.createdAt}</span>
@@ -482,7 +494,7 @@ export function ReceiveNoteDetail({
           </table>
         </div>
 
-        {/* Bottom Actions: Print Dropdown and Back Button */}
+        {/* Bottom Actions: Print Dropdown */}
         <div className="rn-detail-actions">
           <div className="rn-print-dropdown-container" ref={printMenuRef}>
             <button
@@ -492,7 +504,8 @@ export function ReceiveNoteDetail({
               aria-haspopup="true"
               aria-expanded={printMenuOpen}
             >
-              <span>Print ▾</span>
+              <Icon name="print" size={14} />
+              <span>Print Options ▾</span>
             </button>
 
             {printMenuOpen && (
@@ -516,15 +529,6 @@ export function ReceiveNoteDetail({
               </div>
             )}
           </div>
-
-          <button
-            type="button"
-            className="rn-btn-back"
-            onClick={onBack}
-            aria-label="Back to listing"
-          >
-            <span>Back</span>
-          </button>
         </div>
       </div>
     </div>

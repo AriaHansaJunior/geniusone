@@ -519,15 +519,6 @@ export function DocumentHistoryDetail({
           >
             Export To Excel
           </Button>
-
-          <button
-            type="button"
-            className="dh-btn-back"
-            onClick={onBack}
-            aria-label="Back to listing"
-          >
-            <span>Back</span>
-          </button>
         </div>
       </div>
     </div>

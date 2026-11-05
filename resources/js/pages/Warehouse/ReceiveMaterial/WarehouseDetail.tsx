@@ -225,9 +225,6 @@ export function WarehouseDetail({
       {/* Detail Navigation & Action Bar */}
       <div className="detail-top-bar">
         <div className="detail-top-bar__left">
-          <button type="button" className="btn-back-pill" onClick={onBack}>
-            <span>Back to Receive Material</span>
-          </button>
           <div className="detail-breadcrumb-trail">
             <a onClick={onBack}>Warehouse</a>
             <span>/</span>

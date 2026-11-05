@@ -112,13 +112,6 @@ export function WarehouseCoordinateIndex({
           >
             Add New
           </Button>
-          <Button
-            variant="ghost"
-            onClick={onBack}
-            className="wh-btn-back"
-          >
-            Back
-          </Button>
         </div>
 
         {/* Filter and Page-Size Controls Bar */}

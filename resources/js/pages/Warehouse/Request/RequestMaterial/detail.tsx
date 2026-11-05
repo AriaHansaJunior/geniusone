@@ -34,12 +34,6 @@ export function RequestMaterialDetail({
   if (!record) {
     return (
       <div className="full-page-detail">
-        <div className="detail-top-bar">
-          <button type="button" className="btn-back-pill" onClick={onBack}>
-            <span>Back to Request Material</span>
-          </button>
-        </div>
-
         <div
           className="panel"
           style={{
@@ -105,9 +99,6 @@ export function RequestMaterialDetail({
       {/* Detail Navigation & Top Action Bar */}
       <div className="detail-top-bar">
         <div className="detail-top-bar__left">
-          <button type="button" className="btn-back-pill" onClick={onBack}>
-            <span>Back to Request Material</span>
-          </button>
           <div className="detail-breadcrumb-trail">
             <a onClick={onBack}>Warehouse</a>
             <span>/</span>
