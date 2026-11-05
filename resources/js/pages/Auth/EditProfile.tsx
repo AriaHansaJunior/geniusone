@@ -97,31 +97,9 @@ export function EditProfile({ onBack, onSaveConfirmed }: EditProfileProps) {
 
   return (
     <div className="full-page-detail edit-profile-page">
-      {/* Top Action & Navigation Bar */}
-      <div className="detail-top-bar">
-        <div className="detail-top-bar__left">
-          <button
-            type="button"
-            className="btn-back-pill"
-            onClick={onBack}
-            aria-label="Back to dashboard"
-          >
-            <span>Back</span>
-          </button>
-          <div className="detail-breadcrumb-trail">
-            <a onClick={onBack}>Home</a>
-            <span>/</span>
-            <a>User Settings</a>
-            <span>/</span>
-            <span className="current">Edit Profile</span>
-          </div>
-        </div>
-      </div>
-
       {/* Main Header Card */}
       <div className="detail-header-card">
         <div className="detail-header-card__info">
-          <span className="detail-header-card__eyebrow">USER PROFILE & PREFERENCES</span>
           <div className="detail-header-card__title-row">
             <h2 className="detail-header-card__title">Edit Profile</h2>
           </div>

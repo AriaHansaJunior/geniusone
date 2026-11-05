@@ -9,6 +9,7 @@ export type IconName =
   | "arrowUp"
   | "arrowUpDown"
   | "bell"
+  | "bookOpen"
   | "box"
   | "calendar"
   | "cart"

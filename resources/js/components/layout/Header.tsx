@@ -71,19 +71,19 @@ export function Header({
   // Synchronize CSS animation start phase with system epoch time
   // so page navigation or full page reloads seamlessly maintain the continuous flowing gradient
   const [flowPhase1] = useState(() => {
-    const cycle = 46; // 46-second primary slow stream
+    const cycle = 20; // 20-second primary dynamic stream
     const sec = (Date.now() / 1000) % cycle;
     return -Number(sec.toFixed(3));
   });
 
   const [flowPhase2] = useState(() => {
-    const cycle = 34; // 34-second secondary gentle sheen stream
+    const cycle = 15; // 15-second secondary dynamic sheen stream
     const sec = (Date.now() / 1000) % cycle;
     return -Number(sec.toFixed(3));
   });
 
   const [flowEdgePhase] = useState(() => {
-    const cycle = 24; // 24-second luminous edge stream
+    const cycle = 12; // 12-second luminous edge stream
     const sec = (Date.now() / 1000) % cycle;
     return -Number(sec.toFixed(3));
   });
@@ -173,25 +173,12 @@ export function Header({
             aria-label="Collapse sidebar"
             title="Collapse sidebar"
           >
-            <Icon name="arrowLeft" size={14} />
+            <Icon name="bookOpen" size={15} />
           </button>
         )}
       </div>
 
-      {collapsed && onToggleCollapse && (
-        <button
-          type="button"
-          className="topbar__expand-toggle"
-          onClick={onToggleCollapse}
-          aria-label="Expand sidebar"
-          title="Expand sidebar"
-        >
-          <Icon name="arrowRight" size={14} />
-        </button>
-      )}
-
       <div className="topbar__context">
-        <span className="topbar__status-dot" aria-hidden="true" />
         <span>PT GENIUS ONE</span>
       </div>
 

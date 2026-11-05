@@ -67,6 +67,12 @@ export function Icon({
         <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
       </>
     ),
+    bookOpen: (
+      <>
+        <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
+        <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
+      </>
+    ),
     box: (
       <>
         <path d="m7.5 4.27 9 5.15" />
