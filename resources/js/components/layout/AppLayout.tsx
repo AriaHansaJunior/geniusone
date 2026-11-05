@@ -105,12 +105,12 @@ export function AppLayout({
               </div>
               {(activePage === "pr" || activePage === "po" || activePage === "report" || activePage === "warehouse") && (
                 <div className="page-header__actions">
-                  <Button variant="secondary" icon="print" onClick={() => window.print()}>
+                  <Button variant="outline" icon="print" onClick={() => window.print()}>
                     Print view
                   </Button>
                   <div ref={actionsRef} style={{ position: "relative", display: "inline-block" }}>
                     <Button
-                      variant="ghost"
+                      variant="outline"
                       icon="more"
                       onClick={() => setIsActionsOpen((prev) => !prev)}
                     >
