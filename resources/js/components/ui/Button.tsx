@@ -4,7 +4,7 @@ import type { IconName } from "../../types";
 
 interface ButtonProps {
   children?: ReactNode;
-  variant?: "primary" | "secondary" | "ghost" | "danger" | "warning" | "success" | "excel";
+  variant?: "primary" | "secondary" | "ghost" | "danger" | "warning" | "success" | "excel" | "outline";
   size?: "sm" | "md" | "lg";
   icon?: IconName;
   loading?: boolean;

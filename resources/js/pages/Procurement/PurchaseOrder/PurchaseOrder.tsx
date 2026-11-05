@@ -137,8 +137,8 @@ export function PurchaseOrder({ onDetail, onCreate, onSelectPr }: PurchaseOrderP
           <div>
             <strong>Filter documents</strong>
           </div>
-          <Button variant="ghost" onClick={handleResetFilters}>
-            Reset filters
+          <Button variant="danger" size="sm" onClick={handleResetFilters}>
+            Reset Filters
           </Button>
         </div>
 

@@ -168,8 +168,8 @@ export function PurchaseOrderReport({
             <strong>Filter documents</strong>
             <span>Refine the records shown in the table</span>
           </div>
-          <Button variant="ghost" onClick={handleResetFilters}>
-            Reset filters
+          <Button variant="danger" size="sm" onClick={handleResetFilters}>
+            Reset Filters
           </Button>
         </div>
 

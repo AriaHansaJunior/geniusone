@@ -130,8 +130,8 @@ export function Warehouse({ onDetail, onCreate }: WarehouseProps) {
           <div>
             <strong>Filter documents</strong>
           </div>
-          <Button variant="ghost" onClick={handleResetFilters}>
-            Reset filters
+          <Button variant="danger" size="sm" onClick={handleResetFilters}>
+            Reset Filters
           </Button>
         </div>
 

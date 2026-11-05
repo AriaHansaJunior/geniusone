@@ -325,7 +325,7 @@ export function Dashboard({
 
           <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
             <Button
-              variant="secondary"
+              variant="outline"
               icon="refresh"
               onClick={handleCheckLiveFeed}
               disabled={isRefreshing}
@@ -460,7 +460,7 @@ export function Dashboard({
               </Button>
               <Button
                 type="button"
-                variant="secondary"
+                variant="danger"
                 onClick={handleResetFilters}
               >
                 Reset

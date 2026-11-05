@@ -115,27 +115,15 @@ export function DashboardStockAlert({
             </Button>
           )}
 
-          <button
+          <Button
             type="button"
+            variant="warning"
+            size="sm"
             onClick={() => setIsCollapsed(!isCollapsed)}
-            style={{
-              border: "1px solid #fde68a",
-              background: "#fef3c7",
-              color: "#92400e",
-              borderRadius: "4px",
-              padding: "6px 10px",
-              cursor: "pointer",
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "4px",
-              fontSize: "12px",
-              fontWeight: 600,
-              minHeight: "32px",
-            }}
             title={isCollapsed ? "Expand alert panel" : "Collapse alert panel"}
           >
-            <span>{isCollapsed ? "Show" : "Hide"}</span>
-          </button>
+            {isCollapsed ? "Show" : "Hide"}
+          </Button>
         </div>
       </div>
 

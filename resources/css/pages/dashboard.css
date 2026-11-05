@@ -121,24 +121,61 @@
   color: var(--blue-700);
 }
 
-/* Filter Bar */
+/* Filter Bar (Full-Width Distribution Aligning with Table Columns) */
 .dashboard-filters-bar {
-  padding: 16px 22px;
+  padding: 14px 22px;
   background: rgba(255, 255, 255, 0.58);
   border-bottom: 1px solid rgba(226, 232, 240, 0.7);
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .dashboard-filters-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 14px;
+  display: flex;
   align-items: flex-end;
+  gap: 14px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.dashboard-filters-grid .master-form-group {
+  flex: 1 1 0;
+  min-width: 130px;
+  margin-bottom: 0;
 }
 
 .dashboard-filters-actions {
   display: flex;
   gap: 8px;
-  align-items: center;
+  align-items: flex-end;
+  flex: 0 0 auto;
+}
+
+.dashboard-filters-actions .button {
+  height: 38px;
+  min-height: 38px;
+  padding: 0 16px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+@media (max-width: 980px) {
+  .dashboard-filters-grid {
+    flex-wrap: wrap;
+  }
+  .dashboard-filters-grid .master-form-group {
+    flex: 1 1 calc(50% - 14px);
+  }
+  .dashboard-filters-actions {
+    flex: 1 1 100%;
+    justify-content: flex-end;
+  }
+}
+
+@media (max-width: 600px) {
+  .dashboard-filters-grid .master-form-group {
+    flex: 1 1 100%;
+  }
 }
 
 /* Table Toolbar */

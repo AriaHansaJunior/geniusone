@@ -306,8 +306,8 @@ export function PurchaseRequisition({ onDetail, onCreate }: PurchaseRequisitionP
           <div>
             <strong>Filter documents</strong>
           </div>
-          <Button variant="ghost" onClick={handleResetFilters}>
-            Reset filters
+          <Button variant="danger" size="sm" onClick={handleResetFilters}>
+            Reset Filters
           </Button>
         </div>
 
