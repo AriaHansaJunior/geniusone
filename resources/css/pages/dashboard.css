@@ -34,7 +34,7 @@
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-glass);
   width: 100%;
-  overflow: hidden;
+  overflow: visible;
   display: flex;
   flex-direction: column;
 }

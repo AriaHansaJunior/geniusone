@@ -3,6 +3,8 @@ import * as XLSX from "xlsx";
 import { Button } from "../../../../components/ui/Button";
 import { Icon } from "../../../../components/ui/Icon";
 import { Pagination } from "../../../../components/ui/Pagination";
+import { CustomDatePicker } from "../../../../components/ui/CustomDatePicker";
+import { CustomSelect } from "../../../../components/ui/CustomSelect";
 import {
   stockCardItemsList,
   stockCardWarehousesList,
@@ -389,33 +391,27 @@ export function StockCardIndex() {
           {/* Start Date */}
           <div className="master-form-group">
             <label className="master-form-label">Start Date</label>
-            <input
-              type="date"
-              className="master-form-input"
+            <CustomDatePicker
               value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
+              onChange={(val) => setStartDate(val)}
             />
           </div>
 
           {/* End Date */}
           <div className="master-form-group">
             <label className="master-form-label">End Date</label>
-            <input
-              type="date"
-              className="master-form-input"
+            <CustomDatePicker
               value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
+              onChange={(val) => setEndDate(val)}
             />
           </div>
 
           {/* Item Selector */}
           <div className="master-form-group" style={{ gridColumn: "span 2" }}>
             <label className="master-form-label">Item</label>
-            <select
-              className="master-form-select"
+            <CustomSelect
               value={selectedItemCode}
-              onChange={(e) => {
-                const newCode = e.target.value;
+              onChange={(newCode) => {
                 setSelectedItemCode(newCode);
                 const found = itemsList.find((i) => i.code === newCode);
                 if (found) {
@@ -423,45 +419,31 @@ export function StockCardIndex() {
                   setSelectedWarehouse(found.defaultWarehouse);
                 }
               }}
-            >
-              {itemsList.map((item) => (
-                <option key={item.code} value={item.code}>
-                  {item.code} — {item.name}
-                </option>
-              ))}
-            </select>
+              options={itemsList.map((item) => ({
+                value: item.code,
+                label: `${item.code} — ${item.name}`,
+              }))}
+            />
           </div>
 
           {/* Unit Selector */}
           <div className="master-form-group">
             <label className="master-form-label">Unit</label>
-            <select
-              className="master-form-select"
+            <CustomSelect
               value={selectedUnit}
-              onChange={(e) => setSelectedUnit(e.target.value)}
-            >
-              {stockCardUnitsList.map((u) => (
-                <option key={u} value={u}>
-                  {u}
-                </option>
-              ))}
-            </select>
+              onChange={(val) => setSelectedUnit(val)}
+              options={stockCardUnitsList}
+            />
           </div>
 
           {/* Warehouse Selector */}
           <div className="master-form-group">
             <label className="master-form-label">Warehouse</label>
-            <select
-              className="master-form-select"
+            <CustomSelect
               value={selectedWarehouse}
-              onChange={(e) => setSelectedWarehouse(e.target.value)}
-            >
-              {warehousesList.map((wh) => (
-                <option key={wh} value={wh}>
-                  {wh}
-                </option>
-              ))}
-            </select>
+              onChange={(val) => setSelectedWarehouse(val)}
+              options={warehousesList}
+            />
           </div>
         </div>
 

@@ -98,6 +98,7 @@
 
 .filter-panel {
   margin-bottom: 16px;
+  overflow: visible;
 }
 
 .panel__heading {

@@ -498,6 +498,112 @@
   margin-bottom: 12px;
 }
 
+.custom-calendar-title-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.custom-calendar-month-text {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--ink);
+  letter-spacing: -0.2px;
+}
+
+.custom-calendar-year-badge-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  background: rgba(0, 113, 227, 0.08);
+  border: 1px solid rgba(0, 113, 227, 0.2);
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--blue-700);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: inherit;
+}
+
+.custom-calendar-year-badge-btn:hover {
+  background: rgba(0, 113, 227, 0.16);
+  border-color: var(--blue-600);
+  color: var(--blue-800);
+}
+
+.custom-calendar-year-range-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  background: rgba(0, 113, 227, 0.1);
+  border: 1px solid rgba(0, 113, 227, 0.25);
+  border-radius: 6px;
+  font-size: 12.5px;
+  font-weight: 800;
+  color: var(--blue-700);
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s ease;
+}
+
+.custom-calendar-year-range-title:hover {
+  background: rgba(0, 113, 227, 0.18);
+  border-color: var(--blue-600);
+}
+
+/* Year Picker Grid (3 columns x 4 rows = 12 years) */
+.custom-calendar-year-picker-view {
+  display: flex;
+  flex-direction: column;
+  animation: calendarFadeIn 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.custom-calendar-years-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  padding: 6px 0 10px;
+}
+
+.custom-calendar-year-cell {
+  height: 38px;
+  border-radius: 8px;
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  background: #f8fafc;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transition: all 0.15s ease;
+  padding: 0;
+  font-family: inherit;
+}
+
+.custom-calendar-year-cell:hover {
+  background: rgba(0, 113, 227, 0.1);
+  border-color: var(--blue-600);
+  color: var(--blue-700);
+  transform: translateY(-1px);
+}
+
+.custom-calendar-year-cell.is-selected {
+  background: var(--blue-600) !important;
+  border-color: var(--blue-600) !important;
+  color: #ffffff !important;
+  font-weight: 800 !important;
+  box-shadow: 0 2px 8px rgba(0, 113, 227, 0.35);
+}
+
+.custom-calendar-year-cell.is-current-year {
+  border: 1.5px solid var(--blue-600);
+  color: var(--blue-700);
+}
+
 .custom-calendar-title {
   font-size: 13px;
   font-weight: 800;

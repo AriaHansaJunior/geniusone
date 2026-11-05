@@ -2,6 +2,7 @@ import { useState, useMemo, useCallback } from "react";
 import { Icon } from "../../../components/ui/Icon";
 import { Badge } from "../../../components/ui/Badge";
 import { Pagination } from "../../../components/ui/Pagination";
+import { CustomSelect } from "../../../components/ui/CustomSelect";
 import {
   initialPoReportRecords,
   poReportSuppliersList,
@@ -450,46 +451,32 @@ export function ReportingPurchaseOrder({
 
           {/* Supplier Dropdown */}
           <div className="po-filter-group">
-            <label className="po-filter-label" htmlFor="po-supplier-select">
+            <label className="po-filter-label">
               Supplier
             </label>
-            <select
-              id="po-supplier-select"
-              className="po-select-input"
+            <CustomSelect
               value={supplierFilter}
-              onChange={(e) => {
-                setSupplierFilter(e.target.value);
+              onChange={(val) => {
+                setSupplierFilter(val);
                 setCurrentPage(1);
               }}
-            >
-              {poReportSuppliersList.map((sup) => (
-                <option key={sup} value={sup}>
-                  {sup}
-                </option>
-              ))}
-            </select>
+              options={poReportSuppliersList}
+            />
           </div>
 
           {/* Receiving Status Dropdown */}
           <div className="po-filter-group">
-            <label className="po-filter-label" htmlFor="po-receiving-select">
+            <label className="po-filter-label">
               Receiving Status
             </label>
-            <select
-              id="po-receiving-select"
-              className="po-select-input"
+            <CustomSelect
               value={receivingFilter}
-              onChange={(e) => {
-                setReceivingFilter(
-                  e.target.value as PoReceivingStatus | "Show All"
-                );
+              onChange={(val) => {
+                setReceivingFilter(val as any);
                 setCurrentPage(1);
               }}
-            >
-              <option value="Show All">Show All</option>
-              <option value="Complete">Complete</option>
-              <option value="Outstanding">Outstanding</option>
-            </select>
+              options={["Show All", "Complete", "Outstanding"]}
+            />
           </div>
 
           {/* Export To Excel Action Button */}

@@ -5,6 +5,8 @@ import { SearchField } from "../../../../components/ui/SearchField";
 import { Icon } from "../../../../components/ui/Icon";
 import { Badge } from "../../../../components/ui/Badge";
 import { Pagination } from "../../../../components/ui/Pagination";
+import { CustomDatePicker } from "../../../../components/ui/CustomDatePicker";
+import { CustomSelect } from "../../../../components/ui/CustomSelect";
 import {
   stockItemClassificationsList,
   stockItemFacilitiesList,
@@ -290,12 +292,10 @@ export function StockItemIndex() {
           {/* Date */}
           <div className="master-form-group">
             <label className="master-form-label">Date</label>
-            <input
-              type="date"
-              className="master-form-input"
+            <CustomDatePicker
               value={date}
-              onChange={(e) => {
-                setDate(e.target.value);
+              onChange={(val) => {
+                setDate(val);
                 setCurrentPage(1);
               }}
             />
@@ -304,58 +304,40 @@ export function StockItemIndex() {
           {/* Classification */}
           <div className="master-form-group">
             <label className="master-form-label">Classification</label>
-            <select
-              className="master-form-select"
+            <CustomSelect
               value={classification}
-              onChange={(e) => {
-                setClassification(e.target.value);
+              onChange={(val) => {
+                setClassification(val);
                 setCurrentPage(1);
               }}
-            >
-              {stockItemClassificationsList.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
+              options={stockItemClassificationsList}
+            />
           </div>
 
           {/* Coordinate */}
           <div className="master-form-group">
             <label className="master-form-label">Coordinate</label>
-            <select
-              className="master-form-select"
+            <CustomSelect
               value={coordinate}
-              onChange={(e) => {
-                setCoordinate(e.target.value);
+              onChange={(val) => {
+                setCoordinate(val);
                 setCurrentPage(1);
               }}
-            >
-              {stockItemCoordinatesList.map((coord) => (
-                <option key={coord} value={coord}>
-                  {coord}
-                </option>
-              ))}
-            </select>
+              options={stockItemCoordinatesList}
+            />
           </div>
 
           {/* Facility */}
           <div className="master-form-group">
             <label className="master-form-label">Facility</label>
-            <select
-              className="master-form-select"
+            <CustomSelect
               value={facility}
-              onChange={(e) => {
-                setFacility(e.target.value);
+              onChange={(val) => {
+                setFacility(val);
                 setCurrentPage(1);
               }}
-            >
-              {stockItemFacilitiesList.map((f) => (
-                <option key={f} value={f}>
-                  {f}
-                </option>
-              ))}
-            </select>
+              options={stockItemFacilitiesList}
+            />
           </div>
         </div>
 

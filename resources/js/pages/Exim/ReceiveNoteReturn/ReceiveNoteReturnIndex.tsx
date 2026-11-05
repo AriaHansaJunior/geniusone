@@ -4,6 +4,7 @@ import { Icon } from "../../../components/ui/Icon";
 import { Button } from "../../../components/ui/Button";
 import { SearchField } from "../../../components/ui/SearchField";
 import { Pagination } from "../../../components/ui/Pagination";
+import { CustomSelect } from "../../../components/ui/CustomSelect";
 import { ApprovalStatusBadge } from "../../../components/approval/ApprovalStatusBadge";
 import { formatDisplayDate } from "../../../data/masterApi";
 import {
@@ -323,39 +324,29 @@ export function ReceiveNoteReturnIndex({
           {/* Customer Dropdown */}
           <div className="rnr-filter-item rnr-filter-customer">
             <label className="rnr-filter-label">Customer</label>
-            <select
+            <CustomSelect
               className="rnr-filter-select"
               value={selectedCustomer}
-              onChange={(e) => {
-                setSelectedCustomer(e.target.value);
+              onChange={(val) => {
+                setSelectedCustomer(val);
                 setCurrentPage(1);
               }}
-            >
-              {customerList.map((cust) => (
-                <option key={cust} value={cust}>
-                  {cust}
-                </option>
-              ))}
-            </select>
+              options={customerList}
+            />
           </div>
 
           {/* Type of Document Dropdown */}
           <div className="rnr-filter-item rnr-filter-doctype">
             <label className="rnr-filter-label">Type of Document</label>
-            <select
+            <CustomSelect
               className="rnr-filter-select"
               value={selectedDocType}
-              onChange={(e) => {
-                setSelectedDocType(e.target.value);
+              onChange={(val) => {
+                setSelectedDocType(val);
                 setCurrentPage(1);
               }}
-            >
-              {docTypesList.map((dt) => (
-                <option key={dt} value={dt}>
-                  {dt}
-                </option>
-              ))}
-            </select>
+              options={docTypesList}
+            />
           </div>
 
           {/* Actions & Settings */}

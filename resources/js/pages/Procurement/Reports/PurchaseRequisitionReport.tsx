@@ -2,6 +2,7 @@ import { useState, useMemo, useCallback } from "react";
 import { Icon } from "../../../components/ui/Icon";
 import { Badge } from "../../../components/ui/Badge";
 import { Pagination } from "../../../components/ui/Pagination";
+import { CustomSelect } from "../../../components/ui/CustomSelect";
 import {
   initialPrReportRecords,
   departmentsList,
@@ -516,46 +517,32 @@ export function PurchaseRequisitionReport({
 
           {/* Dept. Request Dropdown */}
           <div className="pr-filter-group">
-            <label className="pr-filter-label" htmlFor="pr-dept-select">
+            <label className="pr-filter-label">
               Dept. Request
             </label>
-            <select
-              id="pr-dept-select"
-              className="pr-select-input"
+            <CustomSelect
               value={deptFilter}
-              onChange={(e) => {
-                setDeptFilter(e.target.value);
+              onChange={(val) => {
+                setDeptFilter(val);
                 setCurrentPage(1);
               }}
-            >
-              {departmentsList.map((dept) => (
-                <option key={dept} value={dept}>
-                  {dept}
-                </option>
-              ))}
-            </select>
+              options={departmentsList}
+            />
           </div>
 
           {/* Section Dropdown */}
           <div className="pr-filter-group">
-            <label className="pr-filter-label" htmlFor="pr-section-select">
+            <label className="pr-filter-label">
               Section
             </label>
-            <select
-              id="pr-section-select"
-              className="pr-select-input"
+            <CustomSelect
               value={sectionFilter}
-              onChange={(e) => {
-                setSectionFilter(e.target.value);
+              onChange={(val) => {
+                setSectionFilter(val);
                 setCurrentPage(1);
               }}
-            >
-              {sectionsList.map((sec) => (
-                <option key={sec} value={sec}>
-                  {sec}
-                </option>
-              ))}
-            </select>
+              options={sectionsList}
+            />
           </div>
         </div>
 

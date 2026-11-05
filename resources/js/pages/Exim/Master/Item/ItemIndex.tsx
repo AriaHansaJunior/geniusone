@@ -4,6 +4,7 @@ import { SearchField } from "../../../../components/ui/SearchField";
 import { Icon } from "../../../../components/ui/Icon";
 import { ConfirmDialog } from "../../../../components/ui/ConfirmDialog";
 import { Pagination } from "../../../../components/ui/Pagination";
+import { CustomSelect } from "../../../../components/ui/CustomSelect";
 import { useAuthPermission } from "../../../../context/AuthPermissionContext";
 import { ColumnSettingsPanel } from "./ColumnSettingsPanel";
 import {
@@ -309,37 +310,31 @@ export function ItemIndex({
               placeholder="Search item code, name, ext..."
             />
 
-            <select
+            <CustomSelect
               className="item-select-filter"
               value={category}
-              onChange={(e) => {
-                setCategory(e.target.value);
+              onChange={(val) => {
+                setCategory(val);
                 setCurrentPage(1);
               }}
-              title="Filter by category"
-            >
-              {itemCategories.map((cat) => (
-                <option key={cat} value={cat}>
-                  {cat === "All Categories" ? "Category: All" : cat}
-                </option>
-              ))}
-            </select>
+              options={itemCategories.map((cat) => ({
+                value: cat,
+                label: cat === "All Categories" ? "Category: All" : cat,
+              }))}
+            />
 
-            <select
+            <CustomSelect
               className="item-select-filter"
               value={classification}
-              onChange={(e) => {
-                setClassification(e.target.value);
+              onChange={(val) => {
+                setClassification(val);
                 setCurrentPage(1);
               }}
-              title="Filter by classification"
-            >
-              {itemClassifications.map((cls) => (
-                <option key={cls} value={cls}>
-                  {cls === "All Classifications" ? "Classification: All" : cls}
-                </option>
-              ))}
-            </select>
+              options={itemClassifications.map((cls) => ({
+                value: cls,
+                label: cls === "All Classifications" ? "Classification: All" : cls,
+              }))}
+            />
           </div>
 
           <div className="item-toolbar-right" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
