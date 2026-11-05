@@ -70,40 +70,64 @@ export function Header({
 
   // Synchronize CSS animation start phase with system epoch time
   // so page navigation or full page reloads seamlessly maintain the continuous flowing gradient
-  const [neonPhase] = useState(() => {
-    const cycle = 28; // 28-second smooth seamless loop
-    const nowSec = (Date.now() / 1000) % cycle;
-    return -Number(nowSec.toFixed(3));
+  const [flowPhase1] = useState(() => {
+    const cycle = 46; // 46-second primary slow stream
+    const sec = (Date.now() / 1000) % cycle;
+    return -Number(sec.toFixed(3));
   });
 
-  const [neonEdgePhase] = useState(() => {
-    const cycle = 14; // 14-second edge highlight loop
-    const nowSec = (Date.now() / 1000) % cycle;
-    return -Number(nowSec.toFixed(3));
+  const [flowPhase2] = useState(() => {
+    const cycle = 34; // 34-second secondary gentle sheen stream
+    const sec = (Date.now() / 1000) % cycle;
+    return -Number(sec.toFixed(3));
+  });
+
+  const [flowEdgePhase] = useState(() => {
+    const cycle = 24; // 24-second luminous edge stream
+    const sec = (Date.now() / 1000) % cycle;
+    return -Number(sec.toFixed(3));
   });
 
   return (
     <header className="topbar">
-      {/* Dynamic Looping Neon Ambient Background Layer */}
+      {/* Dynamic Ambient Infinite Stream Layer (Seamless Zero-Cut Flow) */}
       <div
-        className="topbar__neon-ambient"
+        className="topbar__ambient"
         aria-hidden="true"
         style={
           {
-            "--neon-phase": `${neonPhase}s`,
-            "--neon-edge-phase": `${neonEdgePhase}s`,
+            "--flow-phase-1": `${flowPhase1}s`,
+            "--flow-phase-2": `${flowPhase2}s`,
+            "--flow-edge-phase": `${flowEdgePhase}s`,
           } as React.CSSProperties
         }
       >
-        <div className="topbar__neon-canvas">
-          <div className="topbar__neon-mesh" />
-          <div className="topbar__neon-orb topbar__neon-orb--1" />
-          <div className="topbar__neon-orb topbar__neon-orb--2" />
-          <div className="topbar__neon-orb topbar__neon-orb--3" />
-          <div className="topbar__neon-orb topbar__neon-orb--4" />
+        {/* Primary Aurora Stream (Continuous dual-track translateX 0 -> -50%) */}
+        <div className="topbar__stream topbar__stream--primary">
+          <div className="topbar__stream-track topbar__stream-track--slow">
+            <div className="topbar__stream-segment" />
+            <div className="topbar__stream-segment" />
+          </div>
         </div>
-        <div className="topbar__neon-glass" />
-        <div className="topbar__neon-edge" />
+
+        {/* Secondary Gentle Sheen (Continuous counter stream translateX -50% -> 0) */}
+        <div className="topbar__stream topbar__stream--secondary">
+          <div className="topbar__stream-track topbar__stream-track--medium">
+            <div className="topbar__stream-segment topbar__stream-segment--secondary" />
+            <div className="topbar__stream-segment topbar__stream-segment--secondary" />
+          </div>
+        </div>
+
+        {/* High-Clarity Frosted Glass Veil */}
+        <div className="topbar__glass" />
+
+        {/* Delicate Luminous Bottom Border Edge */}
+        <div className="topbar__edge">
+          <div className="topbar__edge-track">
+            <div className="topbar__edge-segment" />
+            <div className="topbar__edge-segment" />
+          </div>
+        </div>
       </div>
 
       {/* Mobile Drawer Hamburger Button */}
@@ -167,6 +191,7 @@ export function Header({
       )}
 
       <div className="topbar__context">
+        <span className="topbar__status-dot" aria-hidden="true" />
         <span>PT GENIUS ONE</span>
       </div>
 
