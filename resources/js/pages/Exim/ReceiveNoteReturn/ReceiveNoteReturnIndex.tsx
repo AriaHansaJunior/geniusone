@@ -5,6 +5,7 @@ import { Button } from "../../../components/ui/Button";
 import { SearchField } from "../../../components/ui/SearchField";
 import { Pagination } from "../../../components/ui/Pagination";
 import { CustomSelect } from "../../../components/ui/CustomSelect";
+import { CustomDatePicker } from "../../../components/ui/CustomDatePicker";
 import { TableColumnSettings, type TableColumnOption } from "../../../components/ui/TableColumnSettings";
 import { ApprovalStatusBadge } from "../../../components/approval/ApprovalStatusBadge";
 import { formatDisplayDate } from "../../../data/masterApi";
@@ -359,18 +360,21 @@ export function ReceiveNoteReturnIndex({
           <div className="rnr-filter-item rnr-filter-date-range">
             <label className="rnr-filter-label">Range Date</label>
             <div className="rnr-date-inputs">
-              <input
-                type="date"
-                className="rnr-date-input"
+              <CustomDatePicker
                 value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
+                onChange={(val) => {
+                  setStartDate(val);
+                  setCurrentPage(1);
+                }}
               />
               <span className="rnr-date-sep">-</span>
-              <input
-                type="date"
-                className="rnr-date-input"
+              <CustomDatePicker
                 value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
+                align="left"
+                onChange={(val) => {
+                  setEndDate(val);
+                  setCurrentPage(1);
+                }}
               />
             </div>
           </div>

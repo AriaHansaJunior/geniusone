@@ -3,6 +3,7 @@ import * as XLSX from "xlsx";
 import { Button } from "../../../components/ui/Button";
 import { Icon } from "../../../components/ui/Icon";
 import { ConfirmDialog } from "../../../components/ui/ConfirmDialog";
+import { CustomDatePicker } from "../../../components/ui/CustomDatePicker";
 import { ItemPickerModal } from "../../Exim/Master/Item/ItemPickerModal";
 import { initialItemRecords } from "../../Exim/Master/Item/item-data";
 import { initialJobNumberRecords } from "../PurchaseMaster/JobNumber/job-number-types";
@@ -618,15 +619,14 @@ export function PurchaseRequisitionCreate({
                 <label htmlFor="prDate" className="master-form-label">
                   Date <span className="required-asterisk">*</span>
                 </label>
-                <input
+                <CustomDatePicker
                   id="prDate"
-                  type="date"
-                  className={`master-form-input ${formErrors.date ? "has-error" : ""}`}
                   value={date}
-                  onChange={(e) => {
-                    setDate(e.target.value);
+                  onChange={(val) => {
+                    setDate(val);
                     if (formErrors.date) setFormErrors((prev) => ({ ...prev, date: "" }));
                   }}
+                  className={formErrors.date ? "has-error" : ""}
                 />
                 {formErrors.date && <span className="master-form-error">{formErrors.date}</span>}
               </div>
@@ -636,15 +636,14 @@ export function PurchaseRequisitionCreate({
                 <label htmlFor="prDueDate" className="master-form-label">
                   Due Date <span className="required-asterisk">*</span>
                 </label>
-                <input
+                <CustomDatePicker
                   id="prDueDate"
-                  type="date"
-                  className={`master-form-input ${formErrors.dueDate ? "has-error" : ""}`}
                   value={dueDate}
-                  onChange={(e) => {
-                    setDueDate(e.target.value);
+                  onChange={(val) => {
+                    setDueDate(val);
                     if (formErrors.dueDate) setFormErrors((prev) => ({ ...prev, dueDate: "" }));
                   }}
+                  className={formErrors.dueDate ? "has-error" : ""}
                 />
                 {formErrors.dueDate && <span className="master-form-error">{formErrors.dueDate}</span>}
               </div>
@@ -1056,11 +1055,9 @@ export function PurchaseRequisitionCreate({
 
                         {/* 7. Due Date */}
                         <td>
-                          <input
-                            type="date"
-                            className="tx-input-cell"
+                          <CustomDatePicker
                             value={row.dueDate}
-                            onChange={(e) => handleUpdateRow(row.id, "dueDate", e.target.value)}
+                            onChange={(val) => handleUpdateRow(row.id, "dueDate", val)}
                           />
                         </td>
 

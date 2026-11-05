@@ -5,6 +5,7 @@ import { SearchField } from "../../../../components/ui/SearchField";
 import { Icon } from "../../../../components/ui/Icon";
 import { Badge, type BadgeTone } from "../../../../components/ui/Badge";
 import { Pagination } from "../../../../components/ui/Pagination";
+import { CustomDatePicker } from "../../../../components/ui/CustomDatePicker";
 import { ApprovalStatusBadge } from "../../../../components/approval/ApprovalStatusBadge";
 import {
   requestMaterialTypesList,
@@ -348,12 +349,10 @@ export function RequestMaterialIndex({
           {/* Request Date: Start */}
           <div className="master-form-group">
             <label className="master-form-label">Request Date From</label>
-            <input
-              type="date"
-              className="master-form-input"
+            <CustomDatePicker
               value={startDate}
-              onChange={(e) => {
-                handleStartDateChange(e.target.value);
+              onChange={(val) => {
+                handleStartDateChange(val);
                 setCurrentPage(1);
               }}
             />
@@ -362,12 +361,10 @@ export function RequestMaterialIndex({
           {/* Request Date: End */}
           <div className="master-form-group">
             <label className="master-form-label">Request Date To</label>
-            <input
-              type="date"
-              className="master-form-input"
+            <CustomDatePicker
               value={endDate}
-              onChange={(e) => {
-                handleEndDateChange(e.target.value);
+              onChange={(val) => {
+                handleEndDateChange(val);
                 setCurrentPage(1);
               }}
             />

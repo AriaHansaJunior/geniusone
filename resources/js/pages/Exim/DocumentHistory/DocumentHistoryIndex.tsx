@@ -3,6 +3,7 @@ import * as XLSX from "xlsx";
 import { Icon } from "../../../components/ui/Icon";
 import { SearchField } from "../../../components/ui/SearchField";
 import { Pagination } from "../../../components/ui/Pagination";
+import { CustomDatePicker } from "../../../components/ui/CustomDatePicker";
 import { initialDocumentHistoryRecords } from "./document-history-data";
 import type {
   DocumentHistoryRecord,
@@ -226,22 +227,18 @@ export function DocumentHistoryIndex({
           <div className="dh-filter-item dh-filter-date-range">
             <label className="dh-filter-label">Invoice Date</label>
             <div className="dh-date-inputs">
-              <input
-                type="date"
-                className="dh-date-input"
+              <CustomDatePicker
                 value={startDate}
-                onChange={(e) => {
-                  setStartDate(e.target.value);
+                onChange={(val) => {
+                  setStartDate(val);
                   setCurrentPage(1);
                 }}
               />
               <span className="dh-date-sep">To</span>
-              <input
-                type="date"
-                className="dh-date-input"
+              <CustomDatePicker
                 value={endDate}
-                onChange={(e) => {
-                  setEndDate(e.target.value);
+                onChange={(val) => {
+                  setEndDate(val);
                   setCurrentPage(1);
                 }}
               />

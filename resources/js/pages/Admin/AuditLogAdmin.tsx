@@ -7,6 +7,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { SearchField } from "../../components/ui/SearchField";
 import { Pagination } from "../../components/ui/Pagination";
+import { CustomDatePicker } from "../../components/ui/CustomDatePicker";
 import { Badge, type BadgeTone } from "../../components/ui/Badge";
 import { Icon } from "../../components/ui/Icon";
 import { Button } from "../../components/ui/Button";
@@ -384,26 +385,20 @@ export function AuditLogAdmin({ onNavigateUsers }: AuditLogAdminProps) {
 
             <div className="audit-date-filter">
               <span>Date:</span>
-              <input
-                type="date"
-                className="audit-date-input"
+              <CustomDatePicker
                 value={dateFrom}
-                onChange={(e) => {
-                  setDateFrom(e.target.value);
+                onChange={(val) => {
+                  setDateFrom(val);
                   setCurrentPage(1);
                 }}
-                title="From Date"
               />
               <span>to</span>
-              <input
-                type="date"
-                className="audit-date-input"
+              <CustomDatePicker
                 value={dateTo}
-                onChange={(e) => {
-                  setDateTo(e.target.value);
+                onChange={(val) => {
+                  setDateTo(val);
                   setCurrentPage(1);
                 }}
-                title="To Date"
               />
               {(dateFrom || dateTo) && (
                 <button

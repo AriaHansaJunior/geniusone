@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Icon } from "../../../components/ui/Icon";
 import { Button } from "../../../components/ui/Button";
+import { CustomDatePicker } from "../../../components/ui/CustomDatePicker";
 import { PickPoItemModal } from "./PickPoItemModal";
 import { suppliersList, docTypesList } from "./receive-note-data";
 import type {
@@ -384,11 +385,10 @@ export function ReceiveNoteForm({ onBack, onSave }: ReceiveNoteFormProps) {
               <label className="master-form-label">
                 Arrival Date <span className="required-asterisk">*</span>
               </label>
-              <input
-                type="date"
-                className={`master-form-input ${formErrors.arrivalDate ? "has-error" : ""}`}
+              <CustomDatePicker
                 value={arrivalDate}
-                onChange={(e) => setArrivalDate(e.target.value)}
+                onChange={(val) => setArrivalDate(val)}
+                className={formErrors.arrivalDate ? "has-error" : ""}
               />
             </div>
 
@@ -407,11 +407,9 @@ export function ReceiveNoteForm({ onBack, onSave }: ReceiveNoteFormProps) {
             {/* Invoice Date */}
             <div className="master-form-group">
               <label className="master-form-label">Invoice Date</label>
-              <input
-                type="date"
-                className="master-form-input"
+              <CustomDatePicker
                 value={invoiceDate}
-                onChange={(e) => setInvoiceDate(e.target.value)}
+                onChange={(val) => setInvoiceDate(val)}
               />
             </div>
 
@@ -430,11 +428,9 @@ export function ReceiveNoteForm({ onBack, onSave }: ReceiveNoteFormProps) {
             {/* Tax Invoice Date */}
             <div className="master-form-group">
               <label className="master-form-label">Tax Invoice Date</label>
-              <input
-                type="date"
-                className="master-form-input"
+              <CustomDatePicker
                 value={taxInvoiceDate}
-                onChange={(e) => setTaxInvoiceDate(e.target.value)}
+                onChange={(val) => setTaxInvoiceDate(val)}
               />
             </div>
           </div>
@@ -456,11 +452,9 @@ export function ReceiveNoteForm({ onBack, onSave }: ReceiveNoteFormProps) {
             {/* S.J Date */}
             <div className="master-form-group">
               <label className="master-form-label">S.J Date</label>
-              <input
-                type="date"
-                className="master-form-input"
+              <CustomDatePicker
                 value={sjDate}
-                onChange={(e) => setSjDate(e.target.value)}
+                onChange={(val) => setSjDate(val)}
               />
             </div>
 
@@ -479,11 +473,9 @@ export function ReceiveNoteForm({ onBack, onSave }: ReceiveNoteFormProps) {
             {/* PL Date */}
             <div className="master-form-group">
               <label className="master-form-label">PL Date</label>
-              <input
-                type="date"
-                className="master-form-input"
+              <CustomDatePicker
                 value={plDate}
-                onChange={(e) => setPlDate(e.target.value)}
+                onChange={(val) => setPlDate(val)}
               />
             </div>
 

@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Button } from "../../../../components/ui/Button";
 import { Icon } from "../../../../components/ui/Icon";
 import { ConfirmDialog } from "../../../../components/ui/ConfirmDialog";
+import { CustomDatePicker } from "../../../../components/ui/CustomDatePicker";
 import {
   requestMaterialTypesList,
   requestMaterialDestinationsList,
@@ -457,20 +458,13 @@ export function RequestMaterialCreate({
             <label className="master-form-label">
               Request Date <span className="required-asterisk">*</span>
             </label>
-            <input
-              type="date"
-              className="master-form-input"
+            <CustomDatePicker
               value={requestDate}
-              style={{
-                borderColor: formErrors.requestDate ? "var(--danger, #ef4444)" : undefined,
-                boxShadow: formErrors.requestDate
-                  ? "0 0 0 2px rgba(239, 68, 68, 0.15)"
-                  : undefined,
-              }}
-              onChange={(e) => {
-                setRequestDate(e.target.value);
+              onChange={(val) => {
+                setRequestDate(val);
                 clearFieldError("requestDate");
               }}
+              className={formErrors.requestDate ? "has-error" : ""}
             />
             {formErrors.requestDate && (
               <span

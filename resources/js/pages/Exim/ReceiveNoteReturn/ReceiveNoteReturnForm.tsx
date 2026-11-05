@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Icon } from "../../../components/ui/Icon";
 import { Button } from "../../../components/ui/Button";
+import { CustomDatePicker } from "../../../components/ui/CustomDatePicker";
 import { PickSalesDeliveryItemModal } from "./PickSalesDeliveryItemModal";
 import { initialAdditionalCostRecords } from "../../Procurement/PurchaseMaster/AdditionalCosts/additional-costs-types";
 import {
@@ -270,11 +271,9 @@ export function ReceiveNoteReturnForm({
               <label className="master-form-label">
                 Arrival Date <span className="required-asterisk">*</span>
               </label>
-              <input
-                type="date"
-                className="master-form-input"
+              <CustomDatePicker
                 value={arrivalDate}
-                onChange={(e) => setArrivalDate(e.target.value)}
+                onChange={(val) => setArrivalDate(val)}
               />
             </div>
 

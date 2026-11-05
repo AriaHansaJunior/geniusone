@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { Icon } from "../../../components/ui/Icon";
 import { Button } from "../../../components/ui/Button";
 import { ConfirmDialog } from "../../../components/ui/ConfirmDialog";
+import { CustomDatePicker } from "../../../components/ui/CustomDatePicker";
 import { initialSupplierRecords } from "../../Procurement/PurchaseMaster/Supplier/supplier-types";
 import { initialWarehouseMasterRecords } from "../MasterWarehouse/warehouse-master-data";
 import { initialItemRecords } from "../../Exim/Master/Item/item-data";
@@ -926,12 +927,11 @@ export function WarehouseCreate({
               <label htmlFor="bpbReceiveDate" className="master-form-label">
                 Receive Date <span className="required-asterisk">*</span>
               </label>
-              <input
+              <CustomDatePicker
                 id="bpbReceiveDate"
-                type="date"
-                className={`master-form-input ${formErrors.receiveDate ? "has-error" : ""}`}
                 value={receiveDate}
-                onChange={(e) => setReceiveDate(e.target.value)}
+                onChange={(val) => setReceiveDate(val)}
+                className={formErrors.receiveDate ? "has-error" : ""}
               />
               {formErrors.receiveDate && (
                 <span className="master-form-error">{formErrors.receiveDate}</span>
@@ -1014,12 +1014,10 @@ export function WarehouseCreate({
               <label htmlFor="bpbInvoiceDate" className="master-form-label">
                 Invoice Date
               </label>
-              <input
+              <CustomDatePicker
                 id="bpbInvoiceDate"
-                type="date"
-                className="master-form-input"
                 value={invoiceDate}
-                onChange={(e) => setInvoiceDate(e.target.value)}
+                onChange={(val) => setInvoiceDate(val)}
               />
             </div>
 
@@ -1070,12 +1068,10 @@ export function WarehouseCreate({
               <label htmlFor="bpbAjuDate" className="master-form-label">
                 Aju Date
               </label>
-              <input
+              <CustomDatePicker
                 id="bpbAjuDate"
-                type="date"
-                className="master-form-input"
                 value={ajuDate}
-                onChange={(e) => setAjuDate(e.target.value)}
+                onChange={(val) => setAjuDate(val)}
               />
             </div>
 
@@ -1097,12 +1093,10 @@ export function WarehouseCreate({
               <label htmlFor="bpbRegDate" className="master-form-label">
                 Registration Date
               </label>
-              <input
+              <CustomDatePicker
                 id="bpbRegDate"
-                type="date"
-                className="master-form-input"
                 value={regDate}
-                onChange={(e) => setRegDate(e.target.value)}
+                onChange={(val) => setRegDate(val)}
               />
             </div>
           </div>

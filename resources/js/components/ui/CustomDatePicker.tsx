@@ -9,6 +9,7 @@ export interface CustomDatePickerProps {
   className?: string;
   id?: string;
   name?: string;
+  align?: "left" | "right";
 }
 
 const MONTH_NAMES = [
@@ -63,6 +64,7 @@ export function CustomDatePicker({
   className = "",
   id,
   name,
+  align = "left",
 }: CustomDatePickerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isYearPickerOpen, setIsYearPickerOpen] = useState(false);
@@ -302,7 +304,12 @@ export function CustomDatePicker({
 
       {/* Custom GeniusOne Calendar Popup */}
       {isOpen && (
-        <div className="custom-calendar-popup" role="dialog" aria-modal="true" aria-label="Choose Date">
+        <div
+          className={`custom-calendar-popup ${align === "right" ? "custom-calendar-popup--right" : ""}`}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Choose Date"
+        >
           {/* Calendar Header */}
           <div className="custom-calendar-header">
             {isYearPickerOpen ? (

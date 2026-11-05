@@ -4,6 +4,7 @@ import { Button } from "../../../components/ui/Button";
 import { SummaryCard } from "../../../components/ui/SummaryCard";
 import { SearchField } from "../../../components/ui/SearchField";
 import { DataTable } from "../../../components/ui/DataTable";
+import { CustomDatePicker } from "../../../components/ui/CustomDatePicker";
 import { FilterPanel } from "../../../components/common/FilterPanel";
 import { pageConfigs } from "../../../data/mockData";
 import { fetchList } from "../../../data/api";
@@ -338,36 +339,16 @@ export function PurchaseRequisition({ onDetail, onCreate }: PurchaseRequisitionP
             </span>
             <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
               <span style={{ color: "var(--muted)", fontSize: "11px", fontWeight: 600 }}>FROM</span>
-              <input
-                type="date"
+              <CustomDatePicker
                 value={filterInputs.startDate || ""}
-                onChange={(e) => handleFilterChange("startDate", e.target.value)}
-                style={{
-                  height: "32px",
-                  padding: "0 10px",
-                  borderRadius: "var(--radius-sm, 6px)",
-                  border: "1px solid var(--line, #cbd5e1)",
-                  fontSize: "12px",
-                  color: "var(--ink)",
-                  background: "#ffffff",
-                }}
+                onChange={(val) => handleFilterChange("startDate", val)}
               />
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
               <span style={{ color: "var(--muted)", fontSize: "11px", fontWeight: 600 }}>TO</span>
-              <input
-                type="date"
+              <CustomDatePicker
                 value={filterInputs.endDate || ""}
-                onChange={(e) => handleFilterChange("endDate", e.target.value)}
-                style={{
-                  height: "32px",
-                  padding: "0 10px",
-                  borderRadius: "var(--radius-sm, 6px)",
-                  border: "1px solid var(--line, #cbd5e1)",
-                  fontSize: "12px",
-                  color: "var(--ink)",
-                  background: "#ffffff",
-                }}
+                onChange={(val) => handleFilterChange("endDate", val)}
               />
             </div>
             {(filterInputs.startDate || filterInputs.endDate) && (

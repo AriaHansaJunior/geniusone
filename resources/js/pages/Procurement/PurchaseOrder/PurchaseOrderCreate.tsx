@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from "react";
 import { Button } from "../../../components/ui/Button";
 import { Icon } from "../../../components/ui/Icon";
 import { ConfirmDialog } from "../../../components/ui/ConfirmDialog";
+import { CustomDatePicker } from "../../../components/ui/CustomDatePicker";
 import { initialSupplierRecords } from "../PurchaseMaster/Supplier/supplier-types";
 import { initialPaymentTermRecords } from "../PurchaseMaster/PaymentTerm/payment-term-types";
 import { initialDeliveryTermRecords } from "../PurchaseMaster/DeliveryTerms/delivery-terms-types";
@@ -922,12 +923,11 @@ export function PurchaseOrderCreate({
                 <label htmlFor="poDate" className="master-form-label">
                   Date <span className="required-asterisk">*</span>
                 </label>
-                <input
+                <CustomDatePicker
                   id="poDate"
-                  type="date"
-                  className={`master-form-input ${formErrors.date ? "has-error" : ""}`}
                   value={date}
-                  onChange={(e) => setDate(e.target.value)}
+                  onChange={(val) => setDate(val)}
+                  className={formErrors.date ? "has-error" : ""}
                 />
                 {formErrors.date && <span className="master-form-error">{formErrors.date}</span>}
               </div>
@@ -936,12 +936,11 @@ export function PurchaseOrderCreate({
                 <label htmlFor="poDueDate" className="master-form-label">
                   Due Date <span className="required-asterisk">*</span>
                 </label>
-                <input
+                <CustomDatePicker
                   id="poDueDate"
-                  type="date"
-                  className={`master-form-input ${formErrors.dueDate ? "has-error" : ""}`}
                   value={dueDate}
-                  onChange={(e) => setDueDate(e.target.value)}
+                  onChange={(val) => setDueDate(val)}
+                  className={formErrors.dueDate ? "has-error" : ""}
                 />
                 {formErrors.dueDate && <span className="master-form-error">{formErrors.dueDate}</span>}
               </div>
@@ -950,12 +949,11 @@ export function PurchaseOrderCreate({
                 <label htmlFor="poLatestDelivery" className="master-form-label">
                   Latest Delivery Date <span className="required-asterisk">*</span>
                 </label>
-                <input
+                <CustomDatePicker
                   id="poLatestDelivery"
-                  type="date"
-                  className={`master-form-input ${formErrors.latestDelivery ? "has-error" : ""}`}
                   value={latestDelivery}
-                  onChange={(e) => setLatestDelivery(e.target.value)}
+                  onChange={(val) => setLatestDelivery(val)}
+                  className={formErrors.latestDelivery ? "has-error" : ""}
                 />
                 {formErrors.latestDelivery && <span className="master-form-error">{formErrors.latestDelivery}</span>}
               </div>

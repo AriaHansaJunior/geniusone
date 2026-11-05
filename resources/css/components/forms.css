@@ -480,6 +480,31 @@
   animation: calendarFadeIn 0.15s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+.custom-calendar-popup--right {
+  left: auto !important;
+  right: 0 !important;
+}
+
+/* Date range inputs container sizing */
+.rn-date-inputs,
+.rnr-date-inputs,
+.dh-date-inputs,
+.audit-date-inputs,
+.date-inputs {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rn-date-inputs .custom-datepicker-container,
+.rnr-date-inputs .custom-datepicker-container,
+.dh-date-inputs .custom-datepicker-container,
+.audit-date-inputs .custom-datepicker-container,
+.date-inputs .custom-datepicker-container {
+  width: 135px;
+  min-width: 125px;
+}
+
 @keyframes calendarFadeIn {
   from {
     opacity: 0;
