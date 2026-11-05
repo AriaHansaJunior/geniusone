@@ -4,6 +4,8 @@ import { Button } from "../../components/ui/Button";
 import { Badge } from "../../components/ui/Badge";
 import { SearchField } from "../../components/ui/SearchField";
 import { Pagination } from "../../components/ui/Pagination";
+import { CustomDatePicker } from "../../components/ui/CustomDatePicker";
+import { CustomSelect } from "../../components/ui/CustomSelect";
 import {
   currenciesList,
   rateTypesList,
@@ -398,55 +400,41 @@ export function Dashboard({
             {/* Start Date (Tanggal Awal) */}
             <div className="master-form-group">
               <label className="master-form-label">Start Date</label>
-              <input
-                type="date"
-                className="master-form-input"
+              <CustomDatePicker
                 value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
+                onChange={(val) => setStartDate(val)}
+                placeholder="DD/MM/YYYY"
               />
             </div>
 
             {/* End Date (Tanggal Akhir) */}
             <div className="master-form-group">
               <label className="master-form-label">End Date</label>
-              <input
-                type="date"
-                className="master-form-input"
+              <CustomDatePicker
                 value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
+                onChange={(val) => setEndDate(val)}
+                placeholder="DD/MM/YYYY"
               />
             </div>
 
             {/* Currency (Valuta) */}
             <div className="master-form-group">
               <label className="master-form-label">Currency</label>
-              <select
-                className="master-form-select"
+              <CustomSelect
                 value={currency}
-                onChange={(e) => setCurrency(e.target.value)}
-              >
-                {currenciesList.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
+                onChange={(val) => setCurrency(val)}
+                options={currenciesList}
+              />
             </div>
 
             {/* Rate Type (Tipe Rate) */}
             <div className="master-form-group">
               <label className="master-form-label">Rate Type</label>
-              <select
-                className="master-form-select"
+              <CustomSelect
                 value={rateType}
-                onChange={(e) => setRateType(e.target.value)}
-              >
-                {rateTypesList.map((t) => (
-                  <option key={t} value={t}>
-                    {t}
-                  </option>
-                ))}
-              </select>
+                onChange={(val) => setRateType(val)}
+                options={rateTypesList}
+              />
             </div>
 
             {/* Action Buttons: Show & Reset */}
@@ -469,56 +457,66 @@ export function Dashboard({
           </div>
         </form>
 
-        {/* Table & Chart Tabs */}
+        {/* Table & Chart Tabs with Integrated Search */}
         <div className="dashboard-tabs">
-          <button
-            type="button"
-            className={`dashboard-tab ${
-              activeTab === "table" ? "dashboard-tab--active" : ""
-            }`}
-            onClick={() => setActiveTab("table")}
-          >
-            <span>Table</span>
-            <span className="dashboard-tab__pill">{filteredRecords.length}</span>
-          </button>
-          <button
-            type="button"
-            className={`dashboard-tab ${
-              activeTab === "chart" ? "dashboard-tab--active" : ""
-            }`}
-            onClick={() => setActiveTab("chart")}
-          >
-            <span>Chart</span>
-          </button>
+          <div className="dashboard-tabs__list">
+            <button
+              type="button"
+              className={`dashboard-tab ${
+                activeTab === "table" ? "dashboard-tab--active" : ""
+              }`}
+              onClick={() => setActiveTab("table")}
+            >
+              <span>Table</span>
+              <span className="dashboard-tab__pill">{filteredRecords.length}</span>
+            </button>
+            <button
+              type="button"
+              className={`dashboard-tab ${
+                activeTab === "chart" ? "dashboard-tab--active" : ""
+              }`}
+              onClick={() => setActiveTab("chart")}
+            >
+              <span>Chart</span>
+            </button>
+          </div>
+
+          {activeTab === "table" && (
+            <div className="dashboard-tabs__search">
+              <SearchField
+                value={search}
+                onChange={(val) => {
+                  setSearch(val);
+                  setCurrentPage(1);
+                }}
+                placeholder="Search currency, rate type, flag..."
+              />
+            </div>
+          )}
         </div>
 
         {/* Tab Content */}
         {activeTab === "table" ? (
           <>
-            {/* Table Search Toolbar */}
-            <div className="dashboard-table-toolbar">
-              <div style={{ maxWidth: "340px", width: "100%" }}>
-                <SearchField
-                  value={search}
-                  onChange={(val) => {
-                    setSearch(val);
-                    setCurrentPage(1);
-                  }}
-                  placeholder="Search currency, rate type, flag..."
-                />
-              </div>
-              <div style={{ fontSize: "11.5px", color: "var(--muted)" }}>
-                Showing <strong>{filteredRecords.length}</strong> rate records
-              </div>
-            </div>
-
-            {/* Table Wrapper */}
+            {/* Table Wrapper with Fixed Layout */}
             <div className="dashboard-rate-table-wrapper">
               <table className="dashboard-rate-table">
+                <colgroup>
+                  <col style={{ width: "48px" }} />
+                  <col style={{ width: "115px" }} />
+                  <col style={{ width: "190px" }} />
+                  <col style={{ width: "190px" }} />
+                  <col style={{ width: "125px" }} />
+                  <col style={{ width: "125px" }} />
+                  <col style={{ width: "125px" }} />
+                  <col style={{ width: "150px" }} />
+                  <col style={{ width: "110px" }} />
+                </colgroup>
                 <thead>
                   <tr>
-                    <th style={{ width: "45px", textAlign: "center" }}>No.</th>
+                    <th style={{ width: "48px", textAlign: "center" }}>No.</th>
                     <th
+                      style={{ width: "115px" }}
                       className="sortable"
                       onClick={() => handleSort("rateDate")}
                     >
@@ -527,6 +525,7 @@ export function Dashboard({
                         (sortDirection === "asc" ? "↑" : sortDirection === "desc" ? "↓" : "")}
                     </th>
                     <th
+                      style={{ width: "190px" }}
                       className="sortable"
                       onClick={() => handleSort("currencyCode")}
                     >
@@ -535,6 +534,7 @@ export function Dashboard({
                         (sortDirection === "asc" ? "↑" : sortDirection === "desc" ? "↓" : "")}
                     </th>
                     <th
+                      style={{ width: "190px" }}
                       className="sortable"
                       onClick={() => handleSort("rateType")}
                     >
@@ -543,6 +543,7 @@ export function Dashboard({
                         (sortDirection === "asc" ? "↑" : sortDirection === "desc" ? "↓" : "")}
                     </th>
                     <th
+                      style={{ width: "125px" }}
                       className="numeric sortable"
                       onClick={() => handleSort("buyingRate")}
                     >
@@ -551,6 +552,7 @@ export function Dashboard({
                         (sortDirection === "asc" ? "↑" : sortDirection === "desc" ? "↓" : "")}
                     </th>
                     <th
+                      style={{ width: "125px" }}
                       className="numeric sortable"
                       onClick={() => handleSort("sellingRate")}
                     >
@@ -559,6 +561,7 @@ export function Dashboard({
                         (sortDirection === "asc" ? "↑" : sortDirection === "desc" ? "↓" : "")}
                     </th>
                     <th
+                      style={{ width: "125px" }}
                       className="numeric sortable"
                       onClick={() => handleSort("rate")}
                     >
@@ -566,8 +569,8 @@ export function Dashboard({
                       {sortField === "rate" &&
                         (sortDirection === "asc" ? "↑" : sortDirection === "desc" ? "↓" : "")}
                     </th>
-                    <th>Flag / Source</th>
-                    <th style={{ width: "120px", textAlign: "center" }}>Status</th>
+                    <th style={{ width: "150px" }}>Flag / Source</th>
+                    <th style={{ width: "110px", textAlign: "center" }}>Status</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -595,6 +598,7 @@ export function Dashboard({
                                 display: "flex",
                                 alignItems: "center",
                                 gap: "6px",
+                                flexWrap: "wrap",
                               }}
                             >
                               <span className="code-pill">
@@ -604,6 +608,8 @@ export function Dashboard({
                                 style={{
                                   fontSize: "11px",
                                   color: "var(--muted)",
+                                  lineHeight: 1.35,
+                                  wordBreak: "break-word",
                                 }}
                               >
                                 {item.currencyName}

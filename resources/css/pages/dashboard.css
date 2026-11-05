@@ -70,14 +70,27 @@
   font-size: 12px;
 }
 
-/* Tabs Navigation (iOS Pill Capsule Style) */
+/* Tabs Navigation (iOS Pill Capsule Style with Integrated Search) */
 .dashboard-tabs {
   display: flex;
   align-items: center;
-  gap: 8px;
+  justify-content: space-between;
+  gap: 16px;
   padding: 10px 22px;
   background: rgba(248, 250, 252, 0.55);
   border-bottom: 1px solid rgba(226, 232, 240, 0.7);
+  flex-wrap: wrap;
+}
+
+.dashboard-tabs__list {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dashboard-tabs__search {
+  width: 320px;
+  max-width: 100%;
 }
 
 .dashboard-tab {
@@ -196,9 +209,11 @@
   -webkit-overflow-scrolling: touch;
 }
 
-/* Exchange Rate Table */
+/* Exchange Rate Table — Fixed Column Widths (Prevent column jumping/shifting on search/filter) */
 .dashboard-rate-table {
   width: 100%;
+  min-width: 980px;
+  table-layout: fixed;
   border-collapse: collapse;
   text-align: left;
   font-size: 12px;
@@ -209,13 +224,14 @@
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   color: var(--slate-600);
-  padding: 12px 16px;
+  padding: 12px 14px;
   font-size: 10.5px;
   font-weight: 800;
   letter-spacing: 0.5px;
   text-transform: uppercase;
   white-space: nowrap;
   border-bottom: 1px solid rgba(226, 232, 240, 0.85);
+  box-sizing: border-box;
 }
 
 .dashboard-rate-table thead th.sortable {
@@ -230,11 +246,16 @@
 }
 
 .dashboard-rate-table tbody td {
-  padding: 12px 16px;
+  padding: 12px 14px;
   font-size: 12px;
   border-bottom: 1px solid rgba(226, 232, 240, 0.7);
   color: var(--ink);
   vertical-align: middle;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  word-break: break-word;
+  white-space: normal;
+  box-sizing: border-box;
 }
 
 .dashboard-rate-table tbody tr {
