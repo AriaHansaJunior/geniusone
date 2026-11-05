@@ -5,6 +5,7 @@ import { Button } from "../../../components/ui/Button";
 import { SearchField } from "../../../components/ui/SearchField";
 import { Pagination } from "../../../components/ui/Pagination";
 import { CustomSelect } from "../../../components/ui/CustomSelect";
+import { TableColumnSettings, type TableColumnOption } from "../../../components/ui/TableColumnSettings";
 import { ApprovalStatusBadge } from "../../../components/approval/ApprovalStatusBadge";
 import { formatDisplayDate } from "../../../data/masterApi";
 import {
@@ -17,6 +18,19 @@ import type {
   ReceiveNoteReturnSortField,
   SortDirection,
 } from "./receive-note-return-types";
+
+const DEFAULT_RNR_COLUMNS: TableColumnOption[] = [
+  { key: "rnNumber", label: "RN Number", visible: true, disabled: true },
+  { key: "deliveryOrder", label: "Delivery Order", visible: true },
+  { key: "customer", label: "Customer", visible: true },
+  { key: "facility", label: "Facility", visible: true },
+  { key: "ajuNumber", label: "Aju Number / Registration Number", visible: true },
+  { key: "amount", label: "Amount", visible: true },
+  { key: "description", label: "Description", visible: true },
+  { key: "warehouseTx", label: "Warehouse Transaction", visible: true },
+  { key: "approvalStatus", label: "Approval Status", visible: true },
+  { key: "userCreated", label: "User Created", visible: true },
+];
 
 interface ReceiveNoteReturnIndexProps {
   records?: ReceiveNoteReturnRecord[];
@@ -40,6 +54,46 @@ export function ReceiveNoteReturnIndex({
   const [sortField, setSortField] = useState<ReceiveNoteReturnSortField>("rnNumber");
   const [sortDirection, setSortDirection] = useState<SortDirection>("none");
   const [exportNotice, setExportNotice] = useState<string | null>(null);
+
+  // Column visibility configuration
+  const [columns, setColumns] = useState<TableColumnOption[]>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("geniusone_rnr_table_columns");
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          return DEFAULT_RNR_COLUMNS.map((def) => {
+            const match = parsed.find((p: any) => p.key === def.key);
+            return match ? { ...def, visible: match.visible } : def;
+          });
+        }
+      } catch (_) {}
+    }
+    return DEFAULT_RNR_COLUMNS;
+  });
+  const [isColumnSettingsOpen, setIsColumnSettingsOpen] = useState(false);
+
+  const isColVisible = (key: string) => {
+    const col = columns.find((c) => c.key === key);
+    return col ? col.visible : true;
+  };
+
+  const handleToggleColumn = (key: string) => {
+    setColumns((prev) => {
+      const next = prev.map((c) => (c.key === key && !c.disabled ? { ...c, visible: !c.visible } : c));
+      try {
+        localStorage.setItem("geniusone_rnr_table_columns", JSON.stringify(next));
+      } catch (_) {}
+      return next;
+    });
+  };
+
+  const handleResetColumns = () => {
+    setColumns(DEFAULT_RNR_COLUMNS);
+    try {
+      localStorage.removeItem("geniusone_rnr_table_columns");
+    } catch (_) {}
+  };
 
   // Filter records
   const filteredRecords = useMemo(() => {
@@ -361,15 +415,26 @@ export function ReceiveNoteReturnIndex({
             >
               Export To Excel
             </Button>
-            <button
-              type="button"
-              className="rnr-btn-settings"
-              title="Table Column Settings"
-              aria-label="Table settings"
-            >
-              <Icon name="settings" size={16} />
-              <Icon name="chevronDown" size={12} />
-            </button>
+            <div style={{ position: "relative" }}>
+              <button
+                type="button"
+                className={`rnr-btn-settings ${isColumnSettingsOpen ? "active" : ""}`}
+                title="Table Column Settings"
+                aria-label="Table settings"
+                onClick={() => setIsColumnSettingsOpen((prev) => !prev)}
+              >
+                <Icon name="settings" size={16} />
+                <Icon name="chevronDown" size={12} />
+              </button>
+
+              <TableColumnSettings
+                isOpen={isColumnSettingsOpen}
+                columns={columns}
+                onToggleColumn={handleToggleColumn}
+                onResetDefault={handleResetColumns}
+                onClose={() => setIsColumnSettingsOpen(false)}
+              />
+            </div>
           </div>
         </div>
 
@@ -379,87 +444,103 @@ export function ReceiveNoteReturnIndex({
             <thead>
               <tr>
                 <th className="rnr-th-no">No</th>
-                <th
-                  className="rnr-th-sortable"
-                  onClick={() => handleSort("rnNumber")}
-                >
-                  <div className="rnr-th-content">
-                    <span>RN Number</span>
-                    {renderSortIndicator("rnNumber")}
-                  </div>
-                </th>
-                <th
-                  className="rnr-th-sortable"
-                  onClick={() => handleSort("deliveryOrder")}
-                >
-                  <div className="rnr-th-content">
-                    <span>Delivery Order</span>
-                    {renderSortIndicator("deliveryOrder")}
-                  </div>
-                </th>
-                <th
-                  className="rnr-th-sortable"
-                  onClick={() => handleSort("customer")}
-                >
-                  <div className="rnr-th-content">
-                    <span>Customer</span>
-                    {renderSortIndicator("customer")}
-                  </div>
-                </th>
-                <th
-                  className="rnr-th-sortable"
-                  onClick={() => handleSort("facility")}
-                >
-                  <div className="rnr-th-content">
-                    <span>Facility</span>
-                    {renderSortIndicator("facility")}
-                  </div>
-                </th>
-                <th
-                  className="rnr-th-sortable"
-                  onClick={() => handleSort("ajuNumber")}
-                >
-                  <div className="rnr-th-content">
-                    <span>Aju Number/Registration Number</span>
-                    {renderSortIndicator("ajuNumber")}
-                  </div>
-                </th>
-                <th
-                  className="rnr-th-sortable text-right"
-                  onClick={() => handleSort("amount")}
-                >
-                  <div className="rnr-th-content justify-end">
-                    <span>Amount</span>
-                    {renderSortIndicator("amount")}
-                  </div>
-                </th>
-                <th>Description</th>
-                <th>Warehouse Transaction</th>
-                <th
-                  className="rnr-th-sortable"
-                  onClick={() => handleSort("approvalStatus")}
-                >
-                  <div className="rnr-th-content">
-                    <span>Approval Status</span>
-                    {renderSortIndicator("approvalStatus")}
-                  </div>
-                </th>
-                <th
-                  className="rnr-th-sortable"
-                  onClick={() => handleSort("userCreated")}
-                >
-                  <div className="rnr-th-content">
-                    <span>User Created</span>
-                    {renderSortIndicator("userCreated")}
-                  </div>
-                </th>
+                {isColVisible("rnNumber") && (
+                  <th
+                    className="rnr-th-sortable"
+                    onClick={() => handleSort("rnNumber")}
+                  >
+                    <div className="rnr-th-content">
+                      <span>RN Number</span>
+                      {renderSortIndicator("rnNumber")}
+                    </div>
+                  </th>
+                )}
+                {isColVisible("deliveryOrder") && (
+                  <th
+                    className="rnr-th-sortable"
+                    onClick={() => handleSort("deliveryOrder")}
+                  >
+                    <div className="rnr-th-content">
+                      <span>Delivery Order</span>
+                      {renderSortIndicator("deliveryOrder")}
+                    </div>
+                  </th>
+                )}
+                {isColVisible("customer") && (
+                  <th
+                    className="rnr-th-sortable"
+                    onClick={() => handleSort("customer")}
+                  >
+                    <div className="rnr-th-content">
+                      <span>Customer</span>
+                      {renderSortIndicator("customer")}
+                    </div>
+                  </th>
+                )}
+                {isColVisible("facility") && (
+                  <th
+                    className="rnr-th-sortable"
+                    onClick={() => handleSort("facility")}
+                  >
+                    <div className="rnr-th-content">
+                      <span>Facility</span>
+                      {renderSortIndicator("facility")}
+                    </div>
+                  </th>
+                )}
+                {isColVisible("ajuNumber") && (
+                  <th
+                    className="rnr-th-sortable"
+                    onClick={() => handleSort("ajuNumber")}
+                  >
+                    <div className="rnr-th-content">
+                      <span>Aju Number/Registration Number</span>
+                      {renderSortIndicator("ajuNumber")}
+                    </div>
+                  </th>
+                )}
+                {isColVisible("amount") && (
+                  <th
+                    className="rnr-th-sortable text-right"
+                    onClick={() => handleSort("amount")}
+                  >
+                    <div className="rnr-th-content justify-end">
+                      <span>Amount</span>
+                      {renderSortIndicator("amount")}
+                    </div>
+                  </th>
+                )}
+                {isColVisible("description") && <th>Description</th>}
+                {isColVisible("warehouseTx") && <th>Warehouse Transaction</th>}
+                {isColVisible("approvalStatus") && (
+                  <th
+                    className="rnr-th-sortable"
+                    onClick={() => handleSort("approvalStatus")}
+                  >
+                    <div className="rnr-th-content">
+                      <span>Approval Status</span>
+                      {renderSortIndicator("approvalStatus")}
+                    </div>
+                  </th>
+                )}
+                {isColVisible("userCreated") && (
+                  <th
+                    className="rnr-th-sortable"
+                    onClick={() => handleSort("userCreated")}
+                  >
+                    <div className="rnr-th-content">
+                      <span>User Created</span>
+                      {renderSortIndicator("userCreated")}
+                    </div>
+                  </th>
+                )}
                 <th className="rnr-th-option text-center">Option</th>
               </tr>
             </thead>
             <tbody>
               {paginatedRecords.length === 0 ? (
                 <tr>
-                  <td colSpan={12} className="rnr-table-empty">
+                  <td colSpan={2 + columns.filter((c) => c.visible).length} className="rnr-table-empty">
                     No Receive Note (Sales Return) records found.
                   </td>
                 </tr>
@@ -469,75 +550,95 @@ export function ReceiveNoteReturnIndex({
                   return (
                     <tr key={rnr.id}>
                       <td className="rnr-td-no text-center">{sequentialNumber}</td>
-                      <td>
-                        <div className="font-semibold text-ink">
-                          {rnr.rnNumber}
-                        </div>
-                        <div className="text-xs text-muted">
-                          RN Date: {formatDisplayDate(rnr.rnDate)}
-                        </div>
-                      </td>
-                      <td>
-                        <div className="text-ink">
-                          {rnr.deliveryOrder && rnr.deliveryOrder !== "null" ? rnr.deliveryOrder : "-"}
-                        </div>
-                        <div className="text-xs text-muted">
-                          Date: {formatDisplayDate(rnr.doDate)}
-                        </div>
-                      </td>
-                      <td className="font-medium text-ink">{rnr.customer}</td>
-                      <td>
-                        <div className="rnr-facility-cell">
-                          <span className="rnr-facility-title">{rnr.facility}</span>
-                          <span className="rnr-badge-bc">{rnr.bcCode}</span>
-                        </div>
-                      </td>
-                      <td>
-                        <button
-                          type="button"
-                          className="rnr-link-aju"
-                          onClick={() => onViewDetail(rnr.rnNumber)}
-                          title="View return details"
-                        >
-                          {rnr.ajuNumber}
-                        </button>
-                        {rnr.noDaftar && (
-                          <div className="text-xs text-muted">
-                            No. Daftar: {rnr.noDaftar}
+                      {isColVisible("rnNumber") && (
+                        <td>
+                          <div className="font-semibold text-ink">
+                            {rnr.rnNumber}
                           </div>
-                        )}
-                      </td>
-                      <td className="text-right font-mono font-medium text-ink">
-                        {rnr.amountFormatted}
-                      </td>
-                      <td className="text-muted">{rnr.description || "-"}</td>
-                      <td>
-                        {rnr.warehouseTransaction ? (
-                          <>
-                            <div className="font-medium text-ink text-xs">
-                              {rnr.warehouseTransaction}
+                          <div className="text-xs text-muted">
+                            RN Date: {formatDisplayDate(rnr.rnDate)}
+                          </div>
+                        </td>
+                      )}
+                      {isColVisible("deliveryOrder") && (
+                        <td>
+                          <div className="text-ink">
+                            {rnr.deliveryOrder && rnr.deliveryOrder !== "null" ? rnr.deliveryOrder : "-"}
+                          </div>
+                          <div className="text-xs text-muted">
+                            Date: {formatDisplayDate(rnr.doDate)}
+                          </div>
+                        </td>
+                      )}
+                      {isColVisible("customer") && (
+                        <td className="font-medium text-ink">{rnr.customer}</td>
+                      )}
+                      {isColVisible("facility") && (
+                        <td>
+                          <div className="rnr-facility-cell">
+                            <span className="rnr-facility-title">{rnr.facility}</span>
+                            <span className="rnr-badge-bc">{rnr.bcCode}</span>
+                          </div>
+                        </td>
+                      )}
+                      {isColVisible("ajuNumber") && (
+                        <td>
+                          <button
+                            type="button"
+                            className="rnr-link-aju"
+                            onClick={() => onViewDetail(rnr.rnNumber)}
+                            title="View return details"
+                          >
+                            {rnr.ajuNumber}
+                          </button>
+                          {rnr.noDaftar && (
+                            <div className="text-xs text-muted">
+                              No. Daftar: {rnr.noDaftar}
                             </div>
-                            {rnr.warehouseReceiveDate && (
-                              <div className="text-xs text-muted">
-                                Receive Date: {rnr.warehouseReceiveDate}
+                          )}
+                        </td>
+                      )}
+                      {isColVisible("amount") && (
+                        <td className="text-right font-mono font-medium text-ink">
+                          {rnr.amountFormatted}
+                        </td>
+                      )}
+                      {isColVisible("description") && (
+                        <td className="text-muted">{rnr.description || "-"}</td>
+                      )}
+                      {isColVisible("warehouseTx") && (
+                        <td>
+                          {rnr.warehouseTransaction ? (
+                            <>
+                              <div className="font-medium text-ink text-xs">
+                                {rnr.warehouseTransaction}
                               </div>
-                            )}
-                          </>
-                        ) : (
-                          <span className="text-muted">-</span>
-                        )}
-                      </td>
-                      <td>
-                        <ApprovalStatusBadge status={rnr.approvalStatus} />
-                      </td>
-                      <td>
-                        <div className="font-medium text-ink text-xs">
-                          {rnr.userCreated}
-                        </div>
-                        <div className="text-xs text-muted">
-                          {rnr.createdAtTimestamp}
-                        </div>
-                      </td>
+                              {rnr.warehouseReceiveDate && (
+                                <div className="text-xs text-muted">
+                                  Receive Date: {rnr.warehouseReceiveDate}
+                                </div>
+                              )}
+                            </>
+                          ) : (
+                            <span className="text-muted">-</span>
+                          )}
+                        </td>
+                      )}
+                      {isColVisible("approvalStatus") && (
+                        <td>
+                          <ApprovalStatusBadge status={rnr.approvalStatus} />
+                        </td>
+                      )}
+                      {isColVisible("userCreated") && (
+                        <td>
+                          <div className="font-medium text-ink text-xs">
+                            {rnr.userCreated}
+                          </div>
+                          <div className="text-xs text-muted">
+                            {rnr.createdAtTimestamp}
+                          </div>
+                        </td>
+                      )}
                       <td className="text-center">
                         <button
                           type="button"

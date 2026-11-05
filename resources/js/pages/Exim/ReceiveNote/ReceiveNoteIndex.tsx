@@ -5,6 +5,7 @@ import { Button } from "../../../components/ui/Button";
 import { SearchField } from "../../../components/ui/SearchField";
 import { Pagination } from "../../../components/ui/Pagination";
 import { CustomSelect } from "../../../components/ui/CustomSelect";
+import { TableColumnSettings, type TableColumnOption } from "../../../components/ui/TableColumnSettings";
 import { ApprovalStatusBadge } from "../../../components/approval/ApprovalStatusBadge";
 import { formatDisplayDate } from "../../../data/masterApi";
 import {
@@ -17,6 +18,18 @@ import type {
   ReceiveNoteSortField,
   SortDirection,
 } from "./receive-note-types";
+
+const DEFAULT_RN_COLUMNS: TableColumnOption[] = [
+  { key: "rnNumber", label: "RN Number", visible: true, disabled: true },
+  { key: "poNumber", label: "PO Number", visible: true },
+  { key: "date", label: "Date", visible: true },
+  { key: "supplier", label: "Supplier", visible: true },
+  { key: "facility", label: "Facility", visible: true },
+  { key: "ajuNumber", label: "Aju Number / Registration Number", visible: true },
+  { key: "amount", label: "Amount", visible: true },
+  { key: "description", label: "Description", visible: true },
+  { key: "warehouseTx", label: "Warehouse Transaction", visible: true },
+];
 
 interface ReceiveNoteIndexProps {
   records?: ReceiveNoteRecord[];
@@ -40,6 +53,46 @@ export function ReceiveNoteIndex({
   const [sortField, setSortField] = useState<ReceiveNoteSortField>("rnNumber");
   const [sortDirection, setSortDirection] = useState<SortDirection>("none");
   const [exportNotice, setExportNotice] = useState<string | null>(null);
+
+  // Column visibility configuration
+  const [columns, setColumns] = useState<TableColumnOption[]>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("geniusone_rn_table_columns");
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          return DEFAULT_RN_COLUMNS.map((def) => {
+            const match = parsed.find((p: any) => p.key === def.key);
+            return match ? { ...def, visible: match.visible } : def;
+          });
+        }
+      } catch (_) {}
+    }
+    return DEFAULT_RN_COLUMNS;
+  });
+  const [isColumnSettingsOpen, setIsColumnSettingsOpen] = useState(false);
+
+  const isColVisible = (key: string) => {
+    const col = columns.find((c) => c.key === key);
+    return col ? col.visible : true;
+  };
+
+  const handleToggleColumn = (key: string) => {
+    setColumns((prev) => {
+      const next = prev.map((c) => (c.key === key && !c.disabled ? { ...c, visible: !c.visible } : c));
+      try {
+        localStorage.setItem("geniusone_rn_table_columns", JSON.stringify(next));
+      } catch (_) {}
+      return next;
+    });
+  };
+
+  const handleResetColumns = () => {
+    setColumns(DEFAULT_RN_COLUMNS);
+    try {
+      localStorage.removeItem("geniusone_rn_table_columns");
+    } catch (_) {}
+  };
 
   // Filter records
   const filteredRecords = useMemo(() => {
@@ -349,15 +402,26 @@ export function ReceiveNoteIndex({
             >
               Export To Excel
             </Button>
-            <button
-              type="button"
-              className="rn-btn-settings"
-              title="Table Column Settings"
-              aria-label="Table settings"
-            >
-              <Icon name="settings" size={16} />
-              <Icon name="chevronDown" size={12} />
-            </button>
+            <div style={{ position: "relative" }}>
+              <button
+                type="button"
+                className={`rn-btn-settings ${isColumnSettingsOpen ? "active" : ""}`}
+                title="Table Column Settings"
+                aria-label="Table settings"
+                onClick={() => setIsColumnSettingsOpen((prev) => !prev)}
+              >
+                <Icon name="settings" size={16} />
+                <Icon name="chevronDown" size={12} />
+              </button>
+
+              <TableColumnSettings
+                isOpen={isColumnSettingsOpen}
+                columns={columns}
+                onToggleColumn={handleToggleColumn}
+                onResetDefault={handleResetColumns}
+                onClose={() => setIsColumnSettingsOpen(false)}
+              />
+            </div>
           </div>
         </div>
 
@@ -367,78 +431,92 @@ export function ReceiveNoteIndex({
             <thead>
               <tr>
                 <th className="rn-th-no">No</th>
-                <th
-                  className="rn-th-sortable"
-                  onClick={() => handleSort("rnNumber")}
-                >
-                  <div className="rn-th-content">
-                    <span>RN Number</span>
-                    {renderSortIndicator("rnNumber")}
-                  </div>
-                </th>
-                <th
-                  className="rn-th-sortable"
-                  onClick={() => handleSort("poNumber")}
-                >
-                  <div className="rn-th-content">
-                    <span>PO Number</span>
-                    {renderSortIndicator("poNumber")}
-                  </div>
-                </th>
-                <th
-                  className="rn-th-sortable"
-                  onClick={() => handleSort("date")}
-                >
-                  <div className="rn-th-content">
-                    <span>Date</span>
-                    {renderSortIndicator("date")}
-                  </div>
-                </th>
-                <th
-                  className="rn-th-sortable"
-                  onClick={() => handleSort("supplier")}
-                >
-                  <div className="rn-th-content">
-                    <span>Supplier</span>
-                    {renderSortIndicator("supplier")}
-                  </div>
-                </th>
-                <th
-                  className="rn-th-sortable"
-                  onClick={() => handleSort("facility")}
-                >
-                  <div className="rn-th-content">
-                    <span>Facility</span>
-                    {renderSortIndicator("facility")}
-                  </div>
-                </th>
-                <th
-                  className="rn-th-sortable"
-                  onClick={() => handleSort("ajuNumber")}
-                >
-                  <div className="rn-th-content">
-                    <span>Aju Number/Registration Number</span>
-                    {renderSortIndicator("ajuNumber")}
-                  </div>
-                </th>
-                <th
-                  className="rn-th-sortable text-right"
-                  onClick={() => handleSort("amount")}
-                >
-                  <div className="rn-th-content justify-end">
-                    <span>Amount</span>
-                    {renderSortIndicator("amount")}
-                  </div>
-                </th>
-                <th>Description</th>
-                <th>Warehouse Transaction</th>
+                {isColVisible("rnNumber") && (
+                  <th
+                    className="rn-th-sortable"
+                    onClick={() => handleSort("rnNumber")}
+                  >
+                    <div className="rn-th-content">
+                      <span>RN Number</span>
+                      {renderSortIndicator("rnNumber")}
+                    </div>
+                  </th>
+                )}
+                {isColVisible("poNumber") && (
+                  <th
+                    className="rn-th-sortable"
+                    onClick={() => handleSort("poNumber")}
+                  >
+                    <div className="rn-th-content">
+                      <span>PO Number</span>
+                      {renderSortIndicator("poNumber")}
+                    </div>
+                  </th>
+                )}
+                {isColVisible("date") && (
+                  <th
+                    className="rn-th-sortable"
+                    onClick={() => handleSort("date")}
+                  >
+                    <div className="rn-th-content">
+                      <span>Date</span>
+                      {renderSortIndicator("date")}
+                    </div>
+                  </th>
+                )}
+                {isColVisible("supplier") && (
+                  <th
+                    className="rn-th-sortable"
+                    onClick={() => handleSort("supplier")}
+                  >
+                    <div className="rn-th-content">
+                      <span>Supplier</span>
+                      {renderSortIndicator("supplier")}
+                    </div>
+                  </th>
+                )}
+                {isColVisible("facility") && (
+                  <th
+                    className="rn-th-sortable"
+                    onClick={() => handleSort("facility")}
+                  >
+                    <div className="rn-th-content">
+                      <span>Facility</span>
+                      {renderSortIndicator("facility")}
+                    </div>
+                  </th>
+                )}
+                {isColVisible("ajuNumber") && (
+                  <th
+                    className="rn-th-sortable"
+                    onClick={() => handleSort("ajuNumber")}
+                  >
+                    <div className="rn-th-content">
+                      <span>Aju Number/Registration Number</span>
+                      {renderSortIndicator("ajuNumber")}
+                    </div>
+                  </th>
+                )}
+                {isColVisible("amount") && (
+                  <th
+                    className="rn-th-sortable text-right"
+                    onClick={() => handleSort("amount")}
+                  >
+                    <div className="rn-th-content justify-end">
+                      <span>Amount</span>
+                      {renderSortIndicator("amount")}
+                    </div>
+                  </th>
+                )}
+                {isColVisible("description") && <th>Description</th>}
+                {isColVisible("warehouseTx") && <th>Warehouse Transaction</th>}
                 <th className="rn-th-option text-center">Option</th>
               </tr>
             </thead>
             <tbody>
               {paginatedRecords.length === 0 ? (
                 <tr>
-                  <td colSpan={11} className="rn-table-empty">
+                  <td colSpan={2 + columns.filter((c) => c.visible).length} className="rn-table-empty">
                     No Receive Note records found.
                   </td>
                 </tr>
@@ -448,42 +526,60 @@ export function ReceiveNoteIndex({
                   return (
                     <tr key={rn.id}>
                       <td className="rn-td-no text-center">{sequentialNumber}</td>
-                      <td>
-                        <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
-                          <span className="font-semibold text-ink">{rn.rnNumber}</span>
-                          <ApprovalStatusBadge status={rn.status || "WAITING_APPROVE_1"} showIcon={false} />
-                        </div>
-                        <div className="text-xs text-muted">
-                          Arrival Date: {formatDisplayDate(rn.arrivalDate)}
-                        </div>
-                      </td>
-                      <td className="font-medium text-ink">{rn.poNumber}</td>
-                      <td>{formatDisplayDate(rn.date)}</td>
-                      <td className="font-medium">{rn.supplier}</td>
-                      <td>
-                        <div className="rn-facility-cell">
-                          <span className="rn-facility-title">{rn.facility}</span>
-                          <span className="rn-badge-bc">{rn.bcCode}</span>
-                        </div>
-                      </td>
-                      <td>
-                        <button
-                          type="button"
-                          className="rn-link-aju"
-                          onClick={() => onViewDetail(rn.rnNumber)}
-                          title="View document details"
-                        >
-                          {rn.ajuNumber}
-                        </button>
-                        <div className="text-xs text-muted">
-                          No. Daftar: {rn.noDaftar}
-                        </div>
-                      </td>
-                      <td className="text-right font-mono font-medium text-ink">
-                        {rn.amountFormatted}
-                      </td>
-                      <td className="text-muted">{rn.description}</td>
-                      <td className="text-muted">{rn.warehouseTransaction}</td>
+                      {isColVisible("rnNumber") && (
+                        <td>
+                          <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
+                            <span className="font-semibold text-ink">{rn.rnNumber}</span>
+                            <ApprovalStatusBadge status={rn.status || "WAITING_APPROVE_1"} showIcon={false} />
+                          </div>
+                          <div className="text-xs text-muted">
+                            Arrival Date: {formatDisplayDate(rn.arrivalDate)}
+                          </div>
+                        </td>
+                      )}
+                      {isColVisible("poNumber") && (
+                        <td className="font-medium text-ink">{rn.poNumber}</td>
+                      )}
+                      {isColVisible("date") && (
+                        <td>{formatDisplayDate(rn.date)}</td>
+                      )}
+                      {isColVisible("supplier") && (
+                        <td className="font-medium">{rn.supplier}</td>
+                      )}
+                      {isColVisible("facility") && (
+                        <td>
+                          <div className="rn-facility-cell">
+                            <span className="rn-facility-title">{rn.facility}</span>
+                            <span className="rn-badge-bc">{rn.bcCode}</span>
+                          </div>
+                        </td>
+                      )}
+                      {isColVisible("ajuNumber") && (
+                        <td>
+                          <button
+                            type="button"
+                            className="rn-link-aju"
+                            onClick={() => onViewDetail(rn.rnNumber)}
+                            title="View document details"
+                          >
+                            {rn.ajuNumber}
+                          </button>
+                          <div className="text-xs text-muted">
+                            No. Daftar: {rn.noDaftar}
+                          </div>
+                        </td>
+                      )}
+                      {isColVisible("amount") && (
+                        <td className="text-right font-mono font-medium text-ink">
+                          {rn.amountFormatted}
+                        </td>
+                      )}
+                      {isColVisible("description") && (
+                        <td className="text-muted">{rn.description}</td>
+                      )}
+                      {isColVisible("warehouseTx") && (
+                        <td className="text-muted">{rn.warehouseTransaction}</td>
+                      )}
                       <td className="text-center">
                         <button
                           type="button"
