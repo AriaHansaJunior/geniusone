@@ -183,10 +183,6 @@ export function Header({
       </div>
 
       <div className="topbar__actions">
-        <button type="button" aria-label="Settings" title="Settings">
-          <Icon name="settings" size={17} />
-        </button>
-
         <div
           ref={userMenuRef}
           className={`user ${isDropdownOpen ? "user--active" : ""}`}
