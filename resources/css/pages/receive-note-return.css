@@ -98,51 +98,68 @@
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-sm);
   box-shadow: var(--shadow-glass);
-  overflow: hidden;
+  overflow: visible;
   margin-bottom: 16px;
+  position: relative;
 }
 
 /* Filter Area */
 .rnr-filter-bar {
   display: flex;
   align-items: flex-end;
-  gap: 16px;
+  gap: 14px;
   padding: 16px 20px;
   background: rgba(255, 255, 255, 0.7);
   border-bottom: 1px solid var(--line);
   flex-wrap: wrap;
+  position: relative;
+  z-index: 10;
 }
 
 .rnr-filter-item {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  flex: 0 1 auto;
 }
 
 .rnr-filter-search {
-  flex: 0 1 240px;
-  min-width: 180px;
+  width: 200px;
+  min-width: 150px;
 }
 
 .rnr-filter-date-range {
-  flex: 0 0 auto;
+  flex-shrink: 0;
 }
 
 .rnr-filter-customer {
-  flex: 0 1 200px;
-  min-width: 160px;
+  width: 180px;
+  min-width: 140px;
 }
 
 .rnr-filter-doctype {
-  flex: 0 1 220px;
-  min-width: 180px;
+  width: 190px;
+  min-width: 150px;
 }
 
 .rnr-filter-settings {
   margin-left: auto;
   display: flex;
-  align-items: flex-end;
-  padding-bottom: 2px;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+@media (max-width: 1320px) {
+  .rnr-filter-bar {
+    gap: 12px;
+  }
+  .rnr-filter-settings {
+    margin-left: 0;
+    width: 100%;
+    justify-content: flex-end;
+    padding-top: 4px;
+  }
 }
 
 .rnr-filter-label {
@@ -230,7 +247,6 @@
   width: 100%;
   border-collapse: collapse;
   font-size: 12px;
-  min-width: 1200px;
 }
 
 .rnr-table thead tr {
@@ -271,10 +287,85 @@
   line-height: 1;
 }
 
+/* Explicit Column Width Rules for Stable Layout (Regardless of Hidden Columns) */
 .rnr-th-no,
 .rnr-td-no {
   width: 50px;
   min-width: 50px;
+  max-width: 50px;
+  text-align: center;
+}
+
+.rnr-th-rnNumber,
+.rnr-td-rnNumber {
+  width: 220px;
+  min-width: 190px;
+}
+
+.rnr-th-deliveryOrder,
+.rnr-td-deliveryOrder {
+  width: 160px;
+  min-width: 140px;
+}
+
+.rnr-th-customer,
+.rnr-td-customer {
+  width: 190px;
+  min-width: 160px;
+}
+
+.rnr-th-facility,
+.rnr-td-facility {
+  width: 140px;
+  min-width: 120px;
+}
+
+.rnr-th-ajuNumber,
+.rnr-td-ajuNumber {
+  width: 180px;
+  min-width: 150px;
+}
+
+.rnr-th-amount,
+.rnr-td-amount {
+  width: 160px;
+  min-width: 140px;
+  text-align: right !important;
+}
+
+.rnr-th-amount .rnr-th-content {
+  width: 100%;
+  justify-content: flex-end;
+}
+
+.rnr-th-description,
+.rnr-td-description {
+  min-width: 180px;
+}
+
+.rnr-th-warehouseTx,
+.rnr-td-warehouseTx {
+  width: 200px;
+  min-width: 170px;
+}
+
+.rnr-th-approvalStatus,
+.rnr-td-approvalStatus {
+  width: 160px;
+  min-width: 140px;
+}
+
+.rnr-th-userCreated,
+.rnr-td-userCreated {
+  width: 180px;
+  min-width: 150px;
+}
+
+.rnr-th-option,
+.rnr-td-option {
+  width: 65px;
+  min-width: 65px;
+  max-width: 70px;
   text-align: center;
 }
 

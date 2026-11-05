@@ -98,51 +98,68 @@
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-sm);
   box-shadow: var(--shadow-glass);
-  overflow: hidden;
+  overflow: visible;
   margin-bottom: 16px;
+  position: relative;
 }
 
 /* Filter Area */
 .rn-filter-bar {
   display: flex;
   align-items: flex-end;
-  gap: 16px;
+  gap: 14px;
   padding: 16px 20px;
   background: rgba(255, 255, 255, 0.7);
   border-bottom: 1px solid var(--line);
   flex-wrap: wrap;
+  position: relative;
+  z-index: 10;
 }
 
 .rn-filter-item {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  flex: 0 1 auto;
 }
 
 .rn-filter-search {
-  flex: 0 1 240px;
-  min-width: 180px;
+  width: 200px;
+  min-width: 150px;
 }
 
 .rn-filter-date-range {
-  flex: 0 0 auto;
+  flex-shrink: 0;
 }
 
 .rn-filter-supplier {
-  flex: 0 1 200px;
-  min-width: 160px;
+  width: 180px;
+  min-width: 140px;
 }
 
 .rn-filter-doctype {
-  flex: 0 1 220px;
-  min-width: 180px;
+  width: 190px;
+  min-width: 150px;
 }
 
 .rn-filter-settings {
   margin-left: auto;
   display: flex;
-  align-items: flex-end;
-  padding-bottom: 2px;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+@media (max-width: 1320px) {
+  .rn-filter-bar {
+    gap: 12px;
+  }
+  .rn-filter-settings {
+    margin-left: 0;
+    width: 100%;
+    justify-content: flex-end;
+    padding-top: 4px;
+  }
 }
 
 .rn-filter-label {
@@ -230,7 +247,6 @@
   width: 100%;
   border-collapse: collapse;
   font-size: 12px;
-  min-width: 1200px;
 }
 
 .rn-table thead tr {
@@ -271,10 +287,79 @@
   line-height: 1;
 }
 
+/* Explicit Column Width Rules for Stable Layout (Regardless of Hidden Columns) */
 .rn-th-no,
 .rn-td-no {
   width: 50px;
   min-width: 50px;
+  max-width: 50px;
+  text-align: center;
+}
+
+.rn-th-rnNumber,
+.rn-td-rnNumber {
+  width: 220px;
+  min-width: 190px;
+}
+
+.rn-th-poNumber,
+.rn-td-poNumber {
+  width: 160px;
+  min-width: 140px;
+}
+
+.rn-th-date,
+.rn-td-date {
+  width: 120px;
+  min-width: 110px;
+}
+
+.rn-th-supplier,
+.rn-td-supplier {
+  width: 190px;
+  min-width: 160px;
+}
+
+.rn-th-facility,
+.rn-td-facility {
+  width: 140px;
+  min-width: 120px;
+}
+
+.rn-th-ajuNumber,
+.rn-td-ajuNumber {
+  width: 180px;
+  min-width: 150px;
+}
+
+.rn-th-amount,
+.rn-td-amount {
+  width: 160px;
+  min-width: 140px;
+  text-align: right !important;
+}
+
+.rn-th-amount .rn-th-content {
+  width: 100%;
+  justify-content: flex-end;
+}
+
+.rn-th-description,
+.rn-td-description {
+  min-width: 180px;
+}
+
+.rn-th-warehouseTx,
+.rn-td-warehouseTx {
+  width: 200px;
+  min-width: 170px;
+}
+
+.rn-th-option,
+.rn-td-option {
+  width: 65px;
+  min-width: 65px;
+  max-width: 70px;
   text-align: center;
 }
 

@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Button } from "../../../../components/ui/Button";
 import { Icon } from "../../../../components/ui/Icon";
+import { CustomSelect } from "../../../../components/ui/CustomSelect";
 import type { TypeOfRequestRecord } from "./type-of-request-types";
 
 interface TypeOfRequestFormProps {
@@ -151,17 +152,11 @@ export function TypeOfRequestForm({
 
           <div className="master-form-group">
             <label className="master-form-label">Department / Scope</label>
-            <select
-              className="master-form-select"
+            <CustomSelect
               value={department}
-              onChange={(e) => setDepartment(e.target.value)}
-            >
-              {departmentOptions.map((dept) => (
-                <option key={dept} value={dept}>
-                  {dept}
-                </option>
-              ))}
-            </select>
+              onChange={(val) => setDepartment(val)}
+              options={departmentOptions.map((dept) => ({ value: dept, label: dept }))}
+            />
           </div>
 
           <div className="master-form-group">
@@ -178,39 +173,39 @@ export function TypeOfRequestForm({
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
             <div className="master-form-group">
               <label className="master-form-label">Requires Job Number</label>
-              <select
-                className="master-form-select"
+              <CustomSelect
                 value={requiresJobNumber ? "true" : "false"}
-                onChange={(e) => setRequiresJobNumber(e.target.value === "true")}
-              >
-                <option value="true">Yes (Mandatory Job Number)</option>
-                <option value="false">No (General Stock)</option>
-              </select>
+                onChange={(val) => setRequiresJobNumber(val === "true")}
+                options={[
+                  { value: "true", label: "Yes (Mandatory Job Number)" },
+                  { value: "false", label: "No (General Stock)" },
+                ]}
+              />
             </div>
 
             <div className="master-form-group">
               <label className="master-form-label">Requires 2nd Level Approval</label>
-              <select
-                className="master-form-select"
+              <CustomSelect
                 value={requiresApproval2 ? "true" : "false"}
-                onChange={(e) => setRequiresApproval2(e.target.value === "true")}
-              >
-                <option value="true">Yes (Dept Head + Warehouse Manager)</option>
-                <option value="false">No (Single Approval)</option>
-              </select>
+                onChange={(val) => setRequiresApproval2(val === "true")}
+                options={[
+                  { value: "true", label: "Yes (Dept Head + Warehouse Manager)" },
+                  { value: "false", label: "No (Single Approval)" },
+                ]}
+              />
             </div>
           </div>
 
           <div className="master-form-group">
             <label className="master-form-label">Status</label>
-            <select
-              className="master-form-select"
+            <CustomSelect
               value={status}
-              onChange={(e) => setStatus(e.target.value as any)}
-            >
-              <option value="Active">Active</option>
-              <option value="Inactive">Inactive</option>
-            </select>
+              onChange={(val) => setStatus(val as any)}
+              options={[
+                { value: "Active", label: "Active" },
+                { value: "Inactive", label: "Inactive" },
+              ]}
+            />
           </div>
 
           {/* Form Actions */}

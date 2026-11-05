@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "../../../../components/ui/Button";
 import { Icon } from "../../../../components/ui/Icon";
+import { CustomSelect } from "../../../../components/ui/CustomSelect";
 import type { AccountRecord } from "./account-types";
 
 export interface AccountFormProps {
@@ -144,22 +145,23 @@ export function AccountForm({
               <label htmlFor="accountCategory" className="master-form-label">
                 Category / Classification
               </label>
-              <select
+              <CustomSelect
                 id="accountCategory"
-                className="master-form-select"
                 value={category}
-                onChange={(e) => setCategory(e.target.value)}
-              >
-                <option value="">Select Category . . .</option>
-                <option value="Current Asset">Current Asset</option>
-                <option value="Fixed Asset">Fixed Asset</option>
-                <option value="Current Liability">Current Liability</option>
-                <option value="Long Term Liability">Long Term Liability</option>
-                <option value="Equity">Equity</option>
-                <option value="Cost of Sales">Cost of Sales</option>
-                <option value="Operating Expense">Operating Expense</option>
-                <option value="Other Income/Expense">Other Income/Expense</option>
-              </select>
+                onChange={(val) => setCategory(val)}
+                placeholder="Select Category . . ."
+                options={[
+                  { value: "", label: "Select Category . . ." },
+                  { value: "Current Asset", label: "Current Asset" },
+                  { value: "Fixed Asset", label: "Fixed Asset" },
+                  { value: "Current Liability", label: "Current Liability" },
+                  { value: "Long Term Liability", label: "Long Term Liability" },
+                  { value: "Equity", label: "Equity" },
+                  { value: "Cost of Sales", label: "Cost of Sales" },
+                  { value: "Operating Expense", label: "Operating Expense" },
+                  { value: "Other Income/Expense", label: "Other Income/Expense" },
+                ]}
+              />
             </div>
 
             <div className="master-form-group">

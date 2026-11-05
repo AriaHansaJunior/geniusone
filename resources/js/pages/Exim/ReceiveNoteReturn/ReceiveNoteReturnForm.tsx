@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Icon } from "../../../components/ui/Icon";
 import { Button } from "../../../components/ui/Button";
 import { CustomDatePicker } from "../../../components/ui/CustomDatePicker";
+import { CustomSelect } from "../../../components/ui/CustomSelect";
 import { PickSalesDeliveryItemModal } from "./PickSalesDeliveryItemModal";
 import { initialAdditionalCostRecords } from "../../Procurement/PurchaseMaster/AdditionalCosts/additional-costs-types";
 import {
@@ -282,25 +283,22 @@ export function ReceiveNoteReturnForm({
               <label className="master-form-label">
                 Customer <span className="required-asterisk">*</span>
               </label>
-              <select
-                className={`master-form-select ${formErrors.customer ? "has-error" : ""}`}
+              <CustomSelect
                 value={customer}
-                onChange={(e) => {
-                  setCustomer(e.target.value);
+                onChange={(val) => {
+                  setCustomer(val);
                   if (formErrors.customer) {
                     setFormErrors((prev) => ({ ...prev, customer: "" }));
                   }
                 }}
-              >
-                <option value="">Select Customer</option>
-                {customerList
-                  .filter((c) => c !== "Choose Customer")
-                  .map((cust) => (
-                    <option key={cust} value={cust}>
-                      {cust}
-                    </option>
-                  ))}
-              </select>
+                placeholder="Select Customer"
+                options={[
+                  { value: "", label: "Select Customer" },
+                  ...customerList
+                    .filter((c) => c !== "Choose Customer")
+                    .map((cust) => ({ value: cust, label: cust })),
+                ]}
+              />
               {formErrors.customer && (
                 <span className="master-form-error">{formErrors.customer}</span>
               )}
@@ -311,22 +309,16 @@ export function ReceiveNoteReturnForm({
               <label className="master-form-label">
                 Currency <span className="required-asterisk">*</span>
               </label>
-              <select
-                className={`master-form-select ${formErrors.currency ? "has-error" : ""}`}
+              <CustomSelect
                 value={currency}
-                onChange={(e) => {
-                  setCurrency(e.target.value);
+                onChange={(val) => {
+                  setCurrency(val);
                   if (formErrors.currency) {
                     setFormErrors((prev) => ({ ...prev, currency: "" }));
                   }
                 }}
-              >
-                {currencyList.map((cur) => (
-                  <option key={cur} value={cur}>
-                    {cur}
-                  </option>
-                ))}
-              </select>
+                options={currencyList.map((cur) => ({ value: cur, label: cur }))}
+              />
               {formErrors.currency && (
                 <span className="master-form-error">{formErrors.currency}</span>
               )}
@@ -337,22 +329,16 @@ export function ReceiveNoteReturnForm({
               <label className="master-form-label">
                 Jenis Retur <span className="required-asterisk">*</span>
               </label>
-              <select
-                className={`master-form-select ${formErrors.jenisRetur ? "has-error" : ""}`}
+              <CustomSelect
                 value={jenisRetur}
-                onChange={(e) => {
-                  setJenisRetur(e.target.value);
+                onChange={(val) => {
+                  setJenisRetur(val);
                   if (formErrors.jenisRetur) {
                     setFormErrors((prev) => ({ ...prev, jenisRetur: "" }));
                   }
                 }}
-              >
-                {returnTypesList.map((rt) => (
-                  <option key={rt} value={rt}>
-                    {rt}
-                  </option>
-                ))}
-              </select>
+                options={returnTypesList.map((rt) => ({ value: rt, label: rt }))}
+              />
               {formErrors.jenisRetur && (
                 <span className="master-form-error">{formErrors.jenisRetur}</span>
               )}
@@ -364,17 +350,11 @@ export function ReceiveNoteReturnForm({
             {/* Vehicle Type */}
             <div className="master-form-group">
               <label className="master-form-label">Vehicle Type</label>
-              <select
-                className="master-form-select"
+              <CustomSelect
                 value={vehicleType}
-                onChange={(e) => setVehicleType(e.target.value)}
-              >
-                {vehicleTypesList.map((vt) => (
-                  <option key={vt} value={vt}>
-                    {vt}
-                  </option>
-                ))}
-              </select>
+                onChange={(val) => setVehicleType(val)}
+                options={vehicleTypesList.map((vt) => ({ value: vt, label: vt }))}
+              />
             </div>
 
             {/* License Plate */}
@@ -392,20 +372,17 @@ export function ReceiveNoteReturnForm({
             {/* Type of Document */}
             <div className="master-form-group">
               <label className="master-form-label">Type of Document</label>
-              <select
-                className="master-form-select"
+              <CustomSelect
                 value={typeOfDocument}
-                onChange={(e) => setTypeOfDocument(e.target.value)}
-              >
-                <option value="">Select Option...</option>
-                {docTypesList
-                  .filter((d) => d !== "All Type of Documents")
-                  .map((dt) => (
-                    <option key={dt} value={dt}>
-                      {dt}
-                    </option>
-                  ))}
-              </select>
+                onChange={(val) => setTypeOfDocument(val)}
+                placeholder="Select Option..."
+                options={[
+                  { value: "", label: "Select Option..." },
+                  ...docTypesList
+                    .filter((d) => d !== "All Type of Documents")
+                    .map((dt) => ({ value: dt, label: dt })),
+                ]}
+              />
             </div>
           </div>
 
@@ -604,20 +581,20 @@ export function ReceiveNoteReturnForm({
               <div className="tx-header-grid">
                 <div className="master-form-group">
                   <label className="master-form-label">Additional Cost</label>
-                  <select
-                    className="master-form-select"
+                  <CustomSelect
                     value={additionalCostRemark}
-                    onChange={(e) => setAdditionalCostRemark(e.target.value)}
-                  >
-                    <option value="">Select Additional Cost...</option>
-                    {initialAdditionalCostRecords
-                      .filter((ac) => !ac.hidden)
-                      .map((ac) => (
-                        <option key={ac.id} value={ac.costName}>
-                          {ac.costCode ? `${ac.costCode} — ${ac.costName}` : ac.costName}
-                        </option>
-                      ))}
-                  </select>
+                    onChange={(val) => setAdditionalCostRemark(val)}
+                    placeholder="Select Additional Cost..."
+                    options={[
+                      { value: "", label: "Select Additional Cost..." },
+                      ...initialAdditionalCostRecords
+                        .filter((ac) => !ac.hidden)
+                        .map((ac) => ({
+                          value: ac.costName,
+                          label: ac.costCode ? `${ac.costCode} — ${ac.costName}` : ac.costName,
+                        })),
+                    ]}
+                  />
                 </div>
                 <div className="master-form-group">
                   <label className="master-form-label">Amount (IDR)</label>

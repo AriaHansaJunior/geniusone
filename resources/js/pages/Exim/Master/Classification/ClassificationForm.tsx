@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Button } from "../../../../components/ui/Button";
 import { Icon } from "../../../../components/ui/Icon";
+import { CustomSelect } from "../../../../components/ui/CustomSelect";
 import {
   reportingTypeOptions,
   accountOptions,
@@ -208,18 +209,12 @@ export function ClassificationForm({
           <label htmlFor="classificationReportingType" className="classification-form-label">
             Reporting Type
           </label>
-          <select
+          <CustomSelect
             id="classificationReportingType"
-            className="classification-form-select"
             value={reportingType}
-            onChange={(e) => setReportingType(e.target.value)}
-          >
-            {reportingTypeOptions.map((opt) => (
-              <option key={opt} value={opt}>
-                {opt}
-              </option>
-            ))}
-          </select>
+            onChange={(val) => setReportingType(val)}
+            options={reportingTypeOptions.map((opt) => ({ value: opt, label: opt }))}
+          />
         </div>
 
         {/* 5. Account */}
@@ -227,18 +222,12 @@ export function ClassificationForm({
           <label htmlFor="classificationAccount" className="classification-form-label">
             Account
           </label>
-          <select
+          <CustomSelect
             id="classificationAccount"
-            className="classification-form-select"
             value={account}
-            onChange={(e) => setAccount(e.target.value)}
-          >
-            {accountOptions.map((opt) => (
-              <option key={opt} value={opt}>
-                {opt}
-              </option>
-            ))}
-          </select>
+            onChange={(val) => setAccount(val)}
+            options={accountOptions.map((opt) => ({ value: opt, label: opt }))}
+          />
         </div>
 
         {/* Form Action Buttons: Cancel and Save */}

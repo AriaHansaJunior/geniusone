@@ -4,6 +4,7 @@ import { Button } from "../../../components/ui/Button";
 import { Icon } from "../../../components/ui/Icon";
 import { ConfirmDialog } from "../../../components/ui/ConfirmDialog";
 import { CustomDatePicker } from "../../../components/ui/CustomDatePicker";
+import { CustomSelect } from "../../../components/ui/CustomSelect";
 import { ItemPickerModal } from "../../Exim/Master/Item/ItemPickerModal";
 import { initialItemRecords } from "../../Exim/Master/Item/item-data";
 import { initialJobNumberRecords } from "../PurchaseMaster/JobNumber/job-number-types";
@@ -653,37 +654,34 @@ export function PurchaseRequisitionCreate({
                 <label htmlFor="prDept" className="master-form-label">
                   Dept. Request <span className="required-asterisk">*</span>
                 </label>
-                <select
+                <CustomSelect
                   id="prDept"
-                  className={`master-form-select ${formErrors.deptRequest ? "has-error" : ""}`}
                   value={deptRequest}
-                  onChange={(e) => {
-                    setDeptRequest(e.target.value);
+                  onChange={(val) => {
+                    setDeptRequest(val);
                     if (formErrors.deptRequest) setFormErrors((prev) => ({ ...prev, deptRequest: "" }));
                   }}
-                >
-                  <option value="">Select Data . . .</option>
-                  {Array.from(
-                    new Set([
-                      ...dbDepartments,
-                      "REVERB",
-                      "SMELTING",
-                      "REFINING",
-                      "MAINTENANCE",
-                      "LOGISTICS",
-                      "LABORATORY",
-                      "PROCUREMENT",
-                      "HSE",
-                      "TEKNIK",
-                      "PPIC",
-                      "HRD",
-                    ])
-                  ).map((d) => (
-                    <option key={d} value={d}>
-                      {d}
-                    </option>
-                  ))}
-                </select>
+                  placeholder="Select Data . . ."
+                  options={[
+                    { value: "", label: "Select Data . . ." },
+                    ...Array.from(
+                      new Set([
+                        ...dbDepartments,
+                        "REVERB",
+                        "SMELTING",
+                        "REFINING",
+                        "MAINTENANCE",
+                        "LOGISTICS",
+                        "LABORATORY",
+                        "PROCUREMENT",
+                        "HSE",
+                        "TEKNIK",
+                        "PPIC",
+                        "HRD",
+                      ])
+                    ).map((d) => ({ value: d, label: d })),
+                  ]}
+                />
                 {formErrors.deptRequest && <span className="master-form-error">{formErrors.deptRequest}</span>}
               </div>
 
@@ -692,32 +690,29 @@ export function PurchaseRequisitionCreate({
                 <label htmlFor="prSection" className="master-form-label">
                   Section <span className="required-asterisk">*</span>
                 </label>
-                <select
+                <CustomSelect
                   id="prSection"
-                  className={`master-form-select ${formErrors.section ? "has-error" : ""}`}
                   value={section}
-                  onChange={(e) => {
-                    setSection(e.target.value);
+                  onChange={(val) => {
+                    setSection(val);
                     if (formErrors.section) setFormErrors((prev) => ({ ...prev, section: "" }));
                   }}
-                >
-                  <option value="">Select Data . . .</option>
-                  {Array.from(
-                    new Set([
-                      ...dbSections,
-                      "Section 01",
-                      "Section 02",
-                      "Furnace A",
-                      "Furnace B",
-                      "General Maintenance",
-                      "Utility",
-                    ])
-                  ).map((s) => (
-                    <option key={s} value={s}>
-                      {s}
-                    </option>
-                  ))}
-                </select>
+                  placeholder="Select Data . . ."
+                  options={[
+                    { value: "", label: "Select Data . . ." },
+                    ...Array.from(
+                      new Set([
+                        ...dbSections,
+                        "Section 01",
+                        "Section 02",
+                        "Furnace A",
+                        "Furnace B",
+                        "General Maintenance",
+                        "Utility",
+                      ])
+                    ).map((s) => ({ value: s, label: s })),
+                  ]}
+                />
                 {formErrors.section && <span className="master-form-error">{formErrors.section}</span>}
               </div>
 
@@ -944,22 +939,16 @@ export function PurchaseRequisitionCreate({
 
                         {/* 2. Job Number (Non-selectable) */}
                         <td>
-                          <select
+                          <input
+                            type="text"
                             className="tx-input-cell tx-input-cell--disabled"
                             disabled
-                            value={row.jobNumber || ""}
+                            value={row.jobNumber || "—"}
                             tabIndex={-1}
                             aria-disabled="true"
+                            readOnly
                             title="Job Number selection is disabled"
-                          >
-                            <option value="">Select Data . . .</option>
-                            <option value="—">— None —</option>
-                            {jobOptions.map((job) => (
-                              <option key={job} value={job}>
-                                {job}
-                              </option>
-                            ))}
-                          </select>
+                          />
                         </td>
 
                         {/* 3. Item Name (Searchable Combobox / Dropdown) */}
@@ -1016,19 +1005,20 @@ export function PurchaseRequisitionCreate({
 
                         {/* 4. Unit */}
                         <td>
-                          <select
-                            className="tx-input-cell"
+                          <CustomSelect
+                            className="tx-custom-select-cell"
                             value={row.unit}
-                            onChange={(e) => handleUpdateRow(row.id, "unit", e.target.value)}
-                          >
-                            <option value="PCE">PCE</option>
-                            <option value="KG">KG</option>
-                            <option value="SET">SET</option>
-                            <option value="ROLL">ROLL</option>
-                            <option value="MTR">MTR</option>
-                            <option value="BOX">BOX</option>
-                            <option value="LTR">LTR</option>
-                          </select>
+                            onChange={(val) => handleUpdateRow(row.id, "unit", val)}
+                            options={[
+                              { value: "PCE", label: "PCE" },
+                              { value: "KG", label: "KG" },
+                              { value: "SET", label: "SET" },
+                              { value: "ROLL", label: "ROLL" },
+                              { value: "MTR", label: "MTR" },
+                              { value: "BOX", label: "BOX" },
+                              { value: "LTR", label: "LTR" },
+                            ]}
+                          />
                         </td>
 
                         {/* 5. Current Stock (Read-only Reference) */}

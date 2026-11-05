@@ -6,6 +6,7 @@ import { Icon } from "../../../../components/ui/Icon";
 import { Badge, type BadgeTone } from "../../../../components/ui/Badge";
 import { Pagination } from "../../../../components/ui/Pagination";
 import { CustomDatePicker } from "../../../../components/ui/CustomDatePicker";
+import { CustomSelect } from "../../../../components/ui/CustomSelect";
 import { ApprovalStatusBadge } from "../../../../components/approval/ApprovalStatusBadge";
 import {
   requestMaterialTypesList,
@@ -373,115 +374,79 @@ export function RequestMaterialIndex({
           {/* Type of Request */}
           <div className="master-form-group">
             <label className="master-form-label">Type of Request</label>
-            <select
-              className="master-form-select"
+            <CustomSelect
               value={typeOfRequest}
-              onChange={(e) => {
-                setTypeOfRequest(e.target.value);
+              onChange={(val) => {
+                setTypeOfRequest(val);
                 setCurrentPage(1);
               }}
-            >
-              {requestMaterialTypesList.map((t) => (
-                <option key={t} value={t}>
-                  {t}
-                </option>
-              ))}
-            </select>
+              options={requestMaterialTypesList}
+            />
           </div>
 
           {/* Created By */}
           <div className="master-form-group">
             <label className="master-form-label">Created By</label>
-            <select
-              className="master-form-select"
+            <CustomSelect
               value={createdBy}
-              onChange={(e) => {
-                setCreatedBy(e.target.value);
+              onChange={(val) => {
+                setCreatedBy(val);
                 setCurrentPage(1);
               }}
-            >
-              {requestMaterialCreatedByList.map((u) => (
-                <option key={u} value={u}>
-                  {u}
-                </option>
-              ))}
-            </select>
+              options={requestMaterialCreatedByList}
+            />
           </div>
 
           {/* Destination Location */}
           <div className="master-form-group">
             <label className="master-form-label">Destination Location</label>
-            <select
-              className="master-form-select"
+            <CustomSelect
               value={destinationLocation}
-              onChange={(e) => {
-                setDestinationLocation(e.target.value);
+              onChange={(val) => {
+                setDestinationLocation(val);
                 setCurrentPage(1);
               }}
-            >
-              {requestMaterialDestinationsList.map((dest) => (
-                <option key={dest} value={dest}>
-                  {dest}
-                </option>
-              ))}
-            </select>
+              options={requestMaterialDestinationsList}
+            />
           </div>
 
           {/* Approval */}
           <div className="master-form-group">
             <label className="master-form-label">Approval</label>
-            <select
-              className="master-form-select"
+            <CustomSelect
               value={approval}
-              onChange={(e) => {
-                setApproval(e.target.value);
+              onChange={(val) => {
+                setApproval(val);
                 setCurrentPage(1);
               }}
-            >
-              {requestMaterialApprovalsList.map((appr) => (
-                <option key={appr} value={appr}>
-                  {appr}
-                </option>
-              ))}
-            </select>
+              options={requestMaterialApprovalsList}
+            />
           </div>
 
           {/* Department */}
           <div className="master-form-group">
             <label className="master-form-label">Department</label>
-            <select
-              className="master-form-select"
+            <CustomSelect
               value={department}
-              onChange={(e) => {
-                setDepartment(e.target.value);
+              onChange={(val) => {
+                setDepartment(val);
                 setCurrentPage(1);
               }}
-            >
-              {requestMaterialDepartmentsList.map((dept) => (
-                <option key={dept} value={dept}>
-                  {dept}
-                </option>
-              ))}
-            </select>
+              options={requestMaterialDepartmentsList}
+            />
           </div>
 
           {/* Project Type */}
           <div className="master-form-group">
             <label className="master-form-label">Project Type</label>
-            <select
-              className="master-form-select"
+            <CustomSelect
               value={projectType}
-              onChange={(e) => {
-                setProjectType(e.target.value);
+              onChange={(val) => {
+                setProjectType(val);
                 setCurrentPage(1);
               }}
-            >
-              {requestMaterialProjectTypesList.map((proj) => (
-                <option key={proj} value={proj}>
-                  {proj}
-                </option>
-              ))}
-            </select>
+              options={requestMaterialProjectTypesList}
+            />
           </div>
         </div>
       </div>

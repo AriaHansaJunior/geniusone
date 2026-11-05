@@ -560,6 +560,31 @@ select.tx-input-cell {
   user-select: none;
 }
 
+/* Custom Select in Transaction Table Cells */
+.tx-custom-select-cell {
+  width: 100%;
+  min-width: 90px;
+}
+
+.tx-custom-select-cell .custom-select-trigger {
+  height: 34px;
+  min-height: 34px;
+  padding: 0 10px;
+  font-size: 12px;
+  border-radius: var(--radius-xs, 6px);
+  background: #ffffff;
+  border: 1px solid var(--line);
+}
+
+.tx-custom-select-cell .custom-select-trigger:hover {
+  border-color: var(--blue-500);
+}
+
+.tx-custom-select-cell .custom-select-dropdown {
+  z-index: 1200;
+  min-width: 160px;
+}
+
 /* Searchable Item Dropdown in Transaction Grid */
 .searchable-item-cell {
   position: relative;

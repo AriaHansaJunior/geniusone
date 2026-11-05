@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Button } from "../../../components/ui/Button";
 import { Icon } from "../../../components/ui/Icon";
+import { CustomSelect } from "../../../components/ui/CustomSelect";
 import { warehouseTypesList } from "./warehouse-master-data";
 import type {
   WarehouseMasterRecord,
@@ -139,28 +140,21 @@ export function WarehouseMasterForm({
             <label htmlFor="wh-type" className="wh-form-label">
               Warehouse Type <span className="wh-required">*</span>
             </label>
-            <select
+            <CustomSelect
               id="wh-type"
-              className={`wh-form-select ${
-                errors.type ? "wh-form-input--error" : ""
-              }`}
               value={type}
-              onChange={(e) => {
-                setType(e.target.value as WarehouseType);
+              onChange={(val) => {
+                setType(val as WarehouseType);
                 if (errors.type) {
                   setErrors((prev) => ({ ...prev, type: undefined }));
                 }
               }}
-            >
-              <option value="" disabled>
-                Choose Warehouse Type
-              </option>
-              {warehouseTypesList.map((wt) => (
-                <option key={wt} value={wt}>
-                  {wt}
-                </option>
-              ))}
-            </select>
+              placeholder="Choose Warehouse Type"
+              options={[
+                { value: "", label: "Choose Warehouse Type" },
+                ...warehouseTypesList.map((wt) => ({ value: wt, label: wt })),
+              ]}
+            />
             {errors.type && (
               <span className="wh-form-error">{errors.type}</span>
             )}

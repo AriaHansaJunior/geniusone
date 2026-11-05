@@ -3,6 +3,7 @@ import { Button } from "../../../../components/ui/Button";
 import { Icon } from "../../../../components/ui/Icon";
 import { ConfirmDialog } from "../../../../components/ui/ConfirmDialog";
 import { CustomDatePicker } from "../../../../components/ui/CustomDatePicker";
+import { CustomSelect } from "../../../../components/ui/CustomSelect";
 import {
   requestMaterialTypesList,
   requestMaterialDestinationsList,
@@ -411,30 +412,21 @@ export function RequestMaterialCreate({
             <label className="master-form-label">
               Type of Request <span className="required-asterisk">*</span>
             </label>
-            <select
-              className="master-form-select"
+            <CustomSelect
               value={typeOfRequest}
-              style={{
-                borderColor: formErrors.typeOfRequest ? "var(--danger, #ef4444)" : undefined,
-                boxShadow: formErrors.typeOfRequest
-                  ? "0 0 0 2px rgba(239, 68, 68, 0.15)"
-                  : undefined,
-              }}
-              onChange={(e) => {
-                setTypeOfRequest(e.target.value);
+              onChange={(val) => {
+                setTypeOfRequest(val);
                 clearFieldError("typeOfRequest");
               }}
-            >
-              <option value="">-- Select Type of Request --</option>
-              {(availableTypesOfRequest && availableTypesOfRequest.length > 0
-                ? availableTypesOfRequest
-                : requestMaterialTypesList.filter((t) => t !== "All Types")
-              ).map((t) => (
-                <option key={t} value={t}>
-                  {t}
-                </option>
-              ))}
-            </select>
+              placeholder="-- Select Type of Request --"
+              options={[
+                { value: "", label: "-- Select Type of Request --" },
+                ...(availableTypesOfRequest && availableTypesOfRequest.length > 0
+                  ? availableTypesOfRequest
+                  : requestMaterialTypesList.filter((t) => t !== "All Types")
+                ).map((t) => ({ value: t, label: t })),
+              ]}
+            />
             {formErrors.typeOfRequest && (
               <span
                 style={{
@@ -489,29 +481,20 @@ export function RequestMaterialCreate({
             <label className="master-form-label">
               Department <span className="required-asterisk">*</span>
             </label>
-            <select
-              className="master-form-select"
+            <CustomSelect
               value={department}
-              style={{
-                borderColor: formErrors.department ? "var(--danger, #ef4444)" : undefined,
-                boxShadow: formErrors.department
-                  ? "0 0 0 2px rgba(239, 68, 68, 0.15)"
-                  : undefined,
-              }}
-              onChange={(e) => {
-                setDepartment(e.target.value);
+              onChange={(val) => {
+                setDepartment(val);
                 clearFieldError("department");
               }}
-            >
-              <option value="">-- Select Department --</option>
-              {requestMaterialDepartmentsList
-                .filter((d) => d !== "All Departments")
-                .map((d) => (
-                  <option key={d} value={d}>
-                    {d}
-                  </option>
-                ))}
-            </select>
+              placeholder="-- Select Department --"
+              options={[
+                { value: "", label: "-- Select Department --" },
+                ...requestMaterialDepartmentsList
+                  .filter((d) => d !== "All Departments")
+                  .map((d) => ({ value: d, label: d })),
+              ]}
+            />
             {formErrors.department && (
               <span
                 style={{
@@ -613,29 +596,20 @@ export function RequestMaterialCreate({
             <label className="master-form-label">
               Project Type <span className="required-asterisk">*</span>
             </label>
-            <select
-              className="master-form-select"
+            <CustomSelect
               value={projectType}
-              style={{
-                borderColor: formErrors.projectType ? "var(--danger, #ef4444)" : undefined,
-                boxShadow: formErrors.projectType
-                  ? "0 0 0 2px rgba(239, 68, 68, 0.15)"
-                  : undefined,
-              }}
-              onChange={(e) => {
-                setProjectType(e.target.value);
+              onChange={(val) => {
+                setProjectType(val);
                 clearFieldError("projectType");
               }}
-            >
-              <option value="">-- Select Project Type --</option>
-              {requestMaterialProjectTypesList
-                .filter((p) => p !== "All Projects")
-                .map((p) => (
-                  <option key={p} value={p}>
-                    {p}
-                  </option>
-                ))}
-            </select>
+              placeholder="-- Select Project Type --"
+              options={[
+                { value: "", label: "-- Select Project Type --" },
+                ...requestMaterialProjectTypesList
+                  .filter((p) => p !== "All Projects")
+                  .map((p) => ({ value: p, label: p })),
+              ]}
+            />
             {formErrors.projectType && (
               <span
                 style={{
@@ -659,29 +633,22 @@ export function RequestMaterialCreate({
             <label className="master-form-label">
               Warehouse Destination <span className="required-asterisk">*</span>
             </label>
-            <select
-              className="master-form-select"
+            <CustomSelect
               value={warehouseDestination}
-              style={{
-                borderColor: formErrors.warehouseDestination
-                  ? "var(--danger, #ef4444)"
-                  : undefined,
-                boxShadow: formErrors.warehouseDestination
-                  ? "0 0 0 2px rgba(239, 68, 68, 0.15)"
-                  : undefined,
-              }}
-              onChange={(e) => {
-                setWarehouseDestination(e.target.value);
+              onChange={(val) => {
+                setWarehouseDestination(val);
                 clearFieldError("warehouseDestination");
               }}
-            >
-              <option value="">-- Select Warehouse Destination --</option>
-              <option value="Gudang Raw Material">Gudang Raw Material</option>
-              <option value="Gudang Sparepart">Gudang Sparepart</option>
-              <option value="Gudang Finish Good">Gudang Finish Good</option>
-              <option value="Gudang Bahan Bakar">Gudang Bahan Bakar</option>
-              <option value="Gudang Buffer">Gudang Buffer</option>
-            </select>
+              placeholder="-- Select Warehouse Destination --"
+              options={[
+                { value: "", label: "-- Select Warehouse Destination --" },
+                { value: "Gudang Raw Material", label: "Gudang Raw Material" },
+                { value: "Gudang Sparepart", label: "Gudang Sparepart" },
+                { value: "Gudang Finish Good", label: "Gudang Finish Good" },
+                { value: "Gudang Bahan Bakar", label: "Gudang Bahan Bakar" },
+                { value: "Gudang Buffer", label: "Gudang Buffer" },
+              ]}
+            />
             {formErrors.warehouseDestination && (
               <span
                 style={{
@@ -716,32 +683,21 @@ export function RequestMaterialCreate({
             <label className="master-form-label">
               Destination Location <span className="required-asterisk">*</span>
             </label>
-            <select
-              className="master-form-select"
+            <CustomSelect
               value={destinationLocation}
-              style={{
-                borderColor: formErrors.destinationLocation
-                  ? "var(--danger, #ef4444)"
-                  : undefined,
-                boxShadow: formErrors.destinationLocation
-                  ? "0 0 0 2px rgba(239, 68, 68, 0.15)"
-                  : undefined,
-              }}
-              onChange={(e) => {
-                setDestinationLocation(e.target.value);
+              onChange={(val) => {
+                setDestinationLocation(val);
                 clearFieldError("destinationLocation");
               }}
-            >
-              <option value="">-- Select Destination Location --</option>
-              {(availableDestinations && availableDestinations.length > 0
-                ? availableDestinations
-                : requestMaterialDestinationsList.filter((d) => d !== "All Destinations")
-              ).map((d) => (
-                <option key={d} value={d}>
-                  {d}
-                </option>
-              ))}
-            </select>
+              placeholder="-- Select Destination Location --"
+              options={[
+                { value: "", label: "-- Select Destination Location --" },
+                ...(availableDestinations && availableDestinations.length > 0
+                  ? availableDestinations
+                  : requestMaterialDestinationsList.filter((d) => d !== "All Destinations")
+                ).map((d) => ({ value: d, label: d })),
+              ]}
+            />
             {formErrors.destinationLocation && (
               <span
                 style={{

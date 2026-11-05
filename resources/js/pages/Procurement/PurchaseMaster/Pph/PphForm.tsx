@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Button } from "../../../../components/ui/Button";
 import { Icon } from "../../../../components/ui/Icon";
 import { ConfirmDialog } from "../../../../components/ui/ConfirmDialog";
+import { CustomSelect } from "../../../../components/ui/CustomSelect";
 import type { PphRecord } from "./pph-types";
 
 interface PphFormProps {
@@ -207,20 +208,21 @@ export function PphForm({ onBack, onSave }: PphFormProps) {
           >
             Jenis PPH
           </label>
-          <select
+          <CustomSelect
             id="jenisPph"
-            className="form-select"
             value={pphType}
-            onChange={(e) => setPphType(e.target.value)}
-          >
-            <option value="">Select PPH Type</option>
-            <option value="PPh 21">PPh 21</option>
-            <option value="PPh 22">PPh 22</option>
-            <option value="PPh 23">PPh 23</option>
-            <option value="PPh 4 (2)">PPh 4 (2)</option>
-            <option value="PPh 31 E">PPh 31 E</option>
-            <option value="PBBKB">PBBKB</option>
-          </select>
+            onChange={(val) => setPphType(val)}
+            placeholder="Select PPH Type"
+            options={[
+              { value: "", label: "Select PPH Type" },
+              { value: "PPh 21", label: "PPh 21" },
+              { value: "PPh 22", label: "PPh 22" },
+              { value: "PPh 23", label: "PPh 23" },
+              { value: "PPh 4 (2)", label: "PPh 4 (2)" },
+              { value: "PPh 31 E", label: "PPh 31 E" },
+              { value: "PBBKB", label: "PBBKB" },
+            ]}
+          />
         </div>
 
         {/* Field 4: Deduction */}
@@ -231,15 +233,15 @@ export function PphForm({ onBack, onSave }: PphFormProps) {
           >
             Deduction
           </label>
-          <select
+          <CustomSelect
             id="deduction"
-            className="form-select"
             value={deduction}
-            onChange={(e) => setDeduction(e.target.value)}
-          >
-            <option value="No">No</option>
-            <option value="Yes">Yes</option>
-          </select>
+            onChange={(val) => setDeduction(val)}
+            options={[
+              { value: "No", label: "No" },
+              { value: "Yes", label: "Yes" },
+            ]}
+          />
         </div>
 
         {/* Action Buttons Footer */}

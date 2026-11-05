@@ -15,6 +15,7 @@ export interface CustomSelectProps {
   className?: string;
   id?: string;
   name?: string;
+  style?: React.CSSProperties;
 }
 
 export function CustomSelect({
@@ -26,6 +27,7 @@ export function CustomSelect({
   className = "",
   id,
   name,
+  style,
 }: CustomSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -92,6 +94,7 @@ export function CustomSelect({
       ref={containerRef}
       className={`custom-select-container ${className} ${disabled ? "is-disabled" : ""}`}
       id={id}
+      style={style}
     >
       {/* Hidden input for forms */}
       {name && <input type="hidden" name={name} value={value} />}

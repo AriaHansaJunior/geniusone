@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Button } from "../../../components/ui/Button";
 import { Icon } from "../../../components/ui/Icon";
+import { CustomSelect } from "../../../components/ui/CustomSelect";
 import type { StockNotificationRecord } from "./stock-notification-types";
 
 interface StockNotificationFormProps {
@@ -161,18 +162,18 @@ export function StockNotificationForm({
             <label className="master-form-label">
               Select Item Catalog <span className="required-mark">*</span>
             </label>
-            <select
-              className="master-form-select"
+            <CustomSelect
               value={itemCode}
-              onChange={(e) => handleSelectItem(e.target.value)}
-            >
-              <option value="">-- Select Item from Catalog (Optional) --</option>
-              {predefinedItems.map((p) => (
-                <option key={p.code} value={p.code}>
-                  [{p.code}] {p.name} (Current Stock: {p.stock} {p.unit})
-                </option>
-              ))}
-            </select>
+              onChange={(val) => handleSelectItem(val)}
+              placeholder="-- Select Item from Catalog (Optional) --"
+              options={[
+                { value: "", label: "-- Select Item from Catalog (Optional) --" },
+                ...predefinedItems.map((p) => ({
+                  value: p.code,
+                  label: `[${p.code}] ${p.name} (Current Stock: ${p.stock} ${p.unit})`,
+                })),
+              ]}
+            />
           </div>
 
           {/* Item Code & Name Details (Read-only or customizable) */}
@@ -261,29 +262,29 @@ export function StockNotificationForm({
 
             <div className="master-form-group">
               <label className="master-form-label">Notification Severity Level</label>
-              <select
-                className="master-form-select"
+              <CustomSelect
                 value={notificationLevel}
-                onChange={(e) => setNotificationLevel(e.target.value as any)}
-              >
-                <option value="Critical">Critical (Immediate Restock)</option>
-                <option value="Warning">Warning (Standard Threshold)</option>
-                <option value="Standard">Standard (Informational)</option>
-              </select>
+                onChange={(val) => setNotificationLevel(val as any)}
+                options={[
+                  { value: "Critical", label: "Critical (Immediate Restock)" },
+                  { value: "Warning", label: "Warning (Standard Threshold)" },
+                  { value: "Standard", label: "Standard (Informational)" },
+                ]}
+              />
             </div>
           </div>
 
           {/* Status & Notes */}
           <div className="master-form-group">
             <label className="master-form-label">Status</label>
-            <select
-              className="master-form-select"
+            <CustomSelect
               value={status}
-              onChange={(e) => setStatus(e.target.value as any)}
-            >
-              <option value="Active">Active</option>
-              <option value="Inactive">Inactive</option>
-            </select>
+              onChange={(val) => setStatus(val as any)}
+              options={[
+                { value: "Active", label: "Active" },
+                { value: "Inactive", label: "Inactive" },
+              ]}
+            />
           </div>
 
           <div className="master-form-group">

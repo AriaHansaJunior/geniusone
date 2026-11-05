@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "../../../../components/ui/Button";
 import { Icon } from "../../../../components/ui/Icon";
+import { CustomSelect } from "../../../../components/ui/CustomSelect";
 import type { JobNumberRecord } from "./job-number-types";
 
 export interface JobNumberFormProps {
@@ -144,22 +145,23 @@ export function JobNumberForm({
               <label htmlFor="jobDepartment" className="master-form-label">
                 Department Request
               </label>
-              <select
+              <CustomSelect
                 id="jobDepartment"
-                className="master-form-select"
                 value={department}
-                onChange={(e) => setDepartment(e.target.value)}
-              >
-                <option value="">Select Department . . .</option>
-                <option value="PRODUCTION">PRODUCTION</option>
-                <option value="SMELTING">SMELTING</option>
-                <option value="MAINTENANCE">MAINTENANCE</option>
-                <option value="REVERB">REVERB</option>
-                <option value="HSE">HSE</option>
-                <option value="TEKNIK">TEKNIK</option>
-                <option value="PPIC">PPIC</option>
-                <option value="PROCUREMENT">PROCUREMENT</option>
-              </select>
+                onChange={(val) => setDepartment(val)}
+                placeholder="Select Department . . ."
+                options={[
+                  { value: "", label: "Select Department . . ." },
+                  { value: "PRODUCTION", label: "PRODUCTION" },
+                  { value: "SMELTING", label: "SMELTING" },
+                  { value: "MAINTENANCE", label: "MAINTENANCE" },
+                  { value: "REVERB", label: "REVERB" },
+                  { value: "HSE", label: "HSE" },
+                  { value: "TEKNIK", label: "TEKNIK" },
+                  { value: "PPIC", label: "PPIC" },
+                  { value: "PROCUREMENT", label: "PROCUREMENT" },
+                ]}
+              />
             </div>
 
             <div className="master-form-group">

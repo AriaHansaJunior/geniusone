@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Button } from "../../../../components/ui/Button";
 import { Icon } from "../../../../components/ui/Icon";
+import { CustomSelect } from "../../../../components/ui/CustomSelect";
 import type { DestinationLocationRecord } from "./destination-location-types";
 
 interface DestinationLocationFormProps {
@@ -149,17 +150,11 @@ export function DestinationLocationForm({
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
             <div className="master-form-group">
               <label className="master-form-label">Location Classification</label>
-              <select
-                className="master-form-select"
+              <CustomSelect
                 value={locationType}
-                onChange={(e) => setLocationType(e.target.value as any)}
-              >
-                {locationTypeOptions.map((type) => (
-                  <option key={type} value={type}>
-                    {type}
-                  </option>
-                ))}
-              </select>
+                onChange={(val) => setLocationType(val as any)}
+                options={locationTypeOptions.map((type) => ({ value: type, label: type }))}
+              />
             </div>
 
             <div className="master-form-group">
@@ -187,14 +182,14 @@ export function DestinationLocationForm({
 
           <div className="master-form-group">
             <label className="master-form-label">Status</label>
-            <select
-              className="master-form-select"
+            <CustomSelect
               value={status}
-              onChange={(e) => setStatus(e.target.value as any)}
-            >
-              <option value="Active">Active</option>
-              <option value="Inactive">Inactive</option>
-            </select>
+              onChange={(val) => setStatus(val as any)}
+              options={[
+                { value: "Active", label: "Active" },
+                { value: "Inactive", label: "Inactive" },
+              ]}
+            />
           </div>
 
           {/* Form Actions */}

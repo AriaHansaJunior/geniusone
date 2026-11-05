@@ -3,6 +3,7 @@ import { Icon } from "../../../components/ui/Icon";
 import { Button } from "../../../components/ui/Button";
 import { ConfirmDialog } from "../../../components/ui/ConfirmDialog";
 import { CustomDatePicker } from "../../../components/ui/CustomDatePicker";
+import { CustomSelect } from "../../../components/ui/CustomSelect";
 import { initialSupplierRecords } from "../../Procurement/PurchaseMaster/Supplier/supplier-types";
 import { initialWarehouseMasterRecords } from "../MasterWarehouse/warehouse-master-data";
 import { initialItemRecords } from "../../Exim/Master/Item/item-data";
@@ -866,34 +867,27 @@ export function WarehouseCreate({
               <label htmlFor="bpbRefSelect" className="master-form-label">
                 Reference Approved PO / Receive Note (Auto-Fill)
               </label>
-              <select
+              <CustomSelect
                 id="bpbRefSelect"
-                className="master-form-select"
                 value={selectedRefKey}
-                onChange={(e) => handleSelectReference(e.target.value)}
-              >
-                <option value="">-- Select Approved PO or Receive Note to Auto-Populate --</option>
-                <optgroup label="Approved Purchase Orders (Stage 2 Approved)">
-                  {allPoOptions.map((po) => (
-                    <option key={`po-${po.poNumber}`} value={`PO:${po.poNumber}`}>
-                      {po.label} — Approved
-                    </option>
-                  ))}
-                </optgroup>
-                {existingRns.length > 0 && (
-                  <optgroup label="Gate Receive Notes (RN)">
-                    {existingRns.map((rn) => {
-                      const rnNum = rn.rn_number || rn.rnNumber;
-                      const sup = rn.supplier?.name || rn.supplierName || "";
-                      return (
-                        <option key={`rn-${rn.id}`} value={`RN:${rnNum}`}>
-                          {rnNum} {sup ? `— ${sup}` : ""}
-                        </option>
-                      );
-                    })}
-                  </optgroup>
-                )}
-              </select>
+                onChange={(val) => handleSelectReference(val)}
+                placeholder="-- Select Approved PO or Receive Note to Auto-Populate --"
+                options={[
+                  { value: "", label: "-- Select Approved PO or Receive Note to Auto-Populate --" },
+                  ...allPoOptions.map((po) => ({
+                    value: `PO:${po.poNumber}`,
+                    label: `[PO] ${po.label} — Approved`,
+                  })),
+                  ...existingRns.map((rn) => {
+                    const rnNum = rn.rn_number || rn.rnNumber;
+                    const sup = rn.supplier?.name || rn.supplierName || "";
+                    return {
+                      value: `RN:${rnNum}`,
+                      label: `[RN] ${rnNum} ${sup ? `— ${sup}` : ""}`,
+                    };
+                  }),
+                ]}
+              />
             </div>
 
             <div className="master-form-group">
@@ -943,19 +937,16 @@ export function WarehouseCreate({
               <label htmlFor="bpbSupplier" className="master-form-label">
                 Supplier Name <span className="required-asterisk">*</span>
               </label>
-              <select
+              <CustomSelect
                 id="bpbSupplier"
-                className={`master-form-select ${formErrors.supplier ? "has-error" : ""}`}
                 value={supplier}
-                onChange={(e) => setSupplier(e.target.value)}
-              >
-                <option value="">Select Supplier...</option>
-                {supplierOptions.map((supName) => (
-                  <option key={supName} value={supName}>
-                    {supName}
-                  </option>
-                ))}
-              </select>
+                onChange={(val) => setSupplier(val)}
+                placeholder="Select Supplier..."
+                options={[
+                  { value: "", label: "Select Supplier..." },
+                  ...supplierOptions.map((supName) => ({ value: supName, label: supName })),
+                ]}
+              />
               {formErrors.supplier && (
                 <span className="master-form-error">{formErrors.supplier}</span>
               )}
@@ -965,34 +956,34 @@ export function WarehouseCreate({
               <label htmlFor="bpbType" className="master-form-label">
                 BPB Type <span className="required-asterisk">*</span>
               </label>
-              <select
+              <CustomSelect
                 id="bpbType"
-                className="master-form-select"
                 value={bpbType}
-                onChange={(e) => setBpbType(e.target.value)}
-              >
-                <option value="Gudang">Warehouse (Gudang)</option>
-                <option value="Timbangan">Scale (Timbangan)</option>
-                <option value="Pembelian Langsung">Direct Purchase</option>
-              </select>
+                onChange={(val) => setBpbType(val)}
+                options={[
+                  { value: "Gudang", label: "Warehouse (Gudang)" },
+                  { value: "Timbangan", label: "Scale (Timbangan)" },
+                  { value: "Pembelian Langsung", label: "Direct Purchase" },
+                ]}
+              />
             </div>
 
             <div className="master-form-group">
               <label htmlFor="bcType" className="master-form-label">
                 Customs Doc Type
               </label>
-              <select
+              <CustomSelect
                 id="bcType"
-                className="master-form-select"
                 value={bcType}
-                onChange={(e) => setBcType(e.target.value)}
-              >
-                <option value="BC 4.0">BC 4.0</option>
-                <option value="BC 2.3">BC 2.3</option>
-                <option value="BC 2.6.2">BC 2.6.2</option>
-                <option value="BC 2.7">BC 2.7</option>
-                <option value="Non-BC">Non-BC (Local)</option>
-              </select>
+                onChange={(val) => setBcType(val)}
+                options={[
+                  { value: "BC 4.0", label: "BC 4.0" },
+                  { value: "BC 2.3", label: "BC 2.3" },
+                  { value: "BC 2.6.2", label: "BC 2.6.2" },
+                  { value: "BC 2.7", label: "BC 2.7" },
+                  { value: "Non-BC", label: "Non-BC (Local)" },
+                ]}
+              />
             </div>
 
             {/* Row 3: Invoice Number | Invoice Date | Tax Invoice | Vehicle License Plate */}
@@ -1185,25 +1176,23 @@ export function WarehouseCreate({
 
                       {/* PO Reference Dropdown (Matches PR Number dropdown in PO Create) */}
                       <td>
-                        <select
-                          className="tx-input-cell"
+                        <CustomSelect
+                          className="tx-custom-select-cell"
                           style={{ minWidth: "220px" }}
                           value={it.poNumber}
-                          onChange={(e) => handleSelectRowPo(it.id, e.target.value)}
-                        >
-                          <option value="">Select Approved PO...</option>
-                          <option value="—">— Direct Receipt (No PO) —</option>
-                          {allPoOptions.map((p) => (
-                            <option key={p.poNumber} value={p.poNumber}>
-                              {p.label}
-                            </option>
-                          ))}
-                          {it.poNumber &&
+                          onChange={(val) => handleSelectRowPo(it.id, val)}
+                          placeholder="Select Approved PO..."
+                          options={[
+                            { value: "", label: "Select Approved PO..." },
+                            { value: "—", label: "— Direct Receipt (No PO) —" },
+                            ...allPoOptions.map((p) => ({ value: p.poNumber, label: p.label })),
+                            ...(it.poNumber &&
                             it.poNumber !== "—" &&
-                            !allPoOptions.some((p) => p.poNumber === it.poNumber) && (
-                              <option value={it.poNumber}>{it.poNumber}</option>
-                            )}
-                        </select>
+                            !allPoOptions.some((p) => p.poNumber === it.poNumber)
+                              ? [{ value: it.poNumber, label: it.poNumber }]
+                              : []),
+                          ]}
+                        />
                       </td>
 
                       {/* Material Item Name */}
@@ -1238,21 +1227,16 @@ export function WarehouseCreate({
 
                       {/* Job Number */}
                       <td>
-                        <select
-                          className="tx-input-cell"
+                        <CustomSelect
+                          className="tx-custom-select-cell"
                           style={{ minWidth: "110px" }}
                           value={it.jobNumber}
-                          onChange={(e) =>
-                            handleUpdateItemField(it.id, "jobNumber", e.target.value)
-                          }
-                        >
-                          <option value="—">—</option>
-                          {jobNumbers.map((jn) => (
-                            <option key={jn} value={jn}>
-                              {jn}
-                            </option>
-                          ))}
-                        </select>
+                          onChange={(val) => handleUpdateItemField(it.id, "jobNumber", val)}
+                          options={[
+                            { value: "—", label: "—" },
+                            ...jobNumbers.map((jn) => ({ value: jn, label: jn })),
+                          ]}
+                        />
                       </td>
 
                       {/* Delivery Note (SJ) */}
@@ -1303,46 +1287,37 @@ export function WarehouseCreate({
 
                       {/* Unit */}
                       <td>
-                        <select
-                          className="tx-input-cell"
+                        <CustomSelect
+                          className="tx-custom-select-cell"
                           style={{ minWidth: "90px" }}
                           value={it.unit}
-                          onChange={(e) =>
-                            handleUpdateItemField(it.id, "unit", e.target.value)
-                          }
-                        >
-                          <option value="PCE">PCE</option>
-                          <option value="PCS">PCS</option>
-                          <option value="KGM">KGM</option>
-                          <option value="KG">KG</option>
-                          <option value="SET">SET</option>
-                          <option value="ROLL">ROLL</option>
-                          <option value="MTR">MTR</option>
-                          <option value="BOX">BOX</option>
-                          <option value="LTR">LTR</option>
-                          {it.unit &&
-                            !["PCE", "PCS", "KGM", "KG", "SET", "ROLL", "MTR", "BOX", "LTR"].includes(it.unit) && (
-                              <option value={it.unit}>{it.unit}</option>
-                            )}
-                        </select>
+                          onChange={(val) => handleUpdateItemField(it.id, "unit", val)}
+                          options={[
+                            { value: "PCE", label: "PCE" },
+                            { value: "PCS", label: "PCS" },
+                            { value: "KGM", label: "KGM" },
+                            { value: "KG", label: "KG" },
+                            { value: "SET", label: "SET" },
+                            { value: "ROLL", label: "ROLL" },
+                            { value: "MTR", label: "MTR" },
+                            { value: "BOX", label: "BOX" },
+                            { value: "LTR", label: "LTR" },
+                            ...(it.unit && !["PCE", "PCS", "KGM", "KG", "SET", "ROLL", "MTR", "BOX", "LTR"].includes(it.unit)
+                              ? [{ value: it.unit, label: it.unit }]
+                              : []),
+                          ]}
+                        />
                       </td>
 
                       {/* Warehouse Location */}
                       <td>
-                        <select
-                          className="tx-input-cell"
+                        <CustomSelect
+                          className="tx-custom-select-cell"
                           style={{ minWidth: "160px" }}
                           value={it.location}
-                          onChange={(e) =>
-                            handleUpdateItemField(it.id, "location", e.target.value)
-                          }
-                        >
-                          {warehouseOptions.map((loc) => (
-                            <option key={loc} value={loc}>
-                              {loc}
-                            </option>
-                          ))}
-                        </select>
+                          onChange={(val) => handleUpdateItemField(it.id, "location", val)}
+                          options={warehouseOptions.map((loc) => ({ value: loc, label: loc }))}
+                        />
                       </td>
 
                       {/* Description / Purpose */}

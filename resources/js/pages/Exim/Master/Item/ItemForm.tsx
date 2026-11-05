@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Button } from "../../../../components/ui/Button";
 import { Icon } from "../../../../components/ui/Icon";
+import { CustomSelect } from "../../../../components/ui/CustomSelect";
 import { itemCategories, itemClassifications } from "./item-data";
 import type { ItemRecord } from "./item-types";
 
@@ -257,57 +258,45 @@ export function ItemForm({ initialRecord, onBack, onSave }: ItemFormProps) {
               <label htmlFor="classification" className="item-form-label">
                 Classification
               </label>
-              <select
+              <CustomSelect
                 id="classification"
-                className="item-form-select"
                 value={classification}
-                onChange={(e) => setClassification(e.target.value)}
-              >
-                {itemClassifications
+                onChange={(val) => setClassification(val)}
+                options={itemClassifications
                   .filter((c) => c !== "All Classifications")
-                  .map((cls) => (
-                    <option key={cls} value={cls}>
-                      {cls}
-                    </option>
-                  ))}
-              </select>
+                  .map((cls) => ({ value: cls, label: cls }))}
+              />
             </div>
 
             <div className="item-form-group">
               <label htmlFor="category" className="item-form-label">
                 Category
               </label>
-              <select
+              <CustomSelect
                 id="category"
-                className="item-form-select"
                 value={category}
-                onChange={(e) => setCategory(e.target.value)}
-              >
-                {itemCategories
+                onChange={(val) => setCategory(val)}
+                options={itemCategories
                   .filter((c) => c !== "All Categories")
-                  .map((cat) => (
-                    <option key={cat} value={cat}>
-                      {cat}
-                    </option>
-                  ))}
-              </select>
+                  .map((cat) => ({ value: cat, label: cat }))}
+              />
             </div>
 
             <div className="item-form-group">
               <label htmlFor="facility" className="item-form-label">
                 Facility
               </label>
-              <select
+              <CustomSelect
                 id="facility"
-                className="item-form-select"
                 value={facility}
-                onChange={(e) =>
-                  setFacility(e.target.value as "FASILITAS" | "NON FASILITAS")
+                onChange={(val) =>
+                  setFacility(val as "FASILITAS" | "NON FASILITAS")
                 }
-              >
-                <option value="FASILITAS">FASILITAS</option>
-                <option value="NON FASILITAS">NON FASILITAS</option>
-              </select>
+                options={[
+                  { value: "FASILITAS", label: "FASILITAS" },
+                  { value: "NON FASILITAS", label: "NON FASILITAS" },
+                ]}
+              />
             </div>
 
             <div className="item-form-group">
@@ -328,38 +317,34 @@ export function ItemForm({ initialRecord, onBack, onSave }: ItemFormProps) {
               <label htmlFor="customReport" className="item-form-label">
                 Customs Report
               </label>
-              <select
+              <CustomSelect
                 id="customReport"
-                className="item-form-select"
                 value={customReport}
-                onChange={(e) => setCustomReport(e.target.value)}
-              >
-                <option value="Sesuai Klasifikasi Barang">
-                  Sesuai Klasifikasi Barang
-                </option>
-                <option value="Mutasi Bahan Baku dan Penolong">
-                  Mutasi Bahan Baku dan Penolong
-                </option>
-                <option value="Mutasi Barang Jadi">Mutasi Barang Jadi</option>
-                <option value="Mutasi Barang Modal">Mutasi Barang Modal</option>
-              </select>
+                onChange={(val) => setCustomReport(val)}
+                options={[
+                  { value: "Sesuai Klasifikasi Barang", label: "Sesuai Klasifikasi Barang" },
+                  { value: "Mutasi Bahan Baku dan Penolong", label: "Mutasi Bahan Baku dan Penolong" },
+                  { value: "Mutasi Barang Jadi", label: "Mutasi Barang Jadi" },
+                  { value: "Mutasi Barang Modal", label: "Mutasi Barang Modal" },
+                ]}
+              />
             </div>
 
             <div className="item-form-group">
               <label htmlFor="jenisItem" className="item-form-label">
                 Item Type
               </label>
-              <select
+              <CustomSelect
                 id="jenisItem"
-                className="item-form-select"
                 value={jenisItem}
-                onChange={(e) => setJenisItem(e.target.value)}
-              >
-                <option value="Raw Material">Raw Material</option>
-                <option value="Finish Good">Finish Good</option>
-                <option value="Scrap">Scrap</option>
-                <option value="Spare Part">Spare Part</option>
-              </select>
+                onChange={(val) => setJenisItem(val)}
+                options={[
+                  { value: "Raw Material", label: "Raw Material" },
+                  { value: "Finish Good", label: "Finish Good" },
+                  { value: "Scrap", label: "Scrap" },
+                  { value: "Spare Part", label: "Spare Part" },
+                ]}
+              />
             </div>
           </div>
         </div>
@@ -372,12 +357,10 @@ export function ItemForm({ initialRecord, onBack, onSave }: ItemFormProps) {
               <label htmlFor="smallestUnitCode" className="item-form-label">
                 Usage Unit (Smallest Unit)
               </label>
-              <select
+              <CustomSelect
                 id="smallestUnitCode"
-                className="item-form-select"
                 value={smallestUnitCode}
-                onChange={(e) => {
-                  const val = e.target.value;
+                onChange={(val) => {
                   setSmallestUnitCode(val);
                   if (val === "PCE") setSmallestUnitName("PIECE");
                   else if (val === "KGM") setSmallestUnitName("KILOGRAM");
@@ -386,26 +369,25 @@ export function ItemForm({ initialRecord, onBack, onSave }: ItemFormProps) {
                   else if (val === "SET") setSmallestUnitName("SET");
                   else if (val === "ST") setSmallestUnitName("SHEET");
                 }}
-              >
-                <option value="PCE">PCE - PIECE</option>
-                <option value="KGM">KGM - KILOGRAM</option>
-                <option value="LTR">LTR - LITER</option>
-                <option value="MTR">MTR - METER</option>
-                <option value="SET">SET - SET</option>
-                <option value="ST">ST - SHEET</option>
-              </select>
+                options={[
+                  { value: "PCE", label: "PCE - PIECE" },
+                  { value: "KGM", label: "KGM - KILOGRAM" },
+                  { value: "LTR", label: "LTR - LITER" },
+                  { value: "MTR", label: "MTR - METER" },
+                  { value: "SET", label: "SET - SET" },
+                  { value: "ST", label: "ST - SHEET" },
+                ]}
+              />
             </div>
 
             <div className="item-form-group">
               <label htmlFor="greatestUnitCode" className="item-form-label">
                 Purchase Unit (Greatest Unit)
               </label>
-              <select
+              <CustomSelect
                 id="greatestUnitCode"
-                className="item-form-select"
                 value={greatestUnitCode}
-                onChange={(e) => {
-                  const val = e.target.value;
+                onChange={(val) => {
                   setGreatestUnitCode(val);
                   if (val === "PCE") setGreatestUnitName("PIECE");
                   else if (val === "KGM") setGreatestUnitName("KILOGRAM");
@@ -414,14 +396,15 @@ export function ItemForm({ initialRecord, onBack, onSave }: ItemFormProps) {
                   else if (val === "SET") setGreatestUnitName("SET");
                   else if (val === "ST") setGreatestUnitName("SHEET");
                 }}
-              >
-                <option value="PCE">PCE - PIECE</option>
-                <option value="KGM">KGM - KILOGRAM</option>
-                <option value="LTR">LTR - LITER</option>
-                <option value="MTR">MTR - METER</option>
-                <option value="SET">SET - SET</option>
-                <option value="ST">ST - SHEET</option>
-              </select>
+                options={[
+                  { value: "PCE", label: "PCE - PIECE" },
+                  { value: "KGM", label: "KGM - KILOGRAM" },
+                  { value: "LTR", label: "LTR - LITER" },
+                  { value: "MTR", label: "MTR - METER" },
+                  { value: "SET", label: "SET - SET" },
+                  { value: "ST", label: "ST - SHEET" },
+                ]}
+              />
             </div>
 
             <div className="item-form-group">

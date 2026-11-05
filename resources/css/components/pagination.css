@@ -165,6 +165,38 @@
   color: var(--blue-600);
 }
 
+/* Custom Rows Select Component in Pagination */
+.pagination__rows-custom-select {
+  width: 68px;
+  min-width: 68px;
+  position: relative;
+}
+
+.pagination__rows-custom-select .custom-select-trigger {
+  min-height: 28px;
+  height: 28px;
+  padding: 0 8px;
+  font-size: 11.5px;
+  font-weight: 700;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.pagination__rows-custom-select .custom-select-dropdown {
+  bottom: calc(100% + 4px);
+  top: auto;
+  min-width: 76px;
+  width: 76px;
+  box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.04);
+}
+
+.pagination__rows-custom-select .custom-select-option {
+  padding: 6px 10px;
+  font-size: 11.5px;
+}
+
 /* Empty State Box */
 .empty {
   height: 220px;

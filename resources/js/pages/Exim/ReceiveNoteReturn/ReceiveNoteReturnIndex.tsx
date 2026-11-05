@@ -419,7 +419,7 @@ export function ReceiveNoteReturnIndex({
             >
               Export To Excel
             </Button>
-            <div style={{ position: "relative" }}>
+            <div style={{ position: "relative", zIndex: 60 }}>
               <button
                 type="button"
                 className={`rnr-btn-settings ${isColumnSettingsOpen ? "active" : ""}`}
@@ -450,7 +450,7 @@ export function ReceiveNoteReturnIndex({
                 <th className="rnr-th-no">No</th>
                 {isColVisible("rnNumber") && (
                   <th
-                    className="rnr-th-sortable"
+                    className="rnr-th-sortable rnr-th-rnNumber"
                     onClick={() => handleSort("rnNumber")}
                   >
                     <div className="rnr-th-content">
@@ -461,7 +461,7 @@ export function ReceiveNoteReturnIndex({
                 )}
                 {isColVisible("deliveryOrder") && (
                   <th
-                    className="rnr-th-sortable"
+                    className="rnr-th-sortable rnr-th-deliveryOrder"
                     onClick={() => handleSort("deliveryOrder")}
                   >
                     <div className="rnr-th-content">
@@ -472,7 +472,7 @@ export function ReceiveNoteReturnIndex({
                 )}
                 {isColVisible("customer") && (
                   <th
-                    className="rnr-th-sortable"
+                    className="rnr-th-sortable rnr-th-customer"
                     onClick={() => handleSort("customer")}
                   >
                     <div className="rnr-th-content">
@@ -483,7 +483,7 @@ export function ReceiveNoteReturnIndex({
                 )}
                 {isColVisible("facility") && (
                   <th
-                    className="rnr-th-sortable"
+                    className="rnr-th-sortable rnr-th-facility"
                     onClick={() => handleSort("facility")}
                   >
                     <div className="rnr-th-content">
@@ -494,7 +494,7 @@ export function ReceiveNoteReturnIndex({
                 )}
                 {isColVisible("ajuNumber") && (
                   <th
-                    className="rnr-th-sortable"
+                    className="rnr-th-sortable rnr-th-ajuNumber"
                     onClick={() => handleSort("ajuNumber")}
                   >
                     <div className="rnr-th-content">
@@ -505,7 +505,7 @@ export function ReceiveNoteReturnIndex({
                 )}
                 {isColVisible("amount") && (
                   <th
-                    className="rnr-th-sortable text-right"
+                    className="rnr-th-sortable rnr-th-amount text-right"
                     onClick={() => handleSort("amount")}
                   >
                     <div className="rnr-th-content justify-end">
@@ -514,11 +514,11 @@ export function ReceiveNoteReturnIndex({
                     </div>
                   </th>
                 )}
-                {isColVisible("description") && <th>Description</th>}
-                {isColVisible("warehouseTx") && <th>Warehouse Transaction</th>}
+                {isColVisible("description") && <th className="rnr-th-description">Description</th>}
+                {isColVisible("warehouseTx") && <th className="rnr-th-warehouseTx">Warehouse Transaction</th>}
                 {isColVisible("approvalStatus") && (
                   <th
-                    className="rnr-th-sortable"
+                    className="rnr-th-sortable rnr-th-approvalStatus"
                     onClick={() => handleSort("approvalStatus")}
                   >
                     <div className="rnr-th-content">
@@ -529,7 +529,7 @@ export function ReceiveNoteReturnIndex({
                 )}
                 {isColVisible("userCreated") && (
                   <th
-                    className="rnr-th-sortable"
+                    className="rnr-th-sortable rnr-th-userCreated"
                     onClick={() => handleSort("userCreated")}
                   >
                     <div className="rnr-th-content">
@@ -555,7 +555,7 @@ export function ReceiveNoteReturnIndex({
                     <tr key={rnr.id}>
                       <td className="rnr-td-no text-center">{sequentialNumber}</td>
                       {isColVisible("rnNumber") && (
-                        <td>
+                        <td className="rnr-td-rnNumber">
                           <div className="font-semibold text-ink">
                             {rnr.rnNumber}
                           </div>
@@ -565,7 +565,7 @@ export function ReceiveNoteReturnIndex({
                         </td>
                       )}
                       {isColVisible("deliveryOrder") && (
-                        <td>
+                        <td className="rnr-td-deliveryOrder">
                           <div className="text-ink">
                             {rnr.deliveryOrder && rnr.deliveryOrder !== "null" ? rnr.deliveryOrder : "-"}
                           </div>
@@ -575,10 +575,10 @@ export function ReceiveNoteReturnIndex({
                         </td>
                       )}
                       {isColVisible("customer") && (
-                        <td className="font-medium text-ink">{rnr.customer}</td>
+                        <td className="rnr-td-customer font-medium text-ink">{rnr.customer}</td>
                       )}
                       {isColVisible("facility") && (
-                        <td>
+                        <td className="rnr-td-facility">
                           <div className="rnr-facility-cell">
                             <span className="rnr-facility-title">{rnr.facility}</span>
                             <span className="rnr-badge-bc">{rnr.bcCode}</span>
@@ -586,7 +586,7 @@ export function ReceiveNoteReturnIndex({
                         </td>
                       )}
                       {isColVisible("ajuNumber") && (
-                        <td>
+                        <td className="rnr-td-ajuNumber">
                           <button
                             type="button"
                             className="rnr-link-aju"
@@ -603,15 +603,15 @@ export function ReceiveNoteReturnIndex({
                         </td>
                       )}
                       {isColVisible("amount") && (
-                        <td className="text-right font-mono font-medium text-ink">
+                        <td className="rnr-td-amount text-right font-mono font-medium text-ink">
                           {rnr.amountFormatted}
                         </td>
                       )}
                       {isColVisible("description") && (
-                        <td className="text-muted">{rnr.description || "-"}</td>
+                        <td className="rnr-td-description text-muted">{rnr.description || "-"}</td>
                       )}
                       {isColVisible("warehouseTx") && (
-                        <td>
+                        <td className="rnr-td-warehouseTx">
                           {rnr.warehouseTransaction ? (
                             <>
                               <div className="font-medium text-ink text-xs">
@@ -629,12 +629,12 @@ export function ReceiveNoteReturnIndex({
                         </td>
                       )}
                       {isColVisible("approvalStatus") && (
-                        <td>
+                        <td className="rnr-td-approvalStatus">
                           <ApprovalStatusBadge status={rnr.approvalStatus} />
                         </td>
                       )}
                       {isColVisible("userCreated") && (
-                        <td>
+                        <td className="rnr-td-userCreated">
                           <div className="font-medium text-ink text-xs">
                             {rnr.userCreated}
                           </div>
@@ -643,7 +643,7 @@ export function ReceiveNoteReturnIndex({
                           </div>
                         </td>
                       )}
-                      <td className="text-center">
+                      <td className="rnr-td-option text-center">
                         <button
                           type="button"
                           className="rnr-btn-row-action"

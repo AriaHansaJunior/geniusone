@@ -406,7 +406,7 @@ export function ReceiveNoteIndex({
             >
               Export To Excel
             </Button>
-            <div style={{ position: "relative" }}>
+            <div style={{ position: "relative", zIndex: 60 }}>
               <button
                 type="button"
                 className={`rn-btn-settings ${isColumnSettingsOpen ? "active" : ""}`}
@@ -437,7 +437,7 @@ export function ReceiveNoteIndex({
                 <th className="rn-th-no">No</th>
                 {isColVisible("rnNumber") && (
                   <th
-                    className="rn-th-sortable"
+                    className="rn-th-sortable rn-th-rnNumber"
                     onClick={() => handleSort("rnNumber")}
                   >
                     <div className="rn-th-content">
@@ -448,7 +448,7 @@ export function ReceiveNoteIndex({
                 )}
                 {isColVisible("poNumber") && (
                   <th
-                    className="rn-th-sortable"
+                    className="rn-th-sortable rn-th-poNumber"
                     onClick={() => handleSort("poNumber")}
                   >
                     <div className="rn-th-content">
@@ -459,7 +459,7 @@ export function ReceiveNoteIndex({
                 )}
                 {isColVisible("date") && (
                   <th
-                    className="rn-th-sortable"
+                    className="rn-th-sortable rn-th-date"
                     onClick={() => handleSort("date")}
                   >
                     <div className="rn-th-content">
@@ -470,7 +470,7 @@ export function ReceiveNoteIndex({
                 )}
                 {isColVisible("supplier") && (
                   <th
-                    className="rn-th-sortable"
+                    className="rn-th-sortable rn-th-supplier"
                     onClick={() => handleSort("supplier")}
                   >
                     <div className="rn-th-content">
@@ -481,7 +481,7 @@ export function ReceiveNoteIndex({
                 )}
                 {isColVisible("facility") && (
                   <th
-                    className="rn-th-sortable"
+                    className="rn-th-sortable rn-th-facility"
                     onClick={() => handleSort("facility")}
                   >
                     <div className="rn-th-content">
@@ -492,7 +492,7 @@ export function ReceiveNoteIndex({
                 )}
                 {isColVisible("ajuNumber") && (
                   <th
-                    className="rn-th-sortable"
+                    className="rn-th-sortable rn-th-ajuNumber"
                     onClick={() => handleSort("ajuNumber")}
                   >
                     <div className="rn-th-content">
@@ -503,7 +503,7 @@ export function ReceiveNoteIndex({
                 )}
                 {isColVisible("amount") && (
                   <th
-                    className="rn-th-sortable text-right"
+                    className="rn-th-sortable rn-th-amount text-right"
                     onClick={() => handleSort("amount")}
                   >
                     <div className="rn-th-content justify-end">
@@ -512,8 +512,8 @@ export function ReceiveNoteIndex({
                     </div>
                   </th>
                 )}
-                {isColVisible("description") && <th>Description</th>}
-                {isColVisible("warehouseTx") && <th>Warehouse Transaction</th>}
+                {isColVisible("description") && <th className="rn-th-description">Description</th>}
+                {isColVisible("warehouseTx") && <th className="rn-th-warehouseTx">Warehouse Transaction</th>}
                 <th className="rn-th-option text-center">Option</th>
               </tr>
             </thead>
@@ -531,7 +531,7 @@ export function ReceiveNoteIndex({
                     <tr key={rn.id}>
                       <td className="rn-td-no text-center">{sequentialNumber}</td>
                       {isColVisible("rnNumber") && (
-                        <td>
+                        <td className="rn-td-rnNumber">
                           <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
                             <span className="font-semibold text-ink">{rn.rnNumber}</span>
                             <ApprovalStatusBadge status={rn.status || "WAITING_APPROVE_1"} showIcon={false} />
@@ -542,16 +542,16 @@ export function ReceiveNoteIndex({
                         </td>
                       )}
                       {isColVisible("poNumber") && (
-                        <td className="font-medium text-ink">{rn.poNumber}</td>
+                        <td className="rn-td-poNumber font-medium text-ink">{rn.poNumber}</td>
                       )}
                       {isColVisible("date") && (
-                        <td>{formatDisplayDate(rn.date)}</td>
+                        <td className="rn-td-date">{formatDisplayDate(rn.date)}</td>
                       )}
                       {isColVisible("supplier") && (
-                        <td className="font-medium">{rn.supplier}</td>
+                        <td className="rn-td-supplier font-medium">{rn.supplier}</td>
                       )}
                       {isColVisible("facility") && (
-                        <td>
+                        <td className="rn-td-facility">
                           <div className="rn-facility-cell">
                             <span className="rn-facility-title">{rn.facility}</span>
                             <span className="rn-badge-bc">{rn.bcCode}</span>
@@ -559,7 +559,7 @@ export function ReceiveNoteIndex({
                         </td>
                       )}
                       {isColVisible("ajuNumber") && (
-                        <td>
+                        <td className="rn-td-ajuNumber">
                           <button
                             type="button"
                             className="rn-link-aju"
@@ -574,17 +574,17 @@ export function ReceiveNoteIndex({
                         </td>
                       )}
                       {isColVisible("amount") && (
-                        <td className="text-right font-mono font-medium text-ink">
+                        <td className="rn-td-amount text-right font-mono font-medium text-ink">
                           {rn.amountFormatted}
                         </td>
                       )}
                       {isColVisible("description") && (
-                        <td className="text-muted">{rn.description}</td>
+                        <td className="rn-td-description text-muted">{rn.description}</td>
                       )}
                       {isColVisible("warehouseTx") && (
-                        <td className="text-muted">{rn.warehouseTransaction}</td>
+                        <td className="rn-td-warehouseTx text-muted">{rn.warehouseTransaction}</td>
                       )}
-                      <td className="text-center">
+                      <td className="rn-td-option text-center">
                         <button
                           type="button"
                           className="rn-btn-row-action"

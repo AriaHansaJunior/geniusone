@@ -3,6 +3,7 @@ import { Button } from "../../../../components/ui/Button";
 import { SearchField } from "../../../../components/ui/SearchField";
 import { Pagination } from "../../../../components/ui/Pagination";
 import { Icon } from "../../../../components/ui/Icon";
+import { CustomSelect } from "../../../../components/ui/CustomSelect";
 import { itemCategories, itemClassifications } from "./item-data";
 import type { ItemRecord } from "./item-types";
 
@@ -144,35 +145,25 @@ export function ItemPickerModal({
               placeholder="Search code, external code, name..."
             />
 
-            <select
-              className="item-picker-select"
+            <CustomSelect
+              className="item-picker-custom-select"
               value={classification}
-              onChange={(e) => {
-                setClassification(e.target.value);
+              onChange={(val) => {
+                setClassification(val);
                 setCurrentPage(1);
               }}
-            >
-              {itemClassifications.map((cls) => (
-                <option key={cls} value={cls}>
-                  {cls}
-                </option>
-              ))}
-            </select>
+              options={itemClassifications.map((cls) => ({ value: cls, label: cls }))}
+            />
 
-            <select
-              className="item-picker-select"
+            <CustomSelect
+              className="item-picker-custom-select"
               value={category}
-              onChange={(e) => {
-                setCategory(e.target.value);
+              onChange={(val) => {
+                setCategory(val);
                 setCurrentPage(1);
               }}
-            >
-              {itemCategories.map((cat) => (
-                <option key={cat} value={cat}>
-                  {cat}
-                </option>
-              ))}
-            </select>
+              options={itemCategories.map((cat) => ({ value: cat, label: cat }))}
+            />
           </div>
 
           <div className="item-picker-actions-group">

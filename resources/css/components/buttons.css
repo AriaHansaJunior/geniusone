@@ -269,19 +269,21 @@
 .btn-export-excel,
 .wh-btn-export-excel,
 .dh-btn-export-excel {
-  background: #16a34a !important;
+  background-color: #16a34a !important;
+  background-image: none !important;
   border: 1px solid #15803d !important;
   color: #ffffff !important;
   font-weight: 700 !important;
   box-shadow: 0 1px 3px rgba(22, 163, 74, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.22) !important;
-  transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease !important;
+  transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease !important;
 }
 
 .button--excel:hover:not(:disabled),
 .btn-export-excel:hover:not(:disabled),
 .wh-btn-export-excel:hover,
 .dh-btn-export-excel:hover {
-  background: #15803d !important;
+  background-color: #15803d !important;
+  background-image: none !important;
   border-color: #166534 !important;
   color: #ffffff !important;
   transform: translateY(-1px);
@@ -292,7 +294,8 @@
 .btn-export-excel:active:not(:disabled),
 .wh-btn-export-excel:active,
 .dh-btn-export-excel:active {
-  background: #166534 !important;
+  background-color: #166534 !important;
+  background-image: none !important;
   border-color: #14532d !important;
   transform: translateY(1px);
   box-shadow: 0 1px 2px rgba(22, 163, 74, 0.2) !important;

@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Button } from "../../../../components/ui/Button";
 import { Icon } from "../../../../components/ui/Icon";
+import { CustomSelect } from "../../../../components/ui/CustomSelect";
 import type { SupplierFormData } from "./supplier-types";
 
 interface SupplierFormProps {
@@ -243,22 +244,22 @@ export function SupplierForm({ onBack, onSave }: SupplierFormProps) {
             <label htmlFor="country" className="field-label">
               Country
             </label>
-            <select
+            <CustomSelect
               id="country"
-              name="country"
-              className="form-select"
               value={formData.country}
-              onChange={handleInputChange}
-            >
-              <option value="">Choose Country</option>
-              <option value="INDONESIA">Indonesia</option>
-              <option value="CHINA">China</option>
-              <option value="JAPAN">Japan</option>
-              <option value="SINGAPORE">Singapore</option>
-              <option value="MALAYSIA">Malaysia</option>
-              <option value="UNITED STATES">United States</option>
-              <option value="GERMANY">Germany</option>
-            </select>
+              onChange={(val) => setFormData((prev) => ({ ...prev, country: val }))}
+              placeholder="Choose Country"
+              options={[
+                { value: "", label: "Choose Country" },
+                { value: "INDONESIA", label: "Indonesia" },
+                { value: "CHINA", label: "China" },
+                { value: "JAPAN", label: "Japan" },
+                { value: "SINGAPORE", label: "Singapore" },
+                { value: "MALAYSIA", label: "Malaysia" },
+                { value: "UNITED STATES", label: "United States" },
+                { value: "GERMANY", label: "Germany" },
+              ]}
+            />
           </div>
 
           {/* Row 4: Zipcode, Email, Telephone Number */}
@@ -312,60 +313,60 @@ export function SupplierForm({ onBack, onSave }: SupplierFormProps) {
             <label htmlFor="paymentTerm" className="field-label">
               Payment Term
             </label>
-            <select
+            <CustomSelect
               id="paymentTerm"
-              name="paymentTerm"
-              className="form-select"
               value={formData.paymentTerm}
-              onChange={handleInputChange}
-            >
-              <option value="">Choose Payment Term</option>
-              <option value="COD">COD - Cash on Delivery</option>
-              <option value="CBD">CBD - Cash Before Delivery</option>
-              <option value="NET_14">Net 14 Days</option>
-              <option value="NET_30">Net 30 Days</option>
-              <option value="NET_45">Net 45 Days</option>
-              <option value="NET_60">Net 60 Days</option>
-              <option value="LC">Letter of Credit (LC)</option>
-            </select>
+              onChange={(val) => setFormData((prev) => ({ ...prev, paymentTerm: val }))}
+              placeholder="Choose Payment Term"
+              options={[
+                { value: "", label: "Choose Payment Term" },
+                { value: "COD", label: "COD - Cash on Delivery" },
+                { value: "CBD", label: "CBD - Cash Before Delivery" },
+                { value: "NET_14", label: "Net 14 Days" },
+                { value: "NET_30", label: "Net 30 Days" },
+                { value: "NET_45", label: "Net 45 Days" },
+                { value: "NET_60", label: "Net 60 Days" },
+                { value: "LC", label: "Letter of Credit (LC)" },
+              ]}
+            />
           </div>
 
           <div className="form-field-group col-span-1">
             <label htmlFor="paymentMethod" className="field-label">
               Payment Method
             </label>
-            <select
+            <CustomSelect
               id="paymentMethod"
-              name="paymentMethod"
-              className="form-select"
               value={formData.paymentMethod}
-              onChange={handleInputChange}
-            >
-              <option value="">Choose Payment Method</option>
-              <option value="TT">Bank Transfer (TT)</option>
-              <option value="LC">Letter of Credit (LC)</option>
-              <option value="CASH">Cash</option>
-              <option value="CHEQUE">Cheque</option>
-              <option value="GIRO">Giro</option>
-            </select>
+              onChange={(val) => setFormData((prev) => ({ ...prev, paymentMethod: val }))}
+              placeholder="Choose Payment Method"
+              options={[
+                { value: "", label: "Choose Payment Method" },
+                { value: "TT", label: "Bank Transfer (TT)" },
+                { value: "LC", label: "Letter of Credit (LC)" },
+                { value: "CASH", label: "Cash" },
+                { value: "CHEQUE", label: "Cheque" },
+                { value: "GIRO", label: "Giro" },
+              ]}
+            />
           </div>
 
           <div className="form-field-group col-span-1">
             <label htmlFor="typeRafaksi" className="field-label">
               Type Rafaksi
             </label>
-            <select
+            <CustomSelect
               id="typeRafaksi"
-              name="typeRafaksi"
-              className="form-select"
               value={formData.typeRafaksi}
-              onChange={handleInputChange}
-            >
-              <option value="-">-</option>
-              <option value="Rafaksi Berat">Rafaksi Berat</option>
-              <option value="Rafaksi Harga">Rafaksi Harga</option>
-              <option value="Rafaksi Kualitas">Rafaksi Kualitas</option>
-            </select>
+              onChange={(val) => setFormData((prev) => ({ ...prev, typeRafaksi: val }))}
+              options={[
+                { value: "-", label: "-" },
+                { value: "Rafaksi Berat", label: "Rafaksi Berat" },
+                { value: "Rafaksi Kadar Air", label: "Rafaksi Kadar Air" },
+                { value: "Rafaksi Harga", label: "Rafaksi Harga" },
+                { value: "Rafaksi Kualitas", label: "Rafaksi Kualitas" },
+              ]}
+            />
           </div>
 
           {/* Row 6: Currency & Port */}
@@ -429,20 +430,20 @@ export function SupplierForm({ onBack, onSave }: SupplierFormProps) {
             <label htmlFor="port" className="field-label">
               Port
             </label>
-            <select
+            <CustomSelect
               id="port"
-              name="port"
-              className="form-select"
               value={formData.port}
-              onChange={handleInputChange}
-            >
-              <option value="">Choose Port</option>
-              <option value="Tanjung Perak, Surabaya">Tanjung Perak, Surabaya</option>
-              <option value="Tanjung Priok, Jakarta">Tanjung Priok, Jakarta</option>
-              <option value="Belawan, Medan">Belawan, Medan</option>
-              <option value="Port of Shanghai, China">Port of Shanghai, China</option>
-              <option value="Port of Singapore">Port of Singapore</option>
-            </select>
+              onChange={(val) => setFormData((prev) => ({ ...prev, port: val }))}
+              placeholder="Choose Port"
+              options={[
+                { value: "", label: "Choose Port" },
+                { value: "Tanjung Perak, Surabaya", label: "Tanjung Perak, Surabaya" },
+                { value: "Tanjung Priok, Jakarta", label: "Tanjung Priok, Jakarta" },
+                { value: "Belawan, Medan", label: "Belawan, Medan" },
+                { value: "Port of Shanghai, China", label: "Port of Shanghai, China" },
+                { value: "Port of Singapore", label: "Port of Singapore" },
+              ]}
+            />
           </div>
 
           {/* Row 7: NPWP & NITKU */}

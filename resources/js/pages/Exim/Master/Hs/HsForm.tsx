@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Button } from "../../../../components/ui/Button";
 import { Icon } from "../../../../components/ui/Icon";
+import { CustomSelect } from "../../../../components/ui/CustomSelect";
 import { rateTypeOptions } from "./hs-data";
 import type { HsRecord } from "./hs-types";
 
@@ -208,18 +209,12 @@ export function HsForm({
               <label htmlFor="typeRateBm" className="hs-form-label">
                 Type Rates BM
               </label>
-              <select
+              <CustomSelect
                 id="typeRateBm"
-                className="hs-form-select"
                 value={typeRateBm}
-                onChange={(e) => setTypeRateBm(e.target.value)}
-              >
-                {rateTypeOptions.map((opt) => (
-                  <option key={opt} value={opt}>
-                    {opt}
-                  </option>
-                ))}
-              </select>
+                onChange={(val) => setTypeRateBm(val)}
+                options={rateTypeOptions.map((opt) => ({ value: opt, label: opt }))}
+              />
             </div>
 
             <div className="hs-form-group">
@@ -254,18 +249,12 @@ export function HsForm({
               <label htmlFor="typeRateCukai" className="hs-form-label">
                 Type Rates Cukai
               </label>
-              <select
+              <CustomSelect
                 id="typeRateCukai"
-                className="hs-form-select"
                 value={typeRateCukai}
-                onChange={(e) => setTypeRateCukai(e.target.value)}
-              >
-                {rateTypeOptions.map((opt) => (
-                  <option key={opt} value={opt}>
-                    {opt}
-                  </option>
-                ))}
-              </select>
+                onChange={(val) => setTypeRateCukai(val)}
+                options={rateTypeOptions.map((opt) => ({ value: opt, label: opt }))}
+              />
             </div>
 
             <div className="hs-form-group">

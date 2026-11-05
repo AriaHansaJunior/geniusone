@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Button } from "../../../../components/ui/Button";
 import { Icon } from "../../../../components/ui/Icon";
+import { CustomSelect } from "../../../../components/ui/CustomSelect";
 import { unitOptions } from "./department-data";
 import type { DepartmentRecord } from "./department-types";
 
@@ -141,18 +142,12 @@ export function DepartmentForm({
           <label htmlFor="departmentUnit" className="department-form-label">
             Unit
           </label>
-          <select
+          <CustomSelect
             id="departmentUnit"
-            className="department-form-select"
             value={unit}
-            onChange={(e) => setUnit(e.target.value)}
-          >
-            {unitOptions.map((opt) => (
-              <option key={opt} value={opt}>
-                {opt}
-              </option>
-            ))}
-          </select>
+            onChange={(val) => setUnit(val)}
+            options={unitOptions.map((opt) => ({ value: opt, label: opt }))}
+          />
         </div>
 
         {/* Form Action Buttons: Cancel and Save */}

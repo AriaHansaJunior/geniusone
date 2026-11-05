@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Icon } from "../../../components/ui/Icon";
 import { Button } from "../../../components/ui/Button";
 import { CustomDatePicker } from "../../../components/ui/CustomDatePicker";
+import { CustomSelect } from "../../../components/ui/CustomSelect";
 import { PickPoItemModal } from "./PickPoItemModal";
 import { suppliersList, docTypesList } from "./receive-note-data";
 import type {
@@ -290,25 +291,22 @@ export function ReceiveNoteForm({ onBack, onSave }: ReceiveNoteFormProps) {
               <label className="master-form-label">
                 Supplier <span className="required-asterisk">*</span>
               </label>
-              <select
-                className={`master-form-select ${formErrors.supplier ? "has-error" : ""}`}
+              <CustomSelect
                 value={supplier}
-                onChange={(e) => {
-                  setSupplier(e.target.value);
+                onChange={(val) => {
+                  setSupplier(val);
                   if (formErrors.supplier) {
                     setFormErrors((prev) => ({ ...prev, supplier: "" }));
                   }
                 }}
-              >
-                <option value="">Select Supplier</option>
-                {suppliersList
-                  .filter((s) => s !== "All Suppliers")
-                  .map((sup) => (
-                    <option key={sup} value={sup}>
-                      {sup}
-                    </option>
-                  ))}
-              </select>
+                placeholder="Select Supplier"
+                options={[
+                  { value: "", label: "Select Supplier" },
+                  ...suppliersList
+                    .filter((s) => s !== "All Suppliers")
+                    .map((sup) => ({ value: sup, label: sup })),
+                ]}
+              />
               {formErrors.supplier && (
                 <span className="master-form-error">{formErrors.supplier}</span>
               )}
@@ -319,16 +317,16 @@ export function ReceiveNoteForm({ onBack, onSave }: ReceiveNoteFormProps) {
               <label className="master-form-label">
                 Currency <span className="required-asterisk">*</span>
               </label>
-              <select
-                className={`master-form-select ${formErrors.currency ? "has-error" : ""}`}
+              <CustomSelect
                 value={currency}
-                onChange={(e) => setCurrency(e.target.value)}
-              >
-                <option value="IDR - RUPIAH">IDR - RUPIAH</option>
-                <option value="USD - US DOLLAR">USD - US DOLLAR</option>
-                <option value="EUR - EURO">EUR - EURO</option>
-                <option value="SGD - SINGAPORE DOLLAR">SGD - SINGAPORE DOLLAR</option>
-              </select>
+                onChange={(val) => setCurrency(val)}
+                options={[
+                  { value: "IDR - RUPIAH", label: "IDR - RUPIAH" },
+                  { value: "USD - US DOLLAR", label: "USD - US DOLLAR" },
+                  { value: "EUR - EURO", label: "EUR - EURO" },
+                  { value: "SGD - SINGAPORE DOLLAR", label: "SGD - SINGAPORE DOLLAR" },
+                ]}
+              />
             </div>
 
             {/* Rate */}
@@ -353,25 +351,22 @@ export function ReceiveNoteForm({ onBack, onSave }: ReceiveNoteFormProps) {
               <label className="master-form-label">
                 Type of Document <span className="required-asterisk">*</span>
               </label>
-              <select
-                className={`master-form-select ${formErrors.typeOfDocument ? "has-error" : ""}`}
+              <CustomSelect
                 value={typeOfDocument}
-                onChange={(e) => {
-                  setTypeOfDocument(e.target.value);
+                onChange={(val) => {
+                  setTypeOfDocument(val);
                   if (formErrors.typeOfDocument) {
                     setFormErrors((prev) => ({ ...prev, typeOfDocument: "" }));
                   }
                 }}
-              >
-                <option value="">Select Data ...</option>
-                {docTypesList
-                  .filter((d) => d !== "All Type of Documents")
-                  .map((dt) => (
-                    <option key={dt} value={dt}>
-                      {dt}
-                    </option>
-                  ))}
-              </select>
+                placeholder="Select Data ..."
+                options={[
+                  { value: "", label: "Select Data ..." },
+                  ...docTypesList
+                    .filter((d) => d !== "All Type of Documents")
+                    .map((dt) => ({ value: dt, label: dt })),
+                ]}
+              />
               {formErrors.typeOfDocument && (
                 <span className="master-form-error">{formErrors.typeOfDocument}</span>
               )}
@@ -482,18 +477,19 @@ export function ReceiveNoteForm({ onBack, onSave }: ReceiveNoteFormProps) {
             {/* Vehicle Type */}
             <div className="master-form-group">
               <label className="master-form-label">Vehicle Type</label>
-              <select
-                className="master-form-select"
+              <CustomSelect
                 value={vehicleType}
-                onChange={(e) => setVehicleType(e.target.value)}
-              >
-                <option value="">Choose Vehicle Type...</option>
-                <option value="MOBIL BARANG">MOBIL BARANG</option>
-                <option value="TRUK BOX">TRUK BOX</option>
-                <option value="CONTAINER 20FT">CONTAINER 20FT</option>
-                <option value="CONTAINER 40FT">CONTAINER 40FT</option>
-                <option value="PICKUP">PICKUP</option>
-              </select>
+                onChange={(val) => setVehicleType(val)}
+                placeholder="Choose Vehicle Type..."
+                options={[
+                  { value: "", label: "Choose Vehicle Type..." },
+                  { value: "MOBIL BARANG", label: "MOBIL BARANG" },
+                  { value: "TRUK BOX", label: "TRUK BOX" },
+                  { value: "CONTAINER 20FT", label: "CONTAINER 20FT" },
+                  { value: "CONTAINER 40FT", label: "CONTAINER 40FT" },
+                  { value: "PICKUP", label: "PICKUP" },
+                ]}
+              />
             </div>
 
             {/* License Plate */}

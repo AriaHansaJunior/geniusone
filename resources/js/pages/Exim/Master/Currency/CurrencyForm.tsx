@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "../../../../components/ui/Button";
 import { Icon } from "../../../../components/ui/Icon";
+import { CustomSelect } from "../../../../components/ui/CustomSelect";
 import type { CurrencyRecord, SyncStatus } from "./currency-types";
 
 export interface CurrencyFormProps {
@@ -166,17 +167,17 @@ export function CurrencyForm({
               <label htmlFor="currencySyncStatus" className="master-form-label">
                 Sync Status
               </label>
-              <select
+              <CustomSelect
                 id="currencySyncStatus"
-                className="master-form-select"
                 value={syncStatus}
-                onChange={(e) => setSyncStatus(e.target.value as SyncStatus)}
-              >
-                <option value="Synced">Synced</option>
-                <option value="Pending">Pending</option>
-                <option value="Failed">Failed</option>
-                <option value="Not Synced">Not Synced</option>
-              </select>
+                onChange={(val) => setSyncStatus(val as SyncStatus)}
+                options={[
+                  { value: "Synced", label: "Synced" },
+                  { value: "Pending", label: "Pending" },
+                  { value: "Failed", label: "Failed" },
+                  { value: "Not Synced", label: "Not Synced" },
+                ]}
+              />
             </div>
           </div>
 

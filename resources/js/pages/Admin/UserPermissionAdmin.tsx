@@ -11,6 +11,7 @@ import { Badge } from "../../components/ui/Badge";
 import { Icon } from "../../components/ui/Icon";
 import { StatusToggle } from "../../components/ui/StatusToggle";
 import { ConfirmDialog } from "../../components/ui/ConfirmDialog";
+import { CustomSelect } from "../../components/ui/CustomSelect";
 import { useAuthPermission } from "../../context/AuthPermissionContext";
 import {
   APPROVAL_MODULES,
@@ -1129,30 +1130,21 @@ export function UserPermissionAdmin({ onNavigateAudit }: UserPermissionAdminProp
                           </div>
                         </td>
                         <td>
-                          <div className="user-identity" style={{ gap: "4px" }}>
-                            <select
-                              className="form-input"
-                              style={{
-                                height: "28px",
-                                padding: "2px 8px",
-                                fontSize: "12px",
-                                fontWeight: 600,
-                                maxWidth: "210px",
-                              }}
+                          <div className="user-identity" style={{ gap: "4px", minWidth: "180px" }}>
+                            <CustomSelect
                               value={user.isSuperAdmin ? "superadmin" : user.role}
                               disabled={user.isSuperAdmin}
-                              onChange={(e) => handleAssignRoleDirectly(user, e.target.value)}
-                              title="Assign Role to user account (permissions are inherited automatically from Role)"
-                            >
-                              {roles.map((r) => (
-                                <option key={r.id} value={r.code}>
-                                  {r.name}
-                                </option>
-                              ))}
-                              {!roles.some((r) => r.code === user.role) && user.role && (
-                                <option value={user.role}>{user.role_label || user.role}</option>
-                              )}
-                            </select>
+                              onChange={(val) => handleAssignRoleDirectly(user, val)}
+                              options={[
+                                ...roles.map((r) => ({
+                                  value: r.code,
+                                  label: r.name,
+                                })),
+                                ...(!roles.some((r) => r.code === user.role) && user.role
+                                  ? [{ value: user.role, label: user.role_label || user.role }]
+                                  : []),
+                              ]}
+                            />
                             <span className="user-dept-text">{user.department}</span>
                           </div>
                         </td>
@@ -1507,46 +1499,40 @@ export function UserPermissionAdmin({ onNavigateAudit }: UserPermissionAdminProp
 
                   <div className="form-field">
                     <label className="form-label">Department</label>
-                    <select
-                      className="form-input"
-                      value={newUserData.department_id}
-                      onChange={(e) => setNewUserData({ ...newUserData, department_id: Number(e.target.value) })}
-                    >
-                      {departmentsList.map((dept) => (
-                        <option key={dept.id} value={dept.id}>
-                          {dept.name}
-                        </option>
-                      ))}
-                    </select>
+                    <CustomSelect
+                      value={String(newUserData.department_id)}
+                      onChange={(val) => setNewUserData({ ...newUserData, department_id: Number(val) })}
+                      options={departmentsList.map((dept) => ({
+                        value: String(dept.id),
+                        label: dept.name,
+                      }))}
+                    />
                   </div>
 
                   <div className="form-field">
                     <label className="form-label">System Role (Inherits Role Permissions)</label>
-                    <select
-                      className="form-input"
+                    <CustomSelect
                       value={newUserData.role}
                       disabled={newUserData.isSuperAdmin}
-                      onChange={(e) => setNewUserData({ ...newUserData, role: e.target.value })}
-                    >
-                      {roles.map((r) => (
-                        <option key={r.id} value={r.code}>
-                          {r.name}
-                        </option>
-                      ))}
-                    </select>
+                      onChange={(val) => setNewUserData({ ...newUserData, role: val })}
+                      options={roles.map((r) => ({
+                        value: r.code,
+                        label: r.name,
+                      }))}
+                    />
                   </div>
 
                   <div className="form-field" style={{ gridColumn: "1 / -1" }}>
                     <label className="form-label">Initial Sidebar Access Preset</label>
-                    <select
-                      className="form-input"
+                    <CustomSelect
                       value={newUserData.sidebarPreset}
-                      onChange={(e) => setNewUserData({ ...newUserData, sidebarPreset: e.target.value })}
-                    >
-                      <option value="all">Full Enterprise Sidebar Access (All Modules)</option>
-                      <option value="procurement">Procurement Modules Only (PR, PO, Reports, Master)</option>
-                      <option value="warehouse">Warehouse & Exim Modules Only (Receiving, Stocks, RN)</option>
-                    </select>
+                      onChange={(val) => setNewUserData({ ...newUserData, sidebarPreset: val as any })}
+                      options={[
+                        { value: "all", label: "Full Enterprise Sidebar Access (All Modules)" },
+                        { value: "procurement", label: "Procurement Modules Only (PR, PO, Reports, Master)" },
+                        { value: "warehouse", label: "Warehouse & Exim Modules Only (Receiving, Stocks, RN)" },
+                      ]}
+                    />
                   </div>
 
                   <div
@@ -2141,58 +2127,52 @@ export function UserPermissionAdmin({ onNavigateAudit }: UserPermissionAdminProp
 
                   <div className="form-field">
                     <label className="form-label">Department</label>
-                    <select
-                      className="form-input"
-                      value={editUserProfileData.department_id}
-                      onChange={(e) =>
+                    <CustomSelect
+                      value={String(editUserProfileData.department_id)}
+                      onChange={(val) =>
                         setEditUserProfileData({
                           ...editUserProfileData,
-                          department_id: Number(e.target.value),
+                          department_id: Number(val),
                         })
                       }
-                    >
-                      {departmentsList.map((dept) => (
-                        <option key={dept.id} value={dept.id}>
-                          {dept.name}
-                        </option>
-                      ))}
-                    </select>
+                      options={departmentsList.map((dept) => ({
+                        value: String(dept.id),
+                        label: dept.name,
+                      }))}
+                    />
                   </div>
 
                   <div className="form-field">
                     <label className="form-label">System Role (Inherits Role Permissions)</label>
-                    <select
-                      className="form-input"
+                    <CustomSelect
                       value={editUserProfileData.role}
                       disabled={editUserProfileData.isSuperAdmin}
-                      onChange={(e) =>
-                        setEditUserProfileData({ ...editUserProfileData, role: e.target.value })
+                      onChange={(val) =>
+                        setEditUserProfileData({ ...editUserProfileData, role: val })
                       }
-                    >
-                      {roles.map((r) => (
-                        <option key={r.id} value={r.code}>
-                          {r.name}
-                        </option>
-                      ))}
-                    </select>
+                      options={roles.map((r) => ({
+                        value: r.code,
+                        label: r.name,
+                      }))}
+                    />
                   </div>
 
                   <div className="form-field" style={{ gridColumn: "1 / -1" }}>
                     <label className="form-label">Account Status</label>
-                    <select
-                      className="form-input"
-                      value={editUserProfileData.status}
+                    <CustomSelect
+                      value={String(editUserProfileData.status)}
                       disabled={editUserProfileData.isSuperAdmin}
-                      onChange={(e) =>
+                      onChange={(val) =>
                         setEditUserProfileData({
                           ...editUserProfileData,
-                          status: Number(e.target.value) as 0 | 1,
+                          status: Number(val) as 0 | 1,
                         })
                       }
-                    >
-                      <option value={1}>Active</option>
-                      <option value={0}>Inactive</option>
-                    </select>
+                      options={[
+                        { value: "1", label: "Active" },
+                        { value: "0", label: "Inactive" },
+                      ]}
+                    />
                   </div>
                 </div>
               </div>

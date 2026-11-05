@@ -67,3 +67,52 @@ h3, .h3 {
   outline-offset: 1px;
 }
 
+/* Alignment & Data Layout Utilities */
+.text-right {
+  text-align: right !important;
+}
+
+.text-left {
+  text-align: left !important;
+}
+
+.text-center {
+  text-align: center !important;
+}
+
+.justify-end {
+  justify-content: flex-end !important;
+}
+
+.justify-center {
+  justify-content: center !important;
+}
+
+.font-mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
+}
+
+.font-medium {
+  font-weight: 600 !important;
+}
+
+.font-semibold {
+  font-weight: 700 !important;
+}
+
+.font-bold {
+  font-weight: 800 !important;
+}
+
+.text-ink {
+  color: var(--ink) !important;
+}
+
+.text-muted {
+  color: var(--muted) !important;
+}
+
+.text-xs {
+  font-size: 11px !important;
+}
+

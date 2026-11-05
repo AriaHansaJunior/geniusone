@@ -3,6 +3,7 @@ import { Button } from "../../../components/ui/Button";
 import { Icon } from "../../../components/ui/Icon";
 import { ConfirmDialog } from "../../../components/ui/ConfirmDialog";
 import { CustomDatePicker } from "../../../components/ui/CustomDatePicker";
+import { CustomSelect } from "../../../components/ui/CustomSelect";
 import { initialSupplierRecords } from "../PurchaseMaster/Supplier/supplier-types";
 import { initialPaymentTermRecords } from "../PurchaseMaster/PaymentTerm/payment-term-types";
 import { initialDeliveryTermRecords } from "../PurchaseMaster/DeliveryTerms/delivery-terms-types";
@@ -905,17 +906,17 @@ export function PurchaseOrderCreate({
                 <label htmlFor="poType" className="master-form-label">
                   PO Type <span className="required-asterisk">*</span>
                 </label>
-                <select
+                <CustomSelect
                   id="poType"
-                  className={`master-form-select ${formErrors.poType ? "has-error" : ""}`}
                   value={poType}
-                  onChange={(e) => setPoType(e.target.value)}
-                >
-                  <option value="PO Standard">PO Standard</option>
-                  <option value="PO Service">PO Service</option>
-                  <option value="PO Import">PO Import</option>
-                  <option value="PO Raw Material">PO Raw Material</option>
-                </select>
+                  onChange={(val) => setPoType(val)}
+                  options={[
+                    { value: "PO Standard", label: "PO Standard" },
+                    { value: "PO Service", label: "PO Service" },
+                    { value: "PO Import", label: "PO Import" },
+                    { value: "PO Raw Material", label: "PO Raw Material" },
+                  ]}
+                />
                 {formErrors.poType && <span className="master-form-error">{formErrors.poType}</span>}
               </div>
 
@@ -963,25 +964,24 @@ export function PurchaseOrderCreate({
                 <label htmlFor="poSupplier" className="master-form-label">
                   Supplier <span className="required-asterisk">*</span>
                 </label>
-                <select
+                <CustomSelect
                   id="poSupplier"
-                  className={`master-form-select ${formErrors.supplier ? "has-error" : ""}`}
                   value={selectedSupplierId}
-                  onChange={(e) => handleSupplierChange(e.target.value)}
-                >
-                  <option value="">Find Supplier</option>
-                  {suppliers.length > 0
-                    ? suppliers.map((sup) => (
-                      <option key={sup.id} value={sup.id}>
-                        {sup.code ? `[${sup.code}] ` : ""}{sup.name}
-                      </option>
-                    ))
-                    : initialSupplierRecords.map((sup) => (
-                      <option key={sup.id} value={sup.id}>
-                        {sup.supplierCode ? `[${sup.supplierCode}] ` : ""}{sup.supplierName}
-                      </option>
-                    ))}
-                </select>
+                  onChange={(val) => handleSupplierChange(val)}
+                  placeholder="Find Supplier"
+                  options={[
+                    { value: "", label: "Find Supplier" },
+                    ...(suppliers.length > 0
+                      ? suppliers.map((sup) => ({
+                          value: String(sup.id),
+                          label: `${sup.code ? `[${sup.code}] ` : ""}${sup.name}`,
+                        }))
+                      : initialSupplierRecords.map((sup) => ({
+                          value: String(sup.id),
+                          label: `${sup.supplierCode ? `[${sup.supplierCode}] ` : ""}${sup.supplierName}`,
+                        }))),
+                  ]}
+                />
                 {formErrors.supplier && <span className="master-form-error">{formErrors.supplier}</span>}
               </div>
 
@@ -989,30 +989,25 @@ export function PurchaseOrderCreate({
                 <label htmlFor="poValuta" className="master-form-label">
                   Currency <span className="required-asterisk">*</span>
                 </label>
-                <select
+                <CustomSelect
                   id="poValuta"
-                  className={`master-form-select ${formErrors.currency ? "has-error" : ""}`}
                   value={currency}
-                  onChange={(e) => {
-                    setCurrency(e.target.value);
-                    if (e.target.value.includes("USD")) setExchangeRate(15850);
-                    else if (e.target.value.includes("EUR")) setExchangeRate(17200);
-                    else if (e.target.value.includes("SGD")) setExchangeRate(12100);
+                  onChange={(val) => {
+                    setCurrency(val);
+                    if (val.includes("USD")) setExchangeRate(15850);
+                    else if (val.includes("EUR")) setExchangeRate(17200);
+                    else if (val.includes("SGD")) setExchangeRate(12100);
                     else setExchangeRate(1.0);
                   }}
-                >
-                  {currencies.length > 0
-                    ? currencies.map((c) => (
-                      <option key={c.id} value={`${c.code} - ${c.name.toUpperCase()}`}>
-                        {c.code} - {c.name.toUpperCase()}
-                      </option>
-                    ))
-                    : initialCurrencyRecords.map((c) => (
-                      <option key={c.id} value={`${c.currencyCode} - ${c.currencyName.toUpperCase()}`}>
-                        {c.currencyCode} - {c.currencyName.toUpperCase()}
-                      </option>
-                    ))}
-                </select>
+                  options={[
+                    { value: "IDR - Indonesian Rupiah", label: "IDR - Indonesian Rupiah" },
+                    { value: "USD - US Dollar", label: "USD - US Dollar" },
+                    { value: "EUR - Euro", label: "EUR - Euro" },
+                    { value: "SGD - Singapore Dollar", label: "SGD - Singapore Dollar" },
+                    { value: "CNY - Chinese Yuan", label: "CNY - Chinese Yuan" },
+                    { value: "JPY - Japanese Yen", label: "JPY - Japanese Yen" },
+                  ]}
+                />
                 {formErrors.currency && <span className="master-form-error">{formErrors.currency}</span>}
               </div>
 
@@ -1051,50 +1046,44 @@ export function PurchaseOrderCreate({
                 <label htmlFor="poPaymentTerm" className="master-form-label">
                   Payment Term
                 </label>
-                <select
+                <CustomSelect
                   id="poPaymentTerm"
-                  className="master-form-select"
                   value={paymentTerm}
-                  onChange={(e) => setPaymentTerm(e.target.value)}
-                >
-                  <option value="">Choose Payment Term</option>
-                  {paymentTerms.length > 0
-                    ? paymentTerms.map((pt) => (
-                      <option key={pt.id} value={pt.name}>
-                        {pt.name}
-                      </option>
-                    ))
-                    : [
-                      "Net 30 Days",
-                      "Net 14 Days",
-                      "100% by TT within 14 days",
-                      "COD (Cash on Delivery)",
-                      "CBD (Cash Before Delivery)",
-                      "LC at Sight",
-                    ].map((pt) => (
-                      <option key={pt} value={pt}>
-                        {pt}
-                      </option>
-                    ))}
-                </select>
+                  onChange={(val) => setPaymentTerm(val)}
+                  placeholder="Choose Payment Term"
+                  options={[
+                    { value: "", label: "Choose Payment Term" },
+                    ...(paymentTerms.length > 0
+                      ? paymentTerms.map((pt) => ({ value: pt.name, label: pt.name }))
+                      : [
+                          "Net 30 Days",
+                          "Net 14 Days",
+                          "100% by TT within 14 days",
+                          "COD (Cash on Delivery)",
+                          "CBD (Cash Before Delivery)",
+                          "LC at Sight",
+                        ].map((pt) => ({ value: pt, label: pt }))),
+                  ]}
+                />
               </div>
 
               <div className="master-form-group">
                 <label htmlFor="poPaymentMethod" className="master-form-label">
                   Payment Method
                 </label>
-                <select
+                <CustomSelect
                   id="poPaymentMethod"
-                  className="master-form-select"
                   value={paymentMethod}
-                  onChange={(e) => setPaymentMethod(e.target.value)}
-                >
-                  <option value="">Choose Payment Method</option>
-                  <option value="Bank Transfer">Bank Transfer (TT)</option>
-                  <option value="Cash">Cash</option>
-                  <option value="Cheque">Cheque / Giro</option>
-                  <option value="Letter of Credit">Letter of Credit (LC)</option>
-                </select>
+                  onChange={(val) => setPaymentMethod(val)}
+                  placeholder="Choose Payment Method"
+                  options={[
+                    { value: "", label: "Choose Payment Method" },
+                    { value: "Bank Transfer", label: "Bank Transfer (TT)" },
+                    { value: "Cash", label: "Cash" },
+                    { value: "Cheque", label: "Cheque / Giro" },
+                    { value: "Letter of Credit", label: "Letter of Credit (LC)" },
+                  ]}
+                />
               </div>
 
               {/* Row 4: Delivery Term | Facility Status | Auto Calculate | Service / Subcontractor */}
@@ -1102,31 +1091,24 @@ export function PurchaseOrderCreate({
                 <label htmlFor="poDeliveryTerm" className="master-form-label">
                   Delivery Term
                 </label>
-                <select
+                <CustomSelect
                   id="poDeliveryTerm"
-                  className="master-form-select"
                   value={deliveryTerm}
-                  onChange={(e) => setDeliveryTerm(e.target.value)}
-                >
-                  <option value="">Choose Delivery Term</option>
-                  {deliveryTerms.length > 0
-                    ? deliveryTerms.map((dt) => (
-                      <option key={dt.id} value={dt.name}>
-                        {dt.name}
-                      </option>
-                    ))
-                    : [
-                      "Franco Gudang Surabaya",
-                      "Loco Pabrik",
-                      "Loco Surabaya",
-                      "FOB Port",
-                      "CIF Port",
-                    ].map((dt) => (
-                      <option key={dt} value={dt}>
-                        {dt}
-                      </option>
-                    ))}
-                </select>
+                  onChange={(val) => setDeliveryTerm(val)}
+                  placeholder="Choose Delivery Term"
+                  options={[
+                    { value: "", label: "Choose Delivery Term" },
+                    ...(deliveryTerms.length > 0
+                      ? deliveryTerms.map((dt) => ({ value: dt.name, label: dt.name }))
+                      : [
+                          "Franco Gudang Surabaya",
+                          "Loco Pabrik",
+                          "FOB Port Tanjung Perak",
+                          "CIF Tanjung Priok",
+                          "Ex-Works",
+                        ].map((dt) => ({ value: dt, label: dt }))),
+                  ]}
+                />
               </div>
 
               <div className="master-form-group">
@@ -1268,20 +1250,20 @@ export function PurchaseOrderCreate({
 
                             {/* 2. PR Number */}
                             <td>
-                              <select
-                                className="tx-input-cell"
-                                style={{ minWidth: "225px" }}
+                              <CustomSelect
+                                className="tx-custom-select-cell"
                                 value={row.prNumber}
-                                onChange={(e) => handleSelectPr(row.id, e.target.value)}
-                              >
-                                <option value="">Select PR Number...</option>
-                                <option value="—">— None (Direct PO Item) —</option>
-                                {allPrOptions.map((p) => (
-                                  <option key={p.prNumber} value={p.prNumber}>
-                                    {p.label}
-                                  </option>
-                                ))}
-                              </select>
+                                onChange={(val) => handleSelectPr(row.id, val)}
+                                placeholder="Select PR Number..."
+                                options={[
+                                  { value: "", label: "Select PR Number..." },
+                                  { value: "—", label: "— None (Direct PO Item) —" },
+                                  ...allPrOptions.map((p) => ({
+                                    value: p.prNumber,
+                                    label: p.label,
+                                  })),
+                                ]}
+                              />
                             </td>
 
                             {/* 3. Item Name */}
@@ -1320,25 +1302,22 @@ export function PurchaseOrderCreate({
 
                             {/* 6. Unit */}
                             <td>
-                              <select
-                                className="tx-input-cell"
+                              <CustomSelect
+                                className="tx-custom-select-cell"
                                 value={row.unit}
-                                onChange={(e) => handleUpdateItemField(row.id, "unit", e.target.value)}
-                              >
-                                <option value="PCE">PCE</option>
-                                <option value="PCS">PCS</option>
-                                <option value="KGM">KGM</option>
-                                <option value="KG">KG</option>
-                                <option value="SET">SET</option>
-                                <option value="ROLL">ROLL</option>
-                                <option value="MTR">MTR</option>
-                                <option value="BOX">BOX</option>
-                                <option value="LTR">LTR</option>
-                                {row.unit &&
-                                  !["PCE", "PCS", "KGM", "KG", "SET", "ROLL", "MTR", "BOX", "LTR"].includes(row.unit) && (
-                                    <option value={row.unit}>{row.unit}</option>
-                                  )}
-                              </select>
+                                onChange={(val) => handleUpdateItemField(row.id, "unit", val)}
+                                options={[
+                                  { value: "PCE", label: "PCE" },
+                                  { value: "PCS", label: "PCS" },
+                                  { value: "KGM", label: "KGM" },
+                                  { value: "KG", label: "KG" },
+                                  { value: "SET", label: "SET" },
+                                  { value: "ROLL", label: "ROLL" },
+                                  { value: "MTR", label: "MTR" },
+                                  { value: "BOX", label: "BOX" },
+                                  { value: "LTR", label: "LTR" },
+                                ]}
+                              />
                             </td>
 
                             {/* 7. Quantity: Requested */}
@@ -1416,16 +1395,17 @@ export function PurchaseOrderCreate({
 
                             {/* 13. PPH */}
                             <td>
-                              <select
-                                className="tx-input-cell"
-                                value={row.pphRate}
-                                onChange={(e) => handleUpdateItemField(row.id, "pphRate", parseFloat(e.target.value) || 0)}
-                              >
-                                <option value={0}>0% (None)</option>
-                                <option value={0.02}>2% (PPH 23)</option>
-                                <option value={0.005}>0.5% (Final)</option>
-                                <option value={0.025}>2.5% (PPH 22)</option>
-                              </select>
+                              <CustomSelect
+                                className="tx-custom-select-cell"
+                                value={String(row.pphRate)}
+                                onChange={(val) => handleUpdateItemField(row.id, "pphRate", parseFloat(val) || 0)}
+                                options={[
+                                  { value: "0", label: "0% (None)" },
+                                  { value: "0.02", label: "2% (PPH 23)" },
+                                  { value: "0.005", label: "0.5% (Final)" },
+                                  { value: "0.025", label: "2.5% (PPH 22)" },
+                                ]}
+                              />
                             </td>
 
                             {/* 14. Subtotal PPH */}
@@ -1505,24 +1485,24 @@ export function PurchaseOrderCreate({
                             {idx + 1}
                           </td>
                           <td>
-                            <select
-                              className="tx-input-cell"
+                            <CustomSelect
+                              className="tx-custom-select-cell"
                               value={cost.costName}
-                              onChange={(e) => handleUpdateCostField(cost.id, "costName", e.target.value)}
-                            >
-                              <option value="">Select Additional Cost...</option>
-                              {masterAdditionalCosts
-                                .filter((ac) => !ac.hidden)
-                                .map((ac) => (
-                                  <option key={ac.id} value={ac.costName}>
-                                    {ac.costCode ? `${ac.costCode} — ${ac.costName}` : ac.costName}
-                                  </option>
-                                ))}
-                              {cost.costName &&
-                                !masterAdditionalCosts.some((ac) => ac.costName === cost.costName) && (
-                                  <option value={cost.costName}>{cost.costName}</option>
-                                )}
-                            </select>
+                              onChange={(val) => handleUpdateCostField(cost.id, "costName", val)}
+                              placeholder="Select Additional Cost..."
+                              options={[
+                                { value: "", label: "Select Additional Cost..." },
+                                ...masterAdditionalCosts
+                                  .filter((ac) => !ac.hidden)
+                                  .map((ac) => ({
+                                    value: ac.costName,
+                                    label: ac.costCode ? `${ac.costCode} — ${ac.costName}` : ac.costName,
+                                  })),
+                                ...(cost.costName && !masterAdditionalCosts.some((ac) => ac.costName === cost.costName)
+                                  ? [{ value: cost.costName, label: cost.costName }]
+                                  : []),
+                              ]}
+                            />
                           </td>
                           <td>
                             <input

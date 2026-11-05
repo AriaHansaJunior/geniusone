@@ -10,6 +10,7 @@ export interface CustomDatePickerProps {
   id?: string;
   name?: string;
   align?: "left" | "right";
+  style?: React.CSSProperties;
 }
 
 const MONTH_NAMES = [
@@ -65,6 +66,7 @@ export function CustomDatePicker({
   id,
   name,
   align = "left",
+  style,
 }: CustomDatePickerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isYearPickerOpen, setIsYearPickerOpen] = useState(false);
@@ -271,6 +273,7 @@ export function CustomDatePicker({
       ref={containerRef}
       className={`custom-datepicker-container ${className} ${disabled ? "is-disabled" : ""}`}
       id={id}
+      style={style}
     >
       {/* Hidden input for form submits */}
       {name && <input type="hidden" name={name} value={value} />}

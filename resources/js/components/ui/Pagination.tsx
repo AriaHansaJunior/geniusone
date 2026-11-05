@@ -1,4 +1,5 @@
 import { Icon } from "./Icon";
+import { CustomSelect } from "./CustomSelect";
 
 interface PaginationProps {
   count?: number;
@@ -97,22 +98,23 @@ export function Pagination({
           </button>
         </div>
         {showPageSize && (
-          <label className="pagination__rows">
+          <div className="pagination__rows">
             <span>Rows</span>
-            <select
-              value={pageSize}
-              aria-label="Rows per page"
-              onChange={(e) => {
-                const nextSize = Number(e.target.value);
+            <CustomSelect
+              className="pagination__rows-custom-select"
+              value={String(pageSize)}
+              onChange={(val) => {
+                const nextSize = Number(val);
                 if (onPageSizeChange) onPageSizeChange(nextSize);
               }}
-            >
-              <option value={10}>10</option>
-              <option value={25}>25</option>
-              <option value={50}>50</option>
-              <option value={100}>100</option>
-            </select>
-          </label>
+              options={[
+                { value: "10", label: "10" },
+                { value: "25", label: "25" },
+                { value: "50", label: "50" },
+                { value: "100", label: "100" },
+              ]}
+            />
+          </div>
         )}
       </div>
     </div>

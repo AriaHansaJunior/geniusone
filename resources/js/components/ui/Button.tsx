@@ -31,15 +31,11 @@ export function Button({
   "aria-label": ariaLabel,
   title,
 }: ButtonProps) {
-  // When text is present, icons are omitted ("cukup hanya tulisan aja, ga perlu ditambahin icons").
-  // Icons are only rendered for icon-only buttons (when there is no text).
-  const hasText = Boolean(
-    children !== undefined &&
-    children !== null &&
-    children !== false &&
-    children !== true &&
-    (typeof children !== "string" || children.trim().length > 0)
-  );
+  // Respect GeniusOne design rules: "The Add New button must display only one plus icon."
+  // If icon is provided, render it. If children is "Add New" without an explicit icon, default to "plus".
+  const isAddNewText =
+    typeof children === "string" && children.trim().toLowerCase() === "add new";
+  const resolvedIcon = icon || (isAddNewText ? ("plus" as IconName) : undefined);
 
   const sizeClass = size ? `button--${size}` : "";
   const loadingClass = loading ? "button--loading" : "";
@@ -58,7 +54,7 @@ export function Button({
       {loading ? (
         <span className="button__spinner" aria-hidden="true" />
       ) : (
-        icon && !hasText && <Icon name={icon} size={16} />
+        resolvedIcon && <Icon name={resolvedIcon} size={15} />
       )}
       {children}
     </button>

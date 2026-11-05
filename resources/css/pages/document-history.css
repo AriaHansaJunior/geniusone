@@ -100,8 +100,9 @@
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-sm);
   box-shadow: var(--shadow-glass);
-  overflow: hidden;
+  overflow: visible;
   margin-bottom: 16px;
+  position: relative;
 }
 
 /* Filter Bar */
@@ -177,7 +178,6 @@
   width: 100%;
   border-collapse: collapse;
   font-size: 12px;
-  min-width: 1200px;
 }
 
 .dh-table thead tr {
