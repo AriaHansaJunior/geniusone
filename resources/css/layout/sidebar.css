@@ -211,12 +211,28 @@
   font-weight: 900;
   padding-left: 6px;
 }
-.sidebar-subgroup-header.subgroup-placeholder {
-  opacity: 0.65;
-}
-.sidebar-subgroup-header--direct.subgroup-placeholder {
+.sidebar-subgroup-header.subgroup-placeholder,
+.sidebar-subgroup-header--disabled,
+.sidebar-subgroup-header:disabled {
   opacity: 0.55;
   cursor: not-allowed;
+  user-select: none;
+}
+.sidebar-subgroup-header--disabled:hover,
+.sidebar-subgroup-header:disabled:hover,
+.sidebar-subgroup-header.subgroup-placeholder:hover {
+  background: transparent !important;
+  color: var(--muted) !important;
+}
+.sidebar-subgroup-header .sidebar-nav-tag {
+  font-size: 8.5px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 999px;
+  background: var(--line);
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
 }
 .sidebar-group-divider-label {
   font-size: 9px;

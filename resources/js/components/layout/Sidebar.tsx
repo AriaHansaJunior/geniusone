@@ -105,7 +105,18 @@ export function Sidebar({
     if (typeof window !== "undefined") {
       try {
         const saved = sessionStorage.getItem(STORAGE_KEY_GROUPS);
-        if (saved) return JSON.parse(saved);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          // Never allow disabled or placeholder groups to be restored as open
+          for (const section of navigationConfig) {
+            section.groups?.forEach((g) => {
+              if (g.disabled || g.isPlaceholder) {
+                parsed[g.id] = false;
+              }
+            });
+          }
+          return parsed;
+        }
       } catch {
         // ignore parse error
       }
@@ -128,7 +139,7 @@ export function Sidebar({
         if (section.groups) {
           for (const group of section.groups) {
             if (group.id === activePage || group.items.some((i) => i.id === activePage)) {
-              if (!group.isDirectLeaf) {
+              if (!group.isDirectLeaf && !group.disabled && !group.isPlaceholder) {
                 defaults[group.id] = true;
               }
               break;
@@ -244,6 +255,12 @@ export function Sidebar({
   const toggleGroup = (groupId: string, e?: React.MouseEvent) => {
     e?.stopPropagation();
     setHoveredNav(null);
+    for (const sec of navigationConfig) {
+      const targetGroup = sec.groups?.find((g) => g.id === groupId);
+      if (targetGroup && (targetGroup.disabled || targetGroup.isPlaceholder)) {
+        return;
+      }
+    }
     setOpenGroups((prev) => ({
       ...prev,
       [groupId]: !prev[groupId],
@@ -387,8 +404,9 @@ export function Sidebar({
                     <div className="sidebar-submenu-panel">
                       {/* Nested Groups (e.g. Purchase Master, Transactions, Reports) */}
                       {section.groups?.map((group) => {
-                        const isGroupOpen = Boolean(openGroups[group.id]);
-                        const isPlaceholder = Boolean(group.isExpandablePlaceholder);
+                        const isPlaceholder = Boolean(group.isPlaceholder || group.isExpandablePlaceholder);
+                        const isDisabled = Boolean(group.disabled || isPlaceholder);
+                        const isGroupOpen = !isDisabled && Boolean(openGroups[group.id]);
 
                         return (
                           <div key={group.id} className="sidebar-subgroup-container">
@@ -404,20 +422,23 @@ export function Sidebar({
                                 className={`sidebar-subgroup-header sidebar-subgroup-header--direct ${
                                   activePage === group.id ? "active" : ""
                                 } ${
-                                  group.isPlaceholder ? "subgroup-placeholder" : ""
+                                  isDisabled ? "subgroup-placeholder sidebar-subgroup-header--disabled" : ""
                                 }`}
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  if (!group.isPlaceholder && group.path) {
+                                  if (!isDisabled && group.path) {
                                     onNavigate(group.id as PageKey, group.path);
                                   }
                                 }}
-                                disabled={group.isPlaceholder}
-                                title={group.label}
+                                disabled={isDisabled}
+                                title={isDisabled ? `${group.label} (Pending)` : group.label}
                               >
                                 <span className="sidebar-subgroup-title">
                                   {group.label}
                                 </span>
+                                {group.badge && (
+                                  <span className="sidebar-nav-tag">{group.badge}</span>
+                                )}
                               </button>
                             ) : (
                               <>
@@ -425,19 +446,31 @@ export function Sidebar({
                                   type="button"
                                   className={`sidebar-subgroup-header ${
                                     isGroupOpen ? "subgroup-open" : ""
-                                  } ${isPlaceholder ? "subgroup-placeholder" : ""}`}
-                                  onClick={(e) => toggleGroup(group.id, e)}
+                                  } ${isDisabled ? "subgroup-placeholder sidebar-subgroup-header--disabled" : ""}`}
+                                  onClick={(e) => {
+                                    if (isDisabled) {
+                                      e.stopPropagation();
+                                      return;
+                                    }
+                                    toggleGroup(group.id, e);
+                                  }}
+                                  disabled={isDisabled}
+                                  title={isDisabled ? `${group.label} (Pending)` : group.label}
                                 >
                                   <span className="sidebar-subgroup-title">
                                     {group.label}
                                   </span>
-                                  <Icon
-                                    name="chevronDown"
-                                    size={12}
-                                    className={`sidebar-chevron-sm ${
-                                      isGroupOpen ? "sidebar-chevron--open" : ""
-                                    }`}
-                                  />
+                                  {isDisabled ? (
+                                    <span className="sidebar-nav-tag">{group.badge || "Pending"}</span>
+                                  ) : (
+                                    <Icon
+                                      name="chevronDown"
+                                      size={12}
+                                      className={`sidebar-chevron-sm ${
+                                        isGroupOpen ? "sidebar-chevron--open" : ""
+                                      }`}
+                                    />
+                                  )}
                                 </button>
 
                                 {isGroupOpen && (

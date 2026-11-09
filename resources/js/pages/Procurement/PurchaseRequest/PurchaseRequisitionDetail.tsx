@@ -74,6 +74,15 @@ export function PurchaseRequisitionDetail({
     fetchDetail("pr", code).then((item) => {
       if (isMounted && item) {
         setRow(item);
+        const norm = normalizeApprovalStatus(item._rawStatus || item.status);
+        if (norm) {
+          const local = getLocalApprovalState("purchase_requisition", item._rawNumber || item.prNumber || code, norm);
+          setApprovalState({
+            ...local,
+            status: norm,
+            currentTier: norm === "WAITING_APPROVE_2" ? 2 : norm === "APPROVED" ? 2 : 1,
+          });
+        }
       }
     });
     return () => {
@@ -167,16 +176,44 @@ export function PurchaseRequisitionDetail({
 
   const handleToggleItemClosing = async (it: any, idx: number) => {
     const currentlyClosed = isPrItemClosed(docNumber, it, idx);
+    const nextClosed = !currentlyClosed;
+
+    if (nextClosed && approvalState.status === "APPROVED") {
+      alert("Barang pada PR yang sudah di-Approve 2 kali tidak dapat di-closing.");
+      return;
+    }
+
     await togglePrItemClosing({
       prNumber: docNumber,
+      prId: row.id || docNumber.replace(/[\/\\]/g, "-"),
       item: it,
       index: idx,
-      close: !currentlyClosed,
+      close: nextClosed,
       userId: currentUser.id,
       userName: currentUser.name,
       userRole: currentUser.role,
     });
     setClosedMapVersion((v) => v + 1);
+
+    const updateItem = (itemRow: any, i: number) => {
+      if (itemRow.id === it.id || i === idx) {
+        return {
+          ...itemRow,
+          is_closed: nextClosed,
+          isClosed: nextClosed,
+          closing_status: nextClosed ? "Closing" : "Open",
+          status: nextClosed ? "Closing" : (rawStatus || "Approved"),
+        };
+      }
+      return itemRow;
+    };
+
+    setRow((prev: any) => ({
+      ...prev,
+      items: (prev.items || []).map(updateItem),
+      _items: (prev._items || []).map(updateItem),
+    }));
+
     const updated = getLocalApprovalState(
       "purchase_requisition",
       docNumber,
@@ -449,9 +486,6 @@ SPECIFICATION DETAILS:
         />
       </div>
 
-      {/* Visual Two-Stage Approval Timeline */}
-      <ApprovalTimeline state={approvalState} style={{ marginBottom: "16px" }} />
-
       {/* 4-Column Hero KPI Summary Grid */}
       <div className="detail-kpi-grid detail-kpi-grid--4">
         <div className="detail-kpi-card">
@@ -605,12 +639,14 @@ SPECIFICATION DETAILS:
                         <button
                           type="button"
                           onClick={() => handleToggleItemClosing(it, idx)}
+                          disabled={!isClosed && isApproved}
                           style={{
                             padding: "4px 10px",
                             fontSize: "11px",
                             fontWeight: 600,
                             borderRadius: "6px",
-                            cursor: "pointer",
+                            cursor: !isClosed && isApproved ? "not-allowed" : "pointer",
+                            opacity: !isClosed && isApproved ? 0.45 : 1,
                             border: isClosed
                               ? "1px solid rgba(16, 185, 129, 0.35)"
                               : "1px solid rgba(239, 68, 68, 0.35)",
@@ -620,7 +656,9 @@ SPECIFICATION DETAILS:
                             color: isClosed ? "#047857" : "#b91c1c",
                           }}
                           title={
-                            isClosed
+                            !isClosed && isApproved
+                              ? "Barang pada PR yang sudah di-Approve 2 kali tidak dapat di-closing"
+                              : isClosed
                               ? "Unclosing: Reactivate item so it can be forwarded to Purchase Order"
                               : "Closing: Close item so it is excluded from Purchase Order"
                           }

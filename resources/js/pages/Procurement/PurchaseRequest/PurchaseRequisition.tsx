@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import * as XLSX from "xlsx";
 import { Button } from "../../../components/ui/Button";
 import { SummaryCard } from "../../../components/ui/SummaryCard";
@@ -8,6 +8,7 @@ import { CustomDatePicker } from "../../../components/ui/CustomDatePicker";
 import { FilterPanel } from "../../../components/common/FilterPanel";
 import { pageConfigs } from "../../../data/mockData";
 import { fetchList } from "../../../data/api";
+import { isPrItemClosed } from "../../../services/approvalApi";
 import type { TableRow } from "../../../types";
 
 interface PurchaseRequisitionProps {
@@ -125,8 +126,32 @@ export function PurchaseRequisition({ onDetail, onCreate }: PurchaseRequisitionP
     setAppliedSearch("");
   };
 
+  // Compute dynamic closing status for each PR row (UI & Data Consistency)
+  const computedRows = useMemo(() => {
+    return rows.map((r) => {
+      const prNum = String(r._rawNumber || r.prNumber || "");
+      const rawItems = r.items || r._items || [];
+      const hasItems = Array.isArray(rawItems) && rawItems.length > 0;
+      const allClosed = hasItems && rawItems.every((it: any, idx: number) => isPrItemClosed(prNum, it, idx));
+      const hasClosed = hasItems && rawItems.some((it: any, idx: number) => isPrItemClosed(prNum, it, idx));
+
+      let effectiveStatus = String(r._rawStatus || r.status || "Draft");
+      if (allClosed || effectiveStatus.toLowerCase() === "closing" || effectiveStatus.toLowerCase() === "closed") {
+        effectiveStatus = "Closing";
+      } else if (hasClosed && (effectiveStatus.toLowerCase().includes("approved") || effectiveStatus === "Ready")) {
+        effectiveStatus = "Partial Closing";
+      }
+
+      return {
+        ...r,
+        status: effectiveStatus,
+        _rawStatus: effectiveStatus,
+      };
+    });
+  }, [rows]);
+
   const filtered = useMemo(() => {
-    return rows.filter((r) => {
+    return computedRows.filter((r) => {
       // 1. Search Query
       const q = appliedSearch.trim().toLowerCase();
       if (q) {
@@ -244,7 +269,7 @@ export function PurchaseRequisition({ onDetail, onCreate }: PurchaseRequisitionP
 
       return true;
     });
-  }, [rows, appliedSearch, appliedFilters]);
+  }, [computedRows, appliedSearch, appliedFilters]);
 
   const handleExportXLSX = () => {
     if (filtered.length === 0) {

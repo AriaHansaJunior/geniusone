@@ -63,6 +63,13 @@ class PurchaseRequisitionApiController extends Controller
             $creatorName = $pr->creatorUser?->name ?? 'System';
             $createdTime = $pr->created_at ? $pr->created_at->format('d-m-Y H:i') : ($pr->date ?? '-');
             $status = $pr->status ?? 'Draft';
+            $allClosed = $pr->items->isNotEmpty() && $pr->items->every(fn ($it) => (bool) $it->is_closed);
+            $hasClosed = $pr->items->isNotEmpty() && $pr->items->contains(fn ($it) => (bool) $it->is_closed);
+            if ($allClosed) {
+                $status = 'Closing';
+            } elseif ($hasClosed && in_array($status, ['Approved', 'Approved 1', 'Approved 2'])) {
+                $status = 'Partial Closing';
+            }
 
             $lineItems = $pr->items->map(function ($it, $itIdx) use ($pr) {
                 $isClosed = (bool) ($it->is_closed ?? false);
@@ -208,14 +215,23 @@ class PurchaseRequisitionApiController extends Controller
             ];
         })->toArray();
 
+        $allClosed = $pr->items->isNotEmpty() && $pr->items->every(fn ($it) => (bool) $it->is_closed);
+        $hasClosed = $pr->items->isNotEmpty() && $pr->items->contains(fn ($it) => (bool) $it->is_closed);
+        $detailStatus = $pr->status ?? 'Waiting for Approve 1';
+        if ($allClosed) {
+            $detailStatus = 'Closing';
+        } elseif ($hasClosed && in_array($detailStatus, ['Approved', 'Approved 1', 'Approved 2'])) {
+            $detailStatus = 'Partial Closing';
+        }
+
         $detailRow = [
             'id' => $pr->id,
             '_id' => "pr-{$pr->id}",
             '_type' => 'pr',
             'prNumber' => $pr->pr_number,
             '_rawNumber' => $pr->pr_number,
-            'status' => $pr->status ?? 'Waiting for Approve 1',
-            '_rawStatus' => $pr->status ?? 'Waiting for Approve 1',
+            'status' => $detailStatus,
+            '_rawStatus' => $detailStatus,
             'date' => $this->safeFormatDate($pr->date, 'd-M-Y', $pr->created_at?->format('d-M-Y') ?? '-'),
             '_rawDate' => $this->safeFormatDate($pr->date, 'd-M-Y', $pr->created_at?->format('d-M-Y') ?? '-'),
             'dueDate' => $this->safeFormatDate($pr->due_date),
@@ -531,6 +547,12 @@ class PurchaseRequisitionApiController extends Controller
 
         $prItem->close($userId);
 
+        // Check if all items in PR are closed, update parent PR status
+        $openItemsCount = $pr->items()->where('is_closed', false)->count();
+        if ($openItemsCount === 0) {
+            $pr->update(['status' => 'Closing']);
+        }
+
         // Record in centralized audit trail (BE-04 & BE-06)
         $itemName = $prItem->item?->name ?? 'PR Item';
         $itemCode = $prItem->item?->code ?? '-';
@@ -591,6 +613,11 @@ class PurchaseRequisitionApiController extends Controller
         $user = \App\Models\System\Auth\User::find($userId);
 
         $prItem->unclose();
+
+        // If PR status was Closing, restore status back to Approved
+        if ($pr->status === 'Closing') {
+            $pr->update(['status' => 'Approved']);
+        }
 
         $itemName = $prItem->item?->name ?? 'PR Item';
         $itemCode = $prItem->item?->code ?? '-';

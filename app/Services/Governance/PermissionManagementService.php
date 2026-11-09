@@ -39,6 +39,7 @@ class PermissionManagementService
             'name' => strtolower(trim($data['name'])),
             'label' => $data['label'] ?? ucwords(str_replace('_', ' ', $data['name'])),
             'description' => $data['description'] ?? null,
+            'sidebar_permissions' => $data['sidebar_permissions'] ?? null,
             'is_system' => false,
         ]);
 
@@ -69,6 +70,9 @@ class PermissionManagementService
         }
         if (isset($data['description'])) {
             $updateData['description'] = $data['description'];
+        }
+        if (array_key_exists('sidebar_permissions', $data)) {
+            $updateData['sidebar_permissions'] = $data['sidebar_permissions'];
         }
 
         // Prevent renaming system role name

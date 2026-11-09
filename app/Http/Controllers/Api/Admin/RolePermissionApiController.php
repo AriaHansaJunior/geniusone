@@ -44,6 +44,7 @@ class RolePermissionApiController extends Controller
             'name' => 'required|string|max:50|unique:roles,name',
             'label' => 'nullable|string|max:100',
             'description' => 'nullable|string|max:255',
+            'sidebar_permissions' => 'nullable|array',
             'permissions' => 'nullable|array',
             'permissions.*' => 'string',
         ]);
@@ -68,6 +69,7 @@ class RolePermissionApiController extends Controller
             'name' => 'sometimes|required|string|max:50',
             'label' => 'nullable|string|max:100',
             'description' => 'nullable|string|max:255',
+            'sidebar_permissions' => 'nullable|array',
             'permissions' => 'nullable|array',
             'permissions.*' => 'string',
         ]);

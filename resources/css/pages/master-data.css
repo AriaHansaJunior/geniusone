@@ -461,6 +461,8 @@
   margin-bottom: 16px;
   background: #ffffff;
   box-shadow: var(--shadow-xs);
+  min-height: 220px;
+  padding-bottom: 8px;
 }
 
 .tx-table-container:has(.searchable-item-dropdown) {

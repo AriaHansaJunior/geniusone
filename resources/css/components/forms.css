@@ -905,3 +905,63 @@
   color: #ffffff;
 }
 
+/* Upward opening dropdown popup */
+.custom-select-dropdown--top {
+  top: auto;
+  bottom: calc(100% + 4px);
+  box-shadow: 0 -14px 30px -4px rgba(15, 23, 42, 0.14), 0 -4px 12px -2px rgba(15, 23, 42, 0.06);
+  animation: selectFadeInTop 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes selectFadeInTop {
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.custom-select-option-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.custom-select-option-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.custom-select-option-desc {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--muted);
+  line-height: 1.35;
+  white-space: normal;
+}
+
+.custom-select-option.is-selected .custom-select-option-desc {
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.custom-select-option-badge {
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--slate-100);
+  color: var(--slate-700);
+  font-weight: 600;
+}
+
+.custom-select-option.is-selected .custom-select-option-badge {
+  background: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+}
+
+
