@@ -763,7 +763,6 @@ export function RequestMaterialCreate({
             <Button
               type="button"
               variant="primary"
-              icon="plus"
               onClick={handleAddEmptyRow}
             >
               Add Item

@@ -1331,7 +1331,6 @@ export function PurchaseOrderCreate({
                   <div style={{ display: "flex", gap: "8px" }}>
                     <Button
                       variant="secondary"
-                      icon="plus"
                       onClick={handleAddItemRow}
                       type="button"
                     >
@@ -1672,7 +1671,7 @@ export function PurchaseOrderCreate({
                               fontSize: "13px",
                             }}
                           >
-                            No items added yet. Click "+ Add Blank Item" above or select an approved PR.
+                            No items added yet. Click "Add Blank Item" above or select an approved PR.
                           </td>
                         </tr>
                       )}
@@ -1686,7 +1685,7 @@ export function PurchaseOrderCreate({
             {activeTab === "costs" && (
               <div style={{ marginBottom: "16px" }}>
                 <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "8px" }}>
-                  <Button variant="secondary" icon="plus" onClick={handleAddCostRow} type="button">
+                  <Button variant="secondary" onClick={handleAddCostRow} type="button">
                     Add Cost Row
                   </Button>
                 </div>

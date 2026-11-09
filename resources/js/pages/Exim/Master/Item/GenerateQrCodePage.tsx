@@ -96,7 +96,6 @@ export function GenerateQrCodePage({
 
           <Button
             variant="secondary"
-            icon="plus"
             onClick={() => setIsPickerOpen(true)}
           >
             Add Item
@@ -158,7 +157,7 @@ export function GenerateQrCodePage({
                       </div>
                       <strong>No items selected for QR generation</strong>
                       <span>
-                        Click "+ Add Item" above to choose items from your catalog.
+                        Click "Add Item" above to choose items from your catalog.
                       </span>
                     </div>
                   </td>

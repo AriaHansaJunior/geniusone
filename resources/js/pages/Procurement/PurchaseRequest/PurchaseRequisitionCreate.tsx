@@ -940,7 +940,6 @@ export function PurchaseRequisitionCreate({
                   }}
                   title="Add a manual blank row"
                 >
-                  <Icon name="plus" size={12} />
                   <span>Blank Row</span>
                 </button>
               </div>

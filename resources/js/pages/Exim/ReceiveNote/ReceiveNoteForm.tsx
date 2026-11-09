@@ -39,7 +39,7 @@ export function ReceiveNoteForm({ onBack, onSave }: ReceiveNoteFormProps) {
           }
         }
       })
-      .catch(() => {});
+      .catch(() => { });
     return () => {
       isMounted = false;
     };
@@ -297,22 +297,21 @@ export function ReceiveNoteForm({ onBack, onSave }: ReceiveNoteFormProps) {
               notice.type === "warning"
                 ? "#fffbeb"
                 : notice.type === "success"
-                ? "#f0fdf4"
-                : "#eff6ff",
-            border: `1px solid ${
-              notice.type === "warning"
+                  ? "#f0fdf4"
+                  : "#eff6ff",
+            border: `1px solid ${notice.type === "warning"
                 ? "#fde68a"
                 : notice.type === "success"
-                ? "#bbf7d0"
-                : "#bfdbfe"
-            }`,
+                  ? "#bbf7d0"
+                  : "#bfdbfe"
+              }`,
             borderRadius: "var(--radius-sm)",
             color:
               notice.type === "warning"
                 ? "#92400e"
                 : notice.type === "success"
-                ? "#166534"
-                : "#1e40af",
+                  ? "#166534"
+                  : "#1e40af",
             fontSize: "12.5px",
             fontWeight: 600,
             display: "flex",
@@ -326,8 +325,8 @@ export function ReceiveNoteForm({ onBack, onSave }: ReceiveNoteFormProps) {
                 notice.type === "warning"
                   ? "alertTriangle"
                   : notice.type === "success"
-                  ? "check"
-                  : "info"
+                    ? "check"
+                    : "info"
               }
               size={16}
             />
