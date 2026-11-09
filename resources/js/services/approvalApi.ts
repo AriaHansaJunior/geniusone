@@ -643,9 +643,10 @@ export function togglePrItemClosing(params: {
 
   // Attempt backend sync if endpoint exists
   if (typeof fetch !== "undefined") {
-    const targetId = prId || prNumber;
-    const itemId = item?.id || index;
-    fetch(`/api/procurement/purchase-requisitions/${encodeURIComponent(targetId)}/items/${encodeURIComponent(itemId)}/${close ? "close" : "unclose"}`, {
+    const rawTarget = String(prId || prNumber || "").trim();
+    const safeTargetId = rawTarget.replace(/[\/\\]/g, "-");
+    const rawItemId = item?.id || item?.pr_has_items_id || (index + 1);
+    fetch(`/api/procurement/purchase-requisitions/${encodeURIComponent(safeTargetId)}/items/${encodeURIComponent(rawItemId)}/${close ? "close" : "unclose"}`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -654,7 +655,9 @@ export function togglePrItemClosing(params: {
           (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || "",
       },
       body: JSON.stringify({ itemCode, itemName, is_closed: close }),
-    }).catch(() => {});
+    }).catch((err) => {
+      console.warn("[togglePrItemClosing] Backend sync warning:", err);
+    });
   }
 
   const approvalState = recordDocumentActivity({

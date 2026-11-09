@@ -8,8 +8,8 @@ import { warehouseRows, findRowBySlug, docToSlug } from "../../../data/mockData"
 import { fetchDetail } from "../../../data/api";
 import { ApprovalStatusBadge } from "../../../components/approval/ApprovalStatusBadge";
 import { ApprovalActionBar } from "../../../components/approval/ApprovalActionBar";
-import { ApprovalTimeline } from "../../../components/approval/ApprovalTimeline";
-import { getLocalApprovalState } from "../../../services/approvalApi";
+import { getLocalApprovalState, recordDocumentActivity } from "../../../services/approvalApi";
+import { useAuthPermission } from "../../../context/AuthPermissionContext";
 import { normalizeApprovalStatus, type DocumentApprovalState } from "../../../types/approval";
 import type { TableRow } from "../../../types";
 
@@ -67,6 +67,8 @@ export function WarehouseDetail({
       _items: [],
     } as TableRow;
   });
+
+  const { currentUser } = useAuthPermission();
 
   useEffect(() => {
     let isMounted = true;
@@ -179,9 +181,79 @@ export function WarehouseDetail({
   const displayTotalQty = Number(computedTotalQty) > 0 ? computedTotalQty : totalQty;
   const primaryUnit = bpbItems[0]?.unit || "PCE";
 
-  const handlePrintPdf = () => {
+  const handlePrintPdf = async () => {
+    const newState = await recordDocumentActivity({
+      module: "bpb",
+      documentId: row.id ? String(row.id) : docNumber,
+      documentNumber: docNumber,
+      action: "printed",
+      userId: currentUser?.id || "user",
+      userName: currentUser?.name || "Warehouse Staff",
+      userRole: currentUser?.role || "warehouse",
+      note: `Printed Receive Material (BPB) ${docNumber}`,
+    });
+    setApprovalState(newState);
     window.print();
   };
+
+  // Build comprehensive Transaction Activity & History Log
+  const activityLogEntries = (() => {
+    const dynamicEntries = (approvalState.history || []).map((entry) => {
+      let actionLabel = "Activity Recorded";
+      let statusLabel = "Logged";
+      let tone: "green" | "blue" | "orange" | "red" | "purple" | "gray" = "gray";
+
+      if (entry.action === "approved") {
+        actionLabel = `Approve ${entry.tier || 1} Receive Material (BPB)`;
+        statusLabel = `Approve ${entry.tier || 1}`;
+        tone = "green";
+      } else if (entry.action === "unapproved") {
+        actionLabel = `UnApprove ${entry.tier || 1} Receive Material (BPB)`;
+        statusLabel = "UnApproved";
+        tone = "orange";
+      } else if (entry.action === "rejected") {
+        actionLabel = `Rejected at Stage ${entry.tier || 1}${entry.note ? ` (${entry.note})` : ""}`;
+        statusLabel = "Rejected";
+        tone = "red";
+      } else if (entry.action === "revised") {
+        actionLabel = entry.note || "Revised BPB Document";
+        statusLabel = "Revised";
+        tone = "blue";
+      } else if (entry.action === "printed") {
+        actionLabel = entry.note || "Printed BPB Document";
+        statusLabel = "Printed";
+        tone = "purple";
+      } else if (entry.action === "created") {
+        actionLabel = entry.note || "Created Receive Material (BPB)";
+        statusLabel = "Created";
+        tone = "blue";
+      }
+
+      return {
+        id: entry.id,
+        user: entry.userName || "System User",
+        role: entry.userRole || "Warehouse Staff",
+        action: actionLabel,
+        time: entry.timestamp,
+        status: statusLabel,
+        tone,
+      };
+    });
+
+    const fallbackEntries = [
+      {
+        id: "fb_created",
+        user: createdBy || "Warehouse Staff",
+        role: "Document Creator",
+        action: `Created Receive Material ${docNumber}`,
+        time: createdAt || receiveDate,
+        status: "Created",
+        tone: "blue" as const,
+      },
+    ];
+
+    return dynamicEntries.length > 0 ? dynamicEntries : fallbackEntries;
+  })();
 
   const handleExportXlsx = () => {
     const headers = [
@@ -292,8 +364,6 @@ export function WarehouseDetail({
           }}
         />
       </div>
-
-      <ApprovalTimeline state={approvalState} style={{ marginBottom: "16px" }} />
 
       {/* 6-Column Logistics & Customs Grid */}
       <div className="detail-kpi-grid">
@@ -587,76 +657,37 @@ export function WarehouseDetail({
         {/* Right Card: Receiving & Audit Verification Log */}
         <div className="detail-section-card">
           <div className="detail-section-card__header">
-            <strong>Receiving & Stock Verification Trail</strong>
-            <span>Audit Trail & Approvals</span>
+            <strong>Transaction History & Activity Log</strong>
+            <span>{activityLogEntries.length} Activity Records</span>
           </div>
           <div className="detail-section-card__body" style={{ padding: 0 }}>
             <table className="audit-log-table">
               <thead>
                 <tr>
                   <th style={{ width: "130px" }}>Actor / Staff</th>
-                  <th>Action</th>
+                  <th>Activity Performed</th>
                   <th style={{ width: "170px" }}>Timestamp</th>
-                  <th style={{ width: "95px" }}>Status</th>
+                  <th style={{ width: "95px" }}>Activity Type</th>
                 </tr>
               </thead>
               <tbody>
-                <tr>
-                  <td>
-                    <strong>{createdBy}</strong>
-                    <small style={{ display: "block", color: "var(--muted)", fontSize: "10px" }}>
-                      Warehouse Staff
-                    </small>
-                  </td>
-                  <td>Receive Material Created</td>
-                  <td style={{ fontFamily: "ui-monospace, monospace", fontSize: "11px" }}>
-                    {createdAt}
-                  </td>
-                  <td>
-                    <Badge tone="blue">✓ Created</Badge>
-                  </td>
-                </tr>
-                <tr>
-                  <td>
-                    <strong>{approvalState.approved1By || "Warehouse Lead"}</strong>
-                    <small style={{ display: "block", color: "var(--muted)", fontSize: "10px" }}>
-                      Stage 1 Verification
-                    </small>
-                  </td>
-                  <td>Quantity & Bin Verification (Approve 1)</td>
-                  <td style={{ fontFamily: "ui-monospace, monospace", fontSize: "11px" }}>
-                    {approvalState.approved1At ||
-                      (approvalState.status === "WAITING_APPROVE_2" || isApproved
-                        ? receiveDate
-                        : "Pending Stage 1")}
-                  </td>
-                  <td>
-                    {approvalState.status === "WAITING_APPROVE_2" || isApproved ? (
-                      <Badge tone="green">✓ Approved 1</Badge>
-                    ) : (
-                      <Badge tone="orange">Waiting 1</Badge>
-                    )}
-                  </td>
-                </tr>
-                <tr>
-                  <td>
-                    <strong>{approvalState.approved2By || "Warehouse Head"}</strong>
-                    <small style={{ display: "block", color: "var(--muted)", fontSize: "10px" }}>
-                      Stage 2 Final Sign-Off
-                    </small>
-                  </td>
-                  <td>Final Stock Ledger Posting (Approve 2)</td>
-                  <td style={{ fontFamily: "ui-monospace, monospace", fontSize: "11px" }}>
-                    {approvalState.approved2At || (isApproved ? receiveDate : "Pending Stage 2")}
-                  </td>
-                  <td>
-                    {isApproved ? (
-                      <Badge tone="green">✓ Approved</Badge>
-                    ) : (
-                      <Badge tone="orange">Pending</Badge>
-                    )}
-                  </td>
-                </tr>
+                {activityLogEntries.map((log) => (
+                  <tr key={log.id}>
+                    <td>
+                      <strong>{log.user}</strong>
+                      <small style={{ display: "block", color: "var(--muted)", fontSize: "10px" }}>
+                        {log.role}
+                      </small>
+                    </td>
+                    <td>{log.action}</td>
+                    <td style={{ fontFamily: "ui-monospace, monospace", fontSize: "11px" }}>
+                      {log.time}
+                    </td>
+                    <td>
+                      <Badge tone={log.tone}>✓ {log.status}</Badge>
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>

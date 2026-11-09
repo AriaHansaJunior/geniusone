@@ -169,77 +169,27 @@ export function PurchaseOrderCreate({
   // Populate items from a given PR
   const populateFromPr = (prObj: any) => {
     const prNum = prObj._rawNumber || prObj.prNumber || "";
-    const rawTotalItems =
-      (prObj.items && Array.isArray(prObj.items) ? prObj.items.length : 0) ||
-      (prObj._items && Array.isArray(prObj._items) ? prObj._items.length : 0);
-    const prItems = getPrItemsList(prObj);
+    const rawList =
+      prObj.items && Array.isArray(prObj.items) && prObj.items.length > 0
+        ? prObj.items
+        : prObj._items && Array.isArray(prObj._items) && prObj._items.length > 0
+        ? prObj._items
+        : [];
+    const prItems = rawList.filter((it: any, idx: number) => !isPrItemClosed(prNum, it, idx));
 
-    if (rawTotalItems > 0 && prItems.length === 0) {
+    if (rawList.length > 0 && prItems.length === 0) {
       setNotification({
         type: "error",
-        message: `All items in PR ${prNum} are marked as Closing and cannot be forwarded to Purchase Order.`,
+        message: `PR ${prNum} berstatus Closing (seluruh barang telah di-close) dan tidak dapat diproses ke Purchase Order.`,
       });
       return;
     }
 
     if (prItems.length === 0) {
-      // Fallback single line item if PR items array was empty
-      const totalQuantity = parseFloat(String(prObj.totalQuantity || prObj._totalQty || "1").replace(/[^0-9.]/g, "") || "1") || 1;
-      const derivedFac = resolveFacilityFromItem(prObj.remark);
-      if (derivedFac) setStatusFacility(derivedFac);
-      setItems([
-        {
-          id: `po-item-${Date.now()}`,
-          prNumber: prNum,
-          itemName: prObj.remark || "Material Item",
-          itemAlias: "—",
-          price: 0,
-          unit: "PCE",
-          requestedQty: totalQuantity,
-          purchasedQty: 0,
-          orderQty: totalQuantity,
-          discountPercent: 0,
-          subtotal: 0,
-          lme: 0,
-          optionalRate: 1.0,
-          percentageLme: 0,
-          pphRate: 0,
-          subtotalPph: 0,
-          remark: prObj.remark || "",
-        },
-      ]);
-
-      if (prNum) {
-        fetchDetail("pr", prNum).then((detail) => {
-          const detailItems = getPrItemsList(detail);
-          if (detail && detailItems.length > 0) {
-            const mappedRows: POItemRow[] = detailItems.map((it: any, idx: number) => {
-              const reqQty = Number(it.rawQty || it.qty || parseFloat(String(it.quantity).replace(/[^0-9.]/g, "") || "1")) || 1;
-              return {
-                id: `po-item-${Date.now()}-${idx}`,
-                prNumber: prNum,
-                pr_has_items_id: it.pr_has_items_id || it.id,
-                itemName: it.item || it.itemName || "Material Item",
-                itemAlias: it.itemCode || it.itemAlias || "—",
-                price: 0,
-                unit: it.unit || "PCE",
-                requestedQty: reqQty,
-                purchasedQty: 0,
-                orderQty: reqQty,
-                discountPercent: 0,
-                subtotal: 0,
-                lme: 0,
-                optionalRate: 1.0,
-                percentageLme: 0,
-                pphRate: 0,
-                subtotalPph: 0,
-                remark: it.remark || detail.remark || "",
-              };
-            });
-            setItems(mappedRows);
-          }
-        });
-      }
+      setNotification({
+        type: "error",
+        message: `Tidak ada barang yang aktif (belum di-closing) pada PR ${prNum}.`,
+      });
       return;
     }
 
@@ -494,15 +444,33 @@ export function PurchaseOrderCreate({
       );
 
       if (matchedPr) {
+        const st = String(matchedPr._rawStatus || matchedPr.status || "").toLowerCase();
+        const isClosingStatus = st.includes("closing") || st.includes("closed");
         const rawCount =
           (matchedPr.items && Array.isArray(matchedPr.items) ? matchedPr.items.length : 0) ||
           (matchedPr._items && Array.isArray(matchedPr._items) ? matchedPr._items.length : 0);
         const prItems = getPrItemsList(matchedPr);
-        if (rawCount > 0 && prItems.length === 0) {
+        if (isClosingStatus || (rawCount > 0 && prItems.length === 0)) {
           setNotification({
             type: "error",
-            message: `All items in PR ${selectedPrNumber} are marked as Closing and excluded from PO.`,
+            message: `PR ${selectedPrNumber} berstatus Closing (seluruh barang telah di-close) dan tidak dapat diproses ke PO.`,
           });
+          setItems((prev) =>
+            prev.map((r) =>
+              r.id === rowId
+                ? {
+                    ...r,
+                    prNumber: "",
+                    pr_has_items_id: undefined,
+                    itemName: "",
+                    itemAlias: "",
+                    orderQty: 0,
+                    requestedQty: 0,
+                    subtotal: 0,
+                  }
+                : r
+            )
+          );
           return;
         }
         if (prItems.length > 0) {
@@ -823,15 +791,30 @@ export function PurchaseOrderCreate({
 
       approvedPrs.forEach((p) => {
         const num = p._rawNumber || p.prNumber;
-        if (num && !seen.has(num)) {
-          seen.add(num);
-          const dept = p._rawDept || p.deptRequest || "";
-          const itemsCount = getPrItemsList(p).length || 1;
-          list.push({
-            prNumber: num,
-            label: `${num} ${dept ? `(${dept} · ${itemsCount} item${itemsCount > 1 ? "s" : ""})` : ""}`,
-          });
+        if (!num || seen.has(num)) return;
+
+        const st = String(p._rawStatus || p.status || "").toLowerCase();
+        const isClosingStatus = st.includes("closing") || st.includes("closed");
+        const rawItems =
+          p.items && Array.isArray(p.items) && p.items.length > 0
+            ? p.items
+            : p._items && Array.isArray(p._items) && p._items.length > 0
+            ? p._items
+            : [];
+        const openItems = getPrItemsList(p);
+
+        // Exclude PRs that are in Closing status or have 0 open items
+        if (isClosingStatus || (rawItems.length > 0 && openItems.length === 0)) {
+          return;
         }
+
+        seen.add(num);
+        const dept = p._rawDept || p.deptRequest || "";
+        const itemsCount = openItems.length || 1;
+        list.push({
+          prNumber: num,
+          label: `${num} ${dept ? `(${dept} · ${itemsCount} item${itemsCount > 1 ? "s" : ""})` : ""}`,
+        });
       });
 
       // Also include initial mock prRows if approvedPrs was empty
@@ -839,8 +822,12 @@ export function PurchaseOrderCreate({
         prRows.forEach((p) => {
           const raw = p._rawNumber || "";
           if (raw && !seen.has(raw)) {
-            seen.add(raw);
-            list.push({ prNumber: raw, label: raw });
+            const st = String(p._rawStatus || p.status || "").toLowerCase();
+            const openItems = getPrItemsList(p);
+            if (!st.includes("closing") && !st.includes("closed") && openItems.length > 0) {
+              seen.add(raw);
+              list.push({ prNumber: raw, label: raw });
+            }
           }
         });
       }

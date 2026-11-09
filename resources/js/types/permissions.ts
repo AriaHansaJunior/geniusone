@@ -81,6 +81,7 @@ export interface RoleDefinition {
   description: string;
   canManageMasterItem: boolean;
   permissions: UserPermissionMap;
+  sidebarPermissions?: string[];
 }
 
 const ROLES_STORAGE_KEY = "geniusone_roles_v2";
@@ -106,6 +107,7 @@ export const INITIAL_ROLES: RoleDefinition[] = [
     description: "Unconditional master access to all modules, Master Item, and approvals.",
     canManageMasterItem: true,
     permissions: createDefaultPermissionMap(true),
+    sidebarPermissions: ["*"],
   },
   {
     id: "role_master_item",
@@ -129,6 +131,22 @@ export const INITIAL_ROLES: RoleDefinition[] = [
       receive_note: { create: false, view: true, update: false, delete: false },
       request_material: { create: false, view: true, update: false, delete: false },
     }),
+    sidebarPermissions: [
+      "dashboard",
+      "stock-notification-master",
+      "supplier",
+      "payment-term",
+      "item",
+      "warehouse-master",
+      "unit",
+      "satuan",
+      "brand",
+      "classification",
+      "department",
+      "facility",
+      "hs",
+      "category",
+    ],
   },
   {
     id: "role_purchasing",
@@ -170,6 +188,24 @@ export const INITIAL_ROLES: RoleDefinition[] = [
       receive_note: { create: false, view: true, update: false, delete: false },
       request_material: { create: false, view: true, update: false, delete: false },
     }),
+    sidebarPermissions: [
+      "dashboard",
+      "stock-notification-master",
+      "supplier",
+      "payment-term",
+      "purchase-category",
+      "delivery-terms",
+      "additional-costs",
+      "pph",
+      "rafaksi-type",
+      "job-number",
+      "item",
+      "pr",
+      "po",
+      "report",
+      "pr-report",
+      "po-report",
+    ],
   },
   {
     id: "role_accounting",
@@ -211,6 +247,18 @@ export const INITIAL_ROLES: RoleDefinition[] = [
       receive_note: { create: false, view: true, update: false, delete: false },
       request_material: { create: false, view: true, update: false, delete: false },
     }),
+    sidebarPermissions: [
+      "dashboard",
+      "stock-notification-master",
+      "payment-term",
+      "additional-costs",
+      "pph",
+      "pr",
+      "po",
+      "report",
+      "pr-report",
+      "po-report",
+    ],
   },
   {
     id: "role_approver1",
@@ -261,6 +309,18 @@ export const INITIAL_ROLES: RoleDefinition[] = [
         unapprove_2: false,
       },
     }),
+    sidebarPermissions: [
+      "dashboard",
+      "stock-notification-master",
+      "pr",
+      "po",
+      "receive-note",
+      "warehouse",
+      "wh-req-material",
+      "report",
+      "pr-report",
+      "po-report",
+    ],
   },
   {
     id: "role_approver2",
@@ -311,6 +371,18 @@ export const INITIAL_ROLES: RoleDefinition[] = [
         unapprove_2: true,
       },
     }),
+    sidebarPermissions: [
+      "dashboard",
+      "stock-notification-master",
+      "pr",
+      "po",
+      "receive-note",
+      "warehouse",
+      "wh-req-material",
+      "report",
+      "pr-report",
+      "po-report",
+    ],
   },
   {
     id: "role_warehouse",
@@ -343,6 +415,42 @@ export const INITIAL_ROLES: RoleDefinition[] = [
         unapprove_2: false,
       },
     }),
+    sidebarPermissions: [
+      "dashboard",
+      "stock-notification-master",
+      "warehouse-master",
+      "type-of-mutation",
+      "wh-type-of-request",
+      "wh-destination-location",
+      "wh-adj-prod",
+      "wh-adj-bc",
+      "wh-opname-material",
+      "wh-adj-stock",
+      "transfer-stock-return",
+      "transfer-stock-result",
+      "receive-material-non-fasilitas",
+      "warehouse",
+      "purchase-return",
+      "sales-return",
+      "wh-out-do",
+      "wh-out-issue",
+      "wh-out-disposal",
+      "wh-req-weight-note",
+      "wh-req-material",
+      "wh-req-weight-note-fg",
+      "wh-req-shipping",
+      "warehouse-move-location",
+      "wh-rep-receive-material",
+      "wh-rep-stock-item",
+      "wh-rep-stock-card",
+      "wh-rep-stock-transfer",
+      "wh-rep-delivery-order",
+      "wh-rep-stock-mutation",
+      "wh-rep-outstanding-request",
+      "receive-note",
+      "receive-note-return",
+      "document-history",
+    ],
   },
   {
     id: "role_requester",
@@ -357,6 +465,13 @@ export const INITIAL_ROLES: RoleDefinition[] = [
       receive_note: { create: false, view: true, update: false, delete: false },
       request_material: { create: true, view: true, update: true, delete: false },
     }),
+    sidebarPermissions: [
+      "dashboard",
+      "stock-notification-master",
+      "pr",
+      "wh-req-material",
+      "report",
+    ],
   },
 ];
 
@@ -367,7 +482,16 @@ export function getStoredRoles(): RoleDefinition[] {
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed;
+        return parsed.map((r) => {
+          const init = INITIAL_ROLES.find((ir) => ir.code === r.code);
+          return {
+            ...r,
+            sidebarPermissions:
+              Array.isArray(r.sidebarPermissions) && r.sidebarPermissions.length > 0
+                ? r.sidebarPermissions
+                : (init?.sidebarPermissions || []),
+          };
+        });
       }
     }
   } catch {
@@ -502,4 +626,113 @@ export function createDefaultPermissionMap(allAllowed = false): UserPermissionMa
     map[mod.id] = allAllowed ? createFullModulePermissions() : createEmptyModulePermissions();
   }
   return map as UserPermissionMap;
+}
+
+/**
+ * Detailed summary of custom overrides applied to a user beyond their assigned role.
+ */
+export interface CustomOverrideSummary {
+  hasOverrides: boolean;
+  extraSidebarCount: number;
+  extraActionCount: number;
+  extraSidebarItems: string[];
+  extraActionNames: string[];
+}
+
+/**
+ * Analyzes whether a user has custom permission overrides or added permissions beyond their assigned role.
+ * Rule: If a user with Role X has permissions added or customized independently by admin (e.g. extra sidebar menus
+ * or extra module actions), they are marked with an asterisk (*) next to their name.
+ */
+export function getCustomOverridesSummary(
+  user: UserAccount,
+  rolesList?: RoleDefinition[]
+): CustomOverrideSummary {
+  const emptyResult: CustomOverrideSummary = {
+    hasOverrides: false,
+    extraSidebarCount: 0,
+    extraActionCount: 0,
+    extraSidebarItems: [],
+    extraActionNames: [],
+  };
+
+  if (user.isSuperAdmin || user.is_super_admin || user.role === "superadmin") {
+    return emptyResult;
+  }
+
+  const roleDef = resolveRoleDefinition(user.role, rolesList);
+  if (!roleDef) return emptyResult;
+
+  const roleSidebar = roleDef.sidebarPermissions || [];
+  const extraSidebarItems: string[] = [];
+
+  // Check 1: Sidebar permissions overrides
+  if (Array.isArray(user.sidebar_permissions) && !roleSidebar.includes("*")) {
+    for (const menuId of user.sidebar_permissions) {
+      if (!roleSidebar.includes(menuId)) {
+        extraSidebarItems.push(menuId);
+      }
+    }
+  }
+
+  // Check 2: Action permissions overrides (CRUD / Approvals)
+  const extraActionNames: string[] = [];
+
+  if (Array.isArray(user.permissions)) {
+    for (const p of user.permissions) {
+      if (p === "*") continue;
+      const parts = p.split(".");
+      if (parts.length < 2) continue;
+      const modKey = parts[0];
+      const actKey = parts[1];
+
+      const fullModId =
+        modKey === "master_item"
+          ? "master_item"
+          : modKey === "pr"
+          ? "purchase_requisition"
+          : modKey === "po"
+          ? "purchase_order"
+          : modKey === "rn" || modKey === "bpb"
+          ? "receive_note"
+          : modKey === "rm"
+          ? "request_material"
+          : modKey;
+
+      const roleHasAction = Boolean(roleDef.permissions[fullModId]?.[actKey as PermissionAction]);
+      if (!roleHasAction) {
+        extraActionNames.push(p);
+      }
+    }
+  } else if (user.permissions && typeof user.permissions === "object") {
+    for (const modId of Object.keys(user.permissions)) {
+      const userModPerms = (user.permissions as UserPermissionMap)[modId];
+      const roleModPerms = roleDef.permissions[modId] || createEmptyModulePermissions();
+      for (const act of PERMISSION_ACTIONS) {
+        if (userModPerms?.[act.action] && !roleModPerms[act.action]) {
+          extraActionNames.push(`${modId}.${act.action}`);
+        }
+      }
+    }
+  }
+
+  const hasOverrides = extraSidebarItems.length > 0 || extraActionNames.length > 0;
+
+  return {
+    hasOverrides,
+    extraSidebarCount: extraSidebarItems.length,
+    extraActionCount: extraActionNames.length,
+    extraSidebarItems,
+    extraActionNames,
+  };
+}
+
+/**
+ * Returns true if the user has custom independent permission overrides beyond their assigned role.
+ */
+export function hasCustomPermissionOverrides(
+  user: UserAccount,
+  rolesList?: RoleDefinition[]
+): boolean {
+  return getCustomOverridesSummary(user, rolesList).hasOverrides;
 }

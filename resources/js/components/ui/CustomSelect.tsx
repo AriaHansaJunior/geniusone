@@ -4,6 +4,8 @@ import { Icon } from "./Icon";
 export interface CustomSelectOption {
   value: string;
   label: string;
+  description?: string;
+  badge?: string;
 }
 
 export interface CustomSelectProps {
@@ -16,6 +18,7 @@ export interface CustomSelectProps {
   id?: string;
   name?: string;
   style?: React.CSSProperties;
+  menuPlacement?: "auto" | "bottom" | "top";
 }
 
 export function CustomSelect({
@@ -28,12 +31,14 @@ export function CustomSelect({
   id,
   name,
   style,
+  menuPlacement = "auto",
 }: CustomSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [openUpwards, setOpenUpwards] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
-  // Normalize options array to { value, label }
+  // Normalize options array to { value, label, description, badge }
   const normalizedOptions: CustomSelectOption[] = useMemo(() => {
     return options.map((opt) => {
       if (typeof opt === "string") {
@@ -49,6 +54,24 @@ export function CustomSelect({
   }, [normalizedOptions, value]);
 
   const displayLabel = selectedOption ? selectedOption.label : value || placeholder;
+
+  // Handle open toggle with placement calculation
+  const handleToggleOpen = () => {
+    if (disabled) return;
+    if (!isOpen && containerRef.current) {
+      if (menuPlacement === "top") {
+        setOpenUpwards(true);
+      } else if (menuPlacement === "bottom") {
+        setOpenUpwards(false);
+      } else {
+        const rect = containerRef.current.getBoundingClientRect();
+        const spaceBelow = window.innerHeight - rect.bottom;
+        const spaceAbove = rect.top;
+        setOpenUpwards(spaceBelow < 260 && spaceAbove > spaceBelow);
+      }
+    }
+    setIsOpen((prev) => !prev);
+  };
 
   // Handle click outside to close
   useEffect(() => {
@@ -102,11 +125,7 @@ export function CustomSelect({
       {/* Trigger Button - Entire surface clickable */}
       <div
         className={`custom-select-trigger ${isOpen ? "is-open" : ""}`}
-        onClick={() => {
-          if (!disabled) {
-            setIsOpen((prev) => !prev);
-          }
-        }}
+        onClick={handleToggleOpen}
         role="combobox"
         aria-expanded={isOpen}
         aria-haspopup="listbox"
@@ -114,7 +133,7 @@ export function CustomSelect({
         onKeyDown={(e) => {
           if ((e.key === "Enter" || e.key === " " || e.key === "ArrowDown") && !disabled) {
             e.preventDefault();
-            setIsOpen(true);
+            handleToggleOpen();
           }
         }}
       >
@@ -128,13 +147,19 @@ export function CustomSelect({
 
       {/* Custom GeniusOne Dropdown List */}
       {isOpen && (
-        <div className="custom-select-dropdown" ref={listRef} role="listbox">
+        <div
+          className={`custom-select-dropdown ${openUpwards ? "custom-select-dropdown--top" : ""}`}
+          ref={listRef}
+          role="listbox"
+        >
           {normalizedOptions.map((opt) => {
             const isSelected = opt.value === value;
             return (
               <div
                 key={opt.value}
-                className={`custom-select-option ${isSelected ? "is-selected" : ""}`}
+                className={`custom-select-option ${isSelected ? "is-selected" : ""} ${
+                  opt.description ? "has-desc" : ""
+                }`}
                 role="option"
                 aria-selected={isSelected}
                 onClick={(e) => {
@@ -142,7 +167,15 @@ export function CustomSelect({
                   handleSelect(opt.value);
                 }}
               >
-                <span className="custom-select-option-text">{opt.label}</span>
+                <div className="custom-select-option-content">
+                  <div className="custom-select-option-row">
+                    <span className="custom-select-option-text">{opt.label}</span>
+                    {opt.badge && <span className="custom-select-option-badge">{opt.badge}</span>}
+                  </div>
+                  {opt.description && (
+                    <span className="custom-select-option-desc">{opt.description}</span>
+                  )}
+                </div>
                 {isSelected && (
                   <span className="custom-select-option-check" aria-hidden="true">
                     <Icon name="check" size={14} strokeWidth={2.5} />

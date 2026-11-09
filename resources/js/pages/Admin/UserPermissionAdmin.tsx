@@ -29,6 +29,8 @@ import {
   getStoredRoles,
   resolveRoleDefinition,
   saveStoredRoles,
+  hasCustomPermissionOverrides,
+  getCustomOverridesSummary,
 } from "../../types/permissions";
 import { ALL_SIDEBAR_MENU_ITEMS, type SidebarMenuItemDescriptor } from "../../config/navigation";
 
@@ -44,6 +46,7 @@ export function UserPermissionAdmin({ onNavigateAudit }: UserPermissionAdminProp
   const [roles, setRoles] = useState<RoleDefinition[]>(() => getStoredRoles());
   const [editingRole, setEditingRole] = useState<RoleDefinition | null>(null);
   const [isCreatingRole, setIsCreatingRole] = useState(false);
+  const [activeRoleModalTab, setActiveRoleModalTab] = useState<"sidebar" | "actions">("sidebar");
 
   const [users, setUsers] = useState<UserAccount[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -283,9 +286,17 @@ export function UserPermissionAdmin({ onNavigateAudit }: UserPermissionAdminProp
     setEditingUser(user);
     setActiveModalTab("sidebar");
 
-    // Initialize sidebar draft: if user has configured array, use it; if null, grant all
+    const roleDef = resolveRoleDefinition(user.role, roles);
+
+    // Initialize sidebar draft: if user has configured array, use it; if null, inherit from role!
     if (Array.isArray(user.sidebar_permissions)) {
       setSidebarDraft([...user.sidebar_permissions]);
+    } else if (roleDef?.sidebarPermissions && roleDef.sidebarPermissions.length > 0) {
+      if (roleDef.sidebarPermissions.includes("*")) {
+        setSidebarDraft(ALL_SIDEBAR_MENU_ITEMS.map((i) => i.id));
+      } else {
+        setSidebarDraft([...roleDef.sidebarPermissions]);
+      }
     } else {
       // Default all items checked
       setSidebarDraft(ALL_SIDEBAR_MENU_ITEMS.map((i) => i.id));
@@ -318,15 +329,31 @@ export function UserPermissionAdmin({ onNavigateAudit }: UserPermissionAdminProp
             }
           }
         }
-      } else if (!isSuper) {
+      } else if (!isSuper && roleDef) {
         // Inherit default permissions from the user's assigned Role (UI-03)
-        const roleDef = resolveRoleDefinition(user.role, roles);
-        if (roleDef) {
-          initialPerms = JSON.parse(JSON.stringify(roleDef.permissions));
-        }
+        initialPerms = JSON.parse(JSON.stringify(roleDef.permissions));
       }
     }
     setPermissionDraft(initialPerms);
+  };
+
+  // Reset a user's drafted permissions and sidebar to their assigned Role defaults
+  const handleResetUserToRoleDefaults = () => {
+    if (!editingUser) return;
+    const roleDef = resolveRoleDefinition(editingUser.role, roles);
+    if (!roleDef) {
+      showFeedback("error", `Could not find definition for role '${editingUser.role}'.`);
+      return;
+    }
+
+    if (roleDef.sidebarPermissions?.includes("*")) {
+      setSidebarDraft(ALL_SIDEBAR_MENU_ITEMS.map((i) => i.id));
+    } else {
+      setSidebarDraft([...(roleDef.sidebarPermissions || [])]);
+    }
+
+    setPermissionDraft(JSON.parse(JSON.stringify(roleDef.permissions)));
+    showFeedback("success", `Permissions aligned with Role '${roleDef.name}'. Click 'Save Permissions' to persist changes.`);
   };
 
   // Toggle single sidebar item
@@ -661,6 +688,34 @@ export function UserPermissionAdmin({ onNavigateAudit }: UserPermissionAdminProp
 
       const data = await res.json();
       if (res.ok && data?.status === "success") {
+        const roleChanged = editingUserProfile.role !== payload.role;
+        if (roleChanged) {
+          const selectedRole = resolveRoleDefinition(payload.role, roles);
+          const derivedPermStrings = selectedRole ? convertPermissionMapToStrings(selectedRole.permissions) : [];
+          const newSidebarPerms = selectedRole?.sidebarPermissions
+            ? (selectedRole.sidebarPermissions.includes("*")
+                ? ALL_SIDEBAR_MENU_ITEMS.map((i) => i.id)
+                : [...selectedRole.sidebarPermissions])
+            : ALL_SIDEBAR_MENU_ITEMS.map((i) => i.id);
+
+          try {
+            await fetch(`/api/admin/users/${editingUserProfile.id}/permissions`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Accept: "application/json",
+                ...(token ? { Authorization: `Bearer ${token}` } : {}),
+              },
+              credentials: "include",
+              body: JSON.stringify({
+                permissions: derivedPermStrings,
+                sidebar_permissions: newSidebarPerms,
+              }),
+            });
+          } catch {
+            // ignore
+          }
+        }
         showFeedback("success", `User profile for '${editUserProfileData.name}' updated successfully.`);
         loadUsers();
         refreshUsers();
@@ -716,6 +771,12 @@ export function UserPermissionAdmin({ onNavigateAudit }: UserPermissionAdminProp
       ? convertPermissionMapToStrings(selectedRole.permissions)
       : [];
 
+    const newSidebarPerms = selectedRole?.sidebarPermissions
+      ? (selectedRole.sidebarPermissions.includes("*")
+          ? ALL_SIDEBAR_MENU_ITEMS.map((i) => i.id)
+          : [...selectedRole.sidebarPermissions])
+      : ALL_SIDEBAR_MENU_ITEMS.map((i) => i.id);
+
     // Optimistically update local users table
     setUsers((prev) =>
       prev.map((u) =>
@@ -725,6 +786,7 @@ export function UserPermissionAdmin({ onNavigateAudit }: UserPermissionAdminProp
               role: newRoleCode,
               role_label: selectedRole ? selectedRole.name : newRoleCode,
               permissions: derivedPermStrings,
+              sidebar_permissions: newSidebarPerms,
             }
           : u
       )
@@ -759,7 +821,7 @@ export function UserPermissionAdmin({ onNavigateAudit }: UserPermissionAdminProp
         credentials: "include",
         body: JSON.stringify({
           permissions: derivedPermStrings,
-          sidebar_permissions: user.sidebar_permissions || ALL_SIDEBAR_MENU_ITEMS.map((i) => i.id),
+          sidebar_permissions: newSidebarPerms,
         }),
       });
     } catch {
@@ -768,13 +830,14 @@ export function UserPermissionAdmin({ onNavigateAudit }: UserPermissionAdminProp
 
     showFeedback(
       "success",
-      `Role '${selectedRole ? selectedRole.name : newRoleCode}' assigned to ${user.name}. All role permissions applied automatically.`
+      `Role '${selectedRole ? selectedRole.name : newRoleCode}' assigned to ${user.name}. All role permissions & sidebar menus applied automatically.`
     );
     refreshUsers();
   };
 
   const handleOpenCreateRole = () => {
     setIsCreatingRole(true);
+    setActiveRoleModalTab("sidebar");
     setEditingRole({
       id: `role_${Date.now()}`,
       code: "",
@@ -782,12 +845,19 @@ export function UserPermissionAdmin({ onNavigateAudit }: UserPermissionAdminProp
       description: "",
       canManageMasterItem: false,
       permissions: createDefaultPermissionMap(false),
+      sidebarPermissions: ["dashboard", "stock-notification-master"],
     });
   };
 
   const handleOpenEditRole = (role: RoleDefinition) => {
     setIsCreatingRole(false);
-    setEditingRole(JSON.parse(JSON.stringify(role)));
+    setActiveRoleModalTab("sidebar");
+    const cloned = JSON.parse(JSON.stringify(role));
+    if (!Array.isArray(cloned.sidebarPermissions)) {
+      const init = INITIAL_ROLES.find((ir) => ir.code === role.code);
+      cloned.sidebarPermissions = init?.sidebarPermissions || [];
+    }
+    setEditingRole(cloned);
   };
 
   const handleToggleRolePermission = (mod: ApprovalModule, act: PermissionAction) => {
@@ -834,7 +904,120 @@ export function UserPermissionAdmin({ onNavigateAudit }: UserPermissionAdminProp
     });
   };
 
-  const handleSaveRoleDefinition = (e: React.FormEvent) => {
+  const handleToggleRoleSidebarItem = (itemId: string) => {
+    if (!editingRole) return;
+    setEditingRole((prev) => {
+      if (!prev) return prev;
+      const curList = prev.sidebarPermissions || [];
+      const nextList = curList.includes(itemId)
+        ? curList.filter((id) => id !== itemId)
+        : [...curList, itemId];
+      return {
+        ...prev,
+        sidebarPermissions: nextList,
+      };
+    });
+  };
+
+  const handleToggleRoleSectionSidebar = (sectionName: string, selectAll: boolean) => {
+    if (!editingRole) return;
+    const sectionItemIds = ALL_SIDEBAR_MENU_ITEMS.filter((i) => i.section === sectionName).map((i) => i.id);
+    setEditingRole((prev) => {
+      if (!prev) return prev;
+      const curList = prev.sidebarPermissions || [];
+      const nextList = selectAll
+        ? Array.from(new Set([...curList, ...sectionItemIds]))
+        : curList.filter((id) => !sectionItemIds.includes(id));
+      return {
+        ...prev,
+        sidebarPermissions: nextList,
+      };
+    });
+  };
+
+  const handleToggleRoleSubgroupSidebar = (items: SidebarMenuItemDescriptor[], selectAll: boolean) => {
+    if (!editingRole) return;
+    const itemIds = items.map((i) => i.id);
+    setEditingRole((prev) => {
+      if (!prev) return prev;
+      const curList = prev.sidebarPermissions || [];
+      const nextList = selectAll
+        ? Array.from(new Set([...curList, ...itemIds]))
+        : curList.filter((id) => !itemIds.includes(id));
+      return {
+        ...prev,
+        sidebarPermissions: nextList,
+      };
+    });
+  };
+
+  const handleApplyRoleSidebarPreset = (preset: "all" | "procurement" | "warehouse" | "clear") => {
+    if (!editingRole) return;
+    let nextList: string[] = [];
+    if (preset === "all") {
+      nextList = ALL_SIDEBAR_MENU_ITEMS.map((i) => i.id);
+    } else if (preset === "procurement") {
+      nextList = ALL_SIDEBAR_MENU_ITEMS.filter(
+        (i) => i.section === "Dashboard" || i.section === "Procurement"
+      ).map((i) => i.id);
+    } else if (preset === "warehouse") {
+      nextList = ALL_SIDEBAR_MENU_ITEMS.filter(
+        (i) => i.section === "Dashboard" || i.section === "Warehouse" || i.section === "Exim"
+      ).map((i) => i.id);
+    } else {
+      nextList = [];
+    }
+    setEditingRole((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        sidebarPermissions: nextList,
+      };
+    });
+  };
+
+  const handleApplyRoleAllModulesPreset = (preset: "all" | "approver" | "crud" | "clear") => {
+    if (!editingRole) return;
+    setEditingRole((prev) => {
+      if (!prev) return prev;
+      const nextPerms: UserPermissionMap = { ...prev.permissions };
+      for (const mod of APPROVAL_MODULES) {
+        if (preset === "all") {
+          nextPerms[mod.id] = createFullModulePermissions();
+        } else if (preset === "approver") {
+          nextPerms[mod.id] = {
+            create: false,
+            view: true,
+            update: false,
+            delete: false,
+            approve_1: true,
+            unapprove_1: true,
+            approve_2: true,
+            unapprove_2: true,
+          };
+        } else if (preset === "crud") {
+          nextPerms[mod.id] = {
+            create: true,
+            view: true,
+            update: true,
+            delete: true,
+            approve_1: false,
+            unapprove_1: false,
+            approve_2: false,
+            unapprove_2: false,
+          };
+        } else {
+          nextPerms[mod.id] = createEmptyModulePermissions();
+        }
+      }
+      return {
+        ...prev,
+        permissions: nextPerms,
+      };
+    });
+  };
+
+  const handleSaveRoleDefinition = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingRole) return;
     const cleanName = editingRole.name.trim();
@@ -847,6 +1030,7 @@ export function UserPermissionAdmin({ onNavigateAudit }: UserPermissionAdminProp
       ...editingRole,
       name: cleanName,
       code: cleanCode,
+      sidebarPermissions: editingRole.sidebarPermissions || [],
     };
 
     const nextRoles = isCreatingRole
@@ -855,8 +1039,48 @@ export function UserPermissionAdmin({ onNavigateAudit }: UserPermissionAdminProp
 
     setRoles(nextRoles);
     saveStoredRoles(nextRoles);
+
+    // Propagate updated role sidebar & permissions to users assigned to this role who don't have custom overrides
+    setUsers((prevUsers) =>
+      prevUsers.map((u) => {
+        if (u.role === finalRole.code && !hasCustomPermissionOverrides(u, nextRoles)) {
+          return {
+            ...u,
+            sidebar_permissions: finalRole.sidebarPermissions || null,
+          };
+        }
+        return u;
+      })
+    );
+
+    // Persist to backend API if applicable
+    const token = sessionStorage.getItem("geniusone_token") || localStorage.getItem("geniusone_token");
+    try {
+      const isExistingDbRole = Number.isInteger(Number(finalRole.id)) && Number(finalRole.id) > 0;
+      if (isExistingDbRole) {
+        await fetch(`/api/admin/roles/${finalRole.id}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          credentials: "include",
+          body: JSON.stringify({
+            name: finalRole.code,
+            label: finalRole.name,
+            description: finalRole.description,
+            sidebar_permissions: finalRole.sidebarPermissions,
+            permissions: convertPermissionMapToStrings(finalRole.permissions),
+          }),
+        });
+      }
+    } catch {
+      // Local storage is already updated
+    }
+
     setEditingRole(null);
-    showFeedback("success", `Role '${finalRole.name}' and its permissions have been saved.`);
+    showFeedback("success", `Role '${finalRole.name}' and its sidebar & approval permissions have been saved.`);
   };
 
   const handleDeleteRoleDefinition = (role: RoleDefinition) => {
@@ -964,11 +1188,12 @@ export function UserPermissionAdmin({ onNavigateAudit }: UserPermissionAdminProp
                 <thead>
                   <tr>
                     <th style={{ width: "48px", textAlign: "center" }}>No</th>
-                    <th style={{ minWidth: "200px" }}>Role Name & Code</th>
-                    <th style={{ minWidth: "240px" }}>Description</th>
-                    <th style={{ width: "165px", textAlign: "center" }}>Master Item Access</th>
-                    <th style={{ minWidth: "280px" }}>Configured Permissions (CRUD & Approval)</th>
-                    <th style={{ width: "160px", textAlign: "center" }}>Actions</th>
+                    <th style={{ minWidth: "190px" }}>Role Name & Code</th>
+                    <th style={{ minWidth: "220px" }}>Description</th>
+                    <th style={{ width: "155px", textAlign: "center" }}>Master Item Access</th>
+                    <th style={{ width: "160px", textAlign: "center" }}>Visible Sidebar Menus</th>
+                    <th style={{ minWidth: "260px" }}>Configured Permissions (CRUD & Approval)</th>
+                    <th style={{ width: "150px", textAlign: "center" }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1005,6 +1230,15 @@ export function UserPermissionAdmin({ onNavigateAudit }: UserPermissionAdminProp
                             <Badge tone="green">Master Item Enabled</Badge>
                           ) : (
                             <Badge tone="gray">View Only</Badge>
+                          )}
+                        </td>
+                        <td style={{ textAlign: "center" }}>
+                          {r.sidebarPermissions?.includes("*") ? (
+                            <Badge tone="purple">All Menus (*)</Badge>
+                          ) : (
+                            <Badge tone="blue">
+                              {r.sidebarPermissions?.length || 0} Menus Granted
+                            </Badge>
                           )}
                         </td>
                         <td>
@@ -1113,7 +1347,17 @@ export function UserPermissionAdmin({ onNavigateAudit }: UserPermissionAdminProp
                             </div>
                             <div className="user-identity">
                               <div className="user-name-row">
-                                <span className="user-full-name">{user.name}</span>
+                                <span className="user-full-name">
+                                  {user.name}
+                                  {hasCustomPermissionOverrides(user, roles) && (
+                                    <span
+                                      className="custom-override-star"
+                                      title={`Custom Permissions Active: ${user.name} has independent permissions customized beyond Role '${resolveRoleDefinition(user.role, roles)?.name || user.role}'.`}
+                                    >
+                                      *
+                                    </span>
+                                  )}
+                                </span>
                                 {user.isSuperAdmin && (
                                   <Badge tone="purple" style={{ fontSize: "10px", padding: "1px 6px" }}>
                                     SuperAdmin
@@ -1168,6 +1412,15 @@ export function UserPermissionAdmin({ onNavigateAudit }: UserPermissionAdminProp
                                 <Badge tone="blue">
                                   Role: {resolveRoleDefinition(user.role, roles)?.name || user.role_label || user.role}
                                 </Badge>
+                                {hasCustomPermissionOverrides(user, roles) && (
+                                  <span
+                                    className="perm-override-badge"
+                                    title="Custom permissions configured beyond assigned role"
+                                  >
+                                    <Icon name="star" size={10} />
+                                    Custom Overrides
+                                  </span>
+                                )}
                                 {(resolveRoleDefinition(user.role, roles)?.canManageMasterItem ||
                                   resolveRoleDefinition(user.role, roles)?.permissions?.master_item?.create) && (
                                   <Badge tone="green">Master Item Access</Badge>
@@ -1255,12 +1508,12 @@ export function UserPermissionAdmin({ onNavigateAudit }: UserPermissionAdminProp
             if (e.target === e.currentTarget) setEditingRole(null);
           }}
         >
-          <div className="dialog-card perm-dialog-card" style={{ maxWidth: "820px" }}>
+          <div className="dialog-card perm-dialog-card" style={{ maxWidth: "860px" }}>
             <div className="dialog-card__header">
               <div>
                 <h3>{isCreatingRole ? "Create New Role" : `Edit Role: ${editingRole.name}`}</h3>
                 <p style={{ margin: "2px 0 0", fontSize: "12px", color: "var(--muted)" }}>
-                  Configure role permissions (Create, View, Update, Delete, Approve, UnApprove) and Master Item access.
+                  Configure visible sidebar navigation menus, document CRUD permissions, and multi-tier approval authorizations.
                 </p>
               </div>
               <button
@@ -1270,6 +1523,33 @@ export function UserPermissionAdmin({ onNavigateAudit }: UserPermissionAdminProp
                 title="Close"
               >
                 <Icon name="close" size={14} />
+              </button>
+            </div>
+
+            {/* Modal Tabs for Role Configuration */}
+            <div className="perm-modal-tabs">
+              <button
+                type="button"
+                className={`perm-modal-tab ${activeRoleModalTab === "sidebar" ? "active" : ""}`}
+                onClick={() => setActiveRoleModalTab("sidebar")}
+              >
+                <Icon name="list" size={14} />
+                <span>Sidebar Navigation Access</span>
+                <span className="perm-modal-tab__badge">
+                  {(editingRole.sidebarPermissions || []).includes("*")
+                    ? "All"
+                    : `${(editingRole.sidebarPermissions || []).length} / ${ALL_SIDEBAR_MENU_ITEMS.length}`}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                className={`perm-modal-tab ${activeRoleModalTab === "actions" ? "active" : ""}`}
+                onClick={() => setActiveRoleModalTab("actions")}
+              >
+                <Icon name="lock" size={14} />
+                <span>Document & Workflow Approvals</span>
+                <span className="perm-modal-tab__badge">CRUD & Approvals</span>
               </button>
             </div>
 
@@ -1310,71 +1590,260 @@ export function UserPermissionAdmin({ onNavigateAudit }: UserPermissionAdminProp
                       onChange={(e) => setEditingRole({ ...editingRole, description: e.target.value })}
                     />
                   </div>
-                  <div
-                    className="form-field"
-                    style={{
-                      gridColumn: "1 / -1",
-                      padding: "10px 14px",
-                      background: "#f8fafc",
-                      border: "1px solid var(--line)",
-                      borderRadius: "6px",
-                    }}
-                  >
-                    <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer", fontSize: "12.5px" }}>
-                      <input
-                        type="checkbox"
-                        checked={editingRole.canManageMasterItem}
-                        onChange={(e) => handleToggleMasterItemAccessForRole(e.target.checked)}
-                      />
-                      <span style={{ fontWeight: 600, color: "var(--ink)" }}>
-                        Authorize Role to Add & Manage Master Item (Purchasing, Accounting, or Master Item Specialist)
-                      </span>
-                    </label>
-                  </div>
                 </div>
 
-                {/* Permission Matrix Table per Module */}
-                <div className="table-frame">
-                  <div className="table-scroll">
-                    <table className="data-table">
-                      <thead>
-                        <tr>
-                          <th style={{ minWidth: "180px" }}>Module</th>
-                          <th style={{ textAlign: "center" }}>Create</th>
-                          <th style={{ textAlign: "center" }}>View</th>
-                          <th style={{ textAlign: "center" }}>Update</th>
-                          <th style={{ textAlign: "center" }}>Delete</th>
-                          <th style={{ textAlign: "center" }}>Approve 1</th>
-                          <th style={{ textAlign: "center" }}>UnApprove 1</th>
-                          <th style={{ textAlign: "center" }}>Approve 2</th>
-                          <th style={{ textAlign: "center" }}>UnApprove 2</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {APPROVAL_MODULES.map((mod) => {
-                          const mp = editingRole.permissions[mod.id] || createEmptyModulePermissions();
-                          return (
-                            <tr key={mod.id}>
-                              <td>
-                                <strong>{mod.label}</strong>
-                                <div style={{ fontSize: "10.5px", color: "var(--muted)" }}>{mod.category}</div>
-                              </td>
-                              {PERMISSION_ACTIONS.map((act) => (
-                                <td key={act.action} style={{ textAlign: "center" }}>
-                                  <input
-                                    type="checkbox"
-                                    checked={Boolean(mp[act.action])}
-                                    onChange={() => handleToggleRolePermission(mod.id, act.action)}
-                                  />
-                                </td>
-                              ))}
+                {/* TAB 1: SIDEBAR NAVIGATION MENUS */}
+                {activeRoleModalTab === "sidebar" && (
+                  <>
+                    <div className="role-sidebar-notice">
+                      <Icon name="info" size={15} />
+                      <span>
+                        Users assigned to <strong>{editingRole.name || "this role"}</strong> will automatically inherit these visible sidebar menus unless overridden individually by SuperAdmin.
+                      </span>
+                    </div>
+
+                    {/* Preset Bar */}
+                    <div className="sidebar-preset-bar">
+                      <span className="sidebar-preset-bar__label">Quick Presets:</span>
+                      <div className="sidebar-preset-bar__buttons">
+                        <button
+                          type="button"
+                          className="perm-preset-btn"
+                          onClick={() => handleApplyRoleSidebarPreset("all")}
+                        >
+                          Grant All Menus
+                        </button>
+                        <button
+                          type="button"
+                          className="perm-preset-btn"
+                          onClick={() => handleApplyRoleSidebarPreset("procurement")}
+                        >
+                          Procurement Only
+                        </button>
+                        <button
+                          type="button"
+                          className="perm-preset-btn"
+                          onClick={() => handleApplyRoleSidebarPreset("warehouse")}
+                        >
+                          Warehouse & Exim Only
+                        </button>
+                        <button
+                          type="button"
+                          className="perm-preset-btn"
+                          onClick={() => handleApplyRoleSidebarPreset("clear")}
+                        >
+                          Clear All
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Grouped Section Cards with Subgroups */}
+                    {Object.entries(groupedSidebarStructure).map(([sectionName, subGroups]) => {
+                      const allSectionItems = Object.values(subGroups).flat();
+                      if (allSectionItems.length === 0) return null;
+
+                      const roleSidebar = editingRole.sidebarPermissions || [];
+                      const isSuper = roleSidebar.includes("*");
+                      const allSelected = isSuper || allSectionItems.every((i) => roleSidebar.includes(i.id));
+                      const enabledCount = isSuper
+                        ? allSectionItems.length
+                        : allSectionItems.filter((i) => roleSidebar.includes(i.id)).length;
+                      const isSectionCollapsed = Boolean(collapsedSections[`role_${sectionName}`]);
+
+                      return (
+                        <div
+                          key={sectionName}
+                          className={`perm-section-card ${isSectionCollapsed ? "perm-section-card--collapsed" : ""}`}
+                        >
+                          <div
+                            className="perm-section-header"
+                            onClick={() => handleToggleSectionCollapse(`role_${sectionName}`)}
+                            title={isSectionCollapsed ? "Click to expand section" : "Click to minimize section"}
+                          >
+                            <span className="perm-section-title">
+                              <span>{sectionName} Section</span>
+                              <Badge tone={enabledCount === allSectionItems.length ? "blue" : enabledCount > 0 ? "gray" : "gray"}>
+                                {enabledCount} / {allSectionItems.length} Active
+                              </Badge>
+                            </span>
+                            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                              <button
+                                type="button"
+                                className="perm-preset-btn"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleToggleRoleSectionSidebar(sectionName, !allSelected);
+                                }}
+                              >
+                                {allSelected ? "Deselect All in Section" : "Select All in Section"}
+                              </button>
+                            </div>
+                          </div>
+
+                          {!isSectionCollapsed && (
+                            <>
+                              {Object.entries(subGroups).map(([groupName, items]) => {
+                                const isGroupAllSelected = items.every((i) => isSuper || roleSidebar.includes(i.id));
+                                const groupEnabledCount = isSuper
+                                  ? items.length
+                                  : items.filter((i) => roleSidebar.includes(i.id)).length;
+
+                                return (
+                                  <div key={groupName} className="perm-subgroup-block">
+                                    <div className="perm-subgroup-header">
+                                      <span className="perm-subgroup-title">
+                                        <span>{groupName}</span>
+                                        <span style={{ fontSize: "10.5px", color: "var(--muted)", fontWeight: 500 }}>
+                                          ({groupEnabledCount}/{items.length} active)
+                                        </span>
+                                      </span>
+                                      {items.length > 1 && (
+                                        <button
+                                          type="button"
+                                          className="perm-subgroup-toggle-btn"
+                                          onClick={() => handleToggleRoleSubgroupSidebar(items, !isGroupAllSelected)}
+                                        >
+                                          {isGroupAllSelected ? "Deselect" : "Select All"}
+                                        </button>
+                                      )}
+                                    </div>
+
+                                    <div className="perm-section-grid">
+                                      {items.map((item) => {
+                                        const isChecked = isSuper || roleSidebar.includes(item.id);
+                                        return (
+                                          <label
+                                            key={item.id}
+                                            className={`perm-menu-item ${isChecked ? "perm-menu-item--checked" : ""}`}
+                                          >
+                                            <input
+                                              type="checkbox"
+                                              checked={isChecked}
+                                              onChange={() => handleToggleRoleSidebarItem(item.id)}
+                                            />
+                                            <div className="perm-menu-item__details">
+                                              <span className="perm-menu-item__name">{item.label}</span>
+                                              <span className="perm-menu-item__group">{item.group || sectionName}</span>
+                                            </div>
+                                          </label>
+                                        );
+                                      })}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </>
+                )}
+
+                {/* TAB 2: ACTIONS & APPROVALS */}
+                {activeRoleModalTab === "actions" && (
+                  <>
+                    <div
+                      className="form-field"
+                      style={{
+                        padding: "10px 14px",
+                        background: "#f8fafc",
+                        border: "1px solid var(--line)",
+                        borderRadius: "6px",
+                        marginBottom: "14px",
+                      }}
+                    >
+                      <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer", fontSize: "12.5px" }}>
+                        <input
+                          type="checkbox"
+                          checked={editingRole.canManageMasterItem}
+                          onChange={(e) => handleToggleMasterItemAccessForRole(e.target.checked)}
+                        />
+                        <span style={{ fontWeight: 600, color: "var(--ink)" }}>
+                          Authorize Role to Add & Manage Master Item (Purchasing, Accounting, or Master Item Specialist)
+                        </span>
+                      </label>
+                    </div>
+
+                    {/* Presets Toolbar for Actions */}
+                    <div className="sidebar-preset-bar" style={{ marginBottom: "14px" }}>
+                      <span className="sidebar-preset-bar__label">Action Presets:</span>
+                      <div className="sidebar-preset-bar__buttons">
+                        <button
+                          type="button"
+                          className="perm-preset-btn"
+                          onClick={() => handleApplyRoleAllModulesPreset("all")}
+                        >
+                          Grant All Actions
+                        </button>
+                        <button
+                          type="button"
+                          className="perm-preset-btn"
+                          onClick={() => handleApplyRoleAllModulesPreset("approver")}
+                        >
+                          Approver Authority Only
+                        </button>
+                        <button
+                          type="button"
+                          className="perm-preset-btn"
+                          onClick={() => handleApplyRoleAllModulesPreset("crud")}
+                        >
+                          CRUD Only
+                        </button>
+                        <button
+                          type="button"
+                          className="perm-preset-btn"
+                          onClick={() => handleApplyRoleAllModulesPreset("clear")}
+                        >
+                          Clear All Actions
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Permission Matrix Table per Module */}
+                    <div className="table-frame">
+                      <div className="table-scroll">
+                        <table className="data-table">
+                          <thead>
+                            <tr>
+                              <th style={{ minWidth: "180px" }}>Module</th>
+                              <th style={{ textAlign: "center" }}>Create</th>
+                              <th style={{ textAlign: "center" }}>View</th>
+                              <th style={{ textAlign: "center" }}>Update</th>
+                              <th style={{ textAlign: "center" }}>Delete</th>
+                              <th style={{ textAlign: "center" }}>Approve 1</th>
+                              <th style={{ textAlign: "center" }}>UnApprove 1</th>
+                              <th style={{ textAlign: "center" }}>Approve 2</th>
+                              <th style={{ textAlign: "center" }}>UnApprove 2</th>
                             </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
+                          </thead>
+                          <tbody>
+                            {APPROVAL_MODULES.map((mod) => {
+                              const mp = editingRole.permissions[mod.id] || createEmptyModulePermissions();
+                              return (
+                                <tr key={mod.id}>
+                                  <td>
+                                    <strong>{mod.label}</strong>
+                                    <div style={{ fontSize: "10.5px", color: "var(--muted)" }}>{mod.category}</div>
+                                  </td>
+                                  {PERMISSION_ACTIONS.map((act) => (
+                                    <td key={act.action} style={{ textAlign: "center" }}>
+                                      <input
+                                        type="checkbox"
+                                        checked={Boolean(mp[act.action])}
+                                        onChange={() => handleToggleRolePermission(mod.id, act.action)}
+                                      />
+                                    </td>
+                                  ))}
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
 
               <div className="dialog-card__footer">
@@ -1402,7 +1871,7 @@ export function UserPermissionAdmin({ onNavigateAudit }: UserPermissionAdminProp
             if (e.target === e.currentTarget && !isSubmittingUser) setIsAddUserOpen(false);
           }}
         >
-          <div className="dialog-card" style={{ maxWidth: "560px" }}>
+          <div className="dialog-card dialog-card--profile" style={{ maxWidth: "580px" }}>
             <div className="dialog-card__header">
               <div>
                 <h3>Add New Enterprise User</h3>
@@ -1518,6 +1987,8 @@ export function UserPermissionAdmin({ onNavigateAudit }: UserPermissionAdminProp
                       options={roles.map((r) => ({
                         value: r.code,
                         label: r.name,
+                        description: r.description,
+                        badge: r.code === "superadmin" ? "All Access" : `${(r.sidebarPermissions || []).length} menus`,
                       }))}
                     />
                   </div>
@@ -1607,15 +2078,41 @@ export function UserPermissionAdmin({ onNavigateAudit }: UserPermissionAdminProp
                 </div>
               </div>
 
-              <button
-                type="button"
-                className="dialog-close-btn"
-                onClick={() => setEditingUser(null)}
-                disabled={isSubmittingPermissions}
-                title="Close"
-              >
-                <Icon name="close" size={14} />
-              </button>
+              <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                {!editingUser.isSuperAdmin && (
+                  <button
+                    type="button"
+                    className="btn-perm-preset"
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      padding: "5px 11px",
+                      fontSize: "11.5px",
+                      borderRadius: "6px",
+                      background: "#eff6ff",
+                      border: "1px solid #bfdbfe",
+                      color: "#1d4ed8",
+                      cursor: "pointer",
+                      fontWeight: 600,
+                    }}
+                    onClick={handleResetUserToRoleDefaults}
+                    title={`Re-sync and reset permissions to defaults for Role '${resolveRoleDefinition(editingUser.role, roles)?.name || editingUser.role}'`}
+                  >
+                    <Icon name="refresh" size={13} />
+                    <span>Reset to Role Defaults</span>
+                  </button>
+                )}
+                <button
+                  type="button"
+                  className="dialog-close-btn"
+                  onClick={() => setEditingUser(null)}
+                  disabled={isSubmittingPermissions}
+                  title="Close"
+                >
+                  <Icon name="close" size={14} />
+                </button>
+              </div>
             </div>
 
             {/* Modal Tabs Navigation */}
@@ -1657,6 +2154,13 @@ export function UserPermissionAdmin({ onNavigateAudit }: UserPermissionAdminProp
               {/* TAB 1: SIDEBAR MENU NAVIGATION */}
               {activeModalTab === "sidebar" && (
                 <>
+                  <div className="role-sidebar-notice" style={{ marginBottom: "12px" }}>
+                    <Icon name="info" size={15} />
+                    <span>
+                      Assigned Role: <strong>{resolveRoleDefinition(editingUser.role, roles)?.name || editingUser.role}</strong>. Menus inherited from this role are marked with a <span className="perm-inherited-pill">Role</span> badge. Extra menus configured manually will grant custom privileges.
+                    </span>
+                  </div>
+
                   {/* Preset Bar */}
                   <div className="sidebar-preset-bar">
                     <span className="sidebar-preset-bar__label">Quick Presets:</span>
@@ -1700,6 +2204,7 @@ export function UserPermissionAdmin({ onNavigateAudit }: UserPermissionAdminProp
                     const allSelected = allSectionItems.every((i) => sidebarDraft.includes(i.id));
                     const enabledCount = allSectionItems.filter((i) => sidebarDraft.includes(i.id)).length;
                     const isSectionCollapsed = Boolean(collapsedSections[sectionName]);
+                    const roleDef = resolveRoleDefinition(editingUser.role, roles);
 
                     return (
                       <div
@@ -1760,6 +2265,11 @@ export function UserPermissionAdmin({ onNavigateAudit }: UserPermissionAdminProp
                                   <div className="perm-section-grid">
                                     {items.map((item) => {
                                       const isChecked = sidebarDraft.includes(item.id);
+                                      const isInheritedRoleMenu = Boolean(
+                                        roleDef?.sidebarPermissions?.includes(item.id) ||
+                                        roleDef?.sidebarPermissions?.includes("*")
+                                      );
+
                                       return (
                                         <label
                                           key={item.id}
@@ -1771,7 +2281,17 @@ export function UserPermissionAdmin({ onNavigateAudit }: UserPermissionAdminProp
                                             onChange={() => handleToggleSidebarItem(item.id)}
                                           />
                                           <div className="perm-menu-item__details">
-                                            <span className="perm-menu-item__name">{item.label}</span>
+                                            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                                              <span className="perm-menu-item__name">{item.label}</span>
+                                              {isInheritedRoleMenu && (
+                                                <span
+                                                  className="perm-inherited-pill"
+                                                  title={`Inherited from base role '${roleDef?.name || editingUser.role}'`}
+                                                >
+                                                  Role
+                                                </span>
+                                              )}
+                                            </div>
                                             <span className="perm-menu-item__group">{item.group || sectionName}</span>
                                           </div>
                                         </label>
@@ -1996,7 +2516,7 @@ export function UserPermissionAdmin({ onNavigateAudit }: UserPermissionAdminProp
             if (e.target === e.currentTarget && !isSubmittingEditUser) setEditingUserProfile(null);
           }}
         >
-          <div className="dialog-card" style={{ maxWidth: "560px" }}>
+          <div className="dialog-card dialog-card--profile" style={{ maxWidth: "580px" }}>
             <div className="dialog-card__header">
               <div>
                 <h3>Edit User Account</h3>
@@ -2147,12 +2667,15 @@ export function UserPermissionAdmin({ onNavigateAudit }: UserPermissionAdminProp
                     <CustomSelect
                       value={editUserProfileData.role}
                       disabled={editUserProfileData.isSuperAdmin}
+                      menuPlacement="top"
                       onChange={(val) =>
                         setEditUserProfileData({ ...editUserProfileData, role: val })
                       }
                       options={roles.map((r) => ({
                         value: r.code,
                         label: r.name,
+                        description: r.description,
+                        badge: r.code === "superadmin" ? "All Access" : `${(r.sidebarPermissions || []).length} menus`,
                       }))}
                     />
                   </div>

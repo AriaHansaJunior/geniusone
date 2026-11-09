@@ -131,6 +131,9 @@ export const navigationConfig: NavSection[] = [
       {
         id: "warehouse-adjustment",
         label: "Adjustment",
+        isPlaceholder: true,
+        disabled: true,
+        badge: "Pending",
         items: [
           { id: "wh-adj-prod", label: "Adjustment Production", path: "/warehouse/adjustment/adjustment-production", isPlaceholder: true },
           { id: "wh-adj-bc", label: "Adjustment Stock BC", path: "/warehouse/adjustment/adjustment-stock-bc", isPlaceholder: true },
@@ -153,6 +156,9 @@ export const navigationConfig: NavSection[] = [
       {
         id: "warehouse-outcoming",
         label: "Outcoming",
+        isPlaceholder: true,
+        disabled: true,
+        badge: "Pending",
         items: [
           { id: "wh-out-do", label: "Delivery Order (Surat Jalan)", path: "/warehouse/outcoming/delivery-order", isPlaceholder: true },
           { id: "wh-out-issue", label: "Issue Material", path: "/warehouse/outcoming/issue-material", isPlaceholder: true },

@@ -351,9 +351,6 @@ export function PurchaseOrderDetail({
         />
       </div>
 
-      {/* Visual Two-Stage Approval Timeline */}
-      <ApprovalTimeline state={approvalState} style={{ marginBottom: "16px" }} />
-
       {/* 6-Column Hero Summary KPI Grid */}
       <div className="detail-kpi-grid">
         <div className="detail-kpi-card">

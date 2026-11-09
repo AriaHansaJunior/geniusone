@@ -31,8 +31,10 @@ export function ApprovalStatusBadge({
   let iconName: "check" | "close" | "clock" | "alertTriangle" = "clock";
   if (normalized === "APPROVED") {
     iconName = "check";
-  } else if (normalized === "REJECTED") {
+  } else if (normalized === "REJECTED" || normalized === "CLOSING") {
     iconName = "close";
+  } else if (normalized === "PARTIAL_CLOSING") {
+    iconName = "alertTriangle";
   } else if (normalized === "WAITING_APPROVE_2") {
     iconName = "clock";
   }
