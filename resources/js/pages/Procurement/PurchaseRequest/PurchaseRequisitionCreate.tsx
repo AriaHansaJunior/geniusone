@@ -13,6 +13,7 @@ import { createPurchaseRequisition } from "../../../data/api";
 
 export interface PRItemRow {
   id: string;
+  items_id?: number;
   jobNumber: string;
   itemCode?: string;
   itemName: string;
@@ -172,6 +173,7 @@ export function PurchaseRequisitionCreate({
   const [deptRequest, setDeptRequest] = useState("");
   const [section, setSection] = useState("");
   const [attachmentName, setAttachmentName] = useState<string>("");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [note, setNote] = useState("");
   const [dbDepartments, setDbDepartments] = useState<string[]>([]);
   const [dbSections, setDbSections] = useState<string[]>([]);
@@ -424,7 +426,7 @@ export function PurchaseRequisitionCreate({
       currentStock: 0,
       quantity: 1,
       dueDate: dueDate || today,
-      facility: "Non Fasilitas",
+      facility: "Fasilitas",
       remark: "",
     };
     setItems((prev) => [...prev, newRow]);
@@ -434,6 +436,7 @@ export function PurchaseRequisitionCreate({
   const handleAddFromMasterPicker = (selectedMasterItems: ItemRecord[]) => {
     const newRows: PRItemRow[] = selectedMasterItems.map((masterItem) => ({
       id: `pr-item-${Date.now()}-${masterItem.id}`,
+      items_id: (masterItem as any).id,
       jobNumber: "",
       itemCode: masterItem.itemCode,
       itemName: masterItem.itemName,
@@ -441,7 +444,7 @@ export function PurchaseRequisitionCreate({
       currentStock: typeof masterItem.stock === "number" ? masterItem.stock : 0,
       quantity: 1,
       dueDate: dueDate || today,
-      facility: masterItem.facility === "FASILITAS" ? "Fasilitas" : "Non Fasilitas",
+      facility: (masterItem.facility === "FASILITAS" || (masterItem as any).facility_status === "FASILITAS") ? "Fasilitas" : "Non Fasilitas",
       remark: "",
     }));
     setItems((prev) => [...prev, ...newRows]);
@@ -482,6 +485,7 @@ export function PurchaseRequisitionCreate({
         e.target.value = "";
         return;
       }
+      setSelectedFile(file);
       setAttachmentName(file.name);
     }
   };
@@ -490,7 +494,11 @@ export function PurchaseRequisitionCreate({
   const validate = () => {
     const errors: Record<string, string> = {};
     if (!date) errors.date = "Date is required.";
-    if (!dueDate) errors.dueDate = "Due Date is required.";
+    if (!dueDate) {
+      errors.dueDate = "Due Date is required.";
+    } else if (date && dueDate < date) {
+      errors.dueDate = "Due Date cannot be earlier than Requisition Date.";
+    }
     if (!deptRequest) errors.deptRequest = "Department Request is required.";
     if (!section) errors.section = "Section is required.";
 
@@ -526,28 +534,49 @@ export function PurchaseRequisitionCreate({
 
   // Confirm Submit
   const handleConfirmSubmit = async () => {
+    if (isSubmitting) return;
     setIsSubmitting(true);
     try {
-      const payload = {
-        deptRequest,
-        section,
-        date,
-        due_date: dueDate,
-        items: items.map((it) => ({
-          itemCode: it.itemCode,
-          itemName: it.itemName,
-          quantity: it.quantity,
-          dueDate: it.dueDate,
-          remark: it.remark || note || "Purchase Requisition Item",
-        })),
-      };
+      const formData = new FormData();
+      formData.append("deptRequest", deptRequest);
+      formData.append("section", section);
+      formData.append("date", date);
+      formData.append("due_date", dueDate);
+      formData.append("note", note);
+      if (selectedFile) {
+        formData.append("attachment_file", selectedFile);
+      }
+      items.forEach((it, idx) => {
+        if (it.items_id) formData.append(`items[${idx}][items_id]`, String(it.items_id));
+        formData.append(`items[${idx}][itemCode]`, it.itemCode || "");
+        formData.append(`items[${idx}][itemName]`, it.itemName);
+        formData.append(`items[${idx}][unit]`, it.unit || "PCE");
+        formData.append(`items[${idx}][facility]`, it.facility || "Fasilitas");
+        formData.append(`items[${idx}][quantity]`, String(it.quantity));
+        formData.append(`items[${idx}][dueDate]`, dueDate);
+        formData.append(`items[${idx}][remark]`, it.remark || note || "Purchase Requisition Item");
+      });
 
-      const res = await createPurchaseRequisition(payload);
+      const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute("content") || "";
+      const res = await fetch("/api/procurement/pr", {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          ...(csrfToken ? { "X-CSRF-TOKEN": csrfToken } : {}),
+        },
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.message || "Failed to create Purchase Requisition.");
+      }
+
       setShowSaveConfirm(false);
       setIsSubmitting(false);
 
       if (onSaveSuccess) {
-        onSaveSuccess(res?.data);
+        onSaveSuccess(data?.data);
       } else {
         onBack();
       }
@@ -625,6 +654,9 @@ export function PurchaseRequisitionCreate({
                   value={date}
                   onChange={(val) => {
                     setDate(val);
+                    if (dueDate && val && dueDate < val) {
+                      setDueDate(val);
+                    }
                     if (formErrors.date) setFormErrors((prev) => ({ ...prev, date: "" }));
                   }}
                   className={formErrors.date ? "has-error" : ""}
@@ -640,8 +672,17 @@ export function PurchaseRequisitionCreate({
                 <CustomDatePicker
                   id="prDueDate"
                   value={dueDate}
+                  min={date}
                   onChange={(val) => {
-                    setDueDate(val);
+                    if (date && val && val < date) {
+                      setNotification({
+                        type: "error",
+                        message: "Target Due Date cannot be earlier than Requisition Date.",
+                      });
+                      setDueDate(date);
+                    } else {
+                      setDueDate(val);
+                    }
                     if (formErrors.dueDate) setFormErrors((prev) => ({ ...prev, dueDate: "" }));
                   }}
                   className={formErrors.dueDate ? "has-error" : ""}
@@ -951,44 +992,31 @@ export function PurchaseRequisitionCreate({
                           />
                         </td>
 
-                        {/* 3. Item Name (Searchable Combobox / Dropdown) */}
+                        {/* 3. Item Name (Regular Text Input) */}
                         <td>
-                          <SearchableItemCombobox
+                          <input
+                            type="text"
+                            className={`tx-input-cell ${formErrors[`item_${index}_name`] ? "has-error" : ""}`}
+                            placeholder="Enter item name..."
                             value={row.itemName}
-                            hasError={Boolean(formErrors[`item_${index}_name`])}
-                            availableItems={masterItems}
-                            onSelect={(selectedItem) => {
-                              handleUpdateRow(row.id, "itemCode", selectedItem.itemCode);
-                              handleUpdateRow(row.id, "itemName", selectedItem.itemName);
-                              handleUpdateRow(
-                                row.id,
-                                "unit",
-                                selectedItem.smallestUnitCode || selectedItem.smallestUnitName || "PCE"
-                              );
-                              handleUpdateRow(
-                                row.id,
-                                "currentStock",
-                                typeof selectedItem.stock === "number" ? selectedItem.stock : 0
-                              );
-                              handleUpdateRow(
-                                row.id,
-                                "facility",
-                                selectedItem.facility === "FASILITAS" ? "Fasilitas" : "Non Fasilitas"
-                              );
-                              if (formErrors[`item_${index}_name`]) {
-                                setFormErrors((prev) => ({ ...prev, [`item_${index}_name`]: "" }));
-                              }
-                            }}
-                            onTextChange={(text) => {
+                            onChange={(e) => {
+                              const text = e.target.value;
                               handleUpdateRow(row.id, "itemName", text);
                               const matched = masterItems.find(
                                 (m) => m.itemName.toLowerCase() === text.trim().toLowerCase()
                               );
                               if (matched) {
+                                handleUpdateRow(row.id, "items_id", (matched as any).id);
+                                handleUpdateRow(row.id, "itemCode", matched.itemCode);
                                 handleUpdateRow(
                                   row.id,
                                   "facility",
-                                  matched.facility === "FASILITAS" ? "Fasilitas" : "Non Fasilitas"
+                                  (matched.facility === "FASILITAS" || (matched as any).facility_status === "FASILITAS") ? "Fasilitas" : "Non Fasilitas"
+                                );
+                                handleUpdateRow(
+                                  row.id,
+                                  "unit",
+                                  matched.smallestUnitName || matched.smallestUnitCode || "PCE"
                                 );
                               }
                               if (formErrors[`item_${index}_name`]) {
@@ -1003,21 +1031,15 @@ export function PurchaseRequisitionCreate({
                           )}
                         </td>
 
-                        {/* 4. Unit */}
+                        {/* 4. Unit (Read-only) */}
                         <td>
-                          <CustomSelect
-                            className="tx-custom-select-cell"
-                            value={row.unit}
-                            onChange={(val) => handleUpdateRow(row.id, "unit", val)}
-                            options={[
-                              { value: "PCE", label: "PCE" },
-                              { value: "KG", label: "KG" },
-                              { value: "SET", label: "SET" },
-                              { value: "ROLL", label: "ROLL" },
-                              { value: "MTR", label: "MTR" },
-                              { value: "BOX", label: "BOX" },
-                              { value: "LTR", label: "LTR" },
-                            ]}
+                          <input
+                            type="text"
+                            className="tx-input-cell tx-input-cell--disabled"
+                            value={row.unit || "PCE"}
+                            readOnly
+                            disabled
+                            title="Unit is configured via Master Item"
                           />
                         </td>
 
@@ -1043,11 +1065,15 @@ export function PurchaseRequisitionCreate({
                           )}
                         </td>
 
-                        {/* 7. Due Date */}
+                        {/* 7. Due Date (Synchronized with Requisition Target Due Date — Read-only) */}
                         <td>
-                          <CustomDatePicker
-                            value={row.dueDate}
-                            onChange={(val) => handleUpdateRow(row.id, "dueDate", val)}
+                          <input
+                            type="text"
+                            className="tx-input-cell tx-input-cell--disabled"
+                            value={dueDate}
+                            readOnly
+                            disabled
+                            title="Due Date is synchronized with Requisition Target Due Date"
                           />
                         </td>
 
@@ -1165,6 +1191,7 @@ export function PurchaseRequisitionCreate({
         cancelLabel="Review Form"
         confirmVariant="primary"
         icon="check"
+        isLoading={isSubmitting}
         onConfirm={handleConfirmSubmit}
         onCancel={() => setShowSaveConfirm(false)}
       />

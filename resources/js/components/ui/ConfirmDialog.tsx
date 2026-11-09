@@ -25,6 +25,8 @@ export interface ConfirmDialogProps {
   confirmVariant?: "primary" | "secondary" | "danger" | "warning";
   variant?: "primary" | "secondary" | "danger" | "warning"; // backwards compatibility alias
   icon?: IconName;
+  isLoading?: boolean;
+  disabled?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
 }
@@ -50,6 +52,8 @@ export function ConfirmDialog({
   confirmVariant,
   variant,
   icon,
+  isLoading,
+  disabled,
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
@@ -207,8 +211,9 @@ export function ConfirmDialog({
             type="button"
             variant={effectiveVariant}
             onClick={onConfirm}
+            disabled={isLoading || disabled}
           >
-            {displayConfirmLabel}
+            {isLoading ? "Saving..." : displayConfirmLabel}
           </Button>
         </div>
       </div>

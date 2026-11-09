@@ -27,6 +27,8 @@ export interface POItemRow {
   requestedQty: number;
   purchasedQty: number;
   orderQty: number;
+  discountType?: "percent" | "amount";
+  discountVal?: number;
   discountPercent: number;
   subtotal: number;
   lme: number;
@@ -67,6 +69,7 @@ export function PurchaseOrderCreate({
 
   // Dynamic Master Records
   const [approvedPrs, setApprovedPrs] = useState<any[]>([]);
+  const [existingPos, setExistingPos] = useState<any[]>([]);
   const [suppliers, setSuppliers] = useState<any[]>([]);
   const [paymentTerms, setPaymentTerms] = useState<any[]>([]);
   const [deliveryTerms, setDeliveryTerms] = useState<any[]>([]);
@@ -103,11 +106,14 @@ export function PurchaseOrderCreate({
       prNumber: "",
       itemName: "",
       itemAlias: "",
+      itemCode: "",
       price: 0,
       unit: "PCE",
       requestedQty: 0,
       purchasedQty: 0,
       orderQty: 0,
+      discountType: "percent",
+      discountVal: 0,
       discountPercent: 0,
       subtotal: 0,
       lme: 0,
@@ -125,13 +131,14 @@ export function PurchaseOrderCreate({
   // Tax and Financial Summary Options
   const [discountOverallPercent, setDiscountOverallPercent] = useState<number>(0);
   const [isPpnActive, setIsPpnActive] = useState<boolean>(true);
+  const [isKawasanBerikat, setIsKawasanBerikat] = useState<boolean>(false);
 
   // Dialog States
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [showSaveConfirm, setShowSaveConfirm] = useState(false);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [notification, setNotification] = useState<{ type: "success" | "error"; message: string } | null>(null);
+  const [notification, setNotification] = useState<{ type: "success" | "error" | "warning"; message: string } | null>(null);
 
   // Helper to resolve Facility status from Master Item or PR item
   const resolveFacilityFromItem = (itemObjOrName: any): "Facility" | "Non Facility" | null => {
@@ -166,6 +173,43 @@ export function PurchaseOrderCreate({
     return rawList.filter((it: any, idx: number) => !isPrItemClosed(prNum, it, idx));
   };
 
+  // Helper to detect if a PR has already been converted into an existing PO
+  const findExistingPoForPr = (prNum: string): { poNumber: string; status?: string } | null => {
+    if (!prNum || prNum === "—" || prNum === "None") return null;
+    const cleanTarget = prNum.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
+
+    const pool = existingPos.length > 0 ? existingPos : poRows;
+    for (const po of pool) {
+      const poNum = po.poNumber || po._rawNumber || po._rawPo || "";
+      const rawPr = po.prNumber || po._rawPr || "";
+      const cleanRawPr = rawPr.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
+      if (cleanRawPr && cleanRawPr === cleanTarget) {
+        return { poNumber: poNum, status: po.status || po._rawStatus };
+      }
+      const poItems = po.items || po._items || [];
+      if (Array.isArray(poItems)) {
+        for (const it of poItems) {
+          const itemPr = it.prNumber || it.pr_number || "";
+          const cleanItemPr = itemPr.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
+          if (cleanItemPr && cleanItemPr === cleanTarget) {
+            return { poNumber: poNum, status: po.status || po._rawStatus };
+          }
+        }
+      }
+    }
+    return null;
+  };
+
+  // Helper to check intra-form duplicate PR selection across rows
+  const findIntraFormDuplicatePr = (currentRowId: string, prNum: string): number | null => {
+    if (!prNum || prNum === "—" || prNum === "None") return null;
+    const cleanTarget = prNum.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
+    const otherIdx = items.findIndex(
+      (r) => r.id !== currentRowId && (r.prNumber || "").replace(/[^a-zA-Z0-9]/g, "").toLowerCase() === cleanTarget
+    );
+    return otherIdx >= 0 ? otherIdx + 1 : null;
+  };
+
   // Populate items from a given PR
   const populateFromPr = (prObj: any) => {
     const prNum = prObj._rawNumber || prObj.prNumber || "";
@@ -196,6 +240,7 @@ export function PurchaseOrderCreate({
     const firstFac = resolveFacilityFromItem(prItems[0]);
     if (firstFac) {
       setStatusFacility(firstFac);
+      if (firstFac === "Facility") setIsKawasanBerikat(true);
     }
 
     const newRows: POItemRow[] = prItems.map((it: any, idx: number) => {
@@ -205,12 +250,15 @@ export function PurchaseOrderCreate({
         prNumber: prNum,
         pr_has_items_id: it.pr_has_items_id || it.id,
         itemName: it.item || it.itemName || "Material Item",
-        itemAlias: it.itemCode || it.itemAlias || "—",
+        itemAlias: it.itemAlias || it.alias || it.itemCode || "—",
+        itemCode: it.itemCode || it.code || "—",
         price: 0,
         unit: it.unit || "PCE",
         requestedQty: reqQty,
         purchasedQty: 0,
         orderQty: reqQty,
+        discountType: "percent",
+        discountVal: 0,
         discountPercent: 0,
         subtotal: 0,
         lme: 0,
@@ -327,6 +375,15 @@ export function PurchaseOrderCreate({
         })
         .catch(() => { });
 
+      // 7. Fetch existing POs to check duplicate PR processing
+      fetchList("po", { perPage: 100 })
+        .then((res) => {
+          if (isMounted && res.rows && res.rows.length > 0) {
+            setExistingPos(res.rows);
+          }
+        })
+        .catch(() => { });
+
       return () => {
         isMounted = false;
       };
@@ -365,9 +422,17 @@ export function PurchaseOrderCreate({
     };
 
     // Recalculate Item Subtotal and PPH
-    const calculateLineSubtotal = (price: number, qty: number, discPercent: number) => {
+    const calculateLineSubtotal = (
+      price: number,
+      qty: number,
+      discVal: number,
+      discType: "percent" | "amount" = "percent"
+    ) => {
       const gross = price * qty;
-      const discount = (gross * (discPercent || 0)) / 100;
+      const discount =
+        discType === "amount"
+          ? Number(discVal || 0)
+          : (gross * (Number(discVal) || 0)) / 100;
       return Math.max(0, gross - discount);
     };
 
@@ -378,11 +443,14 @@ export function PurchaseOrderCreate({
         prNumber: "",
         itemName: "",
         itemAlias: "",
+        itemCode: "",
         price: 0,
         unit: "PCE",
         requestedQty: 0,
         purchasedQty: 0,
         orderQty: 0,
+        discountType: "percent",
+        discountVal: 0,
         discountPercent: 0,
         subtotal: 0,
         lme: 0,
@@ -409,6 +477,7 @@ export function PurchaseOrderCreate({
         const derivedFac = resolveFacilityFromItem(val);
         if (derivedFac) {
           setStatusFacility(derivedFac);
+          if (derivedFac === "Facility") setIsKawasanBerikat(true);
         }
       }
       setItems((prev) =>
@@ -416,12 +485,26 @@ export function PurchaseOrderCreate({
           if (r.id !== id) return r;
           const updated = { ...r, [field]: val };
 
-          // Auto recalculate subtotal if price, orderQty, or discountPercent changed
-          if (field === "price" || field === "orderQty" || field === "discountPercent" || field === "pphRate") {
+          if (field === "discountVal") {
+            updated.discountPercent = Number(val) || 0;
+          } else if (field === "discountPercent") {
+            updated.discountVal = Number(val) || 0;
+          }
+
+          // Auto recalculate subtotal if price, orderQty, discountVal, discountPercent, discountType or pphRate changed
+          if (
+            field === "price" ||
+            field === "orderQty" ||
+            field === "discountVal" ||
+            field === "discountPercent" ||
+            field === "discountType" ||
+            field === "pphRate"
+          ) {
             const sub = calculateLineSubtotal(
               Number(updated.price) || 0,
               Number(updated.orderQty) || 0,
-              Number(updated.discountPercent) || 0
+              Number(updated.discountVal ?? updated.discountPercent) || 0,
+              updated.discountType || "percent"
             );
             updated.subtotal = sub;
             updated.subtotalPph = sub * (Number(updated.pphRate) || 0);
@@ -439,6 +522,21 @@ export function PurchaseOrderCreate({
         return;
       }
 
+      // Check for duplicate PR in existing POs or inside the same form
+      const existingPo = findExistingPoForPr(selectedPrNumber);
+      const duplicateRowNo = findIntraFormDuplicatePr(rowId, selectedPrNumber);
+      if (existingPo) {
+        setNotification({
+          type: "warning",
+          message: `Warning: PR ${selectedPrNumber} has already been converted into Purchase Order ${existingPo.poNumber}. Please verify to avoid duplicate PO creation (Double PO).`,
+        });
+      } else if (duplicateRowNo) {
+        setNotification({
+          type: "warning",
+          message: `Warning: PR ${selectedPrNumber} is already selected in Line Item ${duplicateRowNo}. Please ensure this is not an unintentional duplicate line.`,
+        });
+      }
+
       const matchedPr = approvedPrs.find(
         (p) => (p._rawNumber || p.prNumber) === selectedPrNumber
       );
@@ -446,14 +544,17 @@ export function PurchaseOrderCreate({
       if (matchedPr) {
         const st = String(matchedPr._rawStatus || matchedPr.status || "").toLowerCase();
         const isClosingStatus = st.includes("closing") || st.includes("closed");
-        const rawCount =
-          (matchedPr.items && Array.isArray(matchedPr.items) ? matchedPr.items.length : 0) ||
-          (matchedPr._items && Array.isArray(matchedPr._items) ? matchedPr._items.length : 0);
-        const prItems = getPrItemsList(matchedPr);
-        if (isClosingStatus || (rawCount > 0 && prItems.length === 0)) {
+        const rawList =
+          (matchedPr.items && Array.isArray(matchedPr.items) ? matchedPr.items : []) ||
+          (matchedPr._items && Array.isArray(matchedPr._items) ? matchedPr._items : []);
+        const hasAnyClosedItem =
+          isClosingStatus ||
+          rawList.some((it: any, idx: number) => isPrItemClosed(selectedPrNumber, it, idx));
+
+        if (hasAnyClosedItem) {
           setNotification({
             type: "error",
-            message: `PR ${selectedPrNumber} berstatus Closing (seluruh barang telah di-close) dan tidak dapat diproses ke PO.`,
+            message: `PR ${selectedPrNumber} memiliki item yang di-closing. PR ini tidak dapat dipilih pada pilihan tabel dan hanya bisa ditambahkan ketika mengklik tombol Ready for PO Conversion pada halaman PR tersebut.`,
           });
           setItems((prev) =>
             prev.map((r) =>
@@ -463,6 +564,7 @@ export function PurchaseOrderCreate({
                     prNumber: "",
                     pr_has_items_id: undefined,
                     itemName: "",
+                    itemCode: "",
                     itemAlias: "",
                     orderQty: 0,
                     requestedQty: 0,
@@ -473,15 +575,19 @@ export function PurchaseOrderCreate({
           );
           return;
         }
+
+        const prItems = getPrItemsList(matchedPr);
         if (prItems.length > 0) {
           const first = prItems[0];
           const derivedFac = resolveFacilityFromItem(first);
           if (derivedFac) {
             setStatusFacility(derivedFac);
+            if (derivedFac === "Facility") setIsKawasanBerikat(true);
           }
           const reqQty = Number(first.rawQty || first.qty || parseFloat(String(first.quantity).replace(/[^0-9.]/g, "") || "1")) || 1;
           const itemName = first.item || first.itemName || "Material Item";
-          const itemAlias = first.itemCode || first.itemAlias || "—";
+          const itemCode = first.itemCode || first.code || "—";
+          const itemAlias = first.itemAlias || first.alias || first.itemCode || "—";
           const unit = first.unit || "PCE";
           const remark = first.remark || matchedPr.remark || "";
           const prItemId = first.pr_has_items_id || first.id;
@@ -489,12 +595,13 @@ export function PurchaseOrderCreate({
           setItems((prev) => {
             const updated = prev.map((r) => {
               if (r.id !== rowId) return r;
-              const sub = calculateLineSubtotal(r.price, reqQty, r.discountPercent);
+              const sub = calculateLineSubtotal(r.price, reqQty, r.discountVal ?? r.discountPercent ?? 0, r.discountType || "percent");
               return {
                 ...r,
                 prNumber: selectedPrNumber,
                 pr_has_items_id: prItemId,
                 itemName,
+                itemCode,
                 itemAlias,
                 unit,
                 requestedQty: reqQty,
@@ -515,12 +622,15 @@ export function PurchaseOrderCreate({
                   prNumber: selectedPrNumber,
                   pr_has_items_id: extra.pr_has_items_id || extra.id,
                   itemName: extra.item || extra.itemName || "Material Item",
-                  itemAlias: extra.itemCode || extra.itemAlias || "—",
+                  itemCode: extra.itemCode || extra.code || "—",
+                  itemAlias: extra.itemAlias || extra.alias || extra.itemCode || "—",
                   price: 0,
                   unit: extra.unit || "PCE",
                   requestedQty: extraReqQty,
                   purchasedQty: 0,
                   orderQty: extraReqQty,
+                  discountType: "percent",
+                  discountVal: 0,
                   discountPercent: 0,
                   subtotal: 0,
                   lme: 0,
@@ -641,8 +751,9 @@ export function PurchaseOrderCreate({
     }, [items]);
 
     const grandTotal = useMemo(() => {
-      return dpp + ppnAmount + totalAdditionalCosts - totalPph;
-    }, [dpp, ppnAmount, totalAdditionalCosts, totalPph]);
+      const effectivePpn = isPpnActive && !isKawasanBerikat ? ppnAmount : 0;
+      return dpp + effectivePpn + totalAdditionalCosts - totalPph;
+    }, [dpp, ppnAmount, isPpnActive, isKawasanBerikat, totalAdditionalCosts, totalPph]);
 
     // Validation
     const validate = () => {
@@ -704,17 +815,22 @@ export function PurchaseOrderCreate({
           deliveryTerm,
           latest_delivery: latestDelivery,
           service_subkon: isSubkon,
-          facility_status: statusFacility === "Facility" ? "FASILITAS" : "NON FASILITAS",
+          facility_status: isKawasanBerikat || statusFacility === "Facility" ? "FASILITAS" : "NON FASILITAS",
+          is_kawasan_berikat: isKawasanBerikat,
           remark: remarkPo,
           items: items.map((it) => ({
             pr_has_items_id: it.pr_has_items_id,
             prNumber: it.prNumber,
             itemName: it.itemName,
+            item_code: it.itemCode,
             item_alias: it.itemAlias,
             price: it.price,
             order: it.orderQty,
             purchased: it.purchasedQty,
-            discountPercent: it.discountPercent,
+            discount_type: it.discountType || "percentage",
+            discount_types_id: it.discountType === "amount" ? 2 : 1,
+            discount_val: it.discountVal ?? it.discountPercent ?? 0,
+            discountPercent: it.discountVal ?? it.discountPercent ?? 0,
             unit: it.unit,
             remark: it.remark,
           })),
@@ -803,17 +919,23 @@ export function PurchaseOrderCreate({
             : [];
         const openItems = getPrItemsList(p);
 
-        // Exclude PRs that are in Closing status or have 0 open items
-        if (isClosingStatus || (rawItems.length > 0 && openItems.length === 0)) {
+        // Exclude PRs that have ANY closing/closed items or are closing status
+        const hasAnyClosedItem =
+          isClosingStatus ||
+          rawItems.some((it: any, idx: number) => isPrItemClosed(num, it, idx));
+
+        if (hasAnyClosedItem || (rawItems.length > 0 && openItems.length === 0)) {
           return;
         }
 
         seen.add(num);
         const dept = p._rawDept || p.deptRequest || "";
         const itemsCount = openItems.length || 1;
+        const existingPo = findExistingPoForPr(num);
+        const poWarning = existingPo ? ` ⚠️ [In PO: ${existingPo.poNumber}]` : "";
         list.push({
           prNumber: num,
-          label: `${num} ${dept ? `(${dept} · ${itemsCount} item${itemsCount > 1 ? "s" : ""})` : ""}`,
+          label: `${num} ${dept ? `(${dept} · ${itemsCount} item${itemsCount > 1 ? "s" : ""})` : ""}${poWarning}`,
         });
       });
 
@@ -823,17 +945,24 @@ export function PurchaseOrderCreate({
           const raw = p._rawNumber || "";
           if (raw && !seen.has(raw)) {
             const st = String(p._rawStatus || p.status || "").toLowerCase();
+            const rawItems = p._items || [];
+            const hasAnyClosedItem =
+              st.includes("closing") ||
+              st.includes("closed") ||
+              rawItems.some((it: any, idx: number) => isPrItemClosed(raw, it, idx));
             const openItems = getPrItemsList(p);
-            if (!st.includes("closing") && !st.includes("closed") && openItems.length > 0) {
+            if (!hasAnyClosedItem && openItems.length > 0) {
               seen.add(raw);
-              list.push({ prNumber: raw, label: raw });
+              const existingPo = findExistingPoForPr(raw);
+              const poWarning = existingPo ? ` ⚠️ [In PO: ${existingPo.poNumber}]` : "";
+              list.push({ prNumber: raw, label: `${raw}${poWarning}` });
             }
           }
         });
       }
 
       return list;
-    }, [approvedPrs]);
+    }, [approvedPrs, existingPos]);
 
     return (
       <div className="transaction-create-page">
@@ -846,10 +975,26 @@ export function PurchaseOrderCreate({
           <div
             style={{
               padding: "10px 16px",
-              background: notification.type === "error" ? "#fef2f2" : "#f0fdf4",
-              border: `1px solid ${notification.type === "error" ? "#fecaca" : "#bbf7d0"}`,
+              background:
+                notification.type === "error"
+                  ? "#fef2f2"
+                  : notification.type === "warning"
+                  ? "#fffbeb"
+                  : "#f0fdf4",
+              border: `1px solid ${
+                notification.type === "error"
+                  ? "#fecaca"
+                  : notification.type === "warning"
+                  ? "#fde68a"
+                  : "#bbf7d0"
+              }`,
               borderRadius: "var(--radius-sm)",
-              color: notification.type === "error" ? "#b91c1c" : "#15803d",
+              color:
+                notification.type === "error"
+                  ? "#b91c1c"
+                  : notification.type === "warning"
+                  ? "#b45309"
+                  : "#15803d",
               fontSize: "12.5px",
               fontWeight: 600,
               display: "flex",
@@ -860,7 +1005,11 @@ export function PurchaseOrderCreate({
           >
             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
               <Icon
-                name={notification.type === "error" ? "alertTriangle" : "check"}
+                name={
+                  notification.type === "error" || notification.type === "warning"
+                    ? "alertTriangle"
+                    : "check"
+                }
                 size={16}
               />
               <span>{notification.message}</span>
@@ -1099,17 +1248,17 @@ export function PurchaseOrderCreate({
               </div>
 
               <div className="master-form-group">
-                <label className="master-form-label">
-                  Facility Status <span style={{ fontSize: "10.5px", color: "var(--muted)", fontWeight: 500 }}>(Master Item)</span>
+                <label htmlFor="poFacilityStatus" className="master-form-label">
+                  Facility Status
                 </label>
-                <input
-                  type="text"
-                  className="master-form-input"
-                  value={statusFacility === "Facility" ? "Fasilitas" : "Non Fasilitas"}
-                  readOnly
-                  disabled
-                  title="Facility status is configured via Master Item"
-                  style={{ background: "var(--surface-muted, #f8fafc)", color: "var(--ink-soft)", fontWeight: 600, cursor: "not-allowed" }}
+                <CustomSelect
+                  id="poFacilityStatus"
+                  value={statusFacility}
+                  onChange={(val) => setStatusFacility(val as "Facility" | "Non Facility")}
+                  options={[
+                    { value: "Facility", label: "Fasilitas" },
+                    { value: "Non Facility", label: "Non Fasilitas" },
+                  ]}
                 />
               </div>
 
@@ -1202,21 +1351,22 @@ export function PurchaseOrderCreate({
                     <thead>
                       <tr>
                         <th rowSpan={2} style={{ minWidth: "46px", width: "46px", textAlign: "center" }}>No</th>
-                        <th rowSpan={2} style={{ minWidth: "240px" }}>PR Number</th>
-                        <th rowSpan={2} style={{ minWidth: "220px" }}>Item Name *</th>
-                        <th rowSpan={2} style={{ minWidth: "150px" }}>Item Alias / Code</th>
-                        <th rowSpan={2} style={{ minWidth: "130px", textAlign: "right" }}>Price</th>
-                        <th rowSpan={2} style={{ minWidth: "96px" }}>Unit</th>
+                        <th rowSpan={2} style={{ minWidth: "230px" }}>PR Number</th>
+                        <th rowSpan={2} style={{ minWidth: "210px" }}>Item Name</th>
+                        <th rowSpan={2} style={{ minWidth: "140px" }}>Item Code</th>
+                        <th rowSpan={2} style={{ minWidth: "160px" }}>Item Alias *</th>
+                        <th rowSpan={2} style={{ minWidth: "125px", textAlign: "right" }}>Price</th>
+                        <th rowSpan={2} style={{ minWidth: "90px" }}>Unit</th>
                         {/* Grouped Header for Quantity */}
                         <th colSpan={3} style={{ textAlign: "center", background: "var(--surface-muted, #f8fafc)", borderBottom: "1px solid var(--line, #e2e8f0)" }}>Quantity</th>
-                        <th rowSpan={2} style={{ minWidth: "96px", textAlign: "right" }}>Discount (%)</th>
-                        <th rowSpan={2} style={{ minWidth: "130px", textAlign: "right" }}>Subtotal</th>
+                        <th rowSpan={2} style={{ minWidth: "140px", textAlign: "right" }}>Discount</th>
+                        <th rowSpan={2} style={{ minWidth: "125px", textAlign: "right" }}>Subtotal</th>
                         <th rowSpan={2} style={{ minWidth: "95px", textAlign: "right" }}>LME</th>
                         <th rowSpan={2} style={{ minWidth: "95px", textAlign: "right" }}>Optional Rate</th>
                         <th rowSpan={2} style={{ minWidth: "95px", textAlign: "right" }}>LME (%)</th>
                         <th rowSpan={2} style={{ minWidth: "125px" }}>PPH</th>
                         <th rowSpan={2} style={{ minWidth: "120px", textAlign: "right" }}>Subtotal PPH</th>
-                        <th rowSpan={2} style={{ minWidth: "170px" }}>Remark</th>
+                        <th rowSpan={2} style={{ minWidth: "160px" }}>Remark</th>
                         <th rowSpan={2} style={{ minWidth: "52px", width: "52px", textAlign: "center" }}>Action</th>
                       </tr>
                       <tr>
@@ -1251,31 +1401,91 @@ export function PurchaseOrderCreate({
                                   })),
                                 ]}
                               />
+                              {(() => {
+                                const dupPo = findExistingPoForPr(row.prNumber);
+                                const dupRow = findIntraFormDuplicatePr(row.id, row.prNumber);
+                                if (dupPo) {
+                                  return (
+                                    <div
+                                      style={{
+                                        fontSize: "10.5px",
+                                        color: "#b45309",
+                                        background: "#fef3c7",
+                                        border: "1px solid #fde68a",
+                                        borderRadius: "3px",
+                                        padding: "2px 5px",
+                                        marginTop: "3px",
+                                        lineHeight: 1.2,
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: "3px",
+                                      }}
+                                    >
+                                      <span>⚠️ In PO: <strong>{dupPo.poNumber}</strong></span>
+                                    </div>
+                                  );
+                                }
+                                if (dupRow) {
+                                  return (
+                                    <div
+                                      style={{
+                                        fontSize: "10.5px",
+                                        color: "#b45309",
+                                        background: "#fef3c7",
+                                        border: "1px solid #fde68a",
+                                        borderRadius: "3px",
+                                        padding: "2px 5px",
+                                        marginTop: "3px",
+                                        lineHeight: 1.2,
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: "3px",
+                                      }}
+                                    >
+                                      <span>⚠️ Dup of Line {dupRow}</span>
+                                    </div>
+                                  );
+                                }
+                                return null;
+                              })()}
                             </td>
 
-                            {/* 3. Item Name */}
+                            {/* 3. Item Name (Read-Only) */}
+                            <td>
+                              <input
+                                type="text"
+                                className="tx-input-cell tx-input-cell--disabled"
+                                placeholder="Item name..."
+                                value={row.itemName}
+                                readOnly
+                                disabled
+                              />
+                            </td>
+
+                            {/* 4. Item Code (Read-Only) */}
+                            <td>
+                              <input
+                                type="text"
+                                className="tx-input-cell tx-input-cell--disabled"
+                                placeholder="Code..."
+                                value={row.itemCode || "—"}
+                                readOnly
+                                disabled
+                              />
+                            </td>
+
+                            {/* 5. Item Alias (Editable) */}
                             <td>
                               <input
                                 type="text"
                                 className={`tx-input-cell ${formErrors[`item_${index}_name`] ? "has-error" : ""}`}
-                                placeholder="Item name..."
-                                value={row.itemName}
-                                onChange={(e) => handleUpdateItemField(row.id, "itemName", e.target.value)}
-                              />
-                            </td>
-
-                            {/* 4. Item Alias */}
-                            <td>
-                              <input
-                                type="text"
-                                className="tx-input-cell"
-                                placeholder="Alias / Code..."
+                                placeholder="Alias..."
                                 value={row.itemAlias}
                                 onChange={(e) => handleUpdateItemField(row.id, "itemAlias", e.target.value)}
                               />
                             </td>
 
-                            {/* 5. Price */}
+                            {/* 6. Price */}
                             <td>
                               <input
                                 type="number"
@@ -1287,7 +1497,7 @@ export function PurchaseOrderCreate({
                               />
                             </td>
 
-                            {/* 6. Unit */}
+                            {/* 7. Unit */}
                             <td>
                               <CustomSelect
                                 className="tx-custom-select-cell"
@@ -1307,17 +1517,17 @@ export function PurchaseOrderCreate({
                               />
                             </td>
 
-                            {/* 7. Quantity: Requested */}
+                            {/* 8. Quantity: Requested */}
                             <td style={{ textAlign: "right", fontFamily: "ui-monospace, monospace", color: "var(--muted)", fontWeight: 600 }}>
                               {row.requestedQty.toFixed(4)}
                             </td>
 
-                            {/* 7. Quantity: Purchased */}
+                            {/* 8. Quantity: Purchased */}
                             <td style={{ textAlign: "right", fontFamily: "ui-monospace, monospace", color: "var(--muted)" }}>
                               {row.purchasedQty.toFixed(4)}
                             </td>
 
-                            {/* 7. Quantity: Order */}
+                            {/* 8. Quantity: Order */}
                             <td>
                               <input
                                 type="number"
@@ -1329,17 +1539,44 @@ export function PurchaseOrderCreate({
                               />
                             </td>
 
-                            {/* 8. Discount (%) */}
+                            {/* 9. Discount with Type Selector (% vs Rp) */}
                             <td>
-                              <input
-                                type="number"
-                                step="any"
-                                min="0"
-                                max="100"
-                                className="tx-input-cell tx-input-cell--num"
-                                value={row.discountPercent}
-                                onChange={(e) => handleUpdateItemField(row.id, "discountPercent", parseFloat(e.target.value) || 0)}
-                              />
+                              <div style={{ display: "flex", gap: "3px", alignItems: "center" }}>
+                                <input
+                                  type="number"
+                                  step="any"
+                                  min="0"
+                                  max={row.discountType === "amount" ? undefined : 100}
+                                  className="tx-input-cell tx-input-cell--num"
+                                  style={{ minWidth: "62px", flex: 1 }}
+                                  value={row.discountVal ?? row.discountPercent ?? 0}
+                                  onChange={(e) => handleUpdateItemField(row.id, "discountVal", parseFloat(e.target.value) || 0)}
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    handleUpdateItemField(
+                                      row.id,
+                                      "discountType",
+                                      (row.discountType || "percent") === "percent" ? "amount" : "percent"
+                                    )
+                                  }
+                                  style={{
+                                    height: "26px",
+                                    padding: "0 6px",
+                                    fontSize: "11px",
+                                    fontWeight: 700,
+                                    borderRadius: "var(--radius-xs)",
+                                    border: "1px solid var(--line)",
+                                    background: (row.discountType || "percent") === "percent" ? "var(--blue-50, #eff6ff)" : "var(--surface)",
+                                    color: (row.discountType || "percent") === "percent" ? "var(--blue-700, #1d4ed8)" : "var(--ink)",
+                                    cursor: "pointer",
+                                  }}
+                                  title={`Switch discount type: currently ${row.discountType || "percent"}`}
+                                >
+                                  {(row.discountType || "percent") === "percent" ? "%" : "Rp"}
+                                </button>
+                              </div>
                             </td>
 
                             {/* 9. Subtotal */}
@@ -1575,6 +1812,31 @@ export function PurchaseOrderCreate({
                   <span>{ppnAmount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 </div>
 
+                {/* Kawasan Berikat (Only appears when PPN is checked) */}
+                {isPpnActive && (
+                  <div
+                    className="po-summary-row"
+                    style={{
+                      padding: "4px 8px",
+                      background: "rgba(241, 245, 249, 0.7)",
+                      borderRadius: "var(--radius-xs)",
+                      fontSize: "11.5px",
+                    }}
+                  >
+                    <label className="master-checkbox-label" style={{ fontSize: "11.5px", gap: "6px" }}>
+                      <input
+                        type="checkbox"
+                        checked={isKawasanBerikat}
+                        onChange={(e) => setIsKawasanBerikat(e.target.checked)}
+                      />
+                      <span style={{ fontWeight: 600 }}>Kawasan Berikat (PPN Ditangguhkan)</span>
+                    </label>
+                    <span style={{ fontSize: "11px", color: isKawasanBerikat ? "var(--blue-700)" : "var(--muted)", fontWeight: 700 }}>
+                      {isKawasanBerikat ? "Ditangguhkan (Rp 0.00)" : "Dipungut"}
+                    </span>
+                  </div>
+                )}
+
                 <div className="po-summary-row">
                   <span>Total Additional Costs</span>
                   <span>{totalAdditionalCosts.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
@@ -1646,12 +1908,41 @@ export function PurchaseOrderCreate({
         {/* Save Confirmation Dialog */}
         <ConfirmDialog
           isOpen={showSaveConfirm}
-          title="Submit Purchase Order?"
-          message={`Are you sure you want to submit this Purchase Order for ${grandTotal.toLocaleString("en-US", { minimumFractionDigits: 2 })} with ${items.length} item(s)?`}
-          confirmLabel="Confirm & Save"
+          title={
+            items.some((it) => it.prNumber && findExistingPoForPr(it.prNumber))
+              ? "Submit PO with Duplicate PR Warning?"
+              : "Submit Purchase Order?"
+          }
+          message={(() => {
+            const warnings = items
+              .filter((it) => it.prNumber && findExistingPoForPr(it.prNumber))
+              .map((it) => `${it.prNumber} (in PO: ${findExistingPoForPr(it.prNumber)?.poNumber})`);
+            const uniqueWarnings = Array.from(new Set(warnings));
+            if (uniqueWarnings.length > 0) {
+              return `Warning: The following PRs were already processed into existing Purchase Orders: ${uniqueWarnings.join(
+                ", "
+              )}. Proceeding may result in a duplicate Purchase Order (Double PO). Are you sure you want to proceed?`;
+            }
+            return `Are you sure you want to submit this Purchase Order for ${grandTotal.toLocaleString("en-US", {
+              minimumFractionDigits: 2,
+            })} with ${items.length} item(s)?`;
+          })()}
+          confirmLabel={
+            items.some((it) => it.prNumber && findExistingPoForPr(it.prNumber))
+              ? "Proceed Anyway"
+              : "Confirm & Save"
+          }
           cancelLabel="Review PO"
-          confirmVariant="primary"
-          icon="check"
+          confirmVariant={
+            items.some((it) => it.prNumber && findExistingPoForPr(it.prNumber))
+              ? "warning"
+              : "primary"
+          }
+          icon={
+            items.some((it) => it.prNumber && findExistingPoForPr(it.prNumber))
+              ? "alertTriangle"
+              : "check"
+          }
           onConfirm={handleConfirmSubmit}
           onCancel={() => setShowSaveConfirm(false)}
         />

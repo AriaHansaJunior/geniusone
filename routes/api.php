@@ -72,6 +72,7 @@ Route::prefix('procurement')->group(function () {
     Route::get('/pr', [PurchaseRequisitionApiController::class, 'index']);
     Route::post('/pr', [PurchaseRequisitionApiController::class, 'store']);
     Route::get('/pr/{code}', [PurchaseRequisitionApiController::class, 'show']);
+    Route::get('/pr/{code}/attachment', [PurchaseRequisitionApiController::class, 'downloadAttachment']);
     Route::post('/pr/{id}/approve', [PurchaseRequisitionApiController::class, 'approve']);
     Route::post('/pr/{id}/reject', [PurchaseRequisitionApiController::class, 'reject']);
     Route::post('/pr/{id}/items/{itemId}/close', [PurchaseRequisitionApiController::class, 'closeItem']);
@@ -207,6 +208,7 @@ Route::prefix('dashboard')->group(function () {
 Route::get('/pr', [PurchaseRequisitionApiController::class, 'index']);
 Route::post('/pr', [PurchaseRequisitionApiController::class, 'store']);
 Route::get('/pr/{code}', [PurchaseRequisitionApiController::class, 'show']);
+Route::get('/pr/{code}/attachment', [PurchaseRequisitionApiController::class, 'downloadAttachment']);
 
 Route::get('/po', [PurchaseOrderApiController::class, 'index']);
 Route::post('/po', [PurchaseOrderApiController::class, 'store']);

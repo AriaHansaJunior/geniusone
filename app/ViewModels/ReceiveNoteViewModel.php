@@ -22,9 +22,20 @@ class ReceiveNoteViewModel
     {
         $currencyCode = $this->rn->currency?->name ?? 'IDR';
 
+        $bpbNumbers = $this->rn->purchaseOrders
+            ->flatMap(fn ($poItem) => $poItem->bpbMappings ?? collect())
+            ->map(fn ($map) => $map->bpbReceiveMaterial?->bpb_number)
+            ->filter()
+            ->unique()
+            ->values();
+        $primaryBpb = $bpbNumbers->first();
+
         return [
             'id' => $this->rn->id,
             'rn_number' => $this->rn->rn_number,
+            'bpb_number' => $primaryBpb,
+            'bpb_numbers' => $bpbNumbers->toArray(),
+            'is_received_in_bpb' => ! empty($primaryBpb),
             'arrival_date' => $this->rn->arrival_date ? date('Y-m-d H:i', strtotime($this->rn->arrival_date)) : null,
             'formatted_arrival_date' => $this->rn->arrival_date ? date('d M Y H:i', strtotime($this->rn->arrival_date)) : '-',
             'license_plate' => $this->rn->license_plate ?? '-',

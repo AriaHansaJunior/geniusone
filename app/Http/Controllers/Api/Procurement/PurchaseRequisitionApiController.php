@@ -102,6 +102,8 @@ class PurchaseRequisitionApiController extends Controller
                 ];
             })->toArray();
 
+            $prRemark = $firstItem?->note ?? $firstItem?->remark ?? 'PP Sby Pengadaan Material';
+
             return [
                 'id' => $pr->id,
                 '_id' => "pr-{$pr->id}",
@@ -111,7 +113,7 @@ class PurchaseRequisitionApiController extends Controller
                 '_rawDate' => $this->safeFormatDate($pr->date, 'd-M-Y', $pr->created_at?->format('d-M-Y') ?? '-'),
                 '_rawDueDate' => $this->safeFormatDate($pr->due_date),
                 '_rawDept' => $pr->department?->name ?? 'General',
-                '_rawRemark' => $firstItem?->remark ?? 'PP Sby Pengadaan Material',
+                '_rawRemark' => $prRemark,
                 '_rawCreatedBy' => "{$creatorName} {$createdTime}",
                 '_rawLastUpdated' => "{$creatorName} {$createdTime}",
                 '_rawPr' => $pr->pr_number,
@@ -126,12 +128,15 @@ class PurchaseRequisitionApiController extends Controller
                 'deptRequest' => $pr->department?->name ?? 'General',
                 'totalItem' => $pr->items->count(),
                 'totalQuantity' => number_format((float) $pr->items->sum('quantity'), 4),
-                'remark' => $firstItem?->remark ?? 'PP Sby Pengadaan Material',
+                'remark' => $prRemark,
+                'note' => $firstItem?->note ?? $firstItem?->remark ?? '',
                 'status' => $status,
                 'createdBy' => $creatorName,
                 'lastUpdated' => $createdTime,
+                'attachment_file' => $pr->attachment_file ? basename($pr->attachment_file) : null,
+                'attachment_url' => $pr->attachment_file ? url('storage/'.$pr->attachment_file) : null,
                 'actions' => '',
-                '_search' => "{$pr->pr_number} {$pr->department?->name} {$creatorName} {$status}",
+                '_search' => "{$pr->pr_number} {$pr->department?->name} {$creatorName} {$status} {$prRemark}",
             ];
         })->toArray();
 
@@ -239,8 +244,11 @@ class PurchaseRequisitionApiController extends Controller
             'deptRequest' => $pr->department?->name ?? 'General',
             '_rawDept' => $pr->department?->name ?? 'General',
             'section' => $pr->section?->name ?? 'General',
-            'remark' => $firstItem?->remark ?? 'PP Sby Pengadaan Material',
-            '_rawRemark' => $firstItem?->remark ?? 'PP Sby Pengadaan Material',
+            'remark' => $firstItem?->note ?? $firstItem?->remark ?? 'PP Sby Pengadaan Material',
+            '_rawRemark' => $firstItem?->note ?? $firstItem?->remark ?? 'PP Sby Pengadaan Material',
+            'note' => $firstItem?->note ?? $firstItem?->remark ?? '',
+            'attachment_file' => $pr->attachment_file ? basename($pr->attachment_file) : null,
+            'attachment_url' => $pr->attachment_file ? (str_starts_with($pr->attachment_file, 'http') ? $pr->attachment_file : url('storage/'.$pr->attachment_file)) : null,
             'createdBy' => "{$creatorName} {$createdTime}",
             '_rawCreatedBy' => "{$creatorName} {$createdTime}",
             '_rawLastUpdated' => "{$creatorName} {$createdTime}",
@@ -310,6 +318,34 @@ class PurchaseRequisitionApiController extends Controller
     }
 
     /**
+     * Download attachment file for a Purchase Requisition.
+     */
+    public function downloadAttachment(Request $request, string $code)
+    {
+        $rawCode = str_replace('-', '/', $code);
+        $pr = PurchaseRequisition::where('pr_number', $rawCode)
+            ->orWhere('pr_number', $code)
+            ->orWhere('id', is_numeric($code) ? (int) $code : null)
+            ->first();
+
+        if (! $pr || ! $pr->attachment_file) {
+            abort(404, 'Attachment not found.');
+        }
+
+        $path = storage_path('app/public/'.$pr->attachment_file);
+        if (! file_exists($path)) {
+            $altPath = public_path($pr->attachment_file);
+            if (file_exists($altPath)) {
+                $path = $altPath;
+            } else {
+                abort(404, 'Attachment file not found on disk.');
+            }
+        }
+
+        return response()->download($path);
+    }
+
+    /**
      * Store newly created Purchase Requisition.
      */
     public function store(Request $request)
@@ -369,6 +405,18 @@ class PurchaseRequisitionApiController extends Controller
         $date = $this->safeToDatabaseDate($request->input('date'), now()->format('Y-m-d'));
         $dueDate = $this->safeToDatabaseDate($request->input('due_date'), now()->addDays(14)->format('Y-m-d'));
 
+        // Handle Attachment File Upload or Path
+        $attachmentPath = null;
+        if ($request->hasFile('attachment_file') || $request->hasFile('attachment')) {
+            $file = $request->file('attachment_file') ?? $request->file('attachment');
+            $filename = time().'_'.preg_replace('/[^a-zA-Z0-9._-]/', '_', $file->getClientOriginalName());
+            $attachmentPath = $file->storeAs('attachments/pr', $filename, 'public');
+        } elseif ($request->filled('attachment_file') && is_string($request->input('attachment_file'))) {
+            $attachmentPath = $request->input('attachment_file');
+        }
+
+        $prGeneralNote = $request->input('note') ?? $request->input('purpose') ?? '';
+
         $processedItems = [];
         foreach ($rawItems as $idx => $it) {
             $itemId = null;
@@ -384,6 +432,26 @@ class PurchaseRequisitionApiController extends Controller
                 $itemId = $found?->id;
             }
 
+            // Resolve requested unit & facility dynamically
+            $reqUnit = $it['unit'] ?? null;
+            $unitId = null;
+            if (! empty($reqUnit)) {
+                $uom = UnitOfMeasurement::where('name', $reqUnit)->first();
+                if (! $uom) {
+                    $uom = UnitOfMeasurement::firstOrCreate(['name' => trim($reqUnit)], ['status' => 1]);
+                }
+                $unitId = $uom?->id;
+            }
+
+            $reqFac = $it['facility'] ?? null;
+            $facId = null;
+            if (! empty($reqFac)) {
+                $facUpper = strtoupper(trim($reqFac));
+                $targetName = str_contains($facUpper, 'NON') ? 'NON FASILITAS' : 'FASILITAS';
+                $fac = Facility::firstOrCreate(['name' => $targetName], ['status' => 1]);
+                $facId = $fac->id;
+            }
+
             if (! $itemId && (! empty($it['itemName']) || ! empty($it['name']) || ! empty($it['itemCode']))) {
                 $name = $it['itemName'] ?? $it['name'] ?? ('Item '.($it['itemCode'] ?? ''));
                 $code = $it['itemCode'] ?? $it['code'] ?? ('ITM-'.strtoupper(\Illuminate\Support\Str::random(6)));
@@ -392,26 +460,42 @@ class PurchaseRequisitionApiController extends Controller
                     [
                         'name' => $name,
                         'classifications_id' => $firstDbItem?->classifications_id ?? 1,
-                        'facilities_id' => $firstDbItem?->facilities_id ?? 1,
+                        'facilities_id' => $facId ?? $firstDbItem?->facilities_id ?? 1,
                         'item_types_id' => $firstDbItem?->item_types_id ?? 1,
                         'categories_id' => $firstDbItem?->categories_id ?? 1,
-                        'units_of_measurements_id' => $firstDbItem?->units_of_measurements_id ?? 1,
+                        'units_of_measurements_id' => $unitId ?? $firstDbItem?->units_of_measurements_id ?? 1,
                         'status' => 1,
                         'stock' => 100,
                     ]
                 );
                 $itemId = $newItem->id;
+            } elseif ($itemId) {
+                $itemModel = Item::find($itemId);
+                if ($itemModel) {
+                    $itemUpdates = [];
+                    if ($unitId && $itemModel->units_of_measurements_id !== $unitId) {
+                        $itemUpdates['units_of_measurements_id'] = $unitId;
+                    }
+                    if ($facId && $itemModel->facilities_id !== $facId) {
+                        $itemUpdates['facilities_id'] = $facId;
+                    }
+                    if (! empty($itemUpdates)) {
+                        $itemModel->update($itemUpdates);
+                    }
+                }
             }
 
             if (! $itemId) {
                 $itemId = $fallbackItemId;
             }
 
+            $itemRemark = $it['remark'] ?? $prGeneralNote ?? 'Purchase Requisition Item';
             $processedItems[] = [
                 'items_id' => $itemId,
                 'quantity' => (float) ($it['quantity'] ?? 1),
                 'due_date' => $this->safeToDatabaseDate($it['dueDate'] ?? $it['due_date'] ?? null, $dueDate),
-                'remark' => $it['remark'] ?? $it['note'] ?? 'Purchase Requisition Item',
+                'remark' => $itemRemark,
+                'note' => $prGeneralNote ?: $itemRemark,
             ];
         }
 
@@ -422,6 +506,7 @@ class PurchaseRequisitionApiController extends Controller
                 'sections_id' => $secId,
                 'date' => $date,
                 'due_date' => $dueDate,
+                'attachment_file' => $attachmentPath,
                 'status' => 'Waiting for Approve 1',
             ],
             $processedItems,

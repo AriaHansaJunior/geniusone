@@ -403,6 +403,15 @@ export function PurchaseRequisitionDetail({
   };
 
   const handleDownloadAttachment = () => {
+    if (row.attachment_url) {
+      window.open(row.attachment_url, "_blank");
+      return;
+    }
+    if (row.attachment_file) {
+      const cleanDoc = docNumber.replace(/[\/\\?%*:|"<>]/g, "-");
+      window.open(`/api/procurement/pr/${cleanDoc}/attachment`, "_blank");
+      return;
+    }
     const content = `GENIUSONE TECHNICAL SPECIFICATION ATTACHMENT
 Document Reference: ${docNumber}
 Department: ${dept}
@@ -535,20 +544,47 @@ SPECIFICATION DETAILS:
 
         <Icon name="arrowRight" size={16} className="pipeline-arrow" />
 
-        <div
-          className={`pipeline-node ${isApproved ? "current" : ""}`}
-          style={{ cursor: isApproved ? "pointer" : "default", opacity: isApproved ? 1 : 0.6 }}
-          onClick={() => isApproved && onNavigateDetail && onNavigateDetail("po-create" as any, docNumber)}
-          title={isApproved ? "Proceed to Create Purchase Order from this PR" : "Locked: Requires Stage 2 Director Approval"}
-        >
-          <div className="pipeline-node__icon">
-            <Icon name="archive" size={16} />
-          </div>
-          <div className="pipeline-node__text">
-            <span>Step 2 · Purchase Order</span>
-            <strong>{isApproved ? "Ready for PO Conversion" : "Pending PR Approval"}</strong>
-          </div>
-        </div>
+        {(() => {
+          const hasActiveItems = items.some((it, idx) => !isPrItemClosed(docNumber, it, idx));
+          const isAllClosed = items.length > 0 && !hasActiveItems;
+          const canConvertToPo = isApproved && hasActiveItems && status !== "Closing";
+
+          return (
+            <div
+              className={`pipeline-node ${canConvertToPo ? "current" : ""}`}
+              style={{
+                cursor: canConvertToPo ? "pointer" : "not-allowed",
+                opacity: canConvertToPo ? 1 : 0.5,
+              }}
+              onClick={() => {
+                if (canConvertToPo && onNavigateDetail) {
+                  onNavigateDetail("po-create" as any, docNumber);
+                }
+              }}
+              title={
+                isAllClosed
+                  ? "All items in this PR are closed (cannot convert to PO)"
+                  : !isApproved
+                  ? "Locked: Requires Stage 2 Director Approval"
+                  : "Proceed to Create Purchase Order from this PR"
+              }
+            >
+              <div className="pipeline-node__icon">
+                <Icon name="archive" size={16} />
+              </div>
+              <div className="pipeline-node__text">
+                <span>Step 2 · Purchase Order</span>
+                <strong>
+                  {isAllClosed
+                    ? "PR Closing (All Items Closed)"
+                    : canConvertToPo
+                    ? "Ready for PO Conversion"
+                    : "Pending PR Approval"}
+                </strong>
+              </div>
+            </div>
+          );
+        })()}
 
         <Icon name="arrowRight" size={16} className="pipeline-arrow" />
 

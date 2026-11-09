@@ -22,6 +22,7 @@ class ReceiveNoteApiController extends Controller
             'currency',
             'updatedByUser',
             'purchaseOrders.purchaseOrder',
+            'purchaseOrders.bpbMappings.bpbReceiveMaterial',
             'approvals.user',
         ]);
 
@@ -59,6 +60,7 @@ class ReceiveNoteApiController extends Controller
             'currency',
             'updatedByUser',
             'purchaseOrders.purchaseOrder',
+            'purchaseOrders.bpbMappings.bpbReceiveMaterial',
             'approvals.user',
         ])
             ->where('rn_number', $rawCode)

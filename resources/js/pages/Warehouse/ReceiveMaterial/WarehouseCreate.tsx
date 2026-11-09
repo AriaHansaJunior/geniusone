@@ -43,20 +43,16 @@ export function WarehouseCreate({
   // Dynamic Master & Reference Datasets
   const [approvedPos, setApprovedPos] = useState<any[]>([]);
   const [existingRns, setExistingRns] = useState<any[]>([]);
+  const [existingBpbs, setExistingBpbs] = useState<any[]>([]);
   const [suppliers, setSuppliers] = useState<any[]>([]);
   const [warehouses, setWarehouses] = useState<any[]>([]);
   const [masterItems, setMasterItems] = useState<any[]>([]);
   const [jobNumbers, setJobNumbers] = useState<string[]>([]);
 
   // Header State
-  const [selectedRefKey, setSelectedRefKey] = useState("");
-  const [rnNumber, setRnNumber] = useState(() => {
-    const rand = String(Math.floor(Math.random() * 900) + 100).padStart(4, "0");
-    return `${rand}/RN-IMLI/X/2026`;
-  });
+  const [rnNumber, setRnNumber] = useState("");
   const [poNumberHeader, setPoNumberHeader] = useState(initialPoNumber || "");
   const [bpbType, setBpbType] = useState("Gudang");
-  const [bcType, setBcType] = useState("BC 4.0");
   const [supplier, setSupplier] = useState("");
   const [receiveDate, setReceiveDate] = useState(today);
 
@@ -70,30 +66,15 @@ export function WarehouseCreate({
   const [regDate, setRegDate] = useState(today);
   const [remark, setRemark] = useState("");
 
-  // Items State — start with a clean row ready for PO selection or direct entry
-  const [items, setItems] = useState<BPBItemRow[]>([
-    {
-      id: `bpb-item-${Date.now()}`,
-      poNumber: initialPoNumber || "",
-      prNumber: "—",
-      name: "",
-      code: "",
-      jobNumber: "—",
-      deliveryNote: `SJ-${new Date().getFullYear()}-001`,
-      orderedQty: 0,
-      receiveQty: 1.0,
-      unit: "PCE",
-      location: "Gudang Sparepart",
-      purpose: "",
-    },
-  ]);
+  // Items State — auto populated from selected RN
+  const [items, setItems] = useState<BPBItemRow[]>([]);
 
   // Dialog & Feedback State
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [showSaveConfirm, setShowSaveConfirm] = useState(false);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [notification, setNotification] = useState<{ type: "success" | "error"; message: string } | null>(null);
+  const [notification, setNotification] = useState<{ type: "success" | "error" | "warning"; message: string } | null>(null);
 
   // Extract items list from PO object
   const getPoItemsList = (poObj: any): any[] => {
@@ -104,6 +85,36 @@ export function WarehouseCreate({
       return poObj.items;
     }
     return [];
+  };
+
+  // Helper to detect if an RN has already been received into an existing BPB (Double BPB Prevention)
+  const findExistingBpbForRn = (rnNum: string): { bpbNumber: string; date?: string } | null => {
+    if (!rnNum) return null;
+    const cleanTarget = rnNum.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
+
+    // 1. Check existingRns for bpb_number
+    const matchedRn = existingRns.find((r) => {
+      const num = String(r.rn_number || r.rnNumber || "").replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
+      return num === cleanTarget;
+    });
+    if (matchedRn?.bpb_number) {
+      return { bpbNumber: matchedRn.bpb_number };
+    }
+    if (Array.isArray(matchedRn?.bpb_numbers) && matchedRn.bpb_numbers.length > 0) {
+      return { bpbNumber: matchedRn.bpb_numbers[0] };
+    }
+
+    // 2. Check existingBpbs list
+    const pool = existingBpbs.length > 0 ? existingBpbs : (warehouseRows || []);
+    for (const bpb of pool) {
+      const bpbNum = bpb.bpbNumber || bpb.bpb_number || bpb._rawNumber || "";
+      const rawRn = bpb.rnNumber || bpb._rawRn || "";
+      const cleanRawRn = rawRn.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
+      if (cleanRawRn && cleanRawRn === cleanTarget) {
+        return { bpbNumber: bpbNum, date: bpb.date || bpb.receiveDate };
+      }
+    }
+    return null;
   };
 
   // Populate form from selected PO
@@ -213,45 +224,106 @@ export function WarehouseCreate({
   const populateFromRn = (rnObj: any) => {
     if (!rnObj) return;
     const rnNum = rnObj.rn_number || rnObj.rnNumber || "";
-    const supName = rnObj.supplier?.name || rnObj.supplierName || rnObj.supplier || "";
+    const supName = rnObj.supplier?.name || rnObj.supplierName || (typeof rnObj.supplier === "string" ? rnObj.supplier : "");
     setRnNumber(rnNum);
-    if (supName && typeof supName === "string") {
+    if (supName) {
       setSupplier(supName);
     }
-    if (rnObj.invoice_number) setInvoiceNumber(rnObj.invoice_number);
-    if (rnObj.tax_invoice) setTaxInvoice(rnObj.tax_invoice);
-    if (rnObj.license_plate) setPlateNo(rnObj.license_plate);
-    if (rnObj.aju_number) setAjuNumber(rnObj.aju_number);
-    if (rnObj.no_pen) setNoPen(rnObj.no_pen);
-    if (rnObj.note) setRemark(rnObj.note);
+    setInvoiceNumber(rnObj.invoice_number && rnObj.invoice_number !== "-" ? rnObj.invoice_number : "-");
+    setInvoiceDate(rnObj.invoice_date || rnObj.arrival_date?.slice(0, 10) || today);
+    setTaxInvoice(rnObj.tax_invoice && rnObj.tax_invoice !== "-" ? rnObj.tax_invoice : "-");
+    setPlateNo(rnObj.license_plate && rnObj.license_plate !== "-" ? rnObj.license_plate : "-");
+    setAjuNumber(rnObj.aju_number && rnObj.aju_number !== "-" ? rnObj.aju_number : "-");
+    setAjuDate(rnObj.aju_date || rnObj.arrival_date?.slice(0, 10) || today);
+    setNoPen(rnObj.no_pen && rnObj.no_pen !== "-" ? rnObj.no_pen : "-");
+    setRegDate(rnObj.reg_date || rnObj.arrival_date?.slice(0, 10) || today);
+    if (rnObj.note && rnObj.note !== "-") {
+      setRemark(rnObj.note);
+    }
 
-    const poRnItems = rnObj.purchase_order_receive_notes || rnObj.purchaseOrderReceiveNotes || [];
-    if (Array.isArray(poRnItems) && poRnItems.length > 0) {
-      const mapped: BPBItemRow[] = poRnItems.map((por: any, idx: number) => {
-        const poItem = por.purchase_order_item || por.purchaseOrderItem;
+    const rnItems = (Array.isArray(rnObj.items) && rnObj.items.length > 0)
+      ? rnObj.items
+      : (Array.isArray(rnObj.purchase_order_receive_notes) ? rnObj.purchase_order_receive_notes : []);
+
+    const defaultWh = warehouses[0]?.name || "Gudang Sparepart";
+
+    if (rnItems.length > 0) {
+      const mapped: BPBItemRow[] = rnItems.map((it: any, idx: number) => {
+        const poItem = it.purchase_order_item || it.purchaseOrderItem;
         const poDoc = poItem?.purchase_order || poItem?.purchaseOrder;
         const prItem = poItem?.purchase_request_item || poItem?.purchaseRequestItem;
         const prDoc = prItem?.purchase_request || prItem?.purchaseRequest;
         const itemMaster = poItem?.item || prItem?.item;
-        const qty = Number(por.Diagnostic || por.quantity || poItem?.order || 1);
+
+        const itemName = it.item_name || it.itemName || it.item || itemMaster?.name || "Material Item";
+        const itemCode = it.item_code || it.itemCode || it.code || itemMaster?.code || "10.100.100.001";
+        const poNum = it.po_number || it.poNumber || poDoc?.po_number || "POL-1026-0040";
+        const sjNum = it.dn_number || it.deliveryNote || it.sj_number || rnObj.sj_number || "SJ-2026-001";
+        const qty = Number(it.net_quantity ?? it.gross_quantity ?? it.quantity ?? it.receiveQty ?? it.suratJalanQty ?? 1);
+        const unitStr = it.unit || itemMaster?.unit?.code || itemMaster?.unitOfMeasurement?.name || "PCE";
+        const desc = it.note || it.remark || rnObj.note || "Warehouse Inbound Receipt";
 
         return {
           id: `bpb-item-${Date.now()}-${idx}`,
-          po_has_items_id: poItem?.id,
-          poNumber: poDoc?.po_number || poNumberHeader || "POL-1026-0040",
+          po_has_items_id: poItem?.id || it.id,
+          poNumber: poNum,
           prNumber: prDoc?.pr_number || "—",
-          name: itemMaster?.name || por.note || "Material Item",
-          code: itemMaster?.code || "10.100.100.001",
-          jobNumber: "—",
-          deliveryNote: por.sj_number || rnObj.sj_number || "SJ-2026-001",
+          name: itemName,
+          code: itemCode,
+          jobNumber: it.job_number || it.jobNumber || "—",
+          deliveryNote: sjNum,
           orderedQty: qty,
           receiveQty: qty,
-          unit: itemMaster?.unit?.code || "PCE",
-          location: warehouses[0]?.name || "Gudang Sparepart",
-          purpose: por.note || rnObj.note || "Inbound Receipt",
+          unit: unitStr,
+          location: defaultWh,
+          purpose: desc,
         };
       });
       setItems(mapped);
+    } else {
+      setItems([]);
+    }
+  };
+
+  const handleSelectRn = (selectedRnNumber: string) => {
+    setRnNumber(selectedRnNumber);
+    if (!selectedRnNumber) {
+      setSupplier("");
+      setInvoiceNumber("");
+      setInvoiceDate(today);
+      setTaxInvoice("");
+      setPlateNo("");
+      setAjuNumber("");
+      setAjuDate(today);
+      setNoPen("");
+      setRegDate(today);
+      setRemark("");
+      setItems([]);
+      setNotification(null);
+      return;
+    }
+
+    // Check for duplicate BPB warning
+    const existingBpb = findExistingBpbForRn(selectedRnNumber);
+    if (existingBpb) {
+      setNotification({
+        type: "warning",
+        message: `Warning: RN ${selectedRnNumber} has already been received in BPB ${existingBpb.bpbNumber}. Please verify to avoid duplicate material receipt (Double BPB).`,
+      });
+    } else {
+      setNotification(null);
+    }
+
+    const matchedRn = existingRns.find(
+      (r) => (r.rn_number || r.rnNumber) === selectedRnNumber
+    );
+
+    if (matchedRn) {
+      populateFromRn(matchedRn);
+    } else {
+      fetchDetail("rn", selectedRnNumber).then((detail) => {
+        if (detail) populateFromRn(detail);
+      });
     }
   };
 
@@ -330,12 +402,26 @@ export function WarehouseCreate({
     });
 
     // 2. Fetch existing Receive Notes
-    fetch("/api/warehouse/rn?per_page=50", { headers: { Accept: "application/json" } })
+    fetch("/api/warehouse/rn?per_page=100", { headers: { Accept: "application/json" } })
       .then((r) => r.json())
       .then((d) => {
-        if (isMounted && d?.data && Array.isArray(d.data)) {
-          setExistingRns(d.data);
+        if (!isMounted) return;
+        const rns = d?.rows || (Array.isArray(d?.data) ? d.data : d?.data?.data) || [];
+        if (Array.isArray(rns) && rns.length > 0) {
+          setExistingRns(rns);
+          if (!rnNumber) {
+            populateFromRn(rns[0]);
+          }
         }
+      })
+      .catch(() => { });
+
+    // 2b. Fetch existing BPBs to detect duplicate material receipts (Double BPB)
+    fetchList("bpb", { perPage: 100 })
+      .then((res) => {
+        if (!isMounted) return;
+        const bpbs = res.rows && res.rows.length > 0 ? res.rows : warehouseRows;
+        setExistingBpbs(bpbs);
       })
       .catch(() => { });
 
@@ -656,7 +742,6 @@ export function WarehouseCreate({
   const validate = () => {
     const errors: Record<string, string> = {};
     if (!rnNumber.trim()) errors.rnNumber = "RN Number is required.";
-    if (!supplier.trim()) errors.supplier = "Supplier Name is required.";
     if (!receiveDate.trim()) errors.receiveDate = "Receive Date is required.";
 
     if (items.length === 0) {
@@ -681,7 +766,7 @@ export function WarehouseCreate({
     if (!validate()) {
       setNotification({
         type: "error",
-        message: "Please complete all required fields and item lines before saving.",
+        message: "Please select an RN Number and complete all required fields before saving.",
       });
       return;
     }
@@ -697,8 +782,7 @@ export function WarehouseCreate({
         rn_number: rnNumber.trim(),
         po_number: poNumberHeader || items[0]?.poNumber || "POL-1026-0040",
         bpb_type: bpbType,
-        bc_type: bcType,
-        supplier: supplier.trim(),
+        supplier: supplier.trim() || "Supplier",
         receive_date: receiveDate,
         invoice_number: invoiceNumber.trim() || undefined,
         invoice_date: invoiceDate || undefined,
@@ -809,6 +893,28 @@ export function WarehouseCreate({
     return list;
   }, [approvedPos]);
 
+  // Compile RN options list for single RN selection
+  const rnOptions = useMemo(() => {
+    const list: Array<{ value: string; label: string }> = [];
+    const seen = new Set<string>();
+
+    existingRns.forEach((r) => {
+      const num = r.rn_number || r.rnNumber;
+      if (!num || seen.has(num)) return;
+      seen.add(num);
+      const sup = r.supplier?.name || r.supplierName || (typeof r.supplier === "string" ? r.supplier : "");
+      const itemsCount = (r.items?.length || r.purchase_order_receive_notes?.length || 1);
+      const existingBpb = findExistingBpbForRn(num);
+      const bpbWarning = existingBpb ? ` ⚠️ [In BPB: ${existingBpb.bpbNumber}]` : "";
+      list.push({
+        value: num,
+        label: `${num} ${sup ? `(${sup} · ${itemsCount} item${itemsCount > 1 ? "s" : ""})` : ""}${bpbWarning}`,
+      });
+    });
+
+    return list;
+  }, [existingRns, existingBpbs]);
+
   return (
     <div className="transaction-create-page">
       {/* Page Header */}
@@ -820,10 +926,26 @@ export function WarehouseCreate({
         <div
           style={{
             padding: "10px 16px",
-            background: notification.type === "error" ? "#fef2f2" : "#f0fdf4",
-            border: `1px solid ${notification.type === "error" ? "#fecaca" : "#bbf7d0"}`,
+            background:
+              notification.type === "error"
+                ? "#fef2f2"
+                : notification.type === "warning"
+                ? "#fffbeb"
+                : "#f0fdf4",
+            border: `1px solid ${
+              notification.type === "error"
+                ? "#fecaca"
+                : notification.type === "warning"
+                ? "#fde68a"
+                : "#bbf7d0"
+            }`,
             borderRadius: "var(--radius-sm)",
-            color: notification.type === "error" ? "#b91c1c" : "#15803d",
+            color:
+              notification.type === "error"
+                ? "#b91c1c"
+                : notification.type === "warning"
+                ? "#b45309"
+                : "#15803d",
             fontSize: "12.5px",
             fontWeight: 600,
             display: "flex",
@@ -834,7 +956,11 @@ export function WarehouseCreate({
         >
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
             <Icon
-              name={notification.type === "error" ? "alertTriangle" : "check"}
+              name={
+                notification.type === "error" || notification.type === "warning"
+                  ? "alertTriangle"
+                  : "check"
+              }
               size={16}
             />
             <span>{notification.message}</span>
@@ -862,93 +988,54 @@ export function WarehouseCreate({
         <form onSubmit={handleSaveClick}>
           {/* Header Field Grid (Structured 4-column layout with balanced rows) */}
           <div className="tx-header-grid">
-            {/* Row 1: Reference Approved PO / RN (span 2) | RN Number | Receive Date */}
-            <div className="master-form-group" style={{ gridColumn: "span 2" }}>
-              <label htmlFor="bpbRefSelect" className="master-form-label">
-                Reference Approved PO / Receive Note (Auto-Fill)
-              </label>
-              <CustomSelect
-                id="bpbRefSelect"
-                value={selectedRefKey}
-                onChange={(val) => handleSelectReference(val)}
-                placeholder="-- Select Approved PO or Receive Note to Auto-Populate --"
-                options={[
-                  { value: "", label: "-- Select Approved PO or Receive Note to Auto-Populate --" },
-                  ...allPoOptions.map((po) => ({
-                    value: `PO:${po.poNumber}`,
-                    label: `[PO] ${po.label} — Approved`,
-                  })),
-                  ...existingRns.map((rn) => {
-                    const rnNum = rn.rn_number || rn.rnNumber;
-                    const sup = rn.supplier?.name || rn.supplierName || "";
-                    return {
-                      value: `RN:${rnNum}`,
-                      label: `[RN] ${rnNum} ${sup ? `— ${sup}` : ""}`,
-                    };
-                  }),
-                ]}
-              />
-            </div>
-
+            {/* Row 1: RN Number | BPB Type | Receive Date | Supplier Name (Takes from RN, Read-Only) */}
             <div className="master-form-group">
               <label htmlFor="bpbRnNumber" className="master-form-label">
                 RN Number <span className="required-asterisk">*</span>
               </label>
-              <div style={{ display: "flex", gap: "6px" }}>
-                <input
-                  id="bpbRnNumber"
-                  type="text"
-                  className={`master-form-input ${formErrors.rnNumber ? "has-error" : ""}`}
-                  style={{ flex: 1 }}
-                  value={rnNumber}
-                  onChange={(e) => setRnNumber(e.target.value)}
-                  placeholder="e.g. 0131/RN-IMLI/X/2026"
-                />
-                <Button
-                  type="button"
-                  variant="secondary"
-                  icon="refresh"
-                  onClick={handleGenerateNewRn}
-                  title="Generate New RN Number"
-                />
-              </div>
-              {formErrors.rnNumber && (
-                <span className="master-form-error">{formErrors.rnNumber}</span>
-              )}
-            </div>
-
-            <div className="master-form-group">
-              <label htmlFor="bpbReceiveDate" className="master-form-label">
-                Receive Date <span className="required-asterisk">*</span>
-              </label>
-              <CustomDatePicker
-                id="bpbReceiveDate"
-                value={receiveDate}
-                onChange={(val) => setReceiveDate(val)}
-                className={formErrors.receiveDate ? "has-error" : ""}
-              />
-              {formErrors.receiveDate && (
-                <span className="master-form-error">{formErrors.receiveDate}</span>
-              )}
-            </div>
-
-            {/* Row 2: Supplier Name (span 2) | BPB Type | Customs Doc Type */}
-            <div className="master-form-group" style={{ gridColumn: "span 2" }}>
-              <label htmlFor="bpbSupplier" className="master-form-label">
-                Supplier Name <span className="required-asterisk">*</span>
-              </label>
               <CustomSelect
-                id="bpbSupplier"
-                value={supplier}
-                onChange={(val) => setSupplier(val)}
-                placeholder="Select Supplier..."
+                id="bpbRnNumber"
+                value={rnNumber}
+                onChange={(val) => handleSelectRn(val)}
+                placeholder="Select RN Number..."
                 options={[
-                  { value: "", label: "Select Supplier..." },
-                  ...supplierOptions.map((supName) => ({ value: supName, label: supName })),
+                  { value: "", label: "Select RN Number..." },
+                  ...rnOptions,
+                  ...(rnNumber && !rnOptions.some((o) => o.value === rnNumber)
+                    ? [{ value: rnNumber, label: rnNumber }]
+                    : []),
                 ]}
               />
-              {formErrors.supplier && (
-                <span className="master-form-error">{formErrors.supplier}</span>
+              {(() => {
+                const existingBpb = findExistingBpbForRn(rnNumber);
+                if (existingBpb) {
+                  return (
+                    <div
+                      style={{
+                        fontSize: "11px",
+                        color: "#b45309",
+                        background: "#fef3c7",
+                        border: "1px solid #fde68a",
+                        borderRadius: "4px",
+                        padding: "3px 8px",
+                        marginTop: "5px",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "5px",
+                        lineHeight: 1.3,
+                      }}
+                    >
+                      <Icon name="alertTriangle" size={13} />
+                      <span>
+                        Notice: RN was already received in <strong>{existingBpb.bpbNumber}</strong>. Avoid duplicate BPB.
+                      </span>
+                    </div>
+                  );
+                }
+                return null;
+              })()}
+              {formErrors.rnNumber && (
+                <span className="master-form-error">{formErrors.rnNumber}</span>
               )}
             </div>
 
@@ -969,24 +1056,35 @@ export function WarehouseCreate({
             </div>
 
             <div className="master-form-group">
-              <label htmlFor="bcType" className="master-form-label">
-                Customs Doc Type
+              <label htmlFor="bpbReceiveDate" className="master-form-label">
+                Receive Date <span className="required-asterisk">*</span>
               </label>
-              <CustomSelect
-                id="bcType"
-                value={bcType}
-                onChange={(val) => setBcType(val)}
-                options={[
-                  { value: "BC 4.0", label: "BC 4.0" },
-                  { value: "BC 2.3", label: "BC 2.3" },
-                  { value: "BC 2.6.2", label: "BC 2.6.2" },
-                  { value: "BC 2.7", label: "BC 2.7" },
-                  { value: "Non-BC", label: "Non-BC (Local)" },
-                ]}
+              <CustomDatePicker
+                id="bpbReceiveDate"
+                value={receiveDate}
+                onChange={(val) => setReceiveDate(val)}
+                className={formErrors.receiveDate ? "has-error" : ""}
+              />
+              {formErrors.receiveDate && (
+                <span className="master-form-error">{formErrors.receiveDate}</span>
+              )}
+            </div>
+
+            <div className="master-form-group">
+              <label htmlFor="bpbSupplier" className="master-form-label">
+                Supplier Name
+              </label>
+              <input
+                id="bpbSupplier"
+                type="text"
+                className="master-form-input tx-input-cell--disabled"
+                value={supplier || "—"}
+                readOnly
+                disabled
               />
             </div>
 
-            {/* Row 3: Invoice Number | Invoice Date | Tax Invoice | Vehicle License Plate */}
+            {/* Row 2: Invoice Number | Invoice Date | Tax Invoice | Vehicle License Plate (All from RN, Read-Only) */}
             <div className="master-form-group">
               <label htmlFor="bpbInvoiceNo" className="master-form-label">
                 Invoice Number
@@ -994,10 +1092,10 @@ export function WarehouseCreate({
               <input
                 id="bpbInvoiceNo"
                 type="text"
-                className="master-form-input"
-                value={invoiceNumber}
-                onChange={(e) => setInvoiceNumber(e.target.value)}
-                placeholder="INV-XXXX-XX-XXX"
+                className="master-form-input tx-input-cell--disabled"
+                value={invoiceNumber || "—"}
+                readOnly
+                disabled
               />
             </div>
 
@@ -1005,10 +1103,13 @@ export function WarehouseCreate({
               <label htmlFor="bpbInvoiceDate" className="master-form-label">
                 Invoice Date
               </label>
-              <CustomDatePicker
+              <input
                 id="bpbInvoiceDate"
-                value={invoiceDate}
-                onChange={(val) => setInvoiceDate(val)}
+                type="text"
+                className="master-form-input tx-input-cell--disabled"
+                value={invoiceDate || "—"}
+                readOnly
+                disabled
               />
             </div>
 
@@ -1019,10 +1120,10 @@ export function WarehouseCreate({
               <input
                 id="bpbTaxInvoice"
                 type="text"
-                className="master-form-input"
-                value={taxInvoice}
-                onChange={(e) => setTaxInvoice(e.target.value)}
-                placeholder="010.002-XX.XXXXXXXX"
+                className="master-form-input tx-input-cell--disabled"
+                value={taxInvoice || "—"}
+                readOnly
+                disabled
               />
             </div>
 
@@ -1033,14 +1134,14 @@ export function WarehouseCreate({
               <input
                 id="bpbPlateNo"
                 type="text"
-                className="master-form-input"
-                value={plateNo}
-                onChange={(e) => setPlateNo(e.target.value)}
-                placeholder="e.g. L 8372 VQ"
+                className="master-form-input tx-input-cell--disabled"
+                value={plateNo || "—"}
+                readOnly
+                disabled
               />
             </div>
 
-            {/* Row 4: Aju Number | Aju Date | Registration Number | Registration Date */}
+            {/* Row 3: Aju Number | Aju Date | Registration Number | Registration Date (All from RN, Read-Only) */}
             <div className="master-form-group">
               <label htmlFor="bpbAjuNumber" className="master-form-label">
                 Aju Number (Customs Barcode)
@@ -1048,10 +1149,10 @@ export function WarehouseCreate({
               <input
                 id="bpbAjuNumber"
                 type="text"
-                className="master-form-input"
-                value={ajuNumber}
-                onChange={(e) => setAjuNumber(e.target.value)}
-                placeholder="000040014562..."
+                className="master-form-input tx-input-cell--disabled"
+                value={ajuNumber || "—"}
+                readOnly
+                disabled
               />
             </div>
 
@@ -1059,10 +1160,13 @@ export function WarehouseCreate({
               <label htmlFor="bpbAjuDate" className="master-form-label">
                 Aju Date
               </label>
-              <CustomDatePicker
+              <input
                 id="bpbAjuDate"
-                value={ajuDate}
-                onChange={(val) => setAjuDate(val)}
+                type="text"
+                className="master-form-input tx-input-cell--disabled"
+                value={ajuDate || "—"}
+                readOnly
+                disabled
               />
             </div>
 
@@ -1073,10 +1177,10 @@ export function WarehouseCreate({
               <input
                 id="bpbNoPen"
                 type="text"
-                className="master-form-input"
-                value={noPen}
-                onChange={(e) => setNoPen(e.target.value)}
-                placeholder="e.g. 088370"
+                className="master-form-input tx-input-cell--disabled"
+                value={noPen || "—"}
+                readOnly
+                disabled
               />
             </div>
 
@@ -1084,10 +1188,13 @@ export function WarehouseCreate({
               <label htmlFor="bpbRegDate" className="master-form-label">
                 Registration Date
               </label>
-              <CustomDatePicker
+              <input
                 id="bpbRegDate"
-                value={regDate}
-                onChange={(val) => setRegDate(val)}
+                type="text"
+                className="master-form-input tx-input-cell--disabled"
+                value={regDate || "—"}
+                readOnly
+                disabled
               />
             </div>
           </div>
@@ -1109,7 +1216,7 @@ export function WarehouseCreate({
               }}
             >
               <span style={{ fontSize: "12px", color: "var(--muted)", fontWeight: 600 }}>
-                Select an Approved PO Number below or from the Reference field above to auto-populate received items.
+                Material items from selected RN ({rnNumber || "None selected"}).
               </span>
               <Button
                 type="button"
@@ -1134,223 +1241,125 @@ export function WarehouseCreate({
               </div>
             )}
 
-            {/* Datalist for Master Items */}
-            <datalist id="bpb-master-items-list">
-              {itemOptions.map((it) => (
-                <option key={`${it.code}-${it.name}`} value={it.name}>
-                  {it.code}
-                </option>
-              ))}
-            </datalist>
-
             <div className="tx-table-container">
               <table className="tx-grid-table">
                 <thead>
                   <tr>
-                    <th style={{ minWidth: "46px", width: "46px", textAlign: "center" }}>No</th>
-                    <th style={{ minWidth: "235px" }}>PO Reference</th>
-                    <th style={{ minWidth: "220px" }}>Material Item *</th>
-                    <th style={{ minWidth: "150px" }}>Item Code</th>
-                    <th style={{ minWidth: "125px" }}>Job Number</th>
-                    <th style={{ minWidth: "165px" }}>Delivery Note (SJ)</th>
-                    <th style={{ minWidth: "95px", textAlign: "right" }}>PO Ordered</th>
-                    <th style={{ minWidth: "115px", textAlign: "right" }}>Receive Qty *</th>
-                    <th style={{ minWidth: "96px" }}>Unit</th>
-                    <th style={{ minWidth: "175px" }}>Warehouse Location</th>
-                    <th style={{ minWidth: "210px" }}>Description / Purpose</th>
-                    <th style={{ minWidth: "52px", width: "52px", textAlign: "center" }}>Action</th>
+                    <th style={{ width: "45px", minWidth: "45px", textAlign: "center" }}>No</th>
+                    <th style={{ minWidth: "220px" }}>Item & Code</th>
+                    <th style={{ width: "120px", minWidth: "120px" }}>Job Number</th>
+                    <th style={{ width: "140px", minWidth: "140px" }}>PO Number</th>
+                    <th style={{ width: "150px", minWidth: "150px" }}>Delivery Note (SJ)</th>
+                    <th style={{ width: "140px", minWidth: "140px", textAlign: "right" }}>Receive Quantity *</th>
+                    <th style={{ minWidth: "180px" }}>Warehouse Location</th>
+                    <th style={{ minWidth: "180px" }}>Description</th>
+                    <th style={{ width: "50px", minWidth: "50px", textAlign: "center" }}>Action</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {items.map((it, idx) => (
-                    <tr key={it.id}>
-                      <td
-                        style={{
-                          textAlign: "center",
-                          fontWeight: 700,
-                          color: "var(--muted)",
-                        }}
-                      >
-                        {idx + 1}
-                      </td>
-
-                      {/* PO Reference Dropdown (Matches PR Number dropdown in PO Create) */}
-                      <td>
-                        <CustomSelect
-                          className="tx-custom-select-cell"
-                          style={{ minWidth: "220px" }}
-                          value={it.poNumber}
-                          onChange={(val) => handleSelectRowPo(it.id, val)}
-                          placeholder="Select Approved PO..."
-                          options={[
-                            { value: "", label: "Select Approved PO..." },
-                            { value: "—", label: "— Direct Receipt (No PO) —" },
-                            ...allPoOptions.map((p) => ({ value: p.poNumber, label: p.label })),
-                            ...(it.poNumber &&
-                            it.poNumber !== "—" &&
-                            !allPoOptions.some((p) => p.poNumber === it.poNumber)
-                              ? [{ value: it.poNumber, label: it.poNumber }]
-                              : []),
-                          ]}
-                        />
-                      </td>
-
-                      {/* Material Item Name */}
-                      <td>
-                        <input
-                          type="text"
-                          list="bpb-master-items-list"
-                          className={`tx-input-cell ${formErrors[`item_${idx}_name`] ? "has-error" : ""
-                            }`}
-                          style={{ minWidth: "205px" }}
-                          value={it.name}
-                          onChange={(e) =>
-                            handleUpdateItemField(it.id, "name", e.target.value)
-                          }
-                          placeholder="Search or enter material name..."
-                        />
-                      </td>
-
-                      {/* Item Code */}
-                      <td>
-                        <input
-                          type="text"
-                          className="tx-input-cell"
-                          style={{ minWidth: "135px" }}
-                          value={it.code}
-                          onChange={(e) =>
-                            handleUpdateItemField(it.id, "code", e.target.value)
-                          }
-                          placeholder="60.100.xxx"
-                        />
-                      </td>
-
-                      {/* Job Number */}
-                      <td>
-                        <CustomSelect
-                          className="tx-custom-select-cell"
-                          style={{ minWidth: "110px" }}
-                          value={it.jobNumber}
-                          onChange={(val) => handleUpdateItemField(it.id, "jobNumber", val)}
-                          options={[
-                            { value: "—", label: "—" },
-                            ...jobNumbers.map((jn) => ({ value: jn, label: jn })),
-                          ]}
-                        />
-                      </td>
-
-                      {/* Delivery Note (SJ) */}
-                      <td>
-                        <input
-                          type="text"
-                          className="tx-input-cell"
-                          style={{ minWidth: "150px" }}
-                          value={it.deliveryNote}
-                          onChange={(e) =>
-                            handleUpdateItemField(it.id, "deliveryNote", e.target.value)
-                          }
-                          placeholder="SJ / DN Number..."
-                        />
-                      </td>
-
-                      {/* Ordered Quantity (Read-only reference from PO) */}
-                      <td
-                        style={{
-                          textAlign: "right",
-                          fontFamily: "ui-monospace, monospace",
-                          color: "var(--muted)",
-                          fontWeight: 600,
-                        }}
-                      >
-                        {(Number(it.orderedQty) || 0).toFixed(2)}
-                      </td>
-
-                      {/* Receive Quantity */}
-                      <td>
-                        <input
-                          type="number"
-                          step="any"
-                          min="0.0001"
-                          className={`tx-input-cell tx-input-cell--num ${formErrors[`item_${idx}_qty`] ? "has-error" : ""
-                            }`}
-                          style={{ minWidth: "100px" }}
-                          value={it.receiveQty}
-                          onChange={(e) =>
-                            handleUpdateItemField(
-                              it.id,
-                              "receiveQty",
-                              parseFloat(e.target.value) || 0
-                            )
-                          }
-                        />
-                      </td>
-
-                      {/* Unit */}
-                      <td>
-                        <CustomSelect
-                          className="tx-custom-select-cell"
-                          style={{ minWidth: "90px" }}
-                          value={it.unit}
-                          onChange={(val) => handleUpdateItemField(it.id, "unit", val)}
-                          options={[
-                            { value: "PCE", label: "PCE" },
-                            { value: "PCS", label: "PCS" },
-                            { value: "KGM", label: "KGM" },
-                            { value: "KG", label: "KG" },
-                            { value: "SET", label: "SET" },
-                            { value: "ROLL", label: "ROLL" },
-                            { value: "MTR", label: "MTR" },
-                            { value: "BOX", label: "BOX" },
-                            { value: "LTR", label: "LTR" },
-                            ...(it.unit && !["PCE", "PCS", "KGM", "KG", "SET", "ROLL", "MTR", "BOX", "LTR"].includes(it.unit)
-                              ? [{ value: it.unit, label: it.unit }]
-                              : []),
-                          ]}
-                        />
-                      </td>
-
-                      {/* Warehouse Location */}
-                      <td>
-                        <CustomSelect
-                          className="tx-custom-select-cell"
-                          style={{ minWidth: "160px" }}
-                          value={it.location}
-                          onChange={(val) => handleUpdateItemField(it.id, "location", val)}
-                          options={warehouseOptions.map((loc) => ({ value: loc, label: loc }))}
-                        />
-                      </td>
-
-                      {/* Description / Purpose */}
-                      <td>
-                        <input
-                          type="text"
-                          className="tx-input-cell"
-                          style={{ minWidth: "195px" }}
-                          value={it.purpose}
-                          onChange={(e) =>
-                            handleUpdateItemField(it.id, "purpose", e.target.value)
-                          }
-                          placeholder="Item purpose / inspection note..."
-                        />
-                      </td>
-
-                      {/* Action Delete */}
-                      <td style={{ textAlign: "center" }}>
-                        <button
-                          type="button"
-                          className="tx-row-delete-btn"
-                          onClick={() => handleDeleteItemLine(it.id)}
-                          title="Remove item"
-                        >
-                          <Icon name="trash" size={13} />
-                        </button>
+                  {items.length === 0 ? (
+                    <tr>
+                      <td colSpan={9} style={{ textAlign: "center", padding: "40px 20px", color: "var(--muted)" }}>
+                        No items loaded yet. Please select an RN Number above to load items.
                       </td>
                     </tr>
-                  ))}
+                  ) : (
+                    items.map((it, idx) => (
+                      <tr key={it.id}>
+                        <td
+                          style={{
+                            textAlign: "center",
+                            fontWeight: 700,
+                            color: "var(--muted)",
+                          }}
+                        >
+                          {idx + 1}
+                        </td>
+
+                        {/* Item & Code */}
+                        <td>
+                          <div style={{ fontWeight: 600, color: "var(--ink)" }}>{it.name}</div>
+                          <div style={{ fontSize: "11px", color: "var(--muted)", fontFamily: "monospace" }}>{it.code}</div>
+                        </td>
+
+                        {/* Job Number */}
+                        <td>
+                          <span style={{ fontFamily: "monospace", color: "var(--ink-muted, #64748b)" }}>{it.jobNumber || "—"}</span>
+                        </td>
+
+                        {/* PO Number */}
+                        <td>
+                          <span style={{ fontWeight: 700, fontFamily: "monospace", color: "var(--ink)" }}>{it.poNumber || "—"}</span>
+                        </td>
+
+                        {/* Delivery Note */}
+                        <td>
+                          <span style={{ fontFamily: "monospace", color: "var(--ink)" }}>{it.deliveryNote || "—"}</span>
+                        </td>
+
+                        {/* Receive Quantity with Unit */}
+                        <td style={{ textAlign: "right" }}>
+                          <div style={{ display: "flex", gap: "6px", alignItems: "center", justifyContent: "flex-end" }}>
+                            <input
+                              type="number"
+                              step="any"
+                              min="0.0001"
+                              className={`tx-input-cell tx-input-cell--num ${formErrors[`item_${idx}_qty`] ? "has-error" : ""}`}
+                              style={{ width: "80px" }}
+                              value={it.receiveQty}
+                              onChange={(e) =>
+                                handleUpdateItemField(
+                                  it.id,
+                                  "receiveQty",
+                                  parseFloat(e.target.value) || 0
+                                )
+                              }
+                            />
+                            <span style={{ fontSize: "11px", fontWeight: 700, color: "var(--muted)", minWidth: "26px" }}>
+                              {it.unit || "PCE"}
+                            </span>
+                          </div>
+                        </td>
+
+                        {/* Warehouse Location (Menentukan Gudang) */}
+                        <td>
+                          <CustomSelect
+                            className="tx-custom-select-cell"
+                            value={it.location}
+                            onChange={(val) => handleUpdateItemField(it.id, "location", val)}
+                            options={warehouseOptions.map((loc) => ({ value: loc, label: loc }))}
+                          />
+                        </td>
+
+                        {/* Description (Remark dari sebelum-sebelumnya) */}
+                        <td>
+                          <input
+                            type="text"
+                            className="tx-input-cell"
+                            placeholder="Description / remark..."
+                            value={it.purpose}
+                            onChange={(e) => handleUpdateItemField(it.id, "purpose", e.target.value)}
+                          />
+                        </td>
+
+                        {/* Action Delete */}
+                        <td style={{ textAlign: "center" }}>
+                          <button
+                            type="button"
+                            className="tx-row-delete-btn"
+                            title="Remove item"
+                            onClick={() => handleDeleteItemLine(it.id)}
+                          >
+                            <Icon name="trash" size={13} />
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
                 <tfoot>
                   <tr style={{ background: "#f8fafc", fontWeight: 700 }}>
-                    <td colSpan={7} style={{ textAlign: "right", padding: "10px 12px" }}>
+                    <td colSpan={5} style={{ textAlign: "right", padding: "10px 12px" }}>
                       Total Receive Quantity ({items.length} item{items.length > 1 ? "s" : ""}):
                     </td>
                     <td
@@ -1366,7 +1375,7 @@ export function WarehouseCreate({
                         maximumFractionDigits: 2,
                       })}
                     </td>
-                    <td colSpan={4} style={{ padding: "10px 12px", color: "var(--muted)", fontSize: "11px" }}>
+                    <td colSpan={3} style={{ padding: "10px 12px", color: "var(--muted)", fontSize: "11px" }}>
                       {items[0]?.unit || "PCE"}
                     </td>
                   </tr>
@@ -1427,12 +1436,22 @@ export function WarehouseCreate({
       {/* Save Confirmation Dialog */}
       <ConfirmDialog
         isOpen={showSaveConfirm}
-        title="Submit Receive Material (BPB)?"
-        message={`Are you sure you want to record this Receive Material (BPB) for RN ${rnNumber} (${supplier}) with ${items.length} item line(s)?`}
-        confirmLabel="Confirm & Save"
+        title={
+          findExistingBpbForRn(rnNumber)
+            ? "Submit Material Receipt with Duplicate Warning?"
+            : "Submit Receive Material (BPB)?"
+        }
+        message={(() => {
+          const dupBpb = findExistingBpbForRn(rnNumber);
+          if (dupBpb) {
+            return `Warning: RN ${rnNumber} has already been received in BPB ${dupBpb.bpbNumber}. Proceeding may result in duplicate material receipt (Double BPB). Are you sure you want to proceed and save this BPB?`;
+          }
+          return `Are you sure you want to record this Receive Material (BPB) for RN ${rnNumber} (${supplier}) with ${items.length} item line(s)?`;
+        })()}
+        confirmLabel={findExistingBpbForRn(rnNumber) ? "Proceed Anyway" : "Confirm & Save"}
         cancelLabel="Review BPB"
-        confirmVariant="primary"
-        icon="check"
+        confirmVariant={findExistingBpbForRn(rnNumber) ? "warning" : "primary"}
+        icon={findExistingBpbForRn(rnNumber) ? "alertTriangle" : "check"}
         onConfirm={handleConfirmSubmit}
         onCancel={() => setShowSaveConfirm(false)}
       />

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Icon } from "../../../components/ui/Icon";
 import { Button } from "../../../components/ui/Button";
 import { CustomDatePicker } from "../../../components/ui/CustomDatePicker";
@@ -19,8 +19,31 @@ interface ReceiveNoteFormProps {
 export function ReceiveNoteForm({ onBack, onSave }: ReceiveNoteFormProps) {
   // Supplier & Currency Information
   const [supplier, setSupplier] = useState("");
+  const [availableSuppliers, setAvailableSuppliers] = useState<string[]>(() =>
+    suppliersList.filter((s) => s !== "All Suppliers")
+  );
   const [currency, setCurrency] = useState("IDR - RUPIAH");
   const [rate, setRate] = useState("1.0000");
+
+  // Load real suppliers on mount
+  useEffect(() => {
+    let isMounted = true;
+    fetch("/api/procurement/master/suppliers", { headers: { Accept: "application/json" } })
+      .then((r) => r.json())
+      .then((d) => {
+        if (!isMounted) return;
+        if (d?.data && Array.isArray(d.data) && d.data.length > 0) {
+          const names = d.data.map((s: any) => s.name).filter(Boolean);
+          if (names.length > 0) {
+            setAvailableSuppliers((prev) => Array.from(new Set([...names, ...prev])));
+          }
+        }
+      })
+      .catch(() => {});
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   // Arrival & Invoice Information
   const [arrivalDate, setArrivalDate] = useState("2026-10-14");
@@ -51,6 +74,7 @@ export function ReceiveNoteForm({ onBack, onSave }: ReceiveNoteFormProps) {
 
   // Validation & alerts
   const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [notice, setNotice] = useState<{
     type: "info" | "warning" | "success";
     message: string;
@@ -101,6 +125,38 @@ export function ReceiveNoteForm({ onBack, onSave }: ReceiveNoteFormProps) {
     setItems((prev) => [...prev, ...newItems]);
   };
 
+  const handleAddBlankItem = () => {
+    const nextNo = items.length + 1;
+    const initialSjQty = 1;
+    const newItem: ReceiveNoteItem = {
+      id: `rn-item-${Date.now()}-${nextNo}`,
+      no: nextNo,
+      poNumber: "—",
+      poDate: arrivalDate || "14-10-2026",
+      dnNumber: "-",
+      dnDate: "-",
+      jobNumber: "—",
+      jobDate: "-",
+      itemCode: "—",
+      itemName: "",
+      qty: initialSjQty,
+      unit: "PCE",
+      rafaksi: 0,
+      rafaksiPercent: 0,
+      pricePerUnit: 0,
+      priceSubtotal: 0,
+      price2PerUnit: 0,
+      price2Subtotal: 0,
+      remark: "-",
+      sjNumber: sjNumber || "-",
+      sjDate: sjDate || arrivalDate || "14-10-2026",
+      poQty: initialSjQty,
+      dlvrQty: 0,
+      suratJalanQty: initialSjQty,
+    };
+    setItems((prev) => [...prev, newItem]);
+  };
+
   const handleRemoveItem = (id: string) => {
     setItems((prev) =>
       prev
@@ -109,24 +165,27 @@ export function ReceiveNoteForm({ onBack, onSave }: ReceiveNoteFormProps) {
     );
   };
 
-  const handleUpdateItemQty = (id: string, newQtyVal: number) => {
+  const handleUpdateItemField = (id: string, field: keyof ReceiveNoteItem, val: any) => {
     setItems((prev) =>
       prev.map((it) => {
         if (it.id !== id) return it;
-        const validQty = isNaN(newQtyVal) || newQtyVal < 0 ? 0 : newQtyVal;
-        const newSubtotal = validQty * it.pricePerUnit;
-        return {
-          ...it,
-          qty: validQty,
-          suratJalanQty: validQty,
-          priceSubtotal: newSubtotal,
-          price2Subtotal: newSubtotal,
-        };
+        const updated = { ...it, [field]: val };
+        if (field === "suratJalanQty" || field === "pricePerUnit" || field === "qty") {
+          const validQty = Number(updated.suratJalanQty ?? updated.qty) || 0;
+          const validPrice = Number(updated.pricePerUnit) || 0;
+          updated.priceSubtotal = validQty * validPrice;
+          updated.price2Subtotal = validQty * validPrice;
+        }
+        return updated;
       })
     );
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleUpdateItemQty = (id: string, newQtyVal: number) => {
+    handleUpdateItemField(id, "suratJalanQty", newQtyVal);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     const errors: { [key: string]: string } = {};
@@ -147,7 +206,16 @@ export function ReceiveNoteForm({ onBack, onSave }: ReceiveNoteFormProps) {
       return;
     }
 
+    if (items.length === 0) {
+      setNotice({
+        type: "warning",
+        message: "Please add at least one item before saving the Receive Note.",
+      });
+      return;
+    }
+
     setFormErrors({});
+    setIsSubmitting(true);
 
     // Construct new mock Receive Note record
     const rnNumber = `0281/RN-IMLI/X/${new Date().getFullYear()}`;
@@ -302,9 +370,7 @@ export function ReceiveNoteForm({ onBack, onSave }: ReceiveNoteFormProps) {
                 placeholder="Select Supplier"
                 options={[
                   { value: "", label: "Select Supplier" },
-                  ...suppliersList
-                    .filter((s) => s !== "All Suppliers")
-                    .map((sup) => ({ value: sup, label: sup })),
+                  ...availableSuppliers.map((sup) => ({ value: sup, label: sup })),
                 ]}
               />
               {formErrors.supplier && (
@@ -550,27 +616,51 @@ export function ReceiveNoteForm({ onBack, onSave }: ReceiveNoteFormProps) {
               />
             </div>
 
-            <button
-              type="button"
-              onClick={() => setIsPickerOpen(true)}
-              style={{
-                background: "#16a34a",
-                color: "#ffffff",
-                border: "1px solid #15803d",
-                padding: "6px 14px",
-                borderRadius: "var(--radius-sm)",
-                fontSize: "12px",
-                fontWeight: 700,
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "6px",
-                cursor: "pointer",
-                whiteSpace: "nowrap",
-              }}
-            >
-              <Icon name="plus" size={14} />
-              <span>Add Items from PO</span>
-            </button>
+            <div style={{ display: "flex", gap: "8px" }}>
+              <button
+                type="button"
+                onClick={() => setIsPickerOpen(true)}
+                style={{
+                  background: "#16a34a",
+                  color: "#ffffff",
+                  border: "1px solid #15803d",
+                  padding: "6px 14px",
+                  borderRadius: "var(--radius-sm)",
+                  fontSize: "12px",
+                  fontWeight: 700,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  cursor: "pointer",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                <Icon name="plus" size={14} />
+                <span>Add Items from PO</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleAddBlankItem}
+                style={{
+                  background: "var(--surface)",
+                  color: "var(--ink)",
+                  border: "1px solid var(--line)",
+                  padding: "6px 14px",
+                  borderRadius: "var(--radius-sm)",
+                  fontSize: "12px",
+                  fontWeight: 700,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  cursor: "pointer",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                <Icon name="plus" size={14} />
+                <span>Add Blank Item</span>
+              </button>
+            </div>
           </div>
 
           {/* Receive Note Item Table */}
@@ -610,7 +700,7 @@ export function ReceiveNoteForm({ onBack, onSave }: ReceiveNoteFormProps) {
                 {items.length === 0 ? (
                   <tr>
                     <td colSpan={13} style={{ textAlign: "center", padding: "40px 20px", color: "var(--muted)" }}>
-                      No items selected yet. Click the green <strong>Add Items from PO</strong> button above to pick purchase order items.
+                      No items selected yet. Click <strong>Add Items from PO</strong> or <strong>Add Blank Item</strong> above to add received items.
                     </td>
                   </tr>
                 ) : (
@@ -619,13 +709,38 @@ export function ReceiveNoteForm({ onBack, onSave }: ReceiveNoteFormProps) {
                       <td className="td-center">{idx + 1}</td>
                       <td style={{ fontWeight: 600 }}>{it.poNumber}</td>
                       <td>
-                        <div style={{ fontWeight: 600 }}>{it.itemName}</div>
-                        <div style={{ fontSize: "10.5px", color: "var(--muted)", fontFamily: "monospace" }}>{it.itemCode}</div>
+                        {it.poNumber === "—" ? (
+                          <input
+                            type="text"
+                            className="tx-input-cell"
+                            placeholder="Enter item name..."
+                            value={it.itemName}
+                            onChange={(e) => handleUpdateItemField(it.id, "itemName", e.target.value)}
+                            style={{ height: "28px" }}
+                          />
+                        ) : (
+                          <>
+                            <div style={{ fontWeight: 600 }}>{it.itemName}</div>
+                            <div style={{ fontSize: "10.5px", color: "var(--muted)", fontFamily: "monospace" }}>{it.itemCode}</div>
+                          </>
+                        )}
                       </td>
                       <td>{it.sjNumber || sjNumber || "-"}</td>
                       <td>{it.sjDate || sjDate || "-"}</td>
-                      <td className="td-right" style={{ fontFamily: "monospace" }}>
-                        {it.pricePerUnit.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                      <td className="td-right">
+                        {it.poNumber === "—" ? (
+                          <input
+                            type="number"
+                            className="tx-input-cell tx-input-cell--num"
+                            value={it.pricePerUnit}
+                            onChange={(e) => handleUpdateItemField(it.id, "pricePerUnit", parseFloat(e.target.value) || 0)}
+                            style={{ width: "85px", height: "28px" }}
+                          />
+                        ) : (
+                          <span style={{ fontFamily: "monospace" }}>
+                            {it.pricePerUnit.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                          </span>
+                        )}
                       </td>
                       <td className="td-right" style={{ fontFamily: "monospace", color: "var(--muted)" }}>
                         {(it.poQty ?? it.qty).toLocaleString("en-US", { minimumFractionDigits: 2 })}
@@ -694,8 +809,8 @@ export function ReceiveNoteForm({ onBack, onSave }: ReceiveNoteFormProps) {
 
           {/* Actions: Save & Cancel */}
           <div className="tx-actions-bar">
-            <button type="submit" className="btn-tx-save">
-              <span>Save</span>
+            <button type="submit" className="btn-tx-save" disabled={isSubmitting}>
+              <span>{isSubmitting ? "Saving..." : "Save"}</span>
             </button>
             <button
               type="button"

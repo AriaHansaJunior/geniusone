@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { Icon } from "../../../components/ui/Icon";
 import { Button } from "../../../components/ui/Button";
 import { SearchField } from "../../../components/ui/SearchField";
@@ -20,10 +20,60 @@ export function PickPoItemModal({
 }: PickPoItemModalProps) {
   const [search, setSearch] = useState("");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [itemsList, setItemsList] = useState<PoItemToPick[]>(availablePoItemsToPick);
+
+  // Fetch approved PO items from backend API
+  useEffect(() => {
+    let isMounted = true;
+    fetch("/api/procurement/po?per_page=100", { headers: { Accept: "application/json" } })
+      .then((r) => r.json())
+      .then((d) => {
+        if (!isMounted) return;
+        const pos = d?.data?.data || d?.rows || (Array.isArray(d?.data) ? d.data : []);
+        if (Array.isArray(pos) && pos.length > 0) {
+          const dynamicItems: PoItemToPick[] = [];
+          pos.forEach((po: any) => {
+            const poNum = po.po_number || po.poNumber || po._rawNumber || "";
+            const rawItems = po.items || po._items || [];
+            rawItems.forEach((it: any, idx: number) => {
+              const qty = Number(it.order || it.orderQty || it.rawQty || 1);
+              const price = Number(it.price || it.priceRp || 0);
+              const name = it.item || it.itemName || it.item_alias || "Material Item";
+              const code = it.itemCode || it.code || it.item_alias || "—";
+              dynamicItems.push({
+                id: `po-${po.id || poNum}-item-${it.id || idx}`,
+                jobNumber: it.job_number || "—",
+                poNumber: poNum,
+                poNumberAlias: it.item_alias || "—",
+                remark: it.remark || po.remark || "-",
+                itemName: name,
+                itemCode: code,
+                unit: it.unit || "PCE",
+                poQty: qty,
+                rnQty: 0,
+                remainQty: qty,
+                unitPrice: price,
+              });
+            });
+          });
+          if (dynamicItems.length > 0) {
+            setItemsList((prev) => {
+              const existingIds = new Set(dynamicItems.map((x) => `${x.poNumber}-${x.itemCode}`));
+              const leftovers = prev.filter((p) => !existingIds.has(`${p.poNumber}-${p.itemCode}`));
+              return [...dynamicItems, ...leftovers];
+            });
+          }
+        }
+      })
+      .catch(() => {});
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   // Filter available items based on search and exclude already selected items
   const filteredItems = useMemo(() => {
-    return availablePoItemsToPick.filter((item) => {
+    return itemsList.filter((item) => {
       const uniqueKey = `${item.poNumber}-${item.itemCode}`;
       if (alreadySelectedKeys.includes(uniqueKey)) {
         return false;
@@ -41,7 +91,7 @@ export function PickPoItemModal({
         item.remark.toLowerCase().includes(q)
       );
     });
-  }, [alreadySelectedKeys, search]);
+  }, [itemsList, alreadySelectedKeys, search]);
 
   if (!isOpen) return null;
 
@@ -70,7 +120,7 @@ export function PickPoItemModal({
   };
 
   const handleConfirmAdd = () => {
-    const chosen = availablePoItemsToPick.filter((item) =>
+    const chosen = itemsList.filter((item) =>
       selectedIds.has(item.id)
     );
     if (chosen.length > 0) {
