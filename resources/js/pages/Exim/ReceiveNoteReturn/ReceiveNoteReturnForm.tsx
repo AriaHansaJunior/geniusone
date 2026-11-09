@@ -416,7 +416,7 @@ export function ReceiveNoteReturnForm({
                     background: "#16a34a",
                     color: "#ffffff",
                     border: "1px solid #15803d",
-                    padding: "6px 14px",
+                    padding: "7px 14px",
                     borderRadius: "var(--radius-sm)",
                     fontSize: "12px",
                     fontWeight: 700,
@@ -426,7 +426,6 @@ export function ReceiveNoteReturnForm({
                     cursor: "pointer",
                   }}
                 >
-                  <Icon name="plus" size={14} />
                   <span>Add Item</span>
                 </button>
               </div>
@@ -468,7 +467,7 @@ export function ReceiveNoteReturnForm({
                     {items.length === 0 ? (
                       <tr>
                         <td colSpan={10} style={{ textAlign: "center", padding: "40px 20px", color: "var(--muted)" }}>
-                          No items selected yet. Click the green <strong>+ Add Item</strong> button above to pick return items.
+                          No items selected yet. Click the green <strong>Add Item</strong> button above to pick return items.
                         </td>
                       </tr>
                     ) : (

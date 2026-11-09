@@ -557,7 +557,7 @@ export function ReceiveNoteForm({ onBack, onSave }: ReceiveNoteFormProps) {
                 background: "#16a34a",
                 color: "#ffffff",
                 border: "1px solid #15803d",
-                padding: "6px 14px",
+                padding: "7px 14px",
                 borderRadius: "var(--radius-sm)",
                 fontSize: "12px",
                 fontWeight: 700,
@@ -568,7 +568,6 @@ export function ReceiveNoteForm({ onBack, onSave }: ReceiveNoteFormProps) {
                 whiteSpace: "nowrap",
               }}
             >
-              <Icon name="plus" size={14} />
               <span>Add Items from PO</span>
             </button>
           </div>

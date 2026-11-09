@@ -862,7 +862,9 @@
 /* ==========================================================================
    Item Picker Modal (Master Item Picker) — Matching Gambar 2 & GeniusOne Theme
    ========================================================================== */
-.item-picker-backdrop {
+.item-picker-backdrop,
+.rn-picker-backdrop,
+.rnr-picker-backdrop {
   position: fixed;
   inset: 0;
   background: rgba(15, 23, 42, 0.55);
@@ -876,7 +878,9 @@
   animation: fadeIn 0.15s ease-out;
 }
 
-.item-picker-modal {
+.item-picker-modal,
+.rn-picker-modal,
+.rnr-picker-modal {
   width: 100%;
   max-width: 1120px;
   max-height: 90vh;
@@ -889,7 +893,9 @@
   border: 1px solid var(--line, #e2e8f0);
 }
 
-.item-picker-header {
+.item-picker-header,
+.rn-picker-header,
+.rnr-picker-header {
   padding: 12px 20px;
   background: #ffffff;
   border-bottom: 1px solid var(--line, #e2e8f0);

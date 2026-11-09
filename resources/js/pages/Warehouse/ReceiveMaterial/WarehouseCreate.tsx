@@ -1114,7 +1114,6 @@ export function WarehouseCreate({
               <Button
                 type="button"
                 variant="secondary"
-                icon="plus"
                 onClick={handleAddItemLine}
               >
                 Add Item Line
