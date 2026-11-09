@@ -95,82 +95,180 @@
   opacity: 1;
 }
 
-/* Table Panel & Toolbar */
-.wh-table-panel {
-  background: var(--glass-card-bg);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-sm);
-  box-shadow: var(--shadow-glass);
-  overflow: hidden;
+/* Table Panel & Card */
+.wh-table-panel,
+.wh-table-card {
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.08), 0 2px 6px -1px rgba(15, 23, 42, 0.04);
+  overflow: visible;
   margin-bottom: 16px;
+  position: relative;
 }
 
+.wh-controls-bar,
 .wh-table-toolbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 20px;
+  padding: 12px 18px;
   border-bottom: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.65);
+  background: #ffffff;
+  border-top-left-radius: inherit;
+  border-top-right-radius: inherit;
   gap: 16px;
   flex-wrap: wrap;
 }
 
 /* Table & Cells */
-.wh-table-frame {
+.wh-table-frame,
+.wh-table-wrapper {
   width: 100%;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
+  background: #ffffff;
 }
 
-.wh-data-table {
+.wh-data-table,
+.wh-table {
   width: 100%;
   border-collapse: collapse;
   font-size: 12px;
+  background: #ffffff;
 }
 
-.wh-data-table thead tr {
-  background: var(--slate-50);
+.wh-data-table thead tr,
+.wh-table thead tr {
+  background: #f8fafc;
   border-bottom: 1px solid var(--line);
 }
 
-.wh-data-table th {
+.wh-data-table th,
+.wh-table th {
   padding: 10px 14px;
-  font-size: 10.5px;
-  font-weight: 800;
+  font-size: 11px;
+  font-weight: 700;
   color: var(--slate-600);
   text-align: left;
-  letter-spacing: 0.4px;
+  letter-spacing: 0.3px;
   text-transform: uppercase;
   white-space: nowrap;
   user-select: none;
+  background: #f8fafc;
+  border-bottom: 1px solid var(--line);
 }
 
-.wh-data-table th.sortable-th {
+.wh-data-table th.sortable-th,
+.wh-table th.wh-th-sortable {
   cursor: pointer;
   transition: background-color 0.15s ease, color 0.15s ease;
 }
 
-.wh-data-table th.sortable-th:hover {
+.wh-data-table th.sortable-th:hover,
+.wh-table th.wh-th-sortable:hover {
   background: var(--slate-100);
   color: var(--blue-700);
 }
 
-.wh-data-table td {
+.wh-th-content {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.wh-data-table td,
+.wh-table td {
   padding: 10px 14px;
   border-bottom: 1px solid var(--line);
   color: var(--ink);
   vertical-align: middle;
+  background: #ffffff;
 }
 
-.wh-data-table tbody tr {
+.wh-data-table tbody tr,
+.wh-table tbody tr {
+  background: #ffffff;
   transition: background-color 0.12s ease;
 }
 
-.wh-data-table tbody tr:hover {
-  background: rgba(0, 113, 227, 0.03);
+.wh-data-table tbody tr:hover td,
+.wh-table tbody tr:hover td {
+  background: #f8fafc;
+}
+
+/* Status Checkbox & Row Actions */
+.wh-status-toggle {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.wh-status-checkbox {
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid var(--line-strong);
+  background: #ffffff;
+  transition: all 0.15s ease;
+}
+
+.wh-status-checkbox--checked {
+  background: var(--blue-600);
+  border-color: var(--blue-600);
+  color: #ffffff;
+}
+
+.wh-status-checkbox--unchecked {
+  background: #ffffff;
+  border-color: var(--line-strong);
+}
+
+.wh-row-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.wh-action-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-xs);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line);
+  background: #ffffff;
+  color: var(--slate-600);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.wh-action-btn--edit:hover {
+  border-color: var(--blue-600);
+  color: var(--blue-600);
+  background: var(--blue-50);
+}
+
+.wh-action-btn--delete:hover {
+  border-color: var(--red-600);
+  color: var(--red-600);
+  background: var(--red-50);
+}
+
+.wh-table-empty {
+  text-align: center;
+  padding: 36px 16px;
+  color: var(--muted);
+  background: #ffffff;
 }
 
 /* Modals */

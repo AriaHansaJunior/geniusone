@@ -376,24 +376,28 @@ export function ItemIndex({
               Export To Excel
             </Button>
 
-            {/* Column Settings Trigger Button */}
-            <button
-              type="button"
-              className={`item-column-btn ${isColumnSettingsOpen ? "active" : ""}`}
-              onClick={() => setIsColumnSettingsOpen((prev) => !prev)}
-              title="Configure visible columns"
-            >
-              <span>Columns</span>
-            </button>
+            {/* Standard GeniusOne Table Column Settings Button */}
+            <div style={{ position: "relative" }}>
+              <button
+                type="button"
+                className={`item-column-btn ${isColumnSettingsOpen ? "active" : ""}`}
+                onClick={() => setIsColumnSettingsOpen((prev) => !prev)}
+                title="Table Column Settings"
+                aria-label="Table column settings"
+              >
+                <Icon name="settings" size={16} />
+                <Icon name="chevronDown" size={12} />
+              </button>
 
-            {/* Anchored Column Settings Popover */}
-            <ColumnSettingsPanel
-              isOpen={isColumnSettingsOpen}
-              columns={columns}
-              onToggleColumn={handleToggleColumn}
-              onResetDefault={handleResetDefaultColumns}
-              onClose={() => setIsColumnSettingsOpen(false)}
-            />
+              {/* Anchored Column Settings Popover */}
+              <ColumnSettingsPanel
+                isOpen={isColumnSettingsOpen}
+                columns={columns}
+                onToggleColumn={handleToggleColumn}
+                onResetDefault={handleResetDefaultColumns}
+                onClose={() => setIsColumnSettingsOpen(false)}
+              />
+            </div>
           </div>
         </div>
 

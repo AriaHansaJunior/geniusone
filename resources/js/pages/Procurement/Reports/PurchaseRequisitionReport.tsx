@@ -3,6 +3,7 @@ import { Icon } from "../../../components/ui/Icon";
 import { Badge } from "../../../components/ui/Badge";
 import { Pagination } from "../../../components/ui/Pagination";
 import { CustomSelect } from "../../../components/ui/CustomSelect";
+import { CustomDatePicker } from "../../../components/ui/CustomDatePicker";
 import {
   initialPrReportRecords,
   departmentsList,
@@ -48,12 +49,13 @@ function toDisplayDate(isoDate: string): string {
 }
 
 /**
- * Parse a DD-MM-YYYY string into YYYY-MM-DD for comparison.
+ * Parse a DD-MM-YYYY or YYYY-MM-DD string into YYYY-MM-DD for comparison.
  */
 function fromDisplayDate(displayDate: string): string {
   if (!displayDate || !displayDate.includes("-")) return displayDate;
   const parts = displayDate.split("-");
   if (parts.length === 3) {
+    if (parts[0].length === 4) return displayDate; // Already YYYY-MM-DD
     return `${parts[2]}-${parts[1]}-${parts[0]}`;
   }
   return displayDate;
@@ -67,8 +69,8 @@ export function PurchaseRequisitionReport({
   // Filter States
   // ---------------------------------------------------------------------------
   const [search, setSearch] = useState("");
-  const [startDate, setStartDate] = useState("14-07-2026");
-  const [endDate, setEndDate] = useState("14-10-2026");
+  const [startDate, setStartDate] = useState("2026-07-14");
+  const [endDate, setEndDate] = useState("2026-10-14");
   const [statusFilter, setStatusFilter] = useState<PrReportStatus | "All">("All");
   const [deptFilter, setDeptFilter] = useState("All Departemen");
   const [sectionFilter, setSectionFilter] = useState("All Section");
@@ -404,7 +406,7 @@ export function PurchaseRequisitionReport({
         {/* Row 1: Search, Date Range, Status, Dept. Request, Section */}
         <div className="pr-report-filters-row">
           {/* Search */}
-          <div className="pr-filter-group">
+          <div className="pr-filter-group pr-filter-group--search">
             <label className="pr-filter-label" htmlFor="pr-search-input">
               Search
             </label>
@@ -438,35 +440,30 @@ export function PurchaseRequisitionReport({
           </div>
 
           {/* Date Range */}
-          <div className="pr-filter-group">
+          <div className="pr-filter-group pr-filter-group--date">
             <label className="pr-filter-label">Date</label>
             <div className="pr-date-range">
-              <input
-                type="text"
-                className="pr-date-input"
+              <CustomDatePicker
                 value={startDate}
-                onChange={(e) => {
-                  setStartDate(e.target.value);
+                onChange={(val) => {
+                  setStartDate(val);
                   setCurrentPage(1);
                 }}
-                placeholder="DD-MM-YYYY"
               />
               <span className="pr-date-separator">-</span>
-              <input
-                type="text"
-                className="pr-date-input"
+              <CustomDatePicker
                 value={endDate}
-                onChange={(e) => {
-                  setEndDate(e.target.value);
+                align="left"
+                onChange={(val) => {
+                  setEndDate(val);
                   setCurrentPage(1);
                 }}
-                placeholder="DD-MM-YYYY"
               />
             </div>
           </div>
 
           {/* Status Radio Group */}
-          <div className="pr-filter-group">
+          <div className="pr-filter-group pr-filter-group--status">
             <label className="pr-filter-label">Status</label>
             <div className="pr-radio-group--two-tier">
               <div className="pr-radio-row">
@@ -516,7 +513,7 @@ export function PurchaseRequisitionReport({
           </div>
 
           {/* Dept. Request Dropdown */}
-          <div className="pr-filter-group">
+          <div className="pr-filter-group pr-filter-group--dept">
             <label className="pr-filter-label">
               Dept. Request
             </label>
@@ -531,7 +528,7 @@ export function PurchaseRequisitionReport({
           </div>
 
           {/* Section Dropdown */}
-          <div className="pr-filter-group">
+          <div className="pr-filter-group pr-filter-group--section">
             <label className="pr-filter-label">
               Section
             </label>
@@ -619,28 +616,30 @@ export function PurchaseRequisitionReport({
             </div>
           </div>
 
-          {/* Export to Excel Action */}
-          <button
-            type="button"
-            className="btn-export-excel"
-            onClick={handleExportToExcel}
-            title="Export current filtered records to Excel compatible CSV"
-          >
-            <span>Export To Excel</span>
-          </button>
-
-          {exportNotice && (
-            <span
-              style={{
-                fontSize: "11px",
-                color: "#16a34a",
-                fontWeight: 600,
-                marginLeft: "8px",
-              }}
+          {/* Export to Excel Action on the Right */}
+          <div className="pr-filter-actions">
+            <button
+              type="button"
+              className="btn-export-excel"
+              onClick={handleExportToExcel}
+              title="Export current filtered records to Excel compatible CSV"
             >
-              ✓ {exportNotice}
-            </span>
-          )}
+              <span>Export To Excel</span>
+            </button>
+
+            {exportNotice && (
+              <span
+                style={{
+                  fontSize: "11px",
+                  color: "#16a34a",
+                  fontWeight: 600,
+                  marginLeft: "8px",
+                }}
+              >
+                ✓ {exportNotice}
+              </span>
+            )}
+          </div>
         </div>
       </section>
 

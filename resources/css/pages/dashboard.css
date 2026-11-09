@@ -12,12 +12,10 @@
 
 /* Stock Buffer Alert Card */
 .dashboard-stock-alert-card {
-  background: var(--glass-card-bg);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
-  border: 1px solid rgba(245, 158, 11, 0.35);
-  border-radius: var(--radius-lg);
-  box-shadow: 0 10px 25px -5px rgba(245, 158, 11, 0.08), 0 2px 6px rgba(0, 0, 0, 0.02), inset 0 1px 1px rgba(255, 255, 255, 0.95);
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.08), 0 2px 6px -1px rgba(15, 23, 42, 0.04);
   width: 100%;
   min-width: 0;
   display: flex;
@@ -27,12 +25,10 @@
 
 /* Exchange Rates Card */
 .dashboard-rate-card {
-  background: var(--glass-card-bg);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
-  border: 1px solid rgba(255, 255, 255, 0.85);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-glass);
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.08), 0 2px 6px -1px rgba(15, 23, 42, 0.04);
   width: 100%;
   overflow: visible;
   display: flex;
@@ -220,9 +216,7 @@
 }
 
 .dashboard-rate-table thead th {
-  background: linear-gradient(180deg, rgba(248, 250, 252, 0.94) 0%, rgba(241, 245, 249, 0.84) 100%);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  background: #f8fafc;
   color: var(--slate-600);
   padding: 12px 14px;
   font-size: 10.5px;
@@ -230,7 +224,7 @@
   letter-spacing: 0.5px;
   text-transform: uppercase;
   white-space: nowrap;
-  border-bottom: 1px solid rgba(226, 232, 240, 0.85);
+  border-bottom: 1px solid var(--line);
   box-sizing: border-box;
 }
 
@@ -241,14 +235,14 @@
 }
 
 .dashboard-rate-table thead th.sortable:hover {
-  background: rgba(241, 245, 249, 0.95);
+  background: var(--slate-100);
   color: var(--blue-700);
 }
 
 .dashboard-rate-table tbody td {
   padding: 12px 14px;
   font-size: 12px;
-  border-bottom: 1px solid rgba(226, 232, 240, 0.7);
+  border-bottom: 1px solid var(--line);
   color: var(--ink);
   vertical-align: middle;
   overflow-wrap: break-word;
@@ -256,14 +250,16 @@
   word-break: break-word;
   white-space: normal;
   box-sizing: border-box;
+  background: #ffffff;
 }
 
 .dashboard-rate-table tbody tr {
+  background: #ffffff;
   transition: background-color 0.15s ease;
 }
 
-.dashboard-rate-table tbody tr:hover {
-  background: rgba(0, 113, 227, 0.04);
+.dashboard-rate-table tbody tr:hover td {
+  background: #f8fafc;
 }
 
 .dashboard-rate-table tbody td.numeric,

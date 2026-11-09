@@ -59,7 +59,7 @@
 /* Toolbar & Filters */
 .audit-toolbar {
   padding: 14px 18px;
-  background: var(--glass-card-bg);
+  background: #ffffff;
   border-bottom: 1px solid var(--line);
   display: flex;
   flex-direction: column;
@@ -512,10 +512,30 @@
   text-transform: uppercase;
 }
 
-.audit-method-tag--get { background: #e0f2fe; color: #0369a1; border: 1px solid #bae6fd; }
-.audit-method-tag--post { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
-.audit-method-tag--patch, .audit-method-tag--put { background: #fef3c7; color: #b45309; border: 1px solid #fde68a; }
-.audit-method-tag--delete { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
+.audit-method-tag--get {
+  background: #e0f2fe;
+  color: #0369a1;
+  border: 1px solid #bae6fd;
+}
+
+.audit-method-tag--post {
+  background: #dcfce7;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+}
+
+.audit-method-tag--patch,
+.audit-method-tag--put {
+  background: #fef3c7;
+  color: #b45309;
+  border: 1px solid #fde68a;
+}
+
+.audit-method-tag--delete {
+  background: #fee2e2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+}
 
 .audit-url-pill {
   font-size: 11.5px;

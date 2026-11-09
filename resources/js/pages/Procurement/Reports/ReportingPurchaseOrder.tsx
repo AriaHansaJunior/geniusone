@@ -3,6 +3,7 @@ import { Icon } from "../../../components/ui/Icon";
 import { Badge } from "../../../components/ui/Badge";
 import { Pagination } from "../../../components/ui/Pagination";
 import { CustomSelect } from "../../../components/ui/CustomSelect";
+import { CustomDatePicker } from "../../../components/ui/CustomDatePicker";
 import {
   initialPoReportRecords,
   poReportSuppliersList,
@@ -50,6 +51,7 @@ function fromDisplayDate(displayDate: string): string {
   if (!displayDate || !displayDate.includes("-")) return displayDate;
   const parts = displayDate.split("-");
   if (parts.length === 3) {
+    if (parts[0].length === 4) return displayDate;
     return `${parts[2]}-${parts[1]}-${parts[0]}`;
   }
   return displayDate;
@@ -63,8 +65,8 @@ export function ReportingPurchaseOrder({
   // Filter States
   // ---------------------------------------------------------------------------
   const [search, setSearch] = useState("");
-  const [startDate, setStartDate] = useState("01-07-2026");
-  const [endDate, setEndDate] = useState("31-10-2026");
+  const [startDate, setStartDate] = useState("2026-07-01");
+  const [endDate, setEndDate] = useState("2026-10-31");
   const [supplierFilter, setSupplierFilter] = useState("Choose Supplier");
   const [receivingFilter, setReceivingFilter] = useState<
     PoReceivingStatus | "Show All"
@@ -388,7 +390,7 @@ export function ReportingPurchaseOrder({
       <section className="po-report-filters" aria-label="Purchase Order Report Filters">
         <div className="po-report-filters-row">
           {/* Search */}
-          <div className="po-filter-group">
+          <div className="po-filter-group po-filter-group--search">
             <label className="po-filter-label" htmlFor="po-search-input">
               Search
             </label>
@@ -422,35 +424,30 @@ export function ReportingPurchaseOrder({
           </div>
 
           {/* Date Range */}
-          <div className="po-filter-group">
+          <div className="po-filter-group po-filter-group--date">
             <label className="po-filter-label">Date Range</label>
             <div className="po-date-range">
-              <input
-                type="text"
-                className="po-date-input"
+              <CustomDatePicker
                 value={startDate}
-                onChange={(e) => {
-                  setStartDate(e.target.value);
+                onChange={(val) => {
+                  setStartDate(val);
                   setCurrentPage(1);
                 }}
-                placeholder="DD-MM-YYYY"
               />
               <span className="po-date-separator">-</span>
-              <input
-                type="text"
-                className="po-date-input"
+              <CustomDatePicker
                 value={endDate}
-                onChange={(e) => {
-                  setEndDate(e.target.value);
+                align="left"
+                onChange={(val) => {
+                  setEndDate(val);
                   setCurrentPage(1);
                 }}
-                placeholder="DD-MM-YYYY"
               />
             </div>
           </div>
 
           {/* Supplier Dropdown */}
-          <div className="po-filter-group">
+          <div className="po-filter-group po-filter-group--supplier">
             <label className="po-filter-label">
               Supplier
             </label>
@@ -465,7 +462,7 @@ export function ReportingPurchaseOrder({
           </div>
 
           {/* Receiving Status Dropdown */}
-          <div className="po-filter-group">
+          <div className="po-filter-group po-filter-group--receiving">
             <label className="po-filter-label">
               Receiving Status
             </label>
@@ -480,14 +477,16 @@ export function ReportingPurchaseOrder({
           </div>
 
           {/* Export To Excel Action Button */}
-          <button
-            type="button"
-            className="btn-export-excel"
-            onClick={handleExportToExcel}
-            title="Export filtered records to Excel compatible CSV"
-          >
-            <span>Export To Excel</span>
-          </button>
+          <div className="po-filter-actions">
+            <button
+              type="button"
+              className="btn-export-excel"
+              onClick={handleExportToExcel}
+              title="Export filtered records to Excel compatible CSV"
+            >
+              <span>Export To Excel</span>
+            </button>
+          </div>
         </div>
 
         {exportNotice && (

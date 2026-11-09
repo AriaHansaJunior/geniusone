@@ -972,6 +972,12 @@
   cursor: pointer;
 }
 
+.item-picker-custom-select {
+  width: 170px !important;
+  min-width: 140px;
+  flex-shrink: 0;
+}
+
 .item-picker-select:focus {
   border-color: var(--blue-600, #0071e3);
   box-shadow: 0 0 0 2px rgba(0, 113, 227, 0.15);

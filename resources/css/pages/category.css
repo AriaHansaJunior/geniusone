@@ -75,13 +75,11 @@
 
 /* Main Table Container Card */
 .category-table-panel {
-  background: var(--glass-card-bg);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-sm);
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
   overflow: hidden;
-  box-shadow: var(--shadow-glass);
+  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.08), 0 2px 6px -1px rgba(15, 23, 42, 0.04);
 }
 
 /* Table Toolbar: Search on Left */
@@ -91,7 +89,7 @@
   justify-content: space-between;
   padding: 12px 20px;
   border-bottom: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.65);
+  background: #ffffff;
   gap: 16px;
   flex-wrap: wrap;
 }

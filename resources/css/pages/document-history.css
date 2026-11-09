@@ -94,12 +94,10 @@
 
 /* Main Table Card */
 .dh-table-card {
-  background: var(--glass-card-bg);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-sm);
-  box-shadow: var(--shadow-glass);
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.08), 0 2px 6px -1px rgba(15, 23, 42, 0.04);
   overflow: visible;
   margin-bottom: 16px;
   position: relative;
@@ -111,8 +109,10 @@
   align-items: flex-end;
   gap: 16px;
   padding: 16px 20px;
-  background: rgba(255, 255, 255, 0.7);
+  background: #ffffff;
   border-bottom: 1px solid var(--line);
+  border-top-left-radius: inherit;
+  border-top-right-radius: inherit;
   flex-wrap: wrap;
 }
 
