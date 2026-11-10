@@ -533,21 +533,25 @@ export function ReceiveNoteIndex({
                     <tr key={rn.id}>
                       <td className="rn-td-no text-center">{sequentialNumber}</td>
                       {isColVisible("rnNumber") && (
-                        <td className="rn-td-rnNumber">
+                        <td
+                          className="rn-td-rnNumber"
+                          onClick={() => onViewDetail(rn.rnNumber)}
+                          style={{ cursor: "pointer" }}
+                          title={`Open Receive Note ${rn.rnNumber}`}
+                        >
                           <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
-                            <span className="font-semibold text-ink">{rn.rnNumber}</span>
-                            <ApprovalStatusBadge
-                              status={
-                                  (rn.status === "Approved" || rn.status === "Approved 2")
-                                  ? "APPROVED"
-                                  : getLocalApprovalState(
-                                    "receive_note",
-                                    rn.rnNumber,
-                                    normalizeApprovalStatus(rn.status || "WAITING_APPROVE_1")
-                                  ).status
-                              }
-                              showIcon={false}
-                            />
+                            <button
+                              type="button"
+                              className="rn-link-number"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onViewDetail(rn.rnNumber);
+                              }}
+                              title={`Open Receive Note ${rn.rnNumber}`}
+                            >
+                              {rn.rnNumber}
+                            </button>
+                            <ApprovalStatusBadge status={rn.status || "WAITING_APPROVE_1"} showIcon={false} />
                           </div>
                           <div className="text-xs text-muted">
                             Arrival Date: {formatDisplayDate(rn.arrivalDate)}

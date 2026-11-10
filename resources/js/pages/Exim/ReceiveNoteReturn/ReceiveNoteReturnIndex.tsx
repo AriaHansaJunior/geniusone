@@ -555,9 +555,24 @@ export function ReceiveNoteReturnIndex({
                     <tr key={rnr.id}>
                       <td className="rnr-td-no text-center">{sequentialNumber}</td>
                       {isColVisible("rnNumber") && (
-                        <td className="rnr-td-rnNumber">
-                          <div className="font-semibold text-ink">
-                            {rnr.rnNumber}
+                        <td
+                          className="rnr-td-rnNumber"
+                          onClick={() => onViewDetail(rnr.rnNumber)}
+                          style={{ cursor: "pointer" }}
+                          title={`Open Receive Note Return ${rnr.rnNumber}`}
+                        >
+                          <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
+                            <button
+                              type="button"
+                              className="rnr-link-number"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onViewDetail(rnr.rnNumber);
+                              }}
+                              title={`Open Receive Note Return ${rnr.rnNumber}`}
+                            >
+                              {rnr.rnNumber}
+                            </button>
                           </div>
                           <div className="text-xs text-muted">
                             RN Date: {formatDisplayDate(rnr.rnDate)}

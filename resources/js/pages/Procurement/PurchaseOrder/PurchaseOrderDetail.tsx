@@ -752,42 +752,44 @@ export function PurchaseOrderDetail({
           </div>
         </div>
 
-        {/* Right Card: EMBEDDED TRANSACTION HISTORY & ACTIVITY LOG (UI-04) */}
+        {/* Bottom Card: EMBEDDED TRANSACTION HISTORY & ACTIVITY LOG (UI-04) */}
         <div className="detail-section-card">
           <div className="detail-section-card__header">
             <strong>Transaction History & Activity Log</strong>
             <span>{activityLogEntries.length} Activity Records</span>
           </div>
           <div className="detail-section-card__body" style={{ padding: 0 }}>
-            <table className="audit-log-table">
-              <thead>
-                <tr>
-                  <th style={{ width: "130px" }}>User / Actor</th>
-                  <th>Activity Performed</th>
-                  <th style={{ width: "160px" }}>Timestamp</th>
-                  <th style={{ width: "100px" }}>Activity Type</th>
-                </tr>
-              </thead>
-              <tbody>
-                {activityLogEntries.map((log) => (
-                  <tr key={log.id}>
-                    <td>
-                      <strong>{log.actor}</strong>
-                      <small style={{ display: "block", color: "var(--muted)", fontSize: "10px" }}>
-                        {log.role}
-                      </small>
-                    </td>
-                    <td>{log.action}</td>
-                    <td style={{ fontFamily: "ui-monospace, monospace", fontSize: "11px" }}>
-                      {log.timestamp}
-                    </td>
-                    <td>
-                      <Badge tone={log.tone}>{log.statusLabel}</Badge>
-                    </td>
+            <div className="table-scroll">
+              <table className="audit-log-table">
+                <thead>
+                  <tr>
+                    <th style={{ width: "160px" }}>User / Actor</th>
+                    <th>Activity Performed</th>
+                    <th style={{ width: "180px" }}>Timestamp</th>
+                    <th style={{ width: "120px" }}>Activity Type</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {activityLogEntries.map((log) => (
+                    <tr key={log.id}>
+                      <td>
+                        <strong>{log.actor}</strong>
+                        <small style={{ display: "block", color: "var(--muted)", fontSize: "10px" }}>
+                          {log.role}
+                        </small>
+                      </td>
+                      <td>{log.action}</td>
+                      <td style={{ fontFamily: "ui-monospace, monospace", fontSize: "11px" }}>
+                        {log.timestamp}
+                      </td>
+                      <td>
+                        <Badge tone={log.tone}>{log.statusLabel}</Badge>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>

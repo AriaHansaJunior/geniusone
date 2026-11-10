@@ -769,110 +769,114 @@ SPECIFICATION DETAILS:
         </div>
       </div>
 
-      {/* Two-Column Lower Content Grid */}
+      {/* Full-Width Stacked Content Cards */}
       <div className="detail-lower-grid">
-        {/* Left Card: Requisition Purpose & Document Attachments */}
+        {/* Top Card: Requisition Purpose & Document Attachments (Full Width) */}
         <div className="detail-section-card">
           <div className="detail-section-card__header">
             <strong>Requisition Purpose & Documentation</strong>
             <span>Internal Procurement Notes</span>
           </div>
           <div className="detail-section-card__body">
-            <div>
-              <span style={{ fontSize: "10.5px", fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.4px" }}>
-                PR Note & Internal Reference
-              </span>
-              <div
-                style={{
-                  background: "var(--canvas)",
-                  padding: "12px 16px",
-                  borderRadius: "var(--radius-sm)",
-                  fontSize: "12px",
-                  color: "var(--ink)",
-                  marginTop: "6px",
-                  border: "1px solid var(--line)",
-                  lineHeight: "1.45",
-                }}
-              >
-                <strong>{remark}</strong>
-                <p style={{ margin: "4px 0 0", color: "var(--ink-soft)", fontSize: "11.5px" }}>
-                  Requisition submitted for mandatory personnel safety compliance. Approved for procurement processing under standard HSE consumable quota.
-                </p>
-              </div>
-            </div>
-
-            <div>
-              <span style={{ fontSize: "10.5px", fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.4px" }}>
-                Attached Technical Specifications
-              </span>
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  background: "var(--canvas)",
-                  padding: "10px 14px",
-                  borderRadius: "var(--radius-sm)",
-                  border: "1px solid var(--line)",
-                  marginTop: "6px",
-                }}
-              >
-                <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                  <Icon name="file" size={16} />
-                  <div>
-                    <strong style={{ fontSize: "12px" }}>UGT-26-004_safety_specs.pdf</strong>
-                    <small style={{ display: "block", color: "var(--muted)", fontSize: "10.5px" }}>1.4 MB · Uploaded by Arsyeila</small>
-                  </div>
-                </div>
-                <Button
-                  variant="ghost"
-                  icon="download"
-                  style={{ padding: "6px 12px", fontSize: "11px" }}
-                  onClick={handleDownloadAttachment}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))", gap: "16px" }}>
+              <div>
+                <span style={{ fontSize: "10.5px", fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.4px" }}>
+                  PR Note & Internal Reference
+                </span>
+                <div
+                  style={{
+                    background: "var(--canvas)",
+                    padding: "12px 16px",
+                    borderRadius: "var(--radius-sm)",
+                    fontSize: "12px",
+                    color: "var(--ink)",
+                    marginTop: "6px",
+                    border: "1px solid var(--line)",
+                    lineHeight: "1.45",
+                  }}
                 >
-                  Download
-                </Button>
+                  <strong>{remark}</strong>
+                  <p style={{ margin: "4px 0 0", color: "var(--ink-soft)", fontSize: "11.5px" }}>
+                    Requisition submitted for mandatory personnel safety compliance. Approved for procurement processing under standard HSE consumable quota.
+                  </p>
+                </div>
+              </div>
+
+              <div>
+                <span style={{ fontSize: "10.5px", fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.4px" }}>
+                  Attached Technical Specifications
+                </span>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    background: "var(--canvas)",
+                    padding: "10px 14px",
+                    borderRadius: "var(--radius-sm)",
+                    border: "1px solid var(--line)",
+                    marginTop: "6px",
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                    <Icon name="file" size={16} />
+                    <div>
+                      <strong style={{ fontSize: "12px" }}>UGT-26-004_safety_specs.pdf</strong>
+                      <small style={{ display: "block", color: "var(--muted)", fontSize: "10.5px" }}>1.4 MB · Uploaded by Arsyeila</small>
+                    </div>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    icon="download"
+                    style={{ padding: "6px 12px", fontSize: "11px" }}
+                    onClick={handleDownloadAttachment}
+                  >
+                    Download
+                  </Button>
+                </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Right Card: Transaction History & Activity Log (UI-04) */}
+        {/* Bottom Card: Transaction History & Activity Log (Full Width with Horizontal Scroll Support) */}
         <div className="detail-section-card">
           <div className="detail-section-card__header">
             <strong>Transaction History & Activity Log</strong>
             <span>{activityLogEntries.length} Activity Records</span>
           </div>
           <div className="detail-section-card__body" style={{ padding: 0 }}>
-            <table className="audit-log-table">
-              <thead>
-                <tr>
-                  <th style={{ width: "130px" }}>User / Actor</th>
-                  <th>Activity Performed</th>
-                  <th style={{ width: "160px" }}>Timestamp</th>
-                  <th style={{ width: "100px" }}>Activity Type</th>
-                </tr>
-              </thead>
-              <tbody>
-                {activityLogEntries.map((log) => (
-                  <tr key={log.id}>
-                    <td>
-                      <strong>{log.actor}</strong>
-                      <small style={{ display: "block", color: "var(--muted)", fontSize: "10px" }}>
-                        {log.role}
-                      </small>
-                    </td>
-                    <td>{log.action}</td>
-                    <td style={{ fontFamily: "ui-monospace, monospace", fontSize: "11px" }}>
-                      {log.timestamp}
-                    </td>
-                    <td>
-                      <Badge tone={log.tone}>{log.statusLabel}</Badge>
-                    </td>
+            <div className="table-scroll">
+              <table className="audit-log-table">
+                <thead>
+                  <tr>
+                    <th style={{ width: "160px" }}>User / Actor</th>
+                    <th>Activity Performed</th>
+                    <th style={{ width: "180px" }}>Timestamp</th>
+                    <th style={{ width: "120px" }}>Activity Type</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {activityLogEntries.map((log) => (
+                    <tr key={log.id}>
+                      <td>
+                        <strong>{log.actor}</strong>
+                        <small style={{ display: "block", color: "var(--muted)", fontSize: "10px" }}>
+                          {log.role}
+                        </small>
+                      </td>
+                      <td>{log.action}</td>
+                      <td style={{ fontFamily: "ui-monospace, monospace", fontSize: "11px" }}>
+                        {log.timestamp}
+                      </td>
+                      <td>
+                        <Badge tone={log.tone}>{log.statusLabel}</Badge>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>
