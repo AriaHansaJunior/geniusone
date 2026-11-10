@@ -324,48 +324,50 @@ export function PurchaseOrderReportDetail({
           </div>
         </div>
 
-        {/* Right Card: Lifecycle Milestones */}
+        {/* Bottom Card: Lifecycle Milestones (Full Width with Horizontal Scroll Support) */}
         <div className="detail-section-card">
           <div className="detail-section-card__header">
             <strong>Document Lifecycle Milestones</strong>
             <span>Authorization & Receipt Verification</span>
           </div>
           <div className="detail-section-card__body" style={{ padding: 0 }}>
-            <table className="audit-log-table">
-              <thead>
-                <tr>
-                  <th style={{ width: "130px" }}>Milestone</th>
-                  <th>Reference</th>
-                  <th style={{ width: "140px" }}>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td>
-                    <strong>PR Approved</strong>
-                    <small style={{ display: "block", color: "var(--muted)", fontSize: "10px" }}>Requisition authorized</small>
-                  </td>
-                  <td>{prNumber}</td>
-                  <td><Badge tone="green">✓ Completed</Badge></td>
-                </tr>
-                <tr>
-                  <td>
-                    <strong>PO Authorized</strong>
-                    <small style={{ display: "block", color: "var(--muted)", fontSize: "10px" }}>Approve 2 completed</small>
-                  </td>
-                  <td>{poNumber}</td>
-                  <td><Badge tone="blue">✓ Approved</Badge></td>
-                </tr>
-                <tr>
-                  <td>
-                    <strong>BPB Verified</strong>
-                    <small style={{ display: "block", color: "var(--muted)", fontSize: "10px" }}>Stock receipt recorded</small>
-                  </td>
-                  <td>{bpbNumber}</td>
-                  <td><Badge tone="green">✓ Received</Badge></td>
-                </tr>
-              </tbody>
-            </table>
+            <div className="table-scroll">
+              <table className="audit-log-table">
+                <thead>
+                  <tr>
+                    <th style={{ width: "160px" }}>Milestone</th>
+                    <th>Reference</th>
+                    <th style={{ width: "160px" }}>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>
+                      <strong>PR Approved</strong>
+                      <small style={{ display: "block", color: "var(--muted)", fontSize: "10px" }}>Requisition authorized</small>
+                    </td>
+                    <td>{prNumber}</td>
+                    <td><Badge tone="green">✓ Completed</Badge></td>
+                  </tr>
+                  <tr>
+                    <td>
+                      <strong>PO Authorized</strong>
+                      <small style={{ display: "block", color: "var(--muted)", fontSize: "10px" }}>Approve 2 completed</small>
+                    </td>
+                    <td>{poNumber}</td>
+                    <td><Badge tone="blue">✓ Approved</Badge></td>
+                  </tr>
+                  <tr>
+                    <td>
+                      <strong>BPB Verified</strong>
+                      <small style={{ display: "block", color: "var(--muted)", fontSize: "10px" }}>Stock receipt recorded</small>
+                    </td>
+                    <td>{bpbNumber}</td>
+                    <td><Badge tone="green">✓ Received</Badge></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>
