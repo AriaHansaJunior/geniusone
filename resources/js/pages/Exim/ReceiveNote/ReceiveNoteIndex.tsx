@@ -530,13 +530,17 @@ export function ReceiveNoteIndex({
                 paginatedRecords.map((rn, idx) => {
                   const sequentialNumber = (safeCurrentPage - 1) * pageSize + idx + 1;
                   return (
-                    <tr key={rn.id}>
+                    <tr
+                      key={rn.id}
+                      className="rn-clickable-row"
+                      onClick={() => onViewDetail(rn.rnNumber)}
+                      style={{ cursor: "pointer" }}
+                      title={`Click row to view details of Receive Note ${rn.rnNumber}`}
+                    >
                       <td className="rn-td-no text-center">{sequentialNumber}</td>
                       {isColVisible("rnNumber") && (
                         <td
                           className="rn-td-rnNumber"
-                          onClick={() => onViewDetail(rn.rnNumber)}
-                          style={{ cursor: "pointer" }}
                           title={`Open Receive Note ${rn.rnNumber}`}
                         >
                           <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
@@ -601,11 +605,14 @@ export function ReceiveNoteIndex({
                       {isColVisible("warehouseTx") && (
                         <td className="rn-td-warehouseTx text-muted">{rn.warehouseTransaction}</td>
                       )}
-                      <td className="rn-td-option text-center">
+                      <td className="rn-td-option text-center" onClick={(e) => e.stopPropagation()}>
                         <button
                           type="button"
                           className="rn-btn-row-action"
-                          onClick={() => onViewDetail(rn.rnNumber)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onViewDetail(rn.rnNumber);
+                          }}
                           title="View Detail Receive Note"
                           aria-label={`View detail for ${rn.rnNumber}`}
                         >

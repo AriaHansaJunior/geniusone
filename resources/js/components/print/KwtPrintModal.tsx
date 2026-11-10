@@ -11,6 +11,7 @@ export interface KwtPrintModalProps {
   hasVariantSwitcher?: boolean;
   activeVariant?: "internal" | "eksternal";
   onVariantChange?: (variant: "internal" | "eksternal") => void;
+  onPrint?: () => void;
   children: React.ReactNode;
 }
 
@@ -22,6 +23,7 @@ export const KwtPrintModal: React.FC<KwtPrintModalProps> = ({
   hasVariantSwitcher = false,
   activeVariant = "internal",
   onVariantChange,
+  onPrint,
   children,
 }) => {
   useEffect(() => {
@@ -40,7 +42,11 @@ export const KwtPrintModal: React.FC<KwtPrintModalProps> = ({
   if (!isOpen) return null;
 
   const handlePrint = () => {
-    window.print();
+    if (onPrint) {
+      onPrint();
+    } else {
+      window.print();
+    }
   };
 
   return (
@@ -87,7 +93,7 @@ export const KwtPrintModal: React.FC<KwtPrintModalProps> = ({
             <Button variant="primary" icon="print" onClick={handlePrint}>
               Print Now
             </Button>
-            <Button variant="secondary" icon="x" onClick={onClose}>
+            <Button variant="secondary" icon="close" onClick={onClose}>
               Close
             </Button>
           </div>
