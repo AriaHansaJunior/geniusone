@@ -11,7 +11,7 @@ export interface KwtPrintModalProps {
   hasVariantSwitcher?: boolean;
   activeVariant?: "internal" | "eksternal";
   onVariantChange?: (variant: "internal" | "eksternal") => void;
-  onPrint?: () => void;
+  onPrint?: () => void | Promise<void>;
   children: React.ReactNode;
 }
 

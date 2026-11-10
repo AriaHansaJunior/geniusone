@@ -27,6 +27,8 @@ export interface PrItemToPick {
   dueDate?: string;
   hasPo: boolean;
   poCount: number;
+  percentageLme?: number;
+  lme?: number;
 }
 
 interface PickPrItemModalProps {
@@ -50,7 +52,6 @@ export function PickPrItemModal({
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [itemsList, setItemsList] = useState<PrItemToPick[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
-  const [hideFullyOrdered, setHideFullyOrdered] = useState<boolean>(true);
 
   // Fetch approved PR items from backend API
   useEffect(() => {
@@ -111,6 +112,12 @@ export function PickPrItemModal({
               const hasPo = Boolean(it.has_po || it.hasPo || ordQty > 0);
               const poCount = Number(it.po_count || (hasPo ? 1 : 0));
 
+              // Only show items that have NOT been fully ordered yet (remaining quantity > 0)
+              // This includes items not yet entered into PO (ordQty === 0) as well as outstanding (remQty > 0)
+              if (remQty <= 0) {
+                return;
+              }
+
               availableItems.push({
                 id: `pr-${pr.id || prNum}-item-${prItemId}`,
                 prId: Number(pr.id || 0),
@@ -132,6 +139,8 @@ export function PickPrItemModal({
                 dueDate: it.dueDate || pr.dueDate || "-",
                 hasPo,
                 poCount,
+                percentageLme: Number(it.percentage_lme || it.percentageLme || it.lmePercentage || 0),
+                lme: Number(it.lme || 0),
               });
             });
           });
@@ -148,7 +157,7 @@ export function PickPrItemModal({
     };
   }, [isOpen]);
 
-  // Filter available items based on search, selection, facility, and ordered status
+  // Filter available items based on search, selection, facility, and remaining quantity
   const filteredItems = useMemo(() => {
     return itemsList.filter((item) => {
       // Exclude items already selected in current PO form
@@ -156,8 +165,8 @@ export function PickPrItemModal({
         return false;
       }
 
-      // If hiding fully ordered items, only show items with remaining quantity > 0
-      if (hideFullyOrdered && item.hasPo && item.remainingQty <= 0) {
+      // Only show items that still need to be ordered/purchased (remainingQty > 0)
+      if (item.remainingQty <= 0) {
         return false;
       }
 
@@ -182,7 +191,7 @@ export function PickPrItemModal({
         item.remark.toLowerCase().includes(q)
       );
     });
-  }, [itemsList, alreadySelectedPrItemIds, hideFullyOrdered, facilityFilter, search]);
+  }, [itemsList, alreadySelectedPrItemIds, facilityFilter, search]);
 
   // Pagination
   const totalRecords = filteredItems.length;
@@ -296,27 +305,6 @@ export function PickPrItemModal({
           </div>
 
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <label
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "6px",
-                fontSize: "12px",
-                fontWeight: 600,
-                color: "var(--ink-muted, #475569)",
-                cursor: "pointer",
-                userSelect: "none",
-                marginRight: "4px",
-              }}
-            >
-              <input
-                type="checkbox"
-                checked={hideFullyOrdered}
-                onChange={(e) => setHideFullyOrdered(e.target.checked)}
-              />
-              Hide fully ordered
-            </label>
-
             <button
               type="button"
               className="picker-btn picker-btn--select-all"
@@ -379,7 +367,7 @@ export function PickPrItemModal({
                       </div>
                       <strong>No available requisition items found</strong>
                       <span>
-                        Make sure the Purchase Requisition is approved twice and items are not closed.
+                        Make sure the Purchase Requisition is approved twice and items are not closed or already fully ordered.
                       </span>
                     </div>
                   </td>

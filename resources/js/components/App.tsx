@@ -665,12 +665,12 @@ function resolveViewStateFromPath(pathname: string, defaultPage: PageKey = "dash
   }
 
   // Master & other aliases
-  if (cleanPath === "/procurement/supplier") return { type: "list", page: "supplier" };
-  if (cleanPath === "/procurement/payment-term") return { type: "list", page: "payment-term" };
-  if (cleanPath === "/procurement/purchase-category") return { type: "list", page: "purchase-category" };
-  if (cleanPath === "/procurement/delivery-terms") return { type: "list", page: "delivery-terms" };
-  if (cleanPath === "/procurement/additional-costs") return { type: "list", page: "additional-costs" };
-  if (cleanPath === "/procurement/pph") return { type: "list", page: "pph" };
+  if (cleanPath === "/procurement/supplier" || cleanPath === "/procurement/purchase-master/supplier") return { type: "list", page: "supplier" };
+  if (cleanPath === "/procurement/payment-term" || cleanPath === "/procurement/purchase-master/payment-term") return { type: "list", page: "payment-term" };
+  if (cleanPath === "/procurement/purchase-category" || cleanPath === "/procurement/purchase-master/purchase-category") return { type: "list", page: "purchase-category" };
+  if (cleanPath === "/procurement/delivery-terms" || cleanPath === "/procurement/purchase-master/delivery-terms") return { type: "list", page: "delivery-terms" };
+  if (cleanPath === "/procurement/additional-costs" || cleanPath === "/procurement/purchase-master/additional-costs") return { type: "list", page: "additional-costs" };
+  if (cleanPath === "/procurement/pph" || cleanPath === "/procurement/purchase-master/pph") return { type: "list", page: "pph" };
   if (
     cleanPath === "/procurement/pr-report" ||
     cleanPath === "/procurement/reports/purchase-requisition-report"

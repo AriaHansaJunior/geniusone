@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import * as XLSX from "xlsx";
 import { Icon } from "../../../components/ui/Icon";
 import { Button } from "../../../components/ui/Button";
@@ -45,6 +45,84 @@ export function ReceiveNoteIndex({
   onAddNew,
   onViewDetail,
 }: ReceiveNoteIndexProps) {
+  const [localRecords, setLocalRecords] = useState<ReceiveNoteRecord[]>(records);
+
+  useEffect(() => {
+    setLocalRecords(records);
+  }, [records]);
+
+  // Sync with backend API on mount
+  useEffect(() => {
+    let isMounted = true;
+    fetch("/api/warehouse/rn?per_page=100", { headers: { Accept: "application/json" } })
+      .then((r) => r.json())
+      .then((d) => {
+        if (!isMounted) return;
+        const apiRows = d?.rows || (Array.isArray(d?.data) ? d.data : d?.data?.data) || [];
+        if (Array.isArray(apiRows) && apiRows.length > 0) {
+          setLocalRecords((prev) => {
+            const map = new Map<string, ReceiveNoteRecord>();
+            // Add existing / initial records first
+            prev.forEach((r) => map.set(r.rnNumber, r));
+            // Merge / overwrite with API data
+            apiRows.forEach((ar: any, idx: number) => {
+              const rnNum = ar.rn_number || ar.rnNumber;
+              if (!rnNum) return;
+              const existing = map.get(rnNum);
+              const mapped: ReceiveNoteRecord = {
+                id: String(ar.id || existing?.id || `rn-api-${idx}`),
+                no: existing?.no || idx + 1,
+                rnNumber: rnNum,
+                arrivalDate: ar.arrival_date ? ar.arrival_date.slice(0, 10) : (existing?.arrivalDate || "-"),
+                poNumber: ar.items?.[0]?.po_number || existing?.poNumber || "—",
+                date: ar.sj_date || existing?.date || "—",
+                supplier: ar.supplier?.name || existing?.supplier || "—",
+                facility: existing?.facility || "FASILITAS",
+                bcCode: existing?.bcCode || "BC 4.0",
+                ajuNumber: ar.aju_number || existing?.ajuNumber || "—",
+                noDaftar: ar.no_pen || existing?.noDaftar || "—",
+                amount: ar.items?.reduce((sum: number, it: any) => sum + (Number(it.grand_total) || 0), 0) || existing?.amount || 0,
+                amountFormatted: existing?.amountFormatted || "IDR 0.00",
+                description: ar.note || existing?.description || "—",
+                warehouseTransaction: ar.bpb_number || existing?.warehouseTransaction || "—",
+                currency: "IDR",
+                rate: 1.0,
+                invoiceNumber: ar.invoice_number || "—",
+                invoiceDate: ar.invoice_date || "—",
+                taxInvoiceNumber: ar.tax_invoice || "—",
+                taxInvoiceDate: ar.tax_invoice_date || "—",
+                vehicleType: ar.vehicle_type || "MOBIL BARANG",
+                licensePlate: ar.license_plate || "—",
+                tanggalDaftar: "—",
+                nomorPackingList: ar.sj_number || "—",
+                tanggalPackingList: ar.sj_date || "—",
+                status: ar.status || existing?.status || "Waiting for Approve 1",
+                createdAt: existing?.createdAt || "-",
+                lastUpdatedAt: existing?.lastUpdatedAt || "-",
+                approval1At: ar.approval_1_at || existing?.approval1At,
+                approval2At: ar.approval_2_at || existing?.approval2At,
+                items: existing?.items || [],
+                totalQty: existing?.totalQty || 0,
+                biayaLain: existing?.biayaLain || 0,
+                discountPercent: existing?.discountPercent || 0,
+                discountAmount: existing?.discountAmount || 0,
+                ppnPercent: existing?.ppnPercent || 0,
+                ppnAmount: existing?.ppnAmount || 0,
+                grandTotal: existing?.grandTotal || 0,
+              };
+              map.set(rnNum, mapped);
+            });
+            return Array.from(map.values());
+          });
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   // Search & Filter State
   const [search, setSearch] = useState("");
   const [startDate, setStartDate] = useState("2026-10-14");
@@ -99,7 +177,7 @@ export function ReceiveNoteIndex({
 
   // Filter records
   const filteredRecords = useMemo(() => {
-    return records.filter((rec) => {
+    return localRecords.filter((rec) => {
       // Supplier filter
       if (
         selectedSupplier !== "All Suppliers" &&
@@ -135,7 +213,7 @@ export function ReceiveNoteIndex({
 
       return true;
     });
-  }, [records, selectedSupplier, selectedDocType, search]);
+  }, [localRecords, selectedSupplier, selectedDocType, search]);
 
   // Sort records
   const sortedRecords = useMemo(() => {
@@ -555,7 +633,16 @@ export function ReceiveNoteIndex({
                             >
                               {rn.rnNumber}
                             </button>
-                            <ApprovalStatusBadge status={rn.status || "WAITING_APPROVE_1"} showIcon={false} />
+                            <ApprovalStatusBadge
+                              status={
+                                getLocalApprovalState(
+                                  "receive_note",
+                                  rn.rnNumber,
+                                  normalizeApprovalStatus(rn.status)
+                                ).status
+                              }
+                              showIcon={false}
+                            />
                           </div>
                           <div className="text-xs text-muted">
                             Arrival Date: {formatDisplayDate(rn.arrivalDate)}
