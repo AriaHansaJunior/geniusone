@@ -9,6 +9,7 @@ import { ApprovalTimeline } from "../../../../components/approval/ApprovalTimeli
 import { ApprovalStatusBadge } from "../../../../components/approval/ApprovalStatusBadge";
 import { getLocalApprovalState } from "../../../../services/approvalApi";
 import { normalizeApprovalStatus, type DocumentApprovalState } from "../../../../types/approval";
+import { KwtPrintModal, KwtPrintTemplateNpb } from "../../../../components/print";
 
 interface RequestMaterialDetailProps {
   id: string;
@@ -85,13 +86,10 @@ export function RequestMaterialDetail({
   }, [record?.requestCode, record?.approval]);
 
   const isApproved = approvalState.status === "APPROVED";
+  const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
 
   const handlePrint = () => {
-    try {
-      window.print();
-    } catch (err: any) {
-      console.warn("Print execution error:", err);
-    }
+    setIsPrintModalOpen(true);
   };
 
   return (
@@ -370,6 +368,55 @@ export function RequestMaterialDetail({
         >
           {record.requestNote || "No request note provided."}
         </div>
+      </div>
+
+      {/* KWT Official NPB Print Preview Modal */}
+      <KwtPrintModal
+        isOpen={isPrintModalOpen}
+        onClose={() => setIsPrintModalOpen(false)}
+        title="Print Nota Permintaan Barang"
+        documentCode="KWT-PPIC-004"
+      >
+        <KwtPrintTemplateNpb
+          docNumber={record.requestCode}
+          requestDate={record.requestDate}
+          destinationWarehouse={record.warehouseDestination || record.destinationLocation || "Gudang Bahan Baku"}
+          departmentFrom={record.department || "PPIC / Produksi"}
+          items={(record.items || []).map((it, idx) => ({
+            no: idx + 1,
+            itemName: it.itemName,
+            quantity: it.requestQty || it.stockQty || 1,
+            unit: it.unit || "PCE",
+            remark: it.remark || "-",
+          }))}
+          notes={record.requestNote || ""}
+          knownBy={approvalState.approved2By || ""}
+          receivedBy=""
+          handedOverBy={approvalState.approved1By || ""}
+          requestedBy={record.createdBy || ""}
+        />
+      </KwtPrintModal>
+
+      {/* Hidden Print Target for Direct Browser Print (Ctrl+P) */}
+      <div className="kwt-print-only-container">
+        <KwtPrintTemplateNpb
+          docNumber={record.requestCode}
+          requestDate={record.requestDate}
+          destinationWarehouse={record.warehouseDestination || record.destinationLocation || "Gudang Bahan Baku"}
+          departmentFrom={record.department || "PPIC / Produksi"}
+          items={(record.items || []).map((it, idx) => ({
+            no: idx + 1,
+            itemName: it.itemName,
+            quantity: it.requestQty || it.stockQty || 1,
+            unit: it.unit || "PCE",
+            remark: it.remark || "-",
+          }))}
+          notes={record.requestNote || ""}
+          knownBy={approvalState.approved2By || ""}
+          receivedBy=""
+          handedOverBy={approvalState.approved1By || ""}
+          requestedBy={record.createdBy || ""}
+        />
       </div>
     </div>
   );

@@ -19,6 +19,7 @@ import {
 } from "../../../services/approvalApi";
 import { normalizeApprovalStatus, type DocumentApprovalState } from "../../../types/approval";
 import { useAuthPermission } from "../../../context/AuthPermissionContext";
+import { KwtPrintModal, KwtPrintTemplatePr } from "../../../components/print";
 
 interface PurchaseRequisitionDetailProps {
   code: string;
@@ -191,7 +192,32 @@ export function PurchaseRequisitionDetail({
         (a: any) => (a.tier === 2 || a.approval_ke == 2) && (a.status === 1 || a.status === "Approved")
       ));
 
-  const handlePrintPdf = async () => {
+  const rawRemark = String(row._rawRemark || row.remark || "");
+  const rawType = String(
+    (row as any).prType ||
+    (row as any).type ||
+    (row as any).purchaseType ||
+    (row as any).requisitionType ||
+    (rawRemark.toUpperCase().includes("LANGSUNG") || rawRemark.toUpperCase().includes("INTERNAL") || docNumber.includes("/INT/")
+      ? "Internal"
+      : "Eksternal")
+  );
+  const defaultVariant: "internal" | "eksternal" = rawType.toLowerCase().includes("internal")
+    ? "internal"
+    : "eksternal";
+
+  const [printVariant, setPrintVariant] = useState<"internal" | "eksternal">(defaultVariant);
+  const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
+
+  useEffect(() => {
+    setPrintVariant(defaultVariant);
+  }, [defaultVariant]);
+
+  const handlePrintPdf = () => {
+    setIsPrintModalOpen(true);
+  };
+
+  const handleExecutePrint = async () => {
     const newState = await recordDocumentActivity({
       module: "purchase_requisition",
       documentId: row.id ? String(row.id) : docNumber,
@@ -200,7 +226,7 @@ export function PurchaseRequisitionDetail({
       userId: currentUser.id,
       userName: currentUser.name,
       userRole: currentUser.role,
-      note: `Printed Purchase Requisition ${docNumber}`,
+      note: `Printed Purchase Requisition ${docNumber} (${printVariant === "internal" ? "KWT-PPIC-001 Internal" : "KWT-PPIC-002 Eksternal"})`,
     });
     setApprovalState(newState);
     window.print();
@@ -508,6 +534,9 @@ SPECIFICATION DETAILS:
           <div className="detail-header-card__title-row">
             <h2 className="detail-header-card__title">{docNumber}</h2>
             <ApprovalStatusBadge status={approvalState.status} />
+            <Badge tone={rawType.toLowerCase().includes("internal") ? "blue" : "purple"}>
+              {rawType.toLowerCase().includes("internal") ? "Internal" : "Eksternal"}
+            </Badge>
           </div>
           <span className="detail-header-card__meta">
             Requested by <strong>{createdBy}</strong> · Department: <strong>{dept}</strong> · Required before <strong>{dueDate}</strong>
@@ -879,6 +908,61 @@ SPECIFICATION DETAILS:
             </div>
           </div>
         </div>
+      </div>
+
+      {/* KWT Official PR Print Preview Modal */}
+      <KwtPrintModal
+        isOpen={isPrintModalOpen}
+        onClose={() => setIsPrintModalOpen(false)}
+        title="Print Purchase Requisition"
+        documentCode={printVariant === "internal" ? "KWT-PPIC-001" : "KWT-PPIC-002"}
+        hasVariantSwitcher={true}
+        activeVariant={printVariant}
+        onVariantChange={setPrintVariant}
+        onPrint={handleExecutePrint}
+      >
+        <KwtPrintTemplatePr
+          variant={printVariant}
+          docNumber={docNumber}
+          date={reqDate}
+          department={dept}
+          section={sectionName}
+          items={items.map((it, idx) => ({
+            no: idx + 1,
+            itemName: it.itemName || it.item || it.name || "Material Item",
+            quantity: typeof it.quantity === "number" || typeof it.quantity === "string" ? it.quantity : 1,
+            unit: it.unit || "PCE",
+            requiredDate: it.dueDate || dueDate || reqDate,
+            facility: it.facility || "Non Fasilitas",
+            remark: it.remark || remark || "-",
+          }))}
+          approved1By={approvalState.approved1By}
+          approved2By={approvalState.approved2By}
+          createdBy={createdBy}
+        />
+      </KwtPrintModal>
+
+      {/* Hidden Print Target for Direct Browser Print (Ctrl+P) */}
+      <div className="kwt-print-only-container">
+        <KwtPrintTemplatePr
+          variant={printVariant}
+          docNumber={docNumber}
+          date={reqDate}
+          department={dept}
+          section={sectionName}
+          items={items.map((it, idx) => ({
+            no: idx + 1,
+            itemName: it.itemName || it.item || it.name || "Material Item",
+            quantity: typeof it.quantity === "number" || typeof it.quantity === "string" ? it.quantity : 1,
+            unit: it.unit || "PCE",
+            requiredDate: it.dueDate || dueDate || reqDate,
+            facility: it.facility || "Non Fasilitas",
+            remark: it.remark || remark || "-",
+          }))}
+          approved1By={approvalState.approved1By}
+          approved2By={approvalState.approved2By}
+          createdBy={createdBy}
+        />
       </div>
     </div>
   );

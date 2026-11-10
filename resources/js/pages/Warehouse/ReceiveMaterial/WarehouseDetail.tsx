@@ -12,6 +12,7 @@ import { getLocalApprovalState, recordDocumentActivity } from "../../../services
 import { useAuthPermission } from "../../../context/AuthPermissionContext";
 import { normalizeApprovalStatus, type DocumentApprovalState } from "../../../types/approval";
 import type { TableRow } from "../../../types";
+import { KwtPrintModal, KwtPrintTemplateBpb } from "../../../components/print";
 
 interface WarehouseDetailProps {
   code: string;
@@ -181,7 +182,13 @@ export function WarehouseDetail({
   const displayTotalQty = Number(computedTotalQty) > 0 ? computedTotalQty : totalQty;
   const primaryUnit = bpbItems[0]?.unit || "PCE";
 
-  const handlePrintPdf = async () => {
+  const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
+
+  const handlePrintPdf = () => {
+    setIsPrintModalOpen(true);
+  };
+
+  const handleExecutePrint = async () => {
     const newState = await recordDocumentActivity({
       module: "bpb",
       documentId: row.id ? String(row.id) : docNumber,
@@ -694,6 +701,56 @@ export function WarehouseDetail({
             </div>
           </div>
         </div>
+      </div>
+
+      {/* KWT Official BPB Print Preview Modal */}
+      <KwtPrintModal
+        isOpen={isPrintModalOpen}
+        onClose={() => setIsPrintModalOpen(false)}
+        title="Print Bukti Penerimaan Barang"
+        documentCode="KWT-PPIC-003"
+        onPrint={handleExecutePrint}
+      >
+        <KwtPrintTemplateBpb
+          docNumber={docNumber}
+          receiveDate={receiveDate}
+          sjNumber={sjNumber}
+          supplierName={supplierName}
+          plateNo={plateNo}
+          items={bpbItems.map((it, idx) => ({
+            no: idx + 1,
+            itemName: it.name || it.itemName || it.materialName || materialName || "Material Item",
+            quantity: it.receiveQty || it.quantity || it.rawQty || displayTotalQty || 1,
+            unit: it.unit || primaryUnit || "PCE",
+            noPp: it.poNumber || it.prNumber || poNumber || prNumber || "-",
+            remark: it.purpose || it.remark || remark || "-",
+          }))}
+          knownBy={approvalState.approved2By || ""}
+          controlledBy={approvalState.approved1By || ""}
+          receivedBy={createdBy || ""}
+        />
+      </KwtPrintModal>
+
+      {/* Hidden Print Target for Direct Browser Print (Ctrl+P) */}
+      <div className="kwt-print-only-container">
+        <KwtPrintTemplateBpb
+          docNumber={docNumber}
+          receiveDate={receiveDate}
+          sjNumber={sjNumber}
+          supplierName={supplierName}
+          plateNo={plateNo}
+          items={bpbItems.map((it, idx) => ({
+            no: idx + 1,
+            itemName: it.name || it.itemName || it.materialName || materialName || "Material Item",
+            quantity: it.receiveQty || it.quantity || it.rawQty || displayTotalQty || 1,
+            unit: it.unit || primaryUnit || "PCE",
+            noPp: it.poNumber || it.prNumber || poNumber || prNumber || "-",
+            remark: it.purpose || it.remark || remark || "-",
+          }))}
+          knownBy={approvalState.approved2By || ""}
+          controlledBy={approvalState.approved1By || ""}
+          receivedBy={createdBy || ""}
+        />
       </div>
     </div>
   );

@@ -42,6 +42,7 @@ export function PurchaseRequisitionCreate({
   const defaultDue = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
 
   // Header State
+  const [prType, setPrType] = useState<"Eksternal" | "Internal">("Eksternal");
   const [date, setDate] = useState(today);
   const [dueDate, setDueDate] = useState(defaultDue);
   const [deptRequest, setDeptRequest] = useState("");
@@ -401,6 +402,8 @@ export function PurchaseRequisitionCreate({
       formData.append("date", date);
       formData.append("due_date", dueDate);
       formData.append("note", note);
+      formData.append("prType", prType);
+      formData.append("type", prType);
       if (selectedFile) {
         formData.append("attachment_file", selectedFile);
       }
@@ -615,7 +618,23 @@ export function PurchaseRequisitionCreate({
                 {formErrors.section && <span className="master-form-error">{formErrors.section}</span>}
               </div>
 
-              {/* 5. Attachment File */}
+              {/* 5. Requisition Type */}
+              <div className="master-form-group">
+                <label htmlFor="prType" className="master-form-label">
+                  Requisition Type <span className="required-asterisk">*</span>
+                </label>
+                <CustomSelect
+                  id="prType"
+                  value={prType}
+                  onChange={(val) => setPrType(val as any)}
+                  options={[
+                    { value: "Eksternal", label: "Eksternal (KWT-PPIC-002)" },
+                    { value: "Internal", label: "Internal (KWT-PPIC-001)" },
+                  ]}
+                />
+              </div>
+
+              {/* 6. Attachment File */}
               <div className="master-form-group">
                 <label htmlFor="prAttachment" className="master-form-label">
                   Attachment file <span style={{ textTransform: "none", fontSize: "10.5px", color: "var(--muted)", fontWeight: 400 }}>(Max: 2MB, Format: PDF, DOC, XLS, JPG, PNG)</span>
