@@ -35,7 +35,7 @@ class TraceabilityReportApiController extends Controller
         ];
 
         $rows = $matrix->map(function ($item, $index) {
-            $firstPr = ! empty($item['linked_prs']) ? $item['linked_prs'][0] : null;
+            $firstPr = $item['linked_prs'][0] ?? null;
             $prNumber = $firstPr['pr_number'] ?? '—';
             $prId = $firstPr['pr_id'] ?? null;
 

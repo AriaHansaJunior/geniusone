@@ -9,7 +9,6 @@ import { ItemPickerModal } from "../../Exim/Master/Item/ItemPickerModal";
 import { initialItemRecords } from "../../Exim/Master/Item/item-data";
 import { initialJobNumberRecords } from "../PurchaseMaster/JobNumber/job-number-types";
 import type { ItemRecord } from "../../Exim/Master/Item/item-types";
-import { createPurchaseRequisition } from "../../../data/api";
 
 export interface PRItemRow {
   id: string;
@@ -30,131 +29,6 @@ interface PurchaseRequisitionCreateProps {
   onSaveSuccess?: (newPR: any) => void;
   availableJobNumbers?: string[];
   availableItems?: ItemRecord[];
-}
-
-interface SearchableItemComboboxProps {
-  value: string;
-  hasError?: boolean;
-  availableItems: ItemRecord[];
-  onSelect: (item: ItemRecord) => void;
-  onTextChange: (text: string) => void;
-}
-
-function SearchableItemCombobox({
-  value,
-  hasError,
-  availableItems,
-  onSelect,
-  onTextChange,
-}: SearchableItemComboboxProps) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  // Close dropdown on click outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, []);
-
-  const filteredItems = useMemo(() => {
-    const query = searchQuery.trim().toLowerCase();
-    if (!query) return availableItems.slice(0, 35);
-    return availableItems
-      .filter((it) => {
-        return (
-          it.itemName.toLowerCase().includes(query) ||
-          it.itemCode.toLowerCase().includes(query) ||
-          (it.kodeEksternal && it.kodeEksternal.toLowerCase().includes(query)) ||
-          (it.classification && it.classification.toLowerCase().includes(query)) ||
-          (it.category && it.category.toLowerCase().includes(query))
-        );
-      })
-      .slice(0, 35);
-  }, [availableItems, searchQuery]);
-
-  return (
-    <div className="searchable-item-cell" ref={containerRef}>
-      <div className="searchable-item-input-wrapper">
-        <input
-          type="text"
-          className={`searchable-item-input ${hasError ? "has-error" : ""}`}
-          placeholder="Select or search item..."
-          value={isOpen ? searchQuery : value}
-          onFocus={() => {
-            setSearchQuery(value);
-            setIsOpen(true);
-          }}
-          onChange={(e) => {
-            const val = e.target.value;
-            setSearchQuery(val);
-            onTextChange(val);
-            if (!isOpen) setIsOpen(true);
-          }}
-          onKeyDown={(e) => {
-            if (e.key === "Escape") {
-              setIsOpen(false);
-            }
-          }}
-        />
-        <button
-          type="button"
-          className="searchable-item-toggle"
-          onClick={() => {
-            if (!isOpen) setSearchQuery(value);
-            setIsOpen((prev) => !prev);
-          }}
-          tabIndex={-1}
-          aria-label="Toggle items dropdown"
-        >
-          <Icon name="chevronDown" size={13} />
-        </button>
-      </div>
-
-      {isOpen && (
-        <div className="searchable-item-dropdown">
-          <div className="searchable-item-dropdown-header">
-            Master Items ({filteredItems.length} matching)
-          </div>
-          {filteredItems.length > 0 ? (
-            filteredItems.map((item) => (
-              <div
-                key={item.id || item.itemCode}
-                className={`searchable-item-option ${item.itemName === value ? "is-selected" : ""}`}
-                onClick={() => {
-                  onSelect(item);
-                  setIsOpen(false);
-                }}
-              >
-                <div className="searchable-item-option-name">
-                  <span>{item.itemName}</span>
-                  <span className="searchable-item-badge">{item.smallestUnitCode}</span>
-                </div>
-                <div className="searchable-item-option-meta">
-                  <span className="code-pill">{item.itemCode}</span>
-                  <span>{item.classification}</span>
-                  <span className="searchable-item-badge--stock">
-                    Stock: {(item.stock || 0).toFixed(2)}
-                  </span>
-                </div>
-              </div>
-            ))
-          ) : (
-            <div className="searchable-item-empty">
-              No matching master items found.
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
 }
 
 export function PurchaseRequisitionCreate({
@@ -414,22 +288,6 @@ export function PurchaseRequisitionCreate({
       }
     };
     reader.readAsBinaryString(file);
-  };
-
-  // Add Empty Row
-  const handleAddBlankRow = () => {
-    const newRow: PRItemRow = {
-      id: `pr-item-${Date.now()}`,
-      jobNumber: "",
-      itemName: "",
-      unit: "PCE",
-      currentStock: 0,
-      quantity: 1,
-      dueDate: dueDate || today,
-      facility: "Fasilitas",
-      remark: "",
-    };
-    setItems((prev) => [...prev, newRow]);
   };
 
   // Add Items from Master Item Picker
@@ -920,28 +778,6 @@ export function PurchaseRequisitionCreate({
                 >
                   <span>Add item</span>
                 </button>
-
-                {/* Manual Blank Row Addition */}
-                <button
-                  type="button"
-                  onClick={handleAddBlankRow}
-                  style={{
-                    background: "#f8fafc",
-                    color: "var(--ink-soft, #475569)",
-                    border: "1px solid var(--line-strong, #cbd5e1)",
-                    padding: "7px 12px",
-                    borderRadius: "var(--radius-sm)",
-                    fontSize: "11.5px",
-                    fontWeight: 600,
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: "4px",
-                    cursor: "pointer",
-                  }}
-                  title="Add a manual blank row"
-                >
-                  <span>Blank Row</span>
-                </button>
               </div>
             </div>
 
@@ -991,37 +827,16 @@ export function PurchaseRequisitionCreate({
                           />
                         </td>
 
-                        {/* 3. Item Name (Regular Text Input) */}
+                        {/* 3. Item Name (Read-Only, sourced from Master Item) */}
                         <td>
                           <input
                             type="text"
-                            className={`tx-input-cell ${formErrors[`item_${index}_name`] ? "has-error" : ""}`}
-                            placeholder="Enter item name..."
+                            className={`tx-input-cell tx-input-cell--disabled ${formErrors[`item_${index}_name`] ? "has-error" : ""}`}
+                            placeholder="Item name..."
                             value={row.itemName}
-                            onChange={(e) => {
-                              const text = e.target.value;
-                              handleUpdateRow(row.id, "itemName", text);
-                              const matched = masterItems.find(
-                                (m) => m.itemName.toLowerCase() === text.trim().toLowerCase()
-                              );
-                              if (matched) {
-                                handleUpdateRow(row.id, "items_id", (matched as any).id);
-                                handleUpdateRow(row.id, "itemCode", matched.itemCode);
-                                handleUpdateRow(
-                                  row.id,
-                                  "facility",
-                                  (matched.facility === "FASILITAS" || (matched as any).facility_status === "FASILITAS") ? "Fasilitas" : "Non Fasilitas"
-                                );
-                                handleUpdateRow(
-                                  row.id,
-                                  "unit",
-                                  matched.smallestUnitName || matched.smallestUnitCode || "PCE"
-                                );
-                              }
-                              if (formErrors[`item_${index}_name`]) {
-                                setFormErrors((prev) => ({ ...prev, [`item_${index}_name`]: "" }));
-                              }
-                            }}
+                            title={row.itemName}
+                            readOnly
+                            disabled
                           />
                           {formErrors[`item_${index}_name`] && (
                             <span style={{ color: "var(--red-600)", fontSize: "10.5px", display: "block" }}>

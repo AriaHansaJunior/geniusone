@@ -174,6 +174,7 @@ class PurchaseOrderApiController extends Controller
             $price = (float) $it->price;
             $disc = (float) $it->discount;
             $sub = (float) $it->subtotal;
+            $facilityName = $itemObj?->facility?->name ?? ($it->requisitionItem?->item?->facility?->name ?? ($po->facility_status ?? 'FASILITAS'));
 
             return [
                 'id' => $it->id,
@@ -184,6 +185,8 @@ class PurchaseOrderApiController extends Controller
                 'itemName' => $itemObj?->name ?? $it->item_alias ?? 'Industrial Material',
                 'itemCode' => $itemObj?->code ?? '-',
                 'itemAlias' => $it->item_alias ?? '—',
+                'facility' => $facilityName,
+                'facility_status' => $facilityName,
                 'rawQty' => $qty,
                 'orderQty' => $qty,
                 'quantity' => number_format($qty, 4).' '.$unitName,
@@ -422,7 +425,19 @@ class PurchaseOrderApiController extends Controller
                     ->orWhere('pr_number', $it['prNumber'])
                     ->first();
                 if ($matchedPr) {
-                    $matchedPrItem = $matchedPr->items->first();
+                    $itemCode = $it['itemCode'] ?? $it['code'] ?? null;
+                    $itemName = $it['itemName'] ?? $it['item_name'] ?? $it['item'] ?? null;
+                    $matchedPrItem = $matchedPr->items()
+                        ->where('is_closed', false)
+                        ->when($itemCode && $itemCode !== '—' && $itemCode !== '-', function ($q) use ($itemCode) {
+                            $q->whereHas('item', fn ($iq) => $iq->where('code', $itemCode));
+                        })
+                        ->when($itemName && $itemName !== '—', function ($q) use ($itemName) {
+                            $q->whereHas('item', fn ($iq) => $iq->where('name', $itemName));
+                        })
+                        ->first()
+                        ?? $matchedPr->items()->where('is_closed', false)->first()
+                        ?? $matchedPr->items->first();
                     $prHasItemId = $matchedPrItem?->id;
                 }
             }
@@ -433,6 +448,7 @@ class PurchaseOrderApiController extends Controller
                 'price' => $price,
                 'order' => $orderQty,
                 'purchased' => (float) ($it['purchased'] ?? $orderQty),
+                'discount_type' => $it['discount_type'] ?? ($it['discount_types_id'] == 2 ? 'amount' : ($it['discount_types_id'] == 1 ? 'percentage' : 'none')),
                 'discount_types_id' => $it['discount_types_id'] ?? null,
                 'discount_val' => (float) ($it['discount_val'] ?? $it['discountPercent'] ?? 0),
                 'pph_id' => $it['pph_id'] ?? null,

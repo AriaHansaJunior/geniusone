@@ -30,9 +30,13 @@ class ReceiveNoteViewModel
             ->values();
         $primaryBpb = $bpbNumbers->first();
 
+        $appr1 = $this->rn->approvals->where('approval_ke', '1')->where('status', 1)->first();
+        $appr2 = $this->rn->approvals->where('approval_ke', '2')->where('status', 1)->first();
+
         return [
             'id' => $this->rn->id,
             'rn_number' => $this->rn->rn_number,
+            'status' => $this->rn->status,
             'bpb_number' => $primaryBpb,
             'bpb_numbers' => $bpbNumbers->toArray(),
             'is_received_in_bpb' => ! empty($primaryBpb),
@@ -42,6 +46,11 @@ class ReceiveNoteViewModel
             'sj_number' => $this->rn->sj_number ?? '-',
             'sj_date' => $this->rn->sj_date ? date('d M Y', strtotime($this->rn->sj_date)) : '-',
             'invoice_number' => $this->rn->invoice_number ?? '-',
+            'invoice_date' => $this->rn->invoice_date,
+            'tax_invoice' => $this->rn->tax_invoice ?? '-',
+            'tax_invoice_date' => $this->rn->tax_invoice_date,
+            'approval_1_at' => $appr1 ? ($appr1->updated_at?->format('d-m-Y H:i').' by '.($appr1->user?->name ?? 'Approver 1')) : '-',
+            'approval_2_at' => $appr2 ? ($appr2->updated_at?->format('d-m-Y H:i').' by '.($appr2->user?->name ?? 'Approver 2')) : '-',
             'note' => $this->rn->note,
             'supplier' => [
                 'id' => $this->rn->supliers_id,

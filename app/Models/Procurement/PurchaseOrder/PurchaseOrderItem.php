@@ -9,6 +9,7 @@ use App\Models\Procurement\PurchaseRequest\PurchaseRequisitionItem;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOneThrough;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class PurchaseOrderItem extends Model
@@ -70,6 +71,18 @@ class PurchaseOrderItem extends Model
     public function prItem(): BelongsTo
     {
         return $this->requisitionItem();
+    }
+
+    public function item(): HasOneThrough
+    {
+        return $this->hasOneThrough(
+            Item::class,
+            PurchaseRequisitionItem::class,
+            'id',
+            'id',
+            'pr_has_items_id',
+            'items_id'
+        );
     }
 
     public function getItemAttribute(): ?Item

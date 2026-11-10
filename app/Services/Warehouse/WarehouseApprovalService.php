@@ -48,6 +48,7 @@ class WarehouseApprovalService
             );
 
             $rn->update([
+                'status' => ($tier === 1) ? 'Waiting for Approve 2' : 'Approved',
                 'updated_by' => $userId,
             ]);
 
@@ -85,6 +86,7 @@ class WarehouseApprovalService
             );
 
             $rn->update([
+                'status' => 'Rejected',
                 'updated_by' => $userId,
             ]);
 
@@ -137,8 +139,13 @@ class WarehouseApprovalService
             );
 
             $bpb->update([
+                'status' => ($tier === 1) ? 'Waiting for Approve 2' : 'Approved',
                 'updated_by' => $userId,
             ]);
+
+            if ($tier === 2) {
+                app(\App\Services\Workflow\DocumentApprovalWorkflowService::class)->postBpbStockToInventory($bpb, $userId);
+            }
 
             AuditLogger::logWorkflow(
                 documentType: 'BPB',
@@ -174,6 +181,7 @@ class WarehouseApprovalService
             );
 
             $bpb->update([
+                'status' => 'Rejected',
                 'updated_by' => $userId,
             ]);
 

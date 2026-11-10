@@ -77,10 +77,26 @@ export function PurchaseRequisitionDetail({
         const norm = normalizeApprovalStatus(item._rawStatus || item.status);
         if (norm) {
           const local = getLocalApprovalState("purchase_requisition", item._rawNumber || item.prNumber || code, norm);
+          const app1 = Array.isArray(item.approvals)
+            ? item.approvals.find((a: any) => (a.tier === 1 || a.approval_ke == 1) && (a.status === 1 || a.status === "Approved"))
+            : null;
+          const app2 = Array.isArray(item.approvals)
+            ? item.approvals.find((a: any) => (a.tier === 2 || a.approval_ke == 2) && (a.status === 1 || a.status === "Approved"))
+            : null;
+
+          const approved1By = item.approved1_by || app1?.user || local.approved1By;
+          const approved1At = item.approved1_at || app1?.date || local.approved1At;
+          const approved2By = item.approved2_by || app2?.user || local.approved2By;
+          const approved2At = item.approved2_at || app2?.date || local.approved2At;
+
           setApprovalState({
             ...local,
             status: norm,
-            currentTier: norm === "WAITING_APPROVE_2" ? 2 : norm === "APPROVED" ? 2 : 1,
+            currentTier: norm === "WAITING_APPROVE_2" ? 2 : (norm === "APPROVED" || norm === "OUTSTANDING" || approved2By) ? 2 : 1,
+            approved1By,
+            approved1At,
+            approved2By,
+            approved2At,
           });
         }
       }
@@ -120,7 +136,7 @@ export function PurchaseRequisitionDetail({
       return {
         ...local,
         status: backendNormalizedStatus,
-        currentTier: backendNormalizedStatus === "WAITING_APPROVE_2" ? 2 : backendNormalizedStatus === "APPROVED" ? 2 : 1,
+        currentTier: backendNormalizedStatus === "WAITING_APPROVE_2" ? 2 : (backendNormalizedStatus === "APPROVED" || backendNormalizedStatus === "OUTSTANDING") ? 2 : 1,
       };
     }
     return local;
@@ -128,22 +144,52 @@ export function PurchaseRequisitionDetail({
 
   useEffect(() => {
     const local = getLocalApprovalState("purchase_requisition", docNumber, backendNormalizedStatus);
+    const app1 = Array.isArray(row.approvals)
+      ? row.approvals.find((a: any) => (a.tier === 1 || a.approval_ke == 1) && (a.status === 1 || a.status === "Approved"))
+      : null;
+    const app2 = Array.isArray(row.approvals)
+      ? row.approvals.find((a: any) => (a.tier === 2 || a.approval_ke == 2) && (a.status === 1 || a.status === "Approved"))
+      : null;
+
+    const approved1By = (row as any).approved1_by || app1?.user || local.approved1By;
+    const approved1At = (row as any).approved1_at || app1?.date || local.approved1At;
+    const approved2By = (row as any).approved2_by || app2?.user || local.approved2By;
+    const approved2At = (row as any).approved2_at || app2?.date || local.approved2At;
+
     if (local.status !== backendNormalizedStatus) {
       const synchedState: DocumentApprovalState = {
         ...local,
         status: backendNormalizedStatus,
-        currentTier: backendNormalizedStatus === "WAITING_APPROVE_2" ? 2 : backendNormalizedStatus === "APPROVED" ? 2 : 1,
+        currentTier: backendNormalizedStatus === "WAITING_APPROVE_2" ? 2 : (backendNormalizedStatus === "APPROVED" || backendNormalizedStatus === "OUTSTANDING" || approved2By) ? 2 : 1,
+        approved1By,
+        approved1At,
+        approved2By,
+        approved2At,
       };
       setApprovalState(synchedState);
     } else {
-      setApprovalState(local);
+      setApprovalState({
+        ...local,
+        approved1By: approved1By || local.approved1By,
+        approved1At: approved1At || local.approved1At,
+        approved2By: approved2By || local.approved2By,
+        approved2At: approved2At || local.approved2At,
+      });
     }
-  }, [docNumber, rawStatus, backendNormalizedStatus]);
+  }, [docNumber, rawStatus, backendNormalizedStatus, row.approvals]);
 
   const { currentUser } = useAuthPermission();
   const [closedMapVersion, setClosedMapVersion] = useState(0);
 
-  const isApproved = approvalState.status === "APPROVED";
+  const isApproved =
+    approvalState.status === "APPROVED" ||
+    approvalState.status === "OUTSTANDING" ||
+    Boolean(approvalState.approved2By) ||
+    (row as any).is_approved === true ||
+    (Array.isArray(row.approvals) &&
+      row.approvals.some(
+        (a: any) => (a.tier === 2 || a.approval_ke == 2) && (a.status === 1 || a.status === "Approved")
+      ));
 
   const handlePrintPdf = async () => {
     const newState = await recordDocumentActivity({
@@ -177,11 +223,6 @@ export function PurchaseRequisitionDetail({
   const handleToggleItemClosing = async (it: any, idx: number) => {
     const currentlyClosed = isPrItemClosed(docNumber, it, idx);
     const nextClosed = !currentlyClosed;
-
-    if (nextClosed && approvalState.status === "APPROVED") {
-      alert("Barang pada PR yang sudah di-Approve 2 kali tidak dapat di-closing.");
-      return;
-    }
 
     await togglePrItemClosing({
       prNumber: docNumber,
@@ -519,9 +560,9 @@ SPECIFICATION DETAILS:
           <span>AUTHORIZATION STAGE</span>
           <strong>{approvalState.status.replace(/_/g, " ")}</strong>
           <small>
-            {approvalState.status === "APPROVED"
-              ? `Approved by ${approvalState.approved2By || "Director"}`
-              : approvalState.status === "WAITING_APPROVE_2"
+            {isApproved || approvalState.approved2By
+              ? `Approved by ${approvalState.approved2By || "Administrator GeniusOne"}`
+              : approvalState.status === "WAITING_APPROVE_2" || approvalState.approved1By
               ? `Verified by Stage 1: ${approvalState.approved1By || "Department Lead"}`
               : approvalState.status === "REJECTED"
               ? `Rejected by ${approvalState.rejectedBy || "Approver"}`
@@ -675,14 +716,12 @@ SPECIFICATION DETAILS:
                         <button
                           type="button"
                           onClick={() => handleToggleItemClosing(it, idx)}
-                          disabled={!isClosed && isApproved}
                           style={{
                             padding: "4px 10px",
                             fontSize: "11px",
                             fontWeight: 600,
                             borderRadius: "6px",
-                            cursor: !isClosed && isApproved ? "not-allowed" : "pointer",
-                            opacity: !isClosed && isApproved ? 0.45 : 1,
+                            cursor: "pointer",
                             border: isClosed
                               ? "1px solid rgba(16, 185, 129, 0.35)"
                               : "1px solid rgba(239, 68, 68, 0.35)",
@@ -692,9 +731,7 @@ SPECIFICATION DETAILS:
                             color: isClosed ? "#047857" : "#b91c1c",
                           }}
                           title={
-                            !isClosed && isApproved
-                              ? "Barang pada PR yang sudah di-Approve 2 kali tidak dapat di-closing"
-                              : isClosed
+                            isClosed
                               ? "Unclosing: Reactivate item so it can be forwarded to Purchase Order"
                               : "Closing: Close item so it is excluded from Purchase Order"
                           }

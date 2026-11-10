@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Icon } from "../../../components/ui/Icon";
-import { Button } from "../../../components/ui/Button";
 import { CustomDatePicker } from "../../../components/ui/CustomDatePicker";
 import { CustomSelect } from "../../../components/ui/CustomSelect";
 import { PickPoItemModal } from "./PickPoItemModal";
@@ -257,7 +256,7 @@ export function ReceiveNoteForm({ onBack, onSave }: ReceiveNoteFormProps) {
       tanggalDaftar: formattedArrivalDate,
       nomorPackingList: plNumber || "-",
       tanggalPackingList: plDate || "-",
-      status: "Draft",
+      status: "Waiting for Approve 1" as any,
       createdAt: `${formattedArrivalDate} 10:00 by USER`,
       lastUpdatedAt: `${formattedArrivalDate} 10:00 by USER`,
       approval1At: "-",
@@ -828,6 +827,7 @@ export function ReceiveNoteForm({ onBack, onSave }: ReceiveNoteFormProps) {
         onClose={() => setIsPickerOpen(false)}
         onAddItems={handleAddPickedItems}
         alreadySelectedKeys={alreadySelectedKeys}
+        facilityFilter={statusDn ? "FASILITAS" : "NON-FASILITAS"}
       />
     </div>
   );

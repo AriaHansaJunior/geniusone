@@ -625,9 +625,9 @@ class DocumentApprovalWorkflowService
     /**
      * BE-05: Post BPB physical stock to warehouse inventory.
      */
-    protected function postBpbStockToInventory(BpbReceiveMaterial $bpb, int $userId): void
+    public function postBpbStockToInventory(BpbReceiveMaterial $bpb, int $userId): void
     {
-        $mappings = PoRnToBpb::with('poReceiveNote')->where('bpb_receive_material_id', $bpb->id)->get();
+        $mappings = PoRnToBpb::with(['poReceiveNote.purchaseOrder.items.requisitionItem.item', 'warehouse'])->where('bpb_receive_material_id', $bpb->id)->get();
 
         foreach ($mappings as $map) {
             $poRn = $map->poReceiveNote;
@@ -640,10 +640,20 @@ class DocumentApprovalWorkflowService
                 continue;
             }
 
-            $item = Item::where('name', $poRn->item_name)->first()
+            $poItems = $poRn->purchaseOrder?->items ?? collect();
+            $matchedPoItem = $poItems->first(function ($it) use ($poRn) {
+                return $it->requisitionItem?->item?->name === $poRn->item_name
+                    || $it->item_alias === $poRn->item_name;
+            });
+
+            $item = $matchedPoItem?->requisitionItem?->item
+                ?? Item::where('name', $poRn->item_name)->first()
+                ?? Item::where('code', $poRn->item_name)->first()
+                ?? Item::where('name', 'like', "%{$poRn->item_name}%")->first()
                 ?? Item::first();
 
             if ($item) {
+                $whName = $map->warehouse?->name ?? "Warehouse #{$map->warehouses_id}";
                 $this->inventoryService->recordStockMovement(
                     item: $item,
                     warehouseId: $map->warehouses_id,
@@ -652,7 +662,7 @@ class DocumentApprovalWorkflowService
                     referenceType: 'BPB',
                     referenceNumber: $bpb->bpb_number,
                     userId: $userId,
-                    notes: "Physical Goods Received via BPB Approval: {$bpb->bpb_number}"
+                    notes: "Physical Goods Received via BPB Approval into {$whName}: {$bpb->bpb_number}"
                 );
             }
         }
@@ -661,9 +671,9 @@ class DocumentApprovalWorkflowService
     /**
      * BE-05: Rollback BPB physical stock if unapproved.
      */
-    protected function rollbackBpbStockFromInventory(BpbReceiveMaterial $bpb, int $userId): void
+    public function rollbackBpbStockFromInventory(BpbReceiveMaterial $bpb, int $userId): void
     {
-        $mappings = PoRnToBpb::with('poReceiveNote')->where('bpb_receive_material_id', $bpb->id)->get();
+        $mappings = PoRnToBpb::with(['poReceiveNote.purchaseOrder.items.requisitionItem.item', 'warehouse'])->where('bpb_receive_material_id', $bpb->id)->get();
 
         foreach ($mappings as $map) {
             $poRn = $map->poReceiveNote;
@@ -676,10 +686,20 @@ class DocumentApprovalWorkflowService
                 continue;
             }
 
-            $item = Item::where('name', $poRn->item_name)->first()
+            $poItems = $poRn->purchaseOrder?->items ?? collect();
+            $matchedPoItem = $poItems->first(function ($it) use ($poRn) {
+                return $it->requisitionItem?->item?->name === $poRn->item_name
+                    || $it->item_alias === $poRn->item_name;
+            });
+
+            $item = $matchedPoItem?->requisitionItem?->item
+                ?? Item::where('name', $poRn->item_name)->first()
+                ?? Item::where('code', $poRn->item_name)->first()
+                ?? Item::where('name', 'like', "%{$poRn->item_name}%")->first()
                 ?? Item::first();
 
             if ($item) {
+                $whName = $map->warehouse?->name ?? "Warehouse #{$map->warehouses_id}";
                 $this->inventoryService->recordStockMovement(
                     item: $item,
                     warehouseId: $map->warehouses_id,
@@ -688,7 +708,7 @@ class DocumentApprovalWorkflowService
                     referenceType: 'BPB_REVERSAL',
                     referenceNumber: $bpb->bpb_number,
                     userId: $userId,
-                    notes: "Stock Reversal due to BPB Unapproval: {$bpb->bpb_number}"
+                    notes: "Stock Reversal due to BPB Unapproval from {$whName}: {$bpb->bpb_number}"
                 );
             }
         }

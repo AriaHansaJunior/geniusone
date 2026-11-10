@@ -1107,7 +1107,11 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
       loadOnce("job-numbers", fetchMasterJobNumbers, setJobNumberRecords);
     }
     if (page === "receive-note" || type === "receive-note-detail") {
-      loadOnce("receive-notes", fetchMasterReceiveNotes, setReceiveNoteRecords);
+      fetchMasterReceiveNotes().then((data) => {
+        if (isMounted && data && data.length > 0) {
+          setReceiveNoteRecords(data);
+        }
+      });
     }
     if (page === "receive-note-return" || type === "receive-note-return-detail") {
       loadOnce("receive-note-returns", fetchMasterReceiveNoteReturns, setReceiveNoteReturnRecords);
@@ -1963,8 +1967,10 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
   }, []);
 
   const handleSaveReceiveNote = useCallback(async (newRecord: ReceiveNoteRecord) => {
+    let savedRnNumber = newRecord.rnNumber;
+    let savedId = newRecord.id;
     try {
-      await createReceiveNote({
+      const res = await createReceiveNote({
         rnNumber: newRecord.rnNumber,
         supplier: newRecord.supplier,
         currency: newRecord.currency,
@@ -1985,12 +1991,18 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
           price: (it as any).price ?? it.pricePerUnit ?? 0,
         })),
       });
+      if (res?.data?.rn_number) {
+        savedRnNumber = res.data.rn_number;
+      }
+      if (res?.data?.id) {
+        savedId = String(res.data.id);
+      }
     } catch (err) {
       console.warn("Failed to persist Receive Note to backend:", err);
     }
 
     setReceiveNoteRecords((prev) => [
-      { ...newRecord, no: 1 },
+      { ...newRecord, id: savedId, rnNumber: savedRnNumber, status: "Waiting for Approve 1", no: 1 },
       ...prev.map((r) => ({ ...r, no: r.no + 1 })),
     ]);
     const nextState: ViewState = { type: "list", page: "receive-note" };
@@ -3073,6 +3085,32 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
                   r.rnNumber.replace(/[\/\\]/g, "-") === viewState.code
               )
             }
+            onApprovalChange={(rnNum, nextState) => {
+              const mappedStatus =
+                nextState.status === "APPROVED"
+                  ? "Approved"
+                  : nextState.status === "WAITING_APPROVE_2"
+                  ? "Waiting for Approve 2"
+                  : nextState.status === "REJECTED"
+                  ? "Rejected"
+                  : "Waiting for Approve 1";
+              setReceiveNoteRecords((prev) =>
+                prev.map((r) =>
+                  r.rnNumber === rnNum
+                    ? {
+                        ...r,
+                        status: mappedStatus as any,
+                        approval1At: nextState.approved1At
+                          ? `${nextState.approved1At}${nextState.approved1By ? ` by ${nextState.approved1By}` : ""}`
+                          : r.approval1At,
+                        approval2At: nextState.approved2At
+                          ? `${nextState.approved2At}${nextState.approved2By ? ` by ${nextState.approved2By}` : ""}`
+                          : r.approval2At,
+                      }
+                    : r
+                )
+              );
+            }}
             onBack={() => handleNavigateList("receive-note", "/exim/receive-note")}
           />
         )}

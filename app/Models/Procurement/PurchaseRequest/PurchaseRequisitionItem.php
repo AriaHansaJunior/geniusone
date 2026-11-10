@@ -47,6 +47,11 @@ class PurchaseRequisitionItem extends Model
         return $this->belongsTo(User::class, 'closed_by');
     }
 
+    public function orderItems(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(\App\Models\Procurement\PurchaseOrder\PurchaseOrderItem::class, 'pr_has_items_id');
+    }
+
     /**
      * BE-05: Mark PR line item as Closed.
      */

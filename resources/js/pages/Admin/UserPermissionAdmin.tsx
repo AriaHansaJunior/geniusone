@@ -27,6 +27,7 @@ import {
   createEmptyModulePermissions,
   createFullModulePermissions,
   getStoredRoles,
+  INITIAL_ROLES,
   resolveRoleDefinition,
   saveStoredRoles,
   hasCustomPermissionOverrides,

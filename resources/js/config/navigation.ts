@@ -6,6 +6,7 @@ export interface NavLeafItem {
   path: string;
   badge?: string | number;
   isPlaceholder?: boolean;
+  disabled?: boolean;
 }
 
 export interface NavGroupItem {
@@ -17,6 +18,8 @@ export interface NavGroupItem {
   isDirectLeaf?: boolean;
   path?: string;
   isPlaceholder?: boolean;
+  disabled?: boolean;
+  badge?: string | number;
 }
 
 export interface NavSection {

@@ -7,7 +7,7 @@ import { CustomSelect } from "../../../components/ui/CustomSelect";
 import { initialSupplierRecords } from "../../Procurement/PurchaseMaster/Supplier/supplier-types";
 import { initialWarehouseMasterRecords } from "../MasterWarehouse/warehouse-master-data";
 import { initialItemRecords } from "../../Exim/Master/Item/item-data";
-import { poRows } from "../../../data/mockData";
+import { poRows, warehouseRows } from "../../../data/mockData";
 import { fetchList, fetchDetail, createWarehouseBpb } from "../../../data/api";
 import { getLocalApprovalState } from "../../../services/approvalApi";
 
@@ -21,7 +21,7 @@ export interface BPBItemRow {
   jobNumber: string;
   deliveryNote: string;
   orderedQty: number;
-  receiveQty: number;
+  receiveQty: number | string;
   unit: string;
   location: string;
   purpose: string;
@@ -87,15 +87,36 @@ export function WarehouseCreate({
     return [];
   };
 
+  const getSafeDocString = (val: any): string => {
+    if (!val) return "";
+    if (typeof val === "string") return val;
+    if (typeof val === "number") return String(val);
+    if (typeof val === "object") {
+      if (typeof val.props?.children === "string") return val.props.children;
+      if (Array.isArray(val.props?.children)) {
+        const found = val.props.children.find((c: any) => typeof c === "string");
+        if (found) return found;
+      }
+      try {
+        const str = String(val);
+        if (str && str !== "[object Object]") return str;
+      } catch (_) { }
+    }
+    return "";
+  };
+
   // Helper to detect if an RN has already been received into an existing BPB (Double BPB Prevention)
   const findExistingBpbForRn = (rnNum: string): { bpbNumber: string; date?: string } | null => {
-    if (!rnNum) return null;
-    const cleanTarget = rnNum.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
+    const targetStr = getSafeDocString(rnNum);
+    if (!targetStr) return null;
+    const cleanTarget = targetStr.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
+    if (!cleanTarget) return null;
 
     // 1. Check existingRns for bpb_number
     const matchedRn = existingRns.find((r) => {
-      const num = String(r.rn_number || r.rnNumber || "").replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
-      return num === cleanTarget;
+      const rawRn = getSafeDocString(r.rn_number) || getSafeDocString(r._rawRn) || getSafeDocString(r.rnNumber);
+      const num = rawRn ? rawRn.replace(/[^a-zA-Z0-9]/g, "").toLowerCase() : "";
+      return num && num === cleanTarget;
     });
     if (matchedRn?.bpb_number) {
       return { bpbNumber: matchedRn.bpb_number };
@@ -107,9 +128,9 @@ export function WarehouseCreate({
     // 2. Check existingBpbs list
     const pool = existingBpbs.length > 0 ? existingBpbs : (warehouseRows || []);
     for (const bpb of pool) {
-      const bpbNum = bpb.bpbNumber || bpb.bpb_number || bpb._rawNumber || "";
-      const rawRn = bpb.rnNumber || bpb._rawRn || "";
-      const cleanRawRn = rawRn.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
+      const bpbNum = getSafeDocString(bpb._rawNumber) || getSafeDocString(bpb.bpbNumber) || getSafeDocString(bpb.bpb_number);
+      const rawRn = getSafeDocString(bpb._rawRn) || getSafeDocString(bpb.rn_number) || getSafeDocString(bpb.rnNumber);
+      const cleanRawRn = rawRn ? rawRn.replace(/[^a-zA-Z0-9]/g, "").toLowerCase() : "";
       if (cleanRawRn && cleanRawRn === cleanTarget) {
         return { bpbNumber: bpbNum, date: bpb.date || bpb.receiveDate };
       }
@@ -223,7 +244,7 @@ export function WarehouseCreate({
   // Populate form from selected existing Receive Note (RN)
   const populateFromRn = (rnObj: any) => {
     if (!rnObj) return;
-    const rnNum = rnObj.rn_number || rnObj.rnNumber || "";
+    const rnNum = getSafeDocString(rnObj.rn_number) || getSafeDocString(rnObj._rawRn) || getSafeDocString(rnObj.rnNumber);
     const supName = rnObj.supplier?.name || rnObj.supplierName || (typeof rnObj.supplier === "string" ? rnObj.supplier : "");
     setRnNumber(rnNum);
     if (supName) {
@@ -314,9 +335,10 @@ export function WarehouseCreate({
       setNotification(null);
     }
 
-    const matchedRn = existingRns.find(
-      (r) => (r.rn_number || r.rnNumber) === selectedRnNumber
-    );
+    const matchedRn = existingRns.find((r) => {
+      const num = getSafeDocString(r.rn_number) || getSafeDocString(r._rawRn) || getSafeDocString(r.rnNumber);
+      return num === selectedRnNumber;
+    });
 
     if (matchedRn) {
       populateFromRn(matchedRn);
@@ -388,8 +410,6 @@ export function WarehouseCreate({
           return num === cleanTarget;
         });
         if (found) {
-          const poNum = found._rawNumber || found._rawPo || found.poNumber;
-          setSelectedRefKey(`PO:${poNum}`);
           populateFromPo(found);
         }
       } else if (list.length > 0 && !supplier) {
@@ -417,7 +437,7 @@ export function WarehouseCreate({
       .catch(() => { });
 
     // 2b. Fetch existing BPBs to detect duplicate material receipts (Double BPB)
-    fetchList("bpb", { perPage: 100 })
+    fetchList("warehouse", { perPage: 100 })
       .then((res) => {
         if (!isMounted) return;
         const bpbs = res.rows && res.rows.length > 0 ? res.rows : warehouseRows;
@@ -470,202 +490,6 @@ export function WarehouseCreate({
       isMounted = false;
     };
   }, [initialPoNumber]);
-
-  // Handle Reference PO / RN Selection
-  const handleSelectReference = (val: string) => {
-    setSelectedRefKey(val);
-    if (!val) return;
-
-    if (val.startsWith("PO:")) {
-      const poNum = val.slice(3);
-      const foundPo = approvedPos.find(
-        (p) => (p._rawNumber || p._rawPo || p.poNumber) === poNum
-      );
-      if (foundPo) {
-        populateFromPo(foundPo);
-      } else {
-        fetchDetail("po", poNum).then((detail) => {
-          if (detail) {
-            populateFromPo(detail);
-          }
-        });
-      }
-    } else if (val.startsWith("RN:")) {
-      const rnNum = val.slice(3);
-      const foundRn = existingRns.find(
-        (r) => (r.rn_number || r.rnNumber) === rnNum
-      );
-      if (foundRn) {
-        populateFromRn(foundRn);
-      }
-    }
-  };
-
-  // Handle PO selection directly inside an Item Row (matching PR selection in PO Create)
-  const handleSelectRowPo = (rowId: string, selectedPoNumber: string) => {
-    if (!selectedPoNumber || selectedPoNumber === "—") {
-      handleUpdateItemField(rowId, "poNumber", "");
-      return;
-    }
-
-    const foundPo = approvedPos.find(
-      (p) => (p._rawNumber || p._rawPo || p.poNumber) === selectedPoNumber
-    );
-
-    if (!foundPo) {
-      handleUpdateItemField(rowId, "poNumber", selectedPoNumber);
-      fetchDetail("po", selectedPoNumber).then((detail) => {
-        if (detail) {
-          setApprovedPos((prev) => [...prev, detail]);
-          populateFromPo(detail);
-        }
-      });
-      return;
-    }
-
-    if (foundPo) {
-      const poNum = foundPo._rawNumber || foundPo._rawPo || foundPo.poNumber || selectedPoNumber;
-      const prNum = foundPo._rawPr || foundPo.prNumber || "—";
-      const rawSup = String(foundPo._rawSupplier || foundPo.supplier || "")
-        .replace(/^\[[^\]]+\]\s*/, "")
-        .trim();
-
-      setSelectedRefKey(`PO:${poNum}`);
-      setPoNumberHeader(poNum);
-      if (rawSup) setSupplier(rawSup);
-      if (foundPo._rawRn && foundPo._rawRn !== "—") {
-        setRnNumber(foundPo._rawRn);
-      }
-      if (foundPo._rawRemark && foundPo._rawRemark !== "-") {
-        setRemark(foundPo._rawRemark);
-      }
-
-      const poItems = getPoItemsList(foundPo);
-      const defaultWh =
-        warehouses[0]?.name ||
-        (initialWarehouseMasterRecords[0] as any)?.name ||
-        "Gudang Sparepart";
-      const defaultSj = `SJ-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 900) + 100)}`;
-
-      if (poItems.length > 0) {
-        const first = poItems[0];
-        const rawQtyStr = String(first.orderQty || first.rawQty || first.quantity || "1").replace(/[^0-9.]/g, "");
-        const qtyNum = parseFloat(rawQtyStr) || 1;
-        const unitMatch = String(first.quantity || "").match(/[A-Za-z]+$/);
-        const unitStr = first.unit || (unitMatch ? unitMatch[0] : "PCE");
-
-        setItems((prev) => {
-          const updated = prev.map((r) => {
-            if (r.id !== rowId) return r;
-            return {
-              ...r,
-              po_has_items_id: first.po_has_items_id || first.id,
-              poNumber: poNum,
-              prNumber: first.prNumber || prNum,
-              name: first.item || first.itemName || "Material Item",
-              code: first.itemCode || first.itemAlias || "10.100.100.001",
-              jobNumber: first.jobNumber || r.jobNumber || "—",
-              deliveryNote: r.deliveryNote || defaultSj,
-              orderedQty: qtyNum,
-              receiveQty: qtyNum,
-              unit: unitStr,
-              location: r.location || defaultWh,
-              purpose: first.remark || foundPo._rawRemark || "Warehouse Inbound Receipt",
-            };
-          });
-
-          if (poItems.length > 1) {
-            const extraRows: BPBItemRow[] = poItems.slice(1).map((extra: any, extraIdx: number) => {
-              const extraQtyStr = String(extra.orderQty || extra.rawQty || extra.quantity || "1").replace(/[^0-9.]/g, "");
-              const extraQtyNum = parseFloat(extraQtyStr) || 1;
-              const extraUnitMatch = String(extra.quantity || "").match(/[A-Za-z]+$/);
-              const extraUnitStr = extra.unit || (extraUnitMatch ? extraUnitMatch[0] : "PCE");
-              return {
-                id: `bpb-item-${Date.now()}-${extraIdx + 1}`,
-                po_has_items_id: extra.po_has_items_id || extra.id,
-                poNumber: poNum,
-                prNumber: extra.prNumber || prNum,
-                name: extra.item || extra.itemName || "Material Item",
-                code: extra.itemCode || extra.itemAlias || "10.100.100.001",
-                jobNumber: extra.jobNumber || "—",
-                deliveryNote: defaultSj,
-                orderedQty: extraQtyNum,
-                receiveQty: extraQtyNum,
-                unit: extraUnitStr,
-                location: defaultWh,
-                purpose: extra.remark || foundPo._rawRemark || "Warehouse Inbound Receipt",
-              };
-            });
-            return [...updated, ...extraRows];
-          }
-
-          return updated;
-        });
-        return;
-      } else {
-        // Fallback when summary PO row has empty _items: populate from summary & fetch detail
-        const totalQtyNum = parseFloat(String(foundPo._totalQty || "1").replace(/[^0-9.]/g, "")) || 1;
-        setItems((prev) =>
-          prev.map((r) => {
-            if (r.id !== rowId) return r;
-            return {
-              ...r,
-              poNumber: poNum,
-              prNumber: prNum,
-              name: foundPo._rawRemark && foundPo._rawRemark !== "-" ? foundPo._rawRemark : r.name || "Material Item",
-              code: r.code || "10.100.100.001",
-              deliveryNote: r.deliveryNote || defaultSj,
-              orderedQty: totalQtyNum,
-              receiveQty: totalQtyNum,
-              location: r.location || defaultWh,
-              purpose: foundPo._rawRemark || r.purpose || "Warehouse Inbound Receipt",
-            };
-          })
-        );
-
-        fetchDetail("po", poNum).then((detail) => {
-          const detailItems = getPoItemsList(detail);
-          if (detail && detailItems.length > 0) {
-            const first = detailItems[0];
-            const rawQtyStr = String(first.orderQty || first.rawQty || first.quantity || "1").replace(/[^0-9.]/g, "");
-            const qtyNum = parseFloat(rawQtyStr) || 1;
-            const unitMatch = String(first.quantity || "").match(/[A-Za-z]+$/);
-            const unitStr = first.unit || (unitMatch ? unitMatch[0] : "PCE");
-
-            setItems((prev) =>
-              prev.map((r) => {
-                if (r.id !== rowId) return r;
-                return {
-                  ...r,
-                  po_has_items_id: first.po_has_items_id || first.id,
-                  poNumber: poNum,
-                  prNumber: first.prNumber || prNum,
-                  name: first.item || first.itemName || "Material Item",
-                  code: first.itemCode || first.itemAlias || "10.100.100.001",
-                  jobNumber: first.jobNumber || r.jobNumber || "—",
-                  deliveryNote: r.deliveryNote || defaultSj,
-                  orderedQty: qtyNum,
-                  receiveQty: qtyNum,
-                  unit: unitStr,
-                  location: r.location || defaultWh,
-                  purpose: first.remark || detail._rawRemark || "Warehouse Inbound Receipt",
-                };
-              })
-            );
-          }
-        });
-        return;
-      }
-    }
-
-    handleUpdateItemField(rowId, "poNumber", selectedPoNumber);
-  };
-
-  // Generate a fresh RN Number
-  const handleGenerateNewRn = () => {
-    const seq = String(Math.floor(Math.random() * 900) + 100).padStart(4, "0");
-    setRnNumber(`${seq}/RN-IMLI/X/2026`);
-  };
 
   // Add Item Line
   const handleAddItemLine = () => {
@@ -735,7 +559,10 @@ export function WarehouseCreate({
 
   // Total Received Quantity
   const totalReceivedQty = useMemo(() => {
-    return items.reduce((sum, it) => sum + (Number(it.receiveQty) || 0), 0);
+    return items.reduce((sum, it) => {
+      const parsed = parseFloat(String(it.receiveQty ?? "").replace(",", "."));
+      return sum + (isNaN(parsed) ? 0 : parsed);
+    }, 0);
   }, [items]);
 
   // Validation
@@ -751,7 +578,8 @@ export function WarehouseCreate({
         if (!it.name.trim()) {
           errors[`item_${idx}_name`] = `Row ${idx + 1}: Material item name is required.`;
         }
-        if (!it.receiveQty || Number(it.receiveQty) <= 0) {
+        const qtyNum = parseFloat(String(it.receiveQty ?? "").replace(",", "."));
+        if (it.receiveQty === "" || isNaN(qtyNum) || qtyNum <= 0) {
           errors[`item_${idx}_qty`] = `Row ${idx + 1}: Receive Qty must be greater than 0.`;
         }
       });
@@ -801,7 +629,7 @@ export function WarehouseCreate({
           name: it.name,
           jobNumber: it.jobNumber || "—",
           deliveryNote: it.deliveryNote || "SJ-2026-001",
-          receiveQty: Number(it.receiveQty) || 1,
+          receiveQty: parseFloat(String(it.receiveQty ?? "").replace(",", ".")) || 1,
           unit: it.unit || "PCE",
           location: it.location || "Gudang Sparepart",
           purpose: it.purpose || remark || "Warehouse Receipt",
@@ -823,19 +651,6 @@ export function WarehouseCreate({
     }
   };
 
-  // Available Supplier Options
-  const supplierOptions = useMemo(() => {
-    const names = new Set<string>();
-    if (supplier) names.add(supplier);
-    suppliers.forEach((s) => {
-      if (s.name) names.add(s.name);
-    });
-    initialSupplierRecords.forEach((s) => {
-      if (s.supplierName) names.add(s.supplierName);
-    });
-    return Array.from(names);
-  }, [suppliers, supplier]);
-
   // Available Warehouse Locations
   const warehouseOptions = useMemo(() => {
     const locs = new Set<string>(["Gudang Sparepart", "Gudang Utama", "Gudang Bahan Baku", "Gudang B3"]);
@@ -848,58 +663,13 @@ export function WarehouseCreate({
     return Array.from(locs);
   }, [warehouses]);
 
-  // Available Material Items for datalist/dropdown
-  const itemOptions = useMemo(() => {
-    const list: Array<{ code: string; name: string }> = [];
-    const seen = new Set<string>();
-    masterItems.forEach((m) => {
-      const name = m.name || m.itemName;
-      const code = m.code || m.itemCode || "";
-      if (name && !seen.has(name)) {
-        seen.add(name);
-        list.push({ code, name });
-      }
-    });
-    initialItemRecords.forEach((m) => {
-      if (m.itemName && !seen.has(m.itemName)) {
-        seen.add(m.itemName);
-        list.push({ code: m.itemCode, name: m.itemName });
-      }
-    });
-    return list;
-  }, [masterItems]);
-
-  // Compile Approved PO options for both Header and Row-level dropdowns
-  const allPoOptions = useMemo(() => {
-    const list: Array<{ poNumber: string; label: string; supplier: string }> = [];
-    const seen = new Set<string>();
-
-    approvedPos.forEach((p) => {
-      const poNum = p._rawNumber || p._rawPo || p.poNumber;
-      if (poNum && !seen.has(poNum)) {
-        seen.add(poNum);
-        const sup = String(p._rawSupplier || p.supplier || "")
-          .replace(/^\[[^\]]+\]\s*/, "")
-          .trim();
-        const itemsCount = getPoItemsList(p).length || 1;
-        list.push({
-          poNumber: poNum,
-          supplier: sup,
-          label: `${poNum}${sup ? ` (${sup} · ${itemsCount} item${itemsCount > 1 ? "s" : ""})` : ""}`,
-        });
-      }
-    });
-
-    return list;
-  }, [approvedPos]);
-
   // Compile RN options list for single RN selection
   const rnOptions = useMemo(() => {
     const list: Array<{ value: string; label: string }> = [];
     const seen = new Set<string>();
 
     existingRns.forEach((r) => {
-      const num = r.rn_number || r.rnNumber;
+      const num = getSafeDocString(r.rn_number) || getSafeDocString(r._rawRn) || getSafeDocString(r.rnNumber);
       if (!num || seen.has(num)) return;
       seen.add(num);
       const sup = r.supplier?.name || r.supplierName || (typeof r.supplier === "string" ? r.supplier : "");
@@ -930,22 +700,21 @@ export function WarehouseCreate({
               notification.type === "error"
                 ? "#fef2f2"
                 : notification.type === "warning"
-                ? "#fffbeb"
-                : "#f0fdf4",
-            border: `1px solid ${
-              notification.type === "error"
+                  ? "#fffbeb"
+                  : "#f0fdf4",
+            border: `1px solid ${notification.type === "error"
                 ? "#fecaca"
                 : notification.type === "warning"
-                ? "#fde68a"
-                : "#bbf7d0"
-            }`,
+                  ? "#fde68a"
+                  : "#bbf7d0"
+              }`,
             borderRadius: "var(--radius-sm)",
             color:
               notification.type === "error"
                 ? "#b91c1c"
                 : notification.type === "warning"
-                ? "#b45309"
-                : "#15803d",
+                  ? "#b45309"
+                  : "#15803d",
             fontSize: "12.5px",
             fontWeight: 600,
             display: "flex",
@@ -1304,15 +1073,24 @@ export function WarehouseCreate({
                               step="any"
                               min="0.0001"
                               className={`tx-input-cell tx-input-cell--num ${formErrors[`item_${idx}_qty`] ? "has-error" : ""}`}
-                              style={{ width: "80px" }}
-                              value={it.receiveQty}
+                              style={{ width: "95px" }}
+                              value={it.receiveQty ?? ""}
                               onChange={(e) =>
                                 handleUpdateItemField(
                                   it.id,
                                   "receiveQty",
-                                  parseFloat(e.target.value) || 0
+                                  e.target.value
                                 )
                               }
+                              onBlur={() => {
+                                const rawVal = String(it.receiveQty ?? "").trim().replace(",", ".");
+                                const parsed = parseFloat(rawVal);
+                                if (!rawVal || isNaN(parsed) || parsed <= 0) {
+                                  handleUpdateItemField(it.id, "receiveQty", 1);
+                                } else {
+                                  handleUpdateItemField(it.id, "receiveQty", parsed);
+                                }
+                              }}
                             />
                             <span style={{ fontSize: "11px", fontWeight: 700, color: "var(--muted)", minWidth: "26px" }}>
                               {it.unit || "PCE"}

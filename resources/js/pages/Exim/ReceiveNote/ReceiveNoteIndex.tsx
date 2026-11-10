@@ -8,6 +8,8 @@ import { CustomSelect } from "../../../components/ui/CustomSelect";
 import { CustomDatePicker } from "../../../components/ui/CustomDatePicker";
 import { TableColumnSettings, type TableColumnOption } from "../../../components/ui/TableColumnSettings";
 import { ApprovalStatusBadge } from "../../../components/approval/ApprovalStatusBadge";
+import { getLocalApprovalState } from "../../../services/approvalApi";
+import { normalizeApprovalStatus } from "../../../types/approval";
 import { formatDisplayDate } from "../../../data/masterApi";
 import {
   initialReceiveNoteRecords,
@@ -67,7 +69,7 @@ export function ReceiveNoteIndex({
             return match ? { ...def, visible: match.visible } : def;
           });
         }
-      } catch (_) {}
+      } catch (_) { }
     }
     return DEFAULT_RN_COLUMNS;
   });
@@ -83,7 +85,7 @@ export function ReceiveNoteIndex({
       const next = prev.map((c) => (c.key === key && !c.disabled ? { ...c, visible: !c.visible } : c));
       try {
         localStorage.setItem("geniusone_rn_table_columns", JSON.stringify(next));
-      } catch (_) {}
+      } catch (_) { }
       return next;
     });
   };
@@ -92,7 +94,7 @@ export function ReceiveNoteIndex({
     setColumns(DEFAULT_RN_COLUMNS);
     try {
       localStorage.removeItem("geniusone_rn_table_columns");
-    } catch (_) {}
+    } catch (_) { }
   };
 
   // Filter records
@@ -534,7 +536,18 @@ export function ReceiveNoteIndex({
                         <td className="rn-td-rnNumber">
                           <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
                             <span className="font-semibold text-ink">{rn.rnNumber}</span>
-                            <ApprovalStatusBadge status={rn.status || "WAITING_APPROVE_1"} showIcon={false} />
+                            <ApprovalStatusBadge
+                              status={
+                                  (rn.status === "Approved" || rn.status === "Approved 2")
+                                  ? "APPROVED"
+                                  : getLocalApprovalState(
+                                    "receive_note",
+                                    rn.rnNumber,
+                                    normalizeApprovalStatus(rn.status || "WAITING_APPROVE_1")
+                                  ).status
+                              }
+                              showIcon={false}
+                            />
                           </div>
                           <div className="text-xs text-muted">
                             Arrival Date: {formatDisplayDate(rn.arrivalDate)}

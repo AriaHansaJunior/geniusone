@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Api\Procurement;
 
 use App\Http\Controllers\Controller;
+use App\Models\Master\Customs\Facility;
 use App\Models\Master\Material\Item;
+use App\Models\Master\Material\UnitOfMeasurement;
 use App\Models\Master\Organization\Department;
 use App\Models\Master\Organization\Section;
 use App\Models\Procurement\PurchaseRequest\PurchaseRequisition;
@@ -29,6 +31,7 @@ class PurchaseRequisitionApiController extends Controller
             'items.item.unitOfMeasurement',
             'items.item.facility',
             'items.closedByUser',
+            'items.orderItems',
             'approvals.user',
         ]);
 
@@ -65,8 +68,32 @@ class PurchaseRequisitionApiController extends Controller
             $status = $pr->status ?? 'Draft';
             $allClosed = $pr->items->isNotEmpty() && $pr->items->every(fn ($it) => (bool) $it->is_closed);
             $hasClosed = $pr->items->isNotEmpty() && $pr->items->contains(fn ($it) => (bool) $it->is_closed);
+
+            $appr2 = $pr->approvals->where('approval_ke', '2')->first();
+            $appr1 = $pr->approvals->where('approval_ke', '1')->first();
+            $isApproved2 = ($status === 'Approved') || ($appr2 && (int) $appr2->status === 1);
+            $isApproved1 = $isApproved2 || ($status === 'Waiting for Approve 2') || ($appr1 && (int) $appr1->status === 1);
+            $baseApprovalStatus = $status;
+
+            // Calculate Outstanding status: Approved PR with some items in PO but some remaining unclosed items not yet ordered
+            $unclosedItems = $pr->items->filter(fn ($it) => ! (bool) $it->is_closed);
+            $totalUnclosed = $unclosedItems->count();
+            $itemsWithPo = $unclosedItems->filter(fn ($it) => $it->orderItems && $it->orderItems->isNotEmpty());
+            $itemsFullyOrdered = $unclosedItems->filter(function ($it) {
+                if (! $it->orderItems || $it->orderItems->isEmpty()) {
+                    return false;
+                }
+                $orderedSum = (float) $it->orderItems->sum('order');
+
+                return $orderedSum >= (float) $it->quantity;
+            });
+
+            $isOutstanding = $isApproved2 && $itemsWithPo->isNotEmpty() && ($itemsFullyOrdered->count() < $totalUnclosed);
+
             if ($allClosed) {
                 $status = 'Closing';
+            } elseif ($isOutstanding) {
+                $status = 'Outstanding';
             } elseif ($hasClosed && in_array($status, ['Approved', 'Approved 1', 'Approved 2'])) {
                 $status = 'Partial Closing';
             }
@@ -74,6 +101,9 @@ class PurchaseRequisitionApiController extends Controller
             $lineItems = $pr->items->map(function ($it, $itIdx) use ($pr) {
                 $isClosed = (bool) ($it->is_closed ?? false);
                 $facilityName = $it->item?->facility?->name ?? 'FASILITAS';
+                $orderedQty = (float) ($it->orderItems ? $it->orderItems->sum('order') : 0);
+                $remainingQty = max(0, (float) $it->quantity - $orderedQty);
+                $hasPo = $it->orderItems && $it->orderItems->isNotEmpty();
 
                 return [
                     'id' => $it->id,
@@ -88,6 +118,11 @@ class PurchaseRequisitionApiController extends Controller
                     'quantity' => number_format((float) $it->quantity, 4).' '.($it->item?->unitOfMeasurement?->name ?? 'PCE'),
                     'qty' => (float) $it->quantity,
                     'rawQty' => (float) $it->quantity,
+                    'ordered_qty' => $orderedQty,
+                    'remaining_qty' => $remainingQty,
+                    'has_po' => $hasPo,
+                    'hasPo' => $hasPo,
+                    'po_count' => $it->orderItems ? $it->orderItems->count() : 0,
                     'unit' => $it->item?->unitOfMeasurement?->name ?? 'PCE',
                     'remark' => $it->remark ?? $it->note ?? 'PP Sby Kebutuhan Operasional',
                     'dueDate' => $this->safeFormatDate($it->due_date),
@@ -137,6 +172,21 @@ class PurchaseRequisitionApiController extends Controller
                 'attachment_url' => $pr->attachment_file ? url('storage/'.$pr->attachment_file) : null,
                 'actions' => '',
                 '_search' => "{$pr->pr_number} {$pr->department?->name} {$creatorName} {$status} {$prRemark}",
+                'is_approved' => $isApproved2,
+                'is_approved_1' => $isApproved1,
+                'is_approved_2' => $isApproved2,
+                'approval_status' => $baseApprovalStatus,
+                'approved1_by' => $appr1?->user?->name,
+                'approved1_at' => $appr1?->updated_at?->format('d-M-Y H:i'),
+                'approved2_by' => $appr2?->user?->name,
+                'approved2_at' => $appr2?->updated_at?->format('d-M-Y H:i'),
+                'approvals' => $pr->approvals->map(fn ($a) => [
+                    'tier' => (int) $a->approval_ke,
+                    'status' => $a->status === 1 ? 'Approved' : 'Pending',
+                    'user' => $a->user?->name ?? 'System',
+                    'date' => $a->updated_at?->format('d-M-Y H:i') ?? '-',
+                    'note' => $a->note,
+                ])->toArray(),
             ];
         })->toArray();
 
@@ -169,6 +219,7 @@ class PurchaseRequisitionApiController extends Controller
             'items.item.unitOfMeasurement',
             'items.item.facility',
             'items.closedByUser',
+            'items.orderItems',
             'approvals.user',
         ])
             ->where('pr_number', $rawCode)
@@ -192,6 +243,9 @@ class PurchaseRequisitionApiController extends Controller
         $lineItems = $pr->items->map(function ($it, $itIdx) use ($pr) {
             $isClosed = (bool) ($it->is_closed ?? false);
             $facilityName = $it->item?->facility?->name ?? 'FASILITAS';
+            $orderedQty = (float) ($it->orderItems ? $it->orderItems->sum('order') : 0);
+            $remainingQty = max(0, (float) $it->quantity - $orderedQty);
+            $hasPo = $it->orderItems && $it->orderItems->isNotEmpty();
 
             return [
                 'id' => $it->id,
@@ -206,6 +260,11 @@ class PurchaseRequisitionApiController extends Controller
                 'quantity' => number_format((float) $it->quantity, 4).' '.($it->item?->unitOfMeasurement?->name ?? 'PCE'),
                 'qty' => (float) $it->quantity,
                 'rawQty' => (float) $it->quantity,
+                'ordered_qty' => $orderedQty,
+                'remaining_qty' => $remainingQty,
+                'has_po' => $hasPo,
+                'hasPo' => $hasPo,
+                'po_count' => $it->orderItems ? $it->orderItems->count() : 0,
                 'unit' => $it->item?->unitOfMeasurement?->name ?? 'PCE',
                 'remark' => $it->remark ?? $it->note ?? 'PP Sby Kebutuhan Operasional',
                 'dueDate' => $this->safeFormatDate($it->due_date),
@@ -223,8 +282,32 @@ class PurchaseRequisitionApiController extends Controller
         $allClosed = $pr->items->isNotEmpty() && $pr->items->every(fn ($it) => (bool) $it->is_closed);
         $hasClosed = $pr->items->isNotEmpty() && $pr->items->contains(fn ($it) => (bool) $it->is_closed);
         $detailStatus = $pr->status ?? 'Waiting for Approve 1';
+
+        $appr2 = $pr->approvals->where('approval_ke', '2')->first();
+        $appr1 = $pr->approvals->where('approval_ke', '1')->first();
+        $isApproved2 = ($detailStatus === 'Approved') || ($appr2 && (int) $appr2->status === 1);
+        $isApproved1 = $isApproved2 || ($detailStatus === 'Waiting for Approve 2') || ($appr1 && (int) $appr1->status === 1);
+        $baseApprovalStatus = $detailStatus;
+
+        // Calculate Outstanding status: Approved PR with some items in PO but some remaining unclosed items not yet ordered
+        $unclosedItems = $pr->items->filter(fn ($it) => ! (bool) $it->is_closed);
+        $totalUnclosed = $unclosedItems->count();
+        $itemsWithPo = $unclosedItems->filter(fn ($it) => $it->orderItems && $it->orderItems->isNotEmpty());
+        $itemsFullyOrdered = $unclosedItems->filter(function ($it) {
+            if (! $it->orderItems || $it->orderItems->isEmpty()) {
+                return false;
+            }
+            $orderedSum = (float) $it->orderItems->sum('order');
+
+            return $orderedSum >= (float) $it->quantity;
+        });
+
+        $isOutstanding = $isApproved2 && $itemsWithPo->isNotEmpty() && ($itemsFullyOrdered->count() < $totalUnclosed);
+
         if ($allClosed) {
             $detailStatus = 'Closing';
+        } elseif ($isOutstanding) {
+            $detailStatus = 'Outstanding';
         } elseif ($hasClosed && in_array($detailStatus, ['Approved', 'Approved 1', 'Approved 2'])) {
             $detailStatus = 'Partial Closing';
         }
@@ -237,6 +320,14 @@ class PurchaseRequisitionApiController extends Controller
             '_rawNumber' => $pr->pr_number,
             'status' => $detailStatus,
             '_rawStatus' => $detailStatus,
+            'is_approved' => $isApproved2,
+            'is_approved_1' => $isApproved1,
+            'is_approved_2' => $isApproved2,
+            'approval_status' => $baseApprovalStatus,
+            'approved1_by' => $appr1?->user?->name,
+            'approved1_at' => $appr1?->updated_at?->format('d-M-Y H:i'),
+            'approved2_by' => $appr2?->user?->name,
+            'approved2_at' => $appr2?->updated_at?->format('d-M-Y H:i'),
             'date' => $this->safeFormatDate($pr->date, 'd-M-Y', $pr->created_at?->format('d-M-Y') ?? '-'),
             '_rawDate' => $this->safeFormatDate($pr->date, 'd-M-Y', $pr->created_at?->format('d-M-Y') ?? '-'),
             'dueDate' => $this->safeFormatDate($pr->due_date),

@@ -267,6 +267,9 @@ export function FilterPanel({ page, filters = {}, onFilterChange }: FilterPanelP
           { value: "approved_1", label: "Approved 1" },
           { value: "approved_2", label: "Approved 2" },
           { value: "approved", label: "Approved (Complete)" },
+          { value: "outstanding", label: "Outstanding" },
+          { value: "partial_closing", label: "Partial Closing" },
+          { value: "closing", label: "Closing" },
           { value: "ready", label: "Ready" },
           { value: "rejected", label: "Rejected" },
         ]}

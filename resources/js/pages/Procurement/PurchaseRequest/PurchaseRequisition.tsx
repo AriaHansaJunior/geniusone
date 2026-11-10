@@ -1,7 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import * as XLSX from "xlsx";
 import { Button } from "../../../components/ui/Button";
-import { SummaryCard } from "../../../components/ui/SummaryCard";
 import { SearchField } from "../../../components/ui/SearchField";
 import { DataTable } from "../../../components/ui/DataTable";
 import { CustomDatePicker } from "../../../components/ui/CustomDatePicker";
@@ -81,7 +80,7 @@ function parseRowDate(dateStr?: string): Date | null {
 
 export function PurchaseRequisition({ onDetail, onCreate }: PurchaseRequisitionProps) {
   const config = pageConfigs.pr;
-  const [stats, setStats] = useState(config.stats);
+  const [, setStats] = useState(config.stats);
   const [rows, setRows] = useState(config.rows);
 
   // Active filters and search states
@@ -127,8 +126,8 @@ export function PurchaseRequisition({ onDetail, onCreate }: PurchaseRequisitionP
   };
 
   // Compute dynamic closing status for each PR row (UI & Data Consistency)
-  const computedRows = useMemo(() => {
-    return rows.map((r) => {
+  const computedRows: TableRow[] = useMemo(() => {
+    return rows.map((r): TableRow => {
       const prNum = String(r._rawNumber || r.prNumber || "");
       const rawItems = r.items || r._items || [];
       const hasItems = Array.isArray(rawItems) && rawItems.length > 0;
@@ -138,6 +137,8 @@ export function PurchaseRequisition({ onDetail, onCreate }: PurchaseRequisitionP
       let effectiveStatus = String(r._rawStatus || r.status || "Draft");
       if (allClosed || effectiveStatus.toLowerCase() === "closing" || effectiveStatus.toLowerCase() === "closed") {
         effectiveStatus = "Closing";
+      } else if (effectiveStatus.toLowerCase() === "outstanding") {
+        effectiveStatus = "Outstanding";
       } else if (hasClosed && (effectiveStatus.toLowerCase().includes("approved") || effectiveStatus === "Ready")) {
         effectiveStatus = "Partial Closing";
       }
@@ -176,9 +177,25 @@ export function PurchaseRequisition({ onDetail, onCreate }: PurchaseRequisitionP
         } else if (statusVal === "approved_1") {
           if (!rowStatus.includes("approved 1")) return false;
         } else if (statusVal === "approved_2") {
-          if (!rowStatus.includes("approved 2")) return false;
+          const isAppr2 =
+            rowStatus.includes("approved 2") ||
+            (rowStatus === "approved" && (r as any).is_approved_2) ||
+            (rowStatus === "outstanding" && ((r as any).is_approved_2 || (r as any).is_approved)) ||
+            (rowStatus === "partial closing" && ((r as any).is_approved_2 || (r as any).is_approved));
+          if (!isAppr2) return false;
         } else if (statusVal === "approved") {
-          if (!rowStatus.includes("approved")) return false;
+          const isAppr =
+            rowStatus.includes("approved") ||
+            (r as any).is_approved === true ||
+            (r as any).approval_status === "Approved" ||
+          ((rowStatus === "outstanding" || rowStatus === "partial closing") && ((r as any).is_approved || (r as any).approval_status === "Approved"));
+          if (!isAppr) return false;
+        } else if (statusVal === "outstanding") {
+          if (!rowStatus.includes("outstanding")) return false;
+        } else if (statusVal === "closing") {
+          if (!rowStatus.includes("closing")) return false;
+        } else if (statusVal === "partial_closing" || statusVal.includes("partial")) {
+          if (!rowStatus.includes("partial")) return false;
         } else if (statusVal === "ready") {
           if (!rowStatus.includes("ready")) return false;
         } else if (statusVal === "draft") {

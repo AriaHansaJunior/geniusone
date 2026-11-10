@@ -168,9 +168,9 @@ class PrPoTraceabilityCompositeController extends Controller
             default => 'Draft',
         };
 
-        $firstPr = ! empty($row['linked_prs']) ? $row['linked_prs'][0]['pr_number'] : '0026/PR-IMLI/X/2026';
+        $firstPr = $row['linked_prs'][0]['pr_number'] ?? '0026/PR-IMLI/X/2026';
         $supplierName = $row['supplier_name'] ?? 'PT. Surya Baja Mandiri';
-        $firstBpb = ! empty($row['bpb_details']) ? $row['bpb_details'][0]['bpb_number'] : '0138/WHIN-IMLI/G/X/2026';
+        $firstBpb = $row['bpb_details'][0]['bpb_number'] ?? '0138/WHIN-IMLI/G/X/2026';
 
         $priceVal = (float) ($row['price'] ?? 52000000);
         $totalVal = $priceVal * (float) $row['ordered_quantity'];

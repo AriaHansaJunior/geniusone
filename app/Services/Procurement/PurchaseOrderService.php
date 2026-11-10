@@ -169,7 +169,7 @@ class PurchaseOrderService
                     price: (float) ($item['price'] ?? 0),
                     order: (float) ($item['order'] ?? $item['quantity'] ?? 1),
                     discountVal: (float) ($item['discount_val'] ?? 0),
-                    discountType: $item['discount_type'] ?? 'percentage',
+                    discountType: $item['discount_type'] ?? (isset($item['discount_types_id']) && $item['discount_types_id'] == 2 ? 'amount' : (isset($item['discount_types_id']) && $item['discount_types_id'] == 1 ? 'percentage' : 'none')),
                     ppnRate: (float) ($item['ppn_rate'] ?? 11),
                     isKawasanBerikat: $isKawasanBerikat,
                     pphRate: (float) ($item['pph_rate'] ?? 0),

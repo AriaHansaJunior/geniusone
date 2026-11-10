@@ -28,9 +28,22 @@ export function getLocalApprovalState(
   initialStatus: ApprovalStatus = "WAITING_APPROVE_1"
 ): DocumentApprovalState {
   try {
-    const raw = localStorage.getItem(getStorageKey(module, documentId));
+    const raw =
+      localStorage.getItem(getStorageKey(module, documentId)) ||
+      localStorage.getItem(getStorageKey(module, documentId.replace(/-/g, "/"))) ||
+      localStorage.getItem(getStorageKey(module, documentId.replace(/[\/\\]/g, "-")));
     if (raw) {
-      return JSON.parse(raw);
+      const parsed: DocumentApprovalState = JSON.parse(raw);
+      if (initialStatus === "APPROVED" && parsed.status !== "APPROVED") {
+        parsed.status = "APPROVED";
+        parsed.currentTier = 2;
+        saveLocalApprovalState(module, documentId, parsed);
+      } else if (initialStatus === "WAITING_APPROVE_2" && parsed.status === "WAITING_APPROVE_1") {
+        parsed.status = "WAITING_APPROVE_2";
+        parsed.currentTier = 2;
+        saveLocalApprovalState(module, documentId, parsed);
+      }
+      return parsed;
     }
   } catch (err) {
     console.warn("Error reading local approval state:", err);
@@ -50,7 +63,16 @@ export function saveLocalApprovalState(
   state: DocumentApprovalState
 ): void {
   try {
-    localStorage.setItem(getStorageKey(module, documentId), JSON.stringify(state));
+    const serialized = JSON.stringify(state);
+    localStorage.setItem(getStorageKey(module, documentId), serialized);
+    const slashKey = documentId.replace(/-/g, "/");
+    const dashKey = documentId.replace(/[\/\\]/g, "-");
+    if (slashKey !== documentId) {
+      localStorage.setItem(getStorageKey(module, slashKey), serialized);
+    }
+    if (dashKey !== documentId) {
+      localStorage.setItem(getStorageKey(module, dashKey), serialized);
+    }
   } catch (err) {
     console.warn("Error saving local approval state:", err);
   }
@@ -86,12 +108,13 @@ export async function executeApprove(params: {
   let backendData: any = null;
 
   try {
+    const safeId = encodeURIComponent(String(documentId).replace(/[\/\\]/g, "-"));
     const endpointMap: Partial<Record<ApprovalModule, string>> = {
-      purchase_requisition: `/api/approval/pr/${encodeURIComponent(documentId)}/approve`,
-      purchase_order: `/api/approval/po/${encodeURIComponent(documentId)}/approve`,
-      receive_note: `/api/approval/rn/${encodeURIComponent(documentId)}/approve`,
-      bpb: `/api/approval/bpb/${encodeURIComponent(documentId)}/approve`,
-      request_material: `/api/approval/request-materials/${encodeURIComponent(documentId)}/approve`,
+      purchase_requisition: `/api/approval/pr/${safeId}/approve`,
+      purchase_order: `/api/approval/po/${safeId}/approve`,
+      receive_note: `/api/approval/rn/${safeId}/approve`,
+      bpb: `/api/approval/bpb/${safeId}/approve`,
+      request_material: `/api/approval/request-materials/${safeId}/approve`,
     };
 
     const endpoint = endpointMap[module];
@@ -198,12 +221,13 @@ export async function executeReject(params: {
   // Attempt backend API
   let backendData: any = null;
   try {
+    const safeId = encodeURIComponent(String(documentId).replace(/[\/\\]/g, "-"));
     const endpointMap: Partial<Record<ApprovalModule, string>> = {
-      purchase_requisition: `/api/approval/pr/${encodeURIComponent(documentId)}/reject`,
-      purchase_order: `/api/approval/po/${encodeURIComponent(documentId)}/reject`,
-      receive_note: `/api/approval/rn/${encodeURIComponent(documentId)}/reject`,
-      bpb: `/api/approval/bpb/${encodeURIComponent(documentId)}/reject`,
-      request_material: `/api/approval/request-materials/${encodeURIComponent(documentId)}/reject`,
+      purchase_requisition: `/api/approval/pr/${safeId}/reject`,
+      purchase_order: `/api/approval/po/${safeId}/reject`,
+      receive_note: `/api/approval/rn/${safeId}/reject`,
+      bpb: `/api/approval/bpb/${safeId}/reject`,
+      request_material: `/api/approval/request-materials/${safeId}/reject`,
     };
 
     const endpoint = endpointMap[module];
@@ -289,12 +313,13 @@ export async function executeUnapprove(params: {
 
   // Call real backend API unapproval
   try {
+    const safeId = encodeURIComponent(String(documentId).replace(/[\/\\]/g, "-"));
     const endpointMap: Partial<Record<ApprovalModule, string>> = {
-      purchase_requisition: `/api/approval/pr/${encodeURIComponent(documentId)}/unapprove`,
-      purchase_order: `/api/approval/po/${encodeURIComponent(documentId)}/unapprove`,
-      receive_note: `/api/approval/rn/${encodeURIComponent(documentId)}/unapprove`,
-      bpb: `/api/approval/bpb/${encodeURIComponent(documentId)}/unapprove`,
-      request_material: `/api/approval/request-materials/${encodeURIComponent(documentId)}/unapprove`,
+      purchase_requisition: `/api/approval/pr/${safeId}/unapprove`,
+      purchase_order: `/api/approval/po/${safeId}/unapprove`,
+      receive_note: `/api/approval/rn/${safeId}/unapprove`,
+      bpb: `/api/approval/bpb/${safeId}/unapprove`,
+      request_material: `/api/approval/request-materials/${safeId}/unapprove`,
     };
 
     const endpoint = endpointMap[module];
@@ -474,9 +499,10 @@ export function recordDocumentActivity(params: {
 
   // Optional async notification to backend activity log if available
   try {
+    const safeId = encodeURIComponent(String(documentId).replace(/[\/\\]/g, "-"));
     const endpointMap: Partial<Record<ApprovalModule, string>> = {
-      purchase_requisition: `/api/approval/pr/${encodeURIComponent(documentId)}/activity`,
-      purchase_order: `/api/approval/po/${encodeURIComponent(documentId)}/activity`,
+      purchase_requisition: `/api/approval/pr/${safeId}/activity`,
+      purchase_order: `/api/approval/po/${safeId}/activity`,
     };
     const ep = endpointMap[module];
     if (ep && typeof fetch !== "undefined") {
@@ -489,7 +515,7 @@ export function recordDocumentActivity(params: {
             (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || "",
         },
         body: JSON.stringify({ action, note, documentNumber }),
-      }).catch(() => {});
+      }).catch(() => { });
     }
   } catch {
     // ignore

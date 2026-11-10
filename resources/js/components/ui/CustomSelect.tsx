@@ -115,7 +115,7 @@ export function CustomSelect({
   return (
     <div
       ref={containerRef}
-      className={`custom-select-container ${className} ${disabled ? "is-disabled" : ""}`}
+      className={`custom-select-container ${className} ${disabled ? "is-disabled" : ""} ${isOpen ? "is-open" : ""}`}
       id={id}
       style={style}
     >

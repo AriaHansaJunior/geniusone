@@ -61,7 +61,7 @@ export async function fetchList(
  * Falls back to local row finder if network fails or 404.
  */
 export async function fetchDetail(
-    module: "pr" | "po" | "report" | "warehouse",
+    module: "pr" | "po" | "report" | "warehouse" | "rn",
     code: string
   ): Promise<TableRow | null> {
     try {
@@ -83,6 +83,7 @@ export async function fetchDetail(
     }
 
     // Graceful Fallback
+    if (module === "rn") return null;
     const list =
       module === "pr"
         ? prRows
@@ -234,15 +235,20 @@ export async function fetchDetail(
     remark?: string;
     items: Array<{
       pr_has_items_id?: number;
+      prNumber?: string;
+      item_code?: string;
+      item_alias?: string;
       price: number;
       order: number;
       purchased?: number;
-      discount_types_id?: number;
+      discount_type?: string;
+      discount_types_id?: number | null;
       discount_val?: number;
       discountPercent?: number;
-      pph_id?: number;
-      ppn_id?: number;
+      pph_id?: number | null;
+      ppn_id?: number | null;
       itemName?: string;
+      remark?: string;
     }>;
     additional_costs?: Array<{
       additional_cost_types_id?: number;

@@ -67,7 +67,7 @@ class PrPoTraceabilityService
                     'pr_date' => $pr->date,
                     'pr_status' => $pr->status,
                 ];
-            })->filter()->unique('pr_id')->values();
+            })->filter()->unique('pr_id')->values()->all();
 
             foreach ($po->items as $poItem) {
                 // Find all physical RN receipts for this PO item
@@ -131,7 +131,7 @@ class PrPoTraceabilityService
                     'outstanding_quantity' => $outstanding,
                     'fulfillment_status' => $fulfillmentStatus,
                     'rn_count' => $rnReceipts->count(),
-                    'bpb_details' => $bpbDetails->unique('bpb_number')->values(),
+                    'bpb_details' => $bpbDetails->unique('bpb_number')->values()->all(),
                 ]);
             }
         }

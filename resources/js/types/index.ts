@@ -46,6 +46,7 @@ export type IconName =
   | "search"
   | "settings"
   | "shield"
+  | "star"
   | "trash"
   | "upload"
   | "user";

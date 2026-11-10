@@ -43,7 +43,7 @@ export function WarehouseDetail({
               return parsed.item;
             }
           }
-        } catch (_) {}
+        } catch (_) { }
       }
     }
     const match = findRowBySlug(warehouseRows, code);
@@ -86,12 +86,12 @@ export function WarehouseDetail({
     typeof row._rawNumber === "string" && row._rawNumber
       ? row._rawNumber
       : typeof row.receiveNumber === "string" && row.receiveNumber
-      ? row.receiveNumber
-      : typeof row.bpbNumber === "string" && row.bpbNumber
-      ? row.bpbNumber
-      : typeof code === "string"
-      ? code.replace(/-/g, "/")
-      : "0138/WHIN-IMLI/G/X/2026";
+        ? row.receiveNumber
+        : typeof row.bpbNumber === "string" && row.bpbNumber
+          ? row.bpbNumber
+          : typeof code === "string"
+            ? code.replace(/-/g, "/")
+            : "0138/WHIN-IMLI/G/X/2026";
 
   const rnNumber = String(row._rawRn || row.rnNumber || "0131/RN-IMLI/X/2026");
   const poNumber = String(row._rawPo || row.poNumber || "POL-0926-0332");
@@ -126,8 +126,8 @@ export function WarehouseDetail({
           backendNormalizedStatus === "WAITING_APPROVE_2"
             ? 2
             : backendNormalizedStatus === "APPROVED"
-            ? 2
-            : 1,
+              ? 2
+              : 1,
       };
     }
     return local;
@@ -143,8 +143,8 @@ export function WarehouseDetail({
           backendNormalizedStatus === "WAITING_APPROVE_2"
             ? 2
             : backendNormalizedStatus === "APPROVED"
-            ? 2
-            : 1,
+              ? 2
+              : 1,
       });
     } else {
       setApprovalState(local);
@@ -157,8 +157,8 @@ export function WarehouseDetail({
     row._items && Array.isArray(row._items) && row._items.length > 0
       ? row._items
       : row.items && Array.isArray(row.items) && row.items.length > 0
-      ? row.items
-      : [
+        ? row.items
+        : [
           {
             no: 1,
             name: materialName,
@@ -488,7 +488,7 @@ export function WarehouseDetail({
               {bpbItems.map((it, idx) => {
                 const itemQty = Number(it.receiveQty ?? it.rawQty ?? 25).toFixed(2);
                 const itemUnit = it.unit || primaryUnit;
-                const itemLoc = it.location || location;
+                const itemLoc = it.warehouse || it.warehouseLocation || it.location || location;
                 return (
                   <tr key={it.id || idx}>
                     <td style={{ textAlign: "center", fontWeight: 700, color: "var(--muted)" }}>
@@ -518,7 +518,7 @@ export function WarehouseDetail({
                       </small>
                     </td>
                     <td style={{ fontFamily: "ui-monospace, monospace", fontSize: "11px" }}>
-                      {it.deliveryNote || sjNumber}
+                      {it.dnNumber || it.deliveryNote || sjNumber}
                     </td>
                     <td
                       style={{

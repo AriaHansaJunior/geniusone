@@ -13,12 +13,14 @@ interface ReceiveNoteDetailProps {
   code: string;
   onBack: () => void;
   record?: ReceiveNoteRecord;
+  onApprovalChange?: (rnNumber: string, state: DocumentApprovalState) => void;
 }
 
 export function ReceiveNoteDetail({
   code,
   onBack,
   record,
+  onApprovalChange,
 }: ReceiveNoteDetailProps) {
   const [printMenuOpen, setPrintMenuOpen] = useState(false);
   const printMenuRef = useRef<HTMLDivElement>(null);
@@ -99,7 +101,10 @@ export function ReceiveNoteDetail({
             documentId={rnData.rnNumber}
             documentNumber={rnData.rnNumber}
             state={approvalState}
-            onStateChange={setApprovalState}
+            onStateChange={(nextState) => {
+              setApprovalState(nextState);
+              onApprovalChange?.(rnData.rnNumber, nextState);
+            }}
           />
           <ApprovalTimeline state={approvalState} />
         </div>
@@ -247,12 +252,20 @@ export function ReceiveNoteDetail({
 
             <div className="rn-meta-item">
               <span className="rn-meta-label">Approval 1 at</span>
-              <span className="rn-meta-value">{rnData.approval1At}</span>
+              <span className="rn-meta-value">
+                {approvalState.approved1At
+                  ? `${approvalState.approved1At}${approvalState.approved1By ? ` by ${approvalState.approved1By}` : ""}`
+                  : rnData.approval1At}
+              </span>
             </div>
 
             <div className="rn-meta-item">
               <span className="rn-meta-label">Approval 2 at</span>
-              <span className="rn-meta-value">{rnData.approval2At}</span>
+              <span className="rn-meta-value">
+                {approvalState.approved2At
+                  ? `${approvalState.approved2At}${approvalState.approved2By ? ` by ${approvalState.approved2By}` : ""}`
+                  : rnData.approval2At}
+              </span>
             </div>
           </div>
         </div>

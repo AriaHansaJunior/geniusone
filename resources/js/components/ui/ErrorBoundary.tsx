@@ -88,6 +88,40 @@ export class ErrorBoundary extends Component<Props, State> {
               The application encountered an unexpected issue while rendering this section.
               You can reload the view or reset your filters.
             </p>
+            {this.state.error && (
+              <details
+                style={{
+                  marginTop: "12px",
+                  textAlign: "left",
+                  background: "#fff1f2",
+                  border: "1px solid #fecdd3",
+                  borderRadius: "6px",
+                  padding: "8px 12px",
+                  fontSize: "11px",
+                  color: "#9f1239",
+                  maxWidth: "500px",
+                }}
+              >
+                <summary style={{ cursor: "pointer", fontWeight: 700 }}>
+                  Error details: {this.state.error.message || String(this.state.error)}
+                </summary>
+                {this.state.error.stack && (
+                  <pre
+                    style={{
+                      marginTop: "6px",
+                      whiteSpace: "pre-wrap",
+                      wordBreak: "break-word",
+                      fontSize: "10.5px",
+                      lineHeight: 1.4,
+                      maxHeight: "160px",
+                      overflowY: "auto",
+                    }}
+                  >
+                    {this.state.error.stack}
+                  </pre>
+                )}
+              </details>
+            )}
           </div>
           <Button variant="primary" onClick={this.handleReset}>
             Reload View

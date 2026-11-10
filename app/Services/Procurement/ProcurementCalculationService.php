@@ -35,10 +35,12 @@ class ProcurementCalculationService
         $subtotal = round($price * $order, 2);
 
         // Calculate discount
-        if ($discountType === 'percentage') {
+        if ($discountType === 'percentage' || $discountType === 'percent') {
             $discount = round(($subtotal * $discountVal) / 100, 2);
-        } else {
+        } elseif ($discountType === 'amount' || $discountType === 'nominal') {
             $discount = min($discountVal, $subtotal);
+        } else {
+            $discount = 0.0;
         }
 
         // DPP (Dasar Pengenaan Pajak)

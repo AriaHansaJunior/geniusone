@@ -766,6 +766,10 @@
   min-width: 0;
 }
 
+.custom-select-container.is-open {
+  z-index: 1050;
+}
+
 .custom-select-trigger {
   height: 38px;
   padding: 0 14px;

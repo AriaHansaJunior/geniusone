@@ -567,6 +567,10 @@ class WarehouseApiController extends Controller
                 'unit' => $itUnit,
                 'remark' => $bpb->note ?? 'Operational Receipt',
                 'warehouse' => $map->warehouse?->name ?? 'Gudang Sparepart',
+                'location' => $map->warehouse?->name ?? 'Gudang Sparepart',
+                'warehouseLocation' => $map->warehouse?->name ?? 'Gudang Sparepart',
+                'deliveryNote' => $prn?->dn_number ?: $sjNumber,
+                'receiveQty' => $net,
             ];
         })->toArray();
 

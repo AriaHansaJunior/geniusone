@@ -52,7 +52,7 @@ class WarehouseReportApiController extends Controller
         }
 
         // Fetch actual inbound gate receipts (RN & BPB) matching the item
-        $inbounds = DB::table('purchase_order_has_receive_note as porn')
+        $inboundsQuery = DB::table('purchase_order_has_receive_note as porn')
             ->join('receive_note as rn', 'porn.receive_note_id', '=', 'rn.id')
             ->leftJoin('po_rn_to_bpb as pb', 'pb.po_has_rn_id', '=', 'porn.id')
             ->leftJoin('bpb_receive_material as bpb', 'pb.bpb_receive_material_id', '=', 'bpb.id')
@@ -61,17 +61,23 @@ class WarehouseReportApiController extends Controller
                 $q->where('porn.item_name', 'like', "%{$item->name}%")
                     ->orWhere('porn.item_name', 'like', "%{$item->code}%");
             })
-            ->whereBetween('rn.arrival_date', ["{$startDate} 00:00:00", "{$endDate} 23:59:59"])
-            ->select([
-                'rn.id as rn_id',
-                'rn.rn_number',
-                'rn.arrival_date as date',
-                'bpb.bpb_number',
-                'porn.quantity as qty_in',
-                'w.name as warehouse_name',
-                'rn.note',
-            ])
-            ->get();
+            ->whereBetween('rn.arrival_date', ["{$startDate} 00:00:00", "{$endDate} 23:59:59"]);
+
+        if (! empty($warehouseId) && $warehouseId !== 'all') {
+            $inboundsQuery->where('pb.warehouses_id', $warehouseId);
+        }
+
+        $inbounds = $inboundsQuery->select([
+            'rn.id as rn_id',
+            'rn.rn_number',
+            'rn.arrival_date as date',
+            'bpb.bpb_number',
+            'bpb.status as bpb_status',
+            'porn.quantity as qty_in',
+            'porn.rafaksi as qty_rafaksi',
+            'w.name as warehouse_name',
+            'rn.note',
+        ])->get();
 
         $currentStock = (float) $item->stock;
         $totalIn = (float) $inbounds->sum('qty_in');
@@ -164,13 +170,31 @@ class WarehouseReportApiController extends Controller
 
         $items = $query->orderBy('name')->get();
 
-        $warehouses = Warehouse::where('status', 1)->pluck('name')->toArray();
-        $defaultWh = ! empty($warehouses) ? $warehouses[0] : 'Main Warehouse';
+        // Map items to warehouses based on actual approved BPB material receipts
+        $inboundWhMap = DB::table('po_rn_to_bpb as pb')
+            ->join('bpb_receive_material as bpb', 'pb.bpb_receive_material_id', '=', 'bpb.id')
+            ->join('purchase_order_has_receive_note as porn', 'pb.po_has_rn_id', '=', 'porn.id')
+            ->join('warehouses as w', 'pb.warehouses_id', '=', 'w.id')
+            ->whereIn('bpb.status', ['Approved', 'Approved 2'])
+            ->select('porn.item_name', 'w.id as warehouse_id', 'w.name as warehouse_name')
+            ->orderByDesc('pb.id')
+            ->get()
+            ->groupBy('item_name');
 
-        $records = $items->map(function ($item, $idx) use ($defaultWh) {
+        $warehouses = Warehouse::where('status', 1)->pluck('name', 'id')->toArray();
+        $defaultWh = ! empty($warehouses) ? array_values($warehouses)[0] : 'Main Warehouse';
+
+        $records = $items->map(function ($item, $idx) use ($inboundWhMap, $defaultWh) {
             $stock = (float) $item->stock;
             $minStock = 10.0;
             $status = $stock <= 0 ? 'Out of Stock' : ($stock < $minStock ? 'Low Stock' : 'In Stock');
+
+            // Find matching warehouse from BPB receipts
+            $matchingInbound = $inboundWhMap->get($item->name)?->first()
+                ?? $inboundWhMap->first(fn ($group, $name) => str_contains($name, $item->name) || str_contains($item->name, $name))?->first();
+
+            $whName = $matchingInbound?->warehouse_name ?? $defaultWh;
+            $whId = $matchingInbound?->warehouse_id;
 
             return [
                 'id' => (string) $item->id,
@@ -180,7 +204,8 @@ class WarehouseReportApiController extends Controller
                 'category' => $item->category?->name ?? 'General',
                 'brand' => $item->brand?->name ?? '-',
                 'unit' => $item->unit?->name ?? 'PCS',
-                'warehouse' => $defaultWh,
+                'warehouse' => $whName,
+                'warehouse_id' => $whId,
                 'current_stock' => $stock,
                 'minimum_stock' => $minStock,
                 'status' => $status,
@@ -191,6 +216,20 @@ class WarehouseReportApiController extends Controller
                 },
             ];
         });
+
+        if (! empty($warehouseId) && $warehouseId !== 'all') {
+            $records = $records->filter(function ($r) use ($warehouseId, $warehouses) {
+                if (is_numeric($warehouseId)) {
+                    return (int) $r['warehouse_id'] === (int) $warehouseId || ($warehouses[$warehouseId] ?? null) === $r['warehouse'];
+                }
+
+                return strtolower($r['warehouse']) === strtolower($warehouseId);
+            })->values()->map(function ($r, $i) {
+                $r['no'] = $i + 1;
+
+                return $r;
+            });
+        }
 
         return response()->json([
             'status' => 'success',

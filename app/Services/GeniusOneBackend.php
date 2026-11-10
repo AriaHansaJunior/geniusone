@@ -124,6 +124,30 @@ class GeniusOneBackend
     }
 
     /**
+     * Unified Warehouse Domain Accessor.
+     */
+    public static function warehouse(): object
+    {
+        return new class
+        {
+            public function createReceiveNote(array $headerData, array $receivedItems, int $userId = 1): ReceiveNote
+            {
+                return GeniusOneBackend::receiveNote()->createReceiveNote($headerData, $receivedItems, $userId);
+            }
+
+            public function approveRn(int $id, int $userId, int $tier = 1, ?string $note = null): ReceiveNote
+            {
+                return GeniusOneBackend::warehouseApproval()->approveRn($id, $userId, $tier, $note);
+            }
+
+            public function rejectRn(int $id, int $userId, int $tier = 1, ?string $reason = null): ReceiveNote
+            {
+                return GeniusOneBackend::warehouseApproval()->rejectRn($id, $userId, $tier, $reason);
+            }
+        };
+    }
+
+    /**
      * Warehouse Inbound BPB Service (Warehouse Storage Allocation).
      */
     public static function bpb(): BpbWarehouseService

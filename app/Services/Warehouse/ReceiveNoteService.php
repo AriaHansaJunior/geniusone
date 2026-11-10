@@ -35,6 +35,9 @@ class ReceiveNoteService
 
         return DB::transaction(function () use ($headerData, $receivedItems, $userId) {
             $rnNumber = $headerData['rn_number'] ?? DocumentNumberGenerator::generateRnNumber();
+            if (ReceiveNote::withTrashed()->where('rn_number', $rnNumber)->exists()) {
+                $rnNumber = DocumentNumberGenerator::generateRnNumber();
+            }
 
             $receiveNote = ReceiveNote::create([
                 'rn_number' => $rnNumber,

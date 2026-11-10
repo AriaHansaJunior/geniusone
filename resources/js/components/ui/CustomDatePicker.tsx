@@ -11,6 +11,8 @@ export interface CustomDatePickerProps {
   name?: string;
   align?: "left" | "right";
   style?: React.CSSProperties;
+  min?: string; // Format: "YYYY-MM-DD"
+  max?: string; // Format: "YYYY-MM-DD"
 }
 
 const MONTH_NAMES = [
@@ -67,6 +69,8 @@ export function CustomDatePicker({
   name,
   align = "left",
   style,
+  min,
+  max,
 }: CustomDatePickerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isYearPickerOpen, setIsYearPickerOpen] = useState(false);
@@ -177,6 +181,9 @@ export function CustomDatePicker({
   const handleToday = (e: React.MouseEvent) => {
     e.stopPropagation();
     const isoString = formatToISO(today.getFullYear(), today.getMonth(), today.getDate());
+    if ((min && isoString < min) || (max && isoString > max)) {
+      return;
+    }
     onChange?.(isoString);
     setViewYear(today.getFullYear());
     setViewMonth(today.getMonth());
@@ -197,6 +204,7 @@ export function CustomDatePicker({
       isCurrentMonth: boolean;
       iso: string;
       isSelected: boolean;
+      isDisabled: boolean;
       isToday: boolean;
     }> = [];
 
@@ -206,6 +214,7 @@ export function CustomDatePicker({
       const m = viewMonth === 0 ? 11 : viewMonth - 1;
       const y = viewMonth === 0 ? viewYear - 1 : viewYear;
       const iso = formatToISO(y, m, day);
+      const isDateDisabled = Boolean((min && iso < min) || (max && iso > max));
       days.push({
         day,
         month: m,
@@ -213,6 +222,7 @@ export function CustomDatePicker({
         isCurrentMonth: false,
         iso,
         isSelected: iso === value,
+        isDisabled: isDateDisabled,
         isToday:
           today.getFullYear() === y &&
           today.getMonth() === m &&
@@ -223,6 +233,7 @@ export function CustomDatePicker({
     // Current month days
     for (let day = 1; day <= daysInCurrentMonth; day++) {
       const iso = formatToISO(viewYear, viewMonth, day);
+      const isDateDisabled = Boolean((min && iso < min) || (max && iso > max));
       days.push({
         day,
         month: viewMonth,
@@ -230,6 +241,7 @@ export function CustomDatePicker({
         isCurrentMonth: true,
         iso,
         isSelected: iso === value,
+        isDisabled: isDateDisabled,
         isToday:
           today.getFullYear() === viewYear &&
           today.getMonth() === viewMonth &&
@@ -244,6 +256,7 @@ export function CustomDatePicker({
       const m = viewMonth === 11 ? 0 : viewMonth + 1;
       const y = viewMonth === 11 ? viewYear + 1 : viewYear;
       const iso = formatToISO(y, m, day);
+      const isDateDisabled = Boolean((min && iso < min) || (max && iso > max));
       days.push({
         day,
         month: m,
@@ -251,6 +264,7 @@ export function CustomDatePicker({
         isCurrentMonth: false,
         iso,
         isSelected: iso === value,
+        isDisabled: isDateDisabled,
         isToday:
           today.getFullYear() === y &&
           today.getMonth() === m &&
@@ -259,7 +273,7 @@ export function CustomDatePicker({
     }
 
     return days;
-  }, [viewYear, viewMonth, value, today]);
+  }, [viewYear, viewMonth, value, today, min, max]);
 
   const displayString = formatDisplay(value);
 
@@ -423,12 +437,14 @@ export function CustomDatePicker({
                   <button
                     key={`${item.iso}-${idx}`}
                     type="button"
+                    disabled={item.isDisabled}
+                    style={item.isDisabled ? { opacity: 0.35, cursor: "not-allowed" } : undefined}
                     className={`custom-calendar-day ${
                       !item.isCurrentMonth ? "is-outside" : ""
                     } ${item.isSelected ? "is-selected" : ""} ${
                       item.isToday ? "is-today" : ""
-                    }`}
-                    onClick={() => handleSelectDay(item.year, item.month, item.day)}
+                    } ${item.isDisabled ? "is-disabled" : ""}`}
+                    onClick={() => !item.isDisabled && handleSelectDay(item.year, item.month, item.day)}
                   >
                     {item.day}
                   </button>

@@ -55,6 +55,7 @@ class ReceiveNoteApiController extends Controller
     public function show(Request $request, string $code)
     {
         $rawCode = str_replace('-', '/', $code);
+        $cleanCode = preg_replace('/[^A-Za-z0-9]/', '', $code);
         $rn = ReceiveNote::with([
             'supplier',
             'currency',
@@ -66,6 +67,7 @@ class ReceiveNoteApiController extends Controller
             ->where('rn_number', $rawCode)
             ->orWhere('rn_number', $code)
             ->orWhere('id', is_numeric($code) ? $code : null)
+            ->orWhereRaw("REPLACE(REPLACE(rn_number, '/', ''), '-', '') = ?", [$cleanCode])
             ->first();
 
         if (! $rn) {

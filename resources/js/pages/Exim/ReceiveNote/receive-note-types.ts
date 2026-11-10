@@ -83,6 +83,7 @@ export interface PoItemToPick {
   rnQty: number;
   remainQty: number;
   unitPrice: number;
+  facility?: string;
 }
 
 export type ReceiveNoteSortField =

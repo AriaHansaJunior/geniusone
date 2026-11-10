@@ -11,6 +11,7 @@ interface PickPoItemModalProps {
   onClose: () => void;
   onAddItems: (selectedItems: PoItemToPick[]) => void;
   alreadySelectedKeys?: string[]; // e.g. `${poNumber}-${itemCode}`
+  facilityFilter?: string | null;
 }
 
 export function PickPoItemModal({
@@ -18,6 +19,7 @@ export function PickPoItemModal({
   onClose,
   onAddItems,
   alreadySelectedKeys = [],
+  facilityFilter = null,
 }: PickPoItemModalProps) {
   const [search, setSearch] = useState("");
   const [pageSize, setPageSize] = useState<number>(10);
@@ -38,11 +40,19 @@ export function PickPoItemModal({
           pos.forEach((po: any) => {
             const poNum = po.po_number || po.poNumber || po._rawNumber || "";
             const rawItems = po.items || po._items || [];
+            const poFac = String(po.facility || po.facility_status || po._rawFacility || "FASILITAS");
             rawItems.forEach((it: any, idx: number) => {
               const qty = Number(it.order || it.orderQty || it.rawQty || 1);
               const price = Number(it.price || it.priceRp || 0);
               const name = it.item || it.itemName || it.item_alias || "Material Item";
               const code = it.itemCode || it.code || it.item_alias || "—";
+              const rawItemFac = it.facility || it.facility_status || it._rawFacility || poFac;
+              const cleanFac = String(typeof rawItemFac === "object" && rawItemFac ? rawItemFac.name : rawItemFac || "FASILITAS")
+                .toUpperCase()
+                .includes("NON")
+                ? "NON FASILITAS"
+                : "FASILITAS";
+
               dynamicItems.push({
                 id: `po-${po.id || poNum}-item-${it.id || idx}`,
                 jobNumber: it.job_number || "—",
@@ -56,6 +66,7 @@ export function PickPoItemModal({
                 rnQty: 0,
                 remainQty: qty,
                 unitPrice: price,
+                facility: cleanFac,
               });
             });
           });
@@ -80,6 +91,14 @@ export function PickPoItemModal({
       const uniqueKey = `${item.poNumber}-${item.itemCode}`;
       if (alreadySelectedKeys.includes(uniqueKey)) {
         return false;
+      }
+
+      if (facilityFilter) {
+        const normFilter = facilityFilter.toUpperCase().includes("NON") ? "NON FASILITAS" : "FASILITAS";
+        const itemFac = (item.facility || "FASILITAS").toUpperCase().includes("NON") ? "NON FASILITAS" : "FASILITAS";
+        if (normFilter !== itemFac) {
+          return false;
+        }
       }
 
       if (!search.trim()) return true;
