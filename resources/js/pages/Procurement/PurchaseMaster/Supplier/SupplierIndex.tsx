@@ -71,7 +71,7 @@ export function SupplierIndex({
         rec.createdAt.toLowerCase().includes(query)
       );
     });
-  }, [search]);
+  }, [localRecords, search]);
 
   // Sort records
   const sortedRecords = useMemo(() => {

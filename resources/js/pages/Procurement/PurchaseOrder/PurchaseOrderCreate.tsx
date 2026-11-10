@@ -292,16 +292,19 @@ export function PurchaseOrderCreate({
       if (firstFac === "Facility") setIsKawasanBerikat(true);
     }
 
-    // Filter items matching targetFacility
+    // Filter items matching targetFacility and having remaining quantity > 0 (belum dibeli atau outstanding)
     const matchingPrItems = prItems.filter((it: any) => {
       const fac = resolveFacilityFromItem(it);
-      return fac === targetFacility;
+      const reqQty = Number(it.rawQty || it.qty || parseFloat(safeExtractString(it.quantity).replace(/[^0-9.]/g, "") || "1")) || 1;
+      const ordQty = Number(it.ordered_qty || 0);
+      const remQty = it.remaining_qty !== undefined ? Number(it.remaining_qty) : Math.max(0, reqQty - ordQty);
+      return fac === targetFacility && remQty > 0;
     });
 
     if (matchingPrItems.length === 0) {
       setNotification({
         type: "error",
-        message: `PR ${prNum} does not contain any items with ${targetFacility === "Facility" ? "Facility" : "Non Facility"} status. Please adjust the form Facility Status to proceed with other items.`,
+        message: `PR ${prNum} does not contain any available items with ${targetFacility === "Facility" ? "Facility" : "Non Facility"} status (items may be fully ordered).`,
       });
       return;
     }
@@ -310,12 +313,15 @@ export function PurchaseOrderCreate({
       const excludedCount = prItems.length - matchingPrItems.length;
       setNotification({
         type: "warning",
-        message: `PR ${prNum}: ${matchingPrItems.length} item(s) populated matching ${targetFacility === "Facility" ? "Facility" : "Non Facility"} status (${excludedCount} ${targetFacility === "Facility" ? "Non Facility" : "Facility"} item(s) excluded).`,
+        message: `PR ${prNum}: ${matchingPrItems.length} item(s) populated matching ${targetFacility === "Facility" ? "Facility" : "Non Facility"} status (${excludedCount} item(s) excluded or fully ordered).`,
       });
     }
 
     const newRows: POItemRow[] = matchingPrItems.map((it: any, idx: number) => {
       const reqQty = Number(it.rawQty || it.qty || parseFloat(safeExtractString(it.quantity).replace(/[^0-9.]/g, "") || "1")) || 1;
+      const ordQty = Number(it.ordered_qty || 0);
+      const remQty = it.remaining_qty !== undefined ? Number(it.remaining_qty) : Math.max(0, reqQty - ordQty);
+      const orderQty = remQty > 0 ? remQty : reqQty;
       return {
         id: `po-item-${Date.now()}-${idx}`,
         prNumber: prNum,
@@ -327,15 +333,15 @@ export function PurchaseOrderCreate({
         price: 0,
         unit: safeExtractString(it.unit || "PCE"),
         requestedQty: reqQty,
-        purchasedQty: 0,
-        orderQty: reqQty,
+        purchasedQty: ordQty,
+        orderQty: orderQty,
         discountType: "none",
         discountVal: 0,
         discountPercent: 0,
         subtotal: 0,
-        lme: 0,
+        lme: Number(it.lme || 0),
         optionalRate: 1.0,
-        percentageLme: 0,
+        percentageLme: Number(it.percentage_lme || it.percentageLme || it.lmePercentage || 0),
         pphRate: 0,
         subtotalPph: 0,
         remark: safeExtractString(it.remark || prObj._rawRemark || prObj.remark || ""),
@@ -618,9 +624,9 @@ export function PurchaseOrderCreate({
           discountVal: 0,
           discountPercent: 0,
           subtotal: sub,
-          lme: 0,
+          lme: it.lme ?? 0,
           optionalRate: 1.0,
-          percentageLme: 0,
+          percentageLme: it.percentageLme ?? 0,
           pphRate: 0,
           subtotalPph: 0,
           remark: it.remark || "",
@@ -749,13 +755,16 @@ export function PurchaseOrderCreate({
         const targetFacility = statusFacility;
         const matchingPrItems = prItems.filter((it: any) => {
           const fac = resolveFacilityFromItem(it);
-          return fac === targetFacility;
+          const reqQty = Number(it.rawQty || it.qty || parseFloat(safeExtractString(it.quantity).replace(/[^0-9.]/g, "") || "1")) || 1;
+          const ordQty = Number(it.ordered_qty || 0);
+          const remQty = it.remaining_qty !== undefined ? Number(it.remaining_qty) : Math.max(0, reqQty - ordQty);
+          return fac === targetFacility && remQty > 0;
         });
 
         if (matchingPrItems.length === 0) {
           setNotification({
             type: "error",
-            message: `PR ${selectedPrNumber} does not contain any items with ${targetFacility === "Facility" ? "Facility" : "Non Facility"} status. Items cannot be added to this ${targetFacility === "Facility" ? "Facility" : "Non Facility"} PO.`,
+            message: `PR ${selectedPrNumber} does not contain any available items with ${targetFacility === "Facility" ? "Facility" : "Non Facility"} status (items may be fully ordered).`,
           });
           setItems((prev) =>
             prev.map((r) =>
@@ -781,12 +790,15 @@ export function PurchaseOrderCreate({
           const excludedCount = prItems.length - matchingPrItems.length;
           setNotification({
             type: "warning",
-            message: `PR ${selectedPrNumber}: ${matchingPrItems.length} item(s) populated matching ${targetFacility === "Facility" ? "Facility" : "Non Facility"} status (${excludedCount} ${targetFacility === "Facility" ? "Non Facility" : "Facility"} item(s) excluded).`,
+            message: `PR ${selectedPrNumber}: ${matchingPrItems.length} item(s) populated matching ${targetFacility === "Facility" ? "Facility" : "Non Facility"} status (${excludedCount} item(s) excluded or fully ordered).`,
           });
         }
 
         const first = matchingPrItems[0];
         const reqQty = Number(first.rawQty || first.qty || parseFloat(safeExtractString(first.quantity).replace(/[^0-9.]/g, "") || "1")) || 1;
+        const ordQty = Number(first.ordered_qty || 0);
+        const remQty = first.remaining_qty !== undefined ? Number(first.remaining_qty) : Math.max(0, reqQty - ordQty);
+        const orderQty = remQty > 0 ? remQty : reqQty;
         const itemName = safeExtractString(first.item || first.itemName || "Material Item");
         const itemCode = safeExtractString(first.itemCode || first.code || "—");
         const itemAlias = safeExtractString(first.itemAlias || first.alias || first.itemCode || "—");
@@ -797,7 +809,7 @@ export function PurchaseOrderCreate({
         setItems((prev) => {
           const updated = prev.map((r) => {
             if (r.id !== rowId) return r;
-            const sub = calculateLineSubtotal(r.price, reqQty, r.discountVal ?? r.discountPercent ?? 0, r.discountType || "none");
+            const sub = calculateLineSubtotal(r.price, orderQty, r.discountVal ?? r.discountPercent ?? 0, r.discountType || "none");
             return {
               ...r,
               prNumber: selectedPrNumber,
@@ -808,11 +820,13 @@ export function PurchaseOrderCreate({
               facility: targetFacility,
               unit,
               requestedQty: reqQty,
-              purchasedQty: 0,
-              orderQty: reqQty,
+              purchasedQty: ordQty,
+              orderQty: orderQty,
               remark,
               subtotal: sub,
               subtotalPph: sub * (Number(r.pphRate) || 0),
+              lme: Number(first.lme || 0),
+              percentageLme: Number(first.percentage_lme || first.percentageLme || first.lmePercentage || 0),
             };
           });
 
@@ -820,6 +834,9 @@ export function PurchaseOrderCreate({
           if (matchingPrItems.length > 1) {
             const extraRows: POItemRow[] = matchingPrItems.slice(1).map((extra: any, extraIdx: number) => {
               const extraReqQty = Number(extra.rawQty || extra.qty || parseFloat(safeExtractString(extra.quantity).replace(/[^0-9.]/g, "") || "1")) || 1;
+              const extraOrdQty = Number(extra.ordered_qty || 0);
+              const extraRemQty = extra.remaining_qty !== undefined ? Number(extra.remaining_qty) : Math.max(0, extraReqQty - extraOrdQty);
+              const extraOrderQty = extraRemQty > 0 ? extraRemQty : extraReqQty;
               return {
                 id: `po-item-${Date.now()}-${extraIdx}`,
                 prNumber: selectedPrNumber,
@@ -831,15 +848,15 @@ export function PurchaseOrderCreate({
                 price: 0,
                 unit: safeExtractString(extra.unit || "PCE"),
                 requestedQty: extraReqQty,
-                purchasedQty: 0,
-                orderQty: extraReqQty,
+                purchasedQty: extraOrdQty,
+                orderQty: extraOrderQty,
                 discountType: "none",
                 discountVal: 0,
                 discountPercent: 0,
                 subtotal: 0,
-                lme: 0,
+                lme: Number(extra.lme || 0),
                 optionalRate: 1.0,
-                percentageLme: 0,
+                percentageLme: Number(extra.percentage_lme || extra.percentageLme || extra.lmePercentage || 0),
                 pphRate: 0,
                 subtotalPph: 0,
                 remark: safeExtractString(extra.remark || matchedPr._rawRemark || matchedPr.remark || ""),
@@ -876,14 +893,23 @@ export function PurchaseOrderCreate({
         fetchDetail("pr", selectedPrNumber).then((detail) => {
           const detailItems = getPrItemsList(detail);
           const targetFacility = statusFacility;
-          const matching = detailItems.filter((it: any) => resolveFacilityFromItem(it) === targetFacility);
+          const matching = detailItems.filter((it: any) => {
+            const fac = resolveFacilityFromItem(it);
+            const reqQty = Number(it.rawQty || it.qty || parseFloat(safeExtractString(it.quantity).replace(/[^0-9.]/g, "") || "1")) || 1;
+            const ordQty = Number(it.ordered_qty || 0);
+            const remQty = it.remaining_qty !== undefined ? Number(it.remaining_qty) : Math.max(0, reqQty - ordQty);
+            return fac === targetFacility && remQty > 0;
+          });
           if (detail && matching.length > 0) {
             const first = matching[0];
             const reqQty = Number(first.rawQty || first.qty || parseFloat(safeExtractString(first.quantity).replace(/[^0-9.]/g, "") || "1")) || 1;
+            const ordQty = Number(first.ordered_qty || 0);
+            const remQty = first.remaining_qty !== undefined ? Number(first.remaining_qty) : Math.max(0, reqQty - ordQty);
+            const orderQty = remQty > 0 ? remQty : reqQty;
             setItems((prev) =>
               prev.map((r) => {
                 if (r.id !== rowId) return r;
-                const sub = calculateLineSubtotal(r.price, reqQty, r.discountVal ?? r.discountPercent ?? 0, r.discountType || "none");
+                const sub = calculateLineSubtotal(r.price, orderQty, r.discountVal ?? r.discountPercent ?? 0, r.discountType || "none");
                 return {
                   ...r,
                   pr_has_items_id: first.pr_has_items_id || first.id,
@@ -892,11 +918,13 @@ export function PurchaseOrderCreate({
                   facility: targetFacility,
                   unit: safeExtractString(first.unit || "PCE"),
                   requestedQty: reqQty,
-                  purchasedQty: 0,
-                  orderQty: reqQty,
+                  purchasedQty: ordQty,
+                  orderQty: orderQty,
                   remark: safeExtractString(first.remark || detail._rawRemark || detail.remark || ""),
                   subtotal: sub,
                   subtotalPph: sub * (Number(r.pphRate) || 0),
+                  lme: Number(first.lme || 0),
+                  percentageLme: Number(first.percentage_lme || first.percentageLme || first.lmePercentage || 0),
                 };
               })
             );
@@ -1192,15 +1220,28 @@ export function PurchaseOrderCreate({
             : [];
       const openItems = getPrItemsList(p);
 
-      // Exclude PR ONLY if all items are closed
+      // Exclude PR if all items are closed
       if (st === "closing" || (rawItems.length > 0 && openItems.length === 0)) {
+        return;
+      }
+
+      // Check if PR has any items with remaining quantity > 0 (belum dibeli / outstanding)
+      const openRemainingItems = openItems.filter((it: any) => {
+        const reqQty = Number(it.rawQty || it.qty || it.quantity || 1);
+        const ordQty = Number(it.ordered_qty || 0);
+        const remQty = it.remaining_qty !== undefined ? Number(it.remaining_qty) : Math.max(0, reqQty - ordQty);
+        return remQty > 0;
+      });
+
+      // Exclude PR if all items are already fully ordered
+      if (openItems.length > 0 && openRemainingItems.length === 0) {
         return;
       }
 
       seen.add(num);
       const dept = safeExtractString(p._rawDept || p.deptRequest || "");
       const targetFac = statusFacility;
-      const matchingCount = openItems.filter((it: any) => resolveFacilityFromItem(it) === targetFac).length;
+      const matchingCount = openRemainingItems.filter((it: any) => resolveFacilityFromItem(it) === targetFac).length;
       const existingPo = findExistingPoForPr(num);
       const poWarning = existingPo ? ` ⚠️ [In PO: ${existingPo.poNumber}]` : "";
       const facLabel = targetFac === "Facility" ? "Facility" : "Non Facility";
@@ -1220,10 +1261,16 @@ export function PurchaseOrderCreate({
           const st = safeExtractString(p._rawStatus || p.status).toLowerCase();
           const rawItems = p._items || [];
           const openItems = getPrItemsList(p);
-          if (st !== "closing" && !(rawItems.length > 0 && openItems.length === 0)) {
+          const openRemainingItems = openItems.filter((it: any) => {
+            const reqQty = Number(it.rawQty || it.qty || it.quantity || 1);
+            const ordQty = Number(it.ordered_qty || 0);
+            const remQty = it.remaining_qty !== undefined ? Number(it.remaining_qty) : Math.max(0, reqQty - ordQty);
+            return remQty > 0;
+          });
+          if (st !== "closing" && !(rawItems.length > 0 && openItems.length === 0) && (openItems.length === 0 || openRemainingItems.length > 0)) {
             seen.add(raw);
             const targetFac = statusFacility;
-            const matchingCount = openItems.filter((it: any) => resolveFacilityFromItem(it) === targetFac).length;
+            const matchingCount = openRemainingItems.filter((it: any) => resolveFacilityFromItem(it) === targetFac).length;
             const existingPo = findExistingPoForPr(raw);
             const poWarning = existingPo ? ` ⚠️ [In PO: ${existingPo.poNumber}]` : "";
             const facLabel = targetFac === "Facility" ? "Fasilitas" : "Non Fasilitas";
@@ -1255,10 +1302,10 @@ export function PurchaseOrderCreate({
                   ? "#fffbeb"
                   : "#f0fdf4",
             border: `1px solid ${notification.type === "error"
-                ? "#fecaca"
-                : notification.type === "warning"
-                  ? "#fde68a"
-                  : "#bbf7d0"
+              ? "#fecaca"
+              : notification.type === "warning"
+                ? "#fde68a"
+                : "#bbf7d0"
               }`,
             borderRadius: "var(--radius-sm)",
             color:
@@ -1610,6 +1657,7 @@ export function PurchaseOrderCreate({
                 <div style={{ display: "flex", gap: "8px" }}>
                   <Button
                     variant="secondary"
+                    icon="plus"
                     onClick={() => setIsPrPickerOpen(true)}
                     type="button"
                   >
@@ -1665,20 +1713,42 @@ export function PurchaseOrderCreate({
 
                           {/* 2. PR Number */}
                           <td>
-                            <CustomSelect
-                              className="tx-custom-select-cell"
-                              value={row.prNumber}
-                              onChange={(val) => handleSelectPr(row.id, val)}
-                              placeholder="Select PR Number..."
-                              options={[
-                                { value: "", label: "Select PR Number..." },
-                                { value: "—", label: "— None (Direct PO Item) —" },
-                                ...allPrOptions.map((p) => ({
-                                  value: p.prNumber,
-                                  label: p.label,
-                                })),
-                              ]}
-                            />
+                            {row.prNumber && row.prNumber !== "—" ? (
+                              <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
+                                <span style={{ fontWeight: 600, color: "var(--ink)", fontSize: "12px" }}>
+                                  {row.prNumber}
+                                </span>
+                                {row.pr_has_items_id && (
+                                  <span
+                                    style={{
+                                      fontSize: "10px",
+                                      fontWeight: 700,
+                                      padding: "1px 6px",
+                                      borderRadius: "4px",
+                                      background: "#e0f2fe",
+                                      color: "#0369a1",
+                                    }}
+                                  >
+                                    PR Item
+                                  </span>
+                                )}
+                              </div>
+                            ) : (
+                              <CustomSelect
+                                className="tx-custom-select-cell"
+                                value={row.prNumber}
+                                onChange={(val) => handleSelectPr(row.id, val)}
+                                placeholder="Select PR Number..."
+                                options={[
+                                  { value: "", label: "Select PR Number..." },
+                                  { value: "—", label: "— None (Direct PO Item) —" },
+                                  ...allPrOptions.map((p) => ({
+                                    value: p.prNumber,
+                                    label: p.label,
+                                  })),
+                                ]}
+                              />
+                            )}
                             {(() => {
                               const dupPo = findExistingPoForPr(row.prNumber);
                               const dupRow = findIntraFormDuplicatePr(row.id, row.prNumber);
@@ -1775,23 +1845,16 @@ export function PurchaseOrderCreate({
                             />
                           </td>
 
-                          {/* 7. Unit */}
+                          {/* 7. Unit (Read-only) */}
                           <td>
-                            <CustomSelect
-                              className="tx-custom-select-cell"
-                              value={row.unit}
-                              onChange={(val) => handleUpdateItemField(row.id, "unit", val)}
-                              options={[
-                                { value: "PCE", label: "PCE" },
-                                { value: "PCS", label: "PCS" },
-                                { value: "KGM", label: "KGM" },
-                                { value: "KG", label: "KG" },
-                                { value: "SET", label: "SET" },
-                                { value: "ROLL", label: "ROLL" },
-                                { value: "MTR", label: "MTR" },
-                                { value: "BOX", label: "BOX" },
-                                { value: "LTR", label: "LTR" },
-                              ]}
+                            <input
+                              type="text"
+                              className="tx-input-cell tx-input-cell--disabled"
+                              value={row.unit || "PCE"}
+                              readOnly
+                              disabled
+                              style={{ textAlign: "center" }}
+                              title="Unit cannot be changed"
                             />
                           </td>
 
@@ -1920,14 +1983,16 @@ export function PurchaseOrderCreate({
                             />
                           </td>
 
-                          {/* 12. Percentage LME */}
+                          {/* 12. Percentage LME (Read-only) */}
                           <td>
                             <input
                               type="number"
                               step="any"
-                              className="tx-input-cell tx-input-cell--num"
+                              className="tx-input-cell tx-input-cell--num tx-input-cell--disabled"
                               value={row.percentageLme}
-                              onChange={(e) => handleUpdateItemField(row.id, "percentageLme", parseFloat(e.target.value) || 0)}
+                              readOnly
+                              disabled
+                              title="LME (%) cannot be changed"
                             />
                           </td>
 

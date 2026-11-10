@@ -88,14 +88,21 @@ export function WarehouseCreate({
   };
 
   const getSafeDocString = (val: any): string => {
-    if (!val) return "";
+    if (val === null || val === undefined) return "";
     if (typeof val === "string") return val;
-    if (typeof val === "number") return String(val);
+    if (typeof val === "number" || typeof val === "boolean") return String(val);
     if (typeof val === "object") {
-      if (typeof val.props?.children === "string") return val.props.children;
-      if (Array.isArray(val.props?.children)) {
-        const found = val.props.children.find((c: any) => typeof c === "string");
-        if (found) return found;
+      if (val.props) {
+        if (typeof val.props.children === "string") return val.props.children;
+        if (typeof val.props.children === "number") return String(val.props.children);
+        if (Array.isArray(val.props.children)) {
+          for (const child of val.props.children) {
+            const res = getSafeDocString(child);
+            if (res) return res;
+          }
+        } else if (val.props.children) {
+          return getSafeDocString(val.props.children);
+        }
       }
       try {
         const str = String(val);
@@ -109,13 +116,13 @@ export function WarehouseCreate({
   const findExistingBpbForRn = (rnNum: string): { bpbNumber: string; date?: string } | null => {
     const targetStr = getSafeDocString(rnNum);
     if (!targetStr) return null;
-    const cleanTarget = targetStr.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
+    const cleanTarget = String(targetStr).replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
     if (!cleanTarget) return null;
 
     // 1. Check existingRns for bpb_number
     const matchedRn = existingRns.find((r) => {
       const rawRn = getSafeDocString(r.rn_number) || getSafeDocString(r._rawRn) || getSafeDocString(r.rnNumber);
-      const num = rawRn ? rawRn.replace(/[^a-zA-Z0-9]/g, "").toLowerCase() : "";
+      const num = rawRn ? String(rawRn).replace(/[^a-zA-Z0-9]/g, "").toLowerCase() : "";
       return num && num === cleanTarget;
     });
     if (matchedRn?.bpb_number) {
@@ -130,7 +137,7 @@ export function WarehouseCreate({
     for (const bpb of pool) {
       const bpbNum = getSafeDocString(bpb._rawNumber) || getSafeDocString(bpb.bpbNumber) || getSafeDocString(bpb.bpb_number);
       const rawRn = getSafeDocString(bpb._rawRn) || getSafeDocString(bpb.rn_number) || getSafeDocString(bpb.rnNumber);
-      const cleanRawRn = rawRn ? rawRn.replace(/[^a-zA-Z0-9]/g, "").toLowerCase() : "";
+      const cleanRawRn = rawRn ? String(rawRn).replace(/[^a-zA-Z0-9]/g, "").toLowerCase() : "";
       if (cleanRawRn && cleanRawRn === cleanTarget) {
         return { bpbNumber: bpbNum, date: bpb.date || bpb.receiveDate };
       }

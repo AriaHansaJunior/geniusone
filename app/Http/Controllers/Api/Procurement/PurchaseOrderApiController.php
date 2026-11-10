@@ -442,17 +442,27 @@ class PurchaseOrderApiController extends Controller
                 }
             }
 
+            $discVal = (float) ($it['discount_val'] ?? $it['discountPercent'] ?? 0);
+            $discType = $it['discount_type'] ?? null;
+            if ($discVal <= 0 || $discType === 'none') {
+                $discTypeId = null;
+                $discType = 'none';
+                $discVal = 0;
+            } else {
+                $discTypeId = $it['discount_types_id'] ?? ($discType === 'amount' || $discType === 'nominal' ? 2 : 1);
+            }
+
             $processedItems[] = [
                 'pr_has_items_id' => $prHasItemId,
                 'item_alias' => $it['item_alias'] ?? $it['itemAlias'] ?? $it['itemName'] ?? $it['item_name'] ?? null,
                 'price' => $price,
                 'order' => $orderQty,
                 'purchased' => (float) ($it['purchased'] ?? $orderQty),
-                'discount_type' => $it['discount_type'] ?? ($it['discount_types_id'] == 2 ? 'amount' : ($it['discount_types_id'] == 1 ? 'percentage' : 'none')),
-                'discount_types_id' => $it['discount_types_id'] ?? null,
-                'discount_val' => (float) ($it['discount_val'] ?? $it['discountPercent'] ?? 0),
-                'pph_id' => $it['pph_id'] ?? null,
-                'ppn_id' => $it['ppn_id'] ?? null,
+                'discount_type' => $discType,
+                'discount_types_id' => $discTypeId,
+                'discount_val' => $discVal,
+                'pph_id' => ! empty($it['pph_id']) && is_numeric($it['pph_id']) ? (int) $it['pph_id'] : null,
+                'ppn_id' => ! empty($it['ppn_id']) && is_numeric($it['ppn_id']) ? (int) $it['ppn_id'] : null,
             ];
         }
 

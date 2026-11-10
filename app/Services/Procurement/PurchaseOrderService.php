@@ -7,6 +7,7 @@ use App\Models\PaymentMethod;
 use App\Models\PaymentTerm;
 use App\Models\PoType;
 use App\Models\Procurement\PurchaseOrder\AdditionalCost;
+use App\Models\Procurement\PurchaseOrder\AdditionalCostType;
 use App\Models\Procurement\PurchaseOrder\PurchaseOrder;
 use App\Models\Procurement\PurchaseOrder\PurchaseOrderItem;
 use App\Models\Procurement\PurchaseRequest\PurchaseRequisition;
@@ -165,11 +166,67 @@ class PurchaseOrderService
             $isKawasanBerikat = strtoupper($order->facility_status) === 'FASILITAS';
 
             foreach ($items as $item) {
+                // Determine discount type and value safely to ensure no foreign key violation
+                $rawDiscVal = (float) ($item['discount_val'] ?? $item['discountPercent'] ?? 0);
+                $rawDiscType = $item['discount_type'] ?? null;
+                $rawDiscTypeId = $item['discount_types_id'] ?? null;
+
+                $resolvedDiscTypeId = null;
+                if ($rawDiscVal > 0) {
+                    if (! empty($rawDiscTypeId) && DB::table('discount_types')->where('id', $rawDiscTypeId)->exists()) {
+                        $resolvedDiscTypeId = (int) $rawDiscTypeId;
+                    } elseif ($rawDiscType === 'percentage' || $rawDiscType === 'percent' || $rawDiscTypeId == 1) {
+                        $resolvedDiscTypeId = DB::table('discount_types')->where('name', 'like', '%percent%')->value('id');
+                        if (! $resolvedDiscTypeId) {
+                            $resolvedDiscTypeId = DB::table('discount_types')->insertGetId([
+                                'name' => 'Percentage',
+                                'status' => '1',
+                                'created_at' => now(),
+                                'updated_at' => now(),
+                            ]);
+                        }
+                    } elseif ($rawDiscType === 'amount' || $rawDiscType === 'nominal' || $rawDiscTypeId == 2) {
+                        $resolvedDiscTypeId = DB::table('discount_types')->where('name', 'like', '%nominal%')->orWhere('name', 'like', '%amount%')->value('id');
+                        if (! $resolvedDiscTypeId) {
+                            $resolvedDiscTypeId = DB::table('discount_types')->insertGetId([
+                                'name' => 'Nominal',
+                                'status' => '1',
+                                'created_at' => now(),
+                                'updated_at' => now(),
+                            ]);
+                        }
+                    }
+                }
+
+                // Check PPH foreign key safely
+                $resolvedPphId = null;
+                if (! empty($item['pph_id'])) {
+                    if (DB::table('pph')->where('id', $item['pph_id'])->exists()) {
+                        $resolvedPphId = (int) $item['pph_id'];
+                    }
+                }
+
+                // Check PPN foreign key safely
+                $resolvedPpnId = null;
+                if (! empty($item['ppn_id'])) {
+                    if (DB::table('ppn')->where('id', $item['ppn_id'])->exists()) {
+                        $resolvedPpnId = (int) $item['ppn_id'];
+                    }
+                }
+
+                // Check PR Item foreign key safely
+                $resolvedPrHasItemId = null;
+                if (! empty($item['pr_has_items_id'])) {
+                    if (DB::table('purchase_requisitions_has_items')->where('id', $item['pr_has_items_id'])->exists()) {
+                        $resolvedPrHasItemId = (int) $item['pr_has_items_id'];
+                    }
+                }
+
                 $calc = ProcurementCalculationService::calculateItemFinancials(
                     price: (float) ($item['price'] ?? 0),
                     order: (float) ($item['order'] ?? $item['quantity'] ?? 1),
-                    discountVal: (float) ($item['discount_val'] ?? 0),
-                    discountType: $item['discount_type'] ?? (isset($item['discount_types_id']) && $item['discount_types_id'] == 2 ? 'amount' : (isset($item['discount_types_id']) && $item['discount_types_id'] == 1 ? 'percentage' : 'none')),
+                    discountVal: $rawDiscVal,
+                    discountType: $rawDiscType ?? ($resolvedDiscTypeId == 2 ? 'amount' : ($resolvedDiscTypeId == 1 ? 'percentage' : 'none')),
                     ppnRate: (float) ($item['ppn_rate'] ?? 11),
                     isKawasanBerikat: $isKawasanBerikat,
                     pphRate: (float) ($item['pph_rate'] ?? 0),
@@ -181,23 +238,23 @@ class PurchaseOrderService
 
                 PurchaseOrderItem::create([
                     'purchase_order_id' => $order->id,
-                    'pr_has_items_id' => $item['pr_has_items_id'] ?? null,
+                    'pr_has_items_id' => $resolvedPrHasItemId,
                     'item_alias' => $item['item_alias'] ?? null,
                     'price' => $calc['price'],
                     'purchased' => (float) ($item['purchased'] ?? $calc['order']),
                     'order' => $calc['order'],
-                    'discount_types_id' => $item['discount_types_id'] ?? null,
-                    'discount_val' => (float) ($item['discount_val'] ?? 0),
+                    'discount_types_id' => $resolvedDiscTypeId,
+                    'discount_val' => $rawDiscVal,
                     'subtotal' => $calc['subtotal'],
                     'lme' => $calc['lme'],
                     'optional_rate' => $calc['optional_rate'],
                     'percentage_lme' => $calc['percentage_lme'],
-                    'pph_id' => $item['pph_id'] ?? null,
+                    'pph_id' => $resolvedPphId,
                     'subtotal_pph' => $calc['pph_amount'],
                     'total' => $calc['total'],
                     'discount' => $calc['discount'],
                     'dpp' => $calc['dpp'],
-                    'ppn_id' => $item['ppn_id'] ?? null,
+                    'ppn_id' => $resolvedPpnId,
                     'ditangguhkan_kawasan_berikat' => $isKawasanBerikat ? 1 : 0,
                     'total_addional_cost' => 0,
                     'total_pph' => $calc['pph_amount'],
@@ -208,18 +265,29 @@ class PurchaseOrderService
             foreach ($additionalCosts as $cost) {
                 $typeId = $cost['additional_cost_types_id'] ?? null;
                 if (! $typeId && ! empty($cost['name'] ?? $cost['item'] ?? null)) {
-                    $cName = $cost['name'] ?? $cost['item'];
-                    $type = AdditionalCostType::firstOrCreate(
-                        ['name' => $cName],
-                        ['code' => strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', $cName), 0, 5)), 'status' => 1]
-                    );
-                    $typeId = $type->id;
+                    $cName = trim($cost['name'] ?? $cost['item']);
+                    // Match by code, exact name, or string containing code/name (e.g. "CRN - Jasa Crane / Lifting")
+                    $type = AdditionalCostType::where('name', $cName)
+                        ->orWhere('code', $cName)
+                        ->orWhereRaw('? LIKE CONCAT(\'%\', name, \'%\')', [$cName])
+                        ->orWhereRaw('? LIKE CONCAT(code, \'%\')', [$cName])
+                        ->first();
+
+                    if (! $type) {
+                        $code = strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', $cName), 0, 5));
+                        $type = AdditionalCostType::firstOrCreate(
+                            ['code' => $code],
+                            ['name' => $cName, 'status' => 1]
+                        );
+                    }
+                    $typeId = $type?->id;
                 }
-                if ($typeId) {
+
+                if ($typeId && DB::table('additional_cost_types')->where('id', $typeId)->exists()) {
                     AdditionalCost::create([
                         'purchase_order_id' => $order->id,
                         'additional_cost_types_id' => $typeId,
-                        'value' => (float) ($cost['value'] ?? $cost['nominal'] ?? 0),
+                        'value' => (float) ($cost['value'] ?? $cost['nominal'] ?? $cost['amount'] ?? 0),
                     ]);
                 }
             }
