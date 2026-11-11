@@ -646,17 +646,36 @@ class DocumentApprovalWorkflowService
                     || $it->item_alias === $poRn->item_name;
             });
 
+            $cleanName = trim((string) $poRn->item_name);
             $item = $matchedPoItem?->requisitionItem?->item
-                ?? Item::where('name', $poRn->item_name)->first()
-                ?? Item::where('code', $poRn->item_name)->first()
-                ?? Item::where('name', 'like', "%{$poRn->item_name}%")->first()
-                ?? Item::first();
+                ?? Item::where('name', $cleanName)->first()
+                ?? Item::where('code', $cleanName)->first()
+                ?? Item::whereRaw('LOWER(name) = ?', [strtolower($cleanName)])->first()
+                ?? Item::where('name', 'like', "%{$cleanName}%")->first()
+                ?? $poRn->purchaseOrder?->items?->first()?->requisitionItem?->item;
+
+            if (! $item && ! empty($cleanName)) {
+                $codeSuffix = strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', $cleanName), 0, 8)) ?: 'ITEM';
+                $item = Item::create([
+                    'name' => $cleanName,
+                    'code' => 'MAT-'.$codeSuffix,
+                    'status' => 1,
+                    'stock' => 0,
+                    'categories_id' => 1,
+                    'classifications_id' => 1,
+                    'facilities_id' => 1,
+                    'item_types_id' => 1,
+                    'units_of_measurements_id' => 1,
+                    'updated_by' => $userId,
+                ]);
+            }
 
             if ($item) {
-                $whName = $map->warehouse?->name ?? "Warehouse #{$map->warehouses_id}";
+                $warehouseId = $map->warehouses_id ?: (Warehouse::first()?->id ?? 1);
+                $whName = $map->warehouse?->name ?? "Warehouse #{$warehouseId}";
                 $this->inventoryService->recordStockMovement(
                     item: $item,
-                    warehouseId: $map->warehouses_id,
+                    warehouseId: $warehouseId,
                     movementType: 'IN',
                     quantity: $netQty,
                     referenceType: 'BPB',
@@ -692,17 +711,20 @@ class DocumentApprovalWorkflowService
                     || $it->item_alias === $poRn->item_name;
             });
 
+            $cleanName = trim((string) $poRn->item_name);
             $item = $matchedPoItem?->requisitionItem?->item
-                ?? Item::where('name', $poRn->item_name)->first()
-                ?? Item::where('code', $poRn->item_name)->first()
-                ?? Item::where('name', 'like', "%{$poRn->item_name}%")->first()
-                ?? Item::first();
+                ?? Item::where('name', $cleanName)->first()
+                ?? Item::where('code', $cleanName)->first()
+                ?? Item::whereRaw('LOWER(name) = ?', [strtolower($cleanName)])->first()
+                ?? Item::where('name', 'like', "%{$cleanName}%")->first()
+                ?? $poRn->purchaseOrder?->items?->first()?->requisitionItem?->item;
 
             if ($item) {
-                $whName = $map->warehouse?->name ?? "Warehouse #{$map->warehouses_id}";
+                $warehouseId = $map->warehouses_id ?: (Warehouse::first()?->id ?? 1);
+                $whName = $map->warehouse?->name ?? "Warehouse #{$warehouseId}";
                 $this->inventoryService->recordStockMovement(
                     item: $item,
-                    warehouseId: $map->warehouses_id,
+                    warehouseId: $warehouseId,
                     movementType: 'OUT',
                     quantity: $netQty,
                     referenceType: 'BPB_REVERSAL',

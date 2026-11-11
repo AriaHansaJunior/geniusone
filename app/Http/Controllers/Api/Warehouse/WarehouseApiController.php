@@ -196,16 +196,29 @@ class WarehouseApiController extends Controller
                 $supplierId = Supplier::first()?->id ?? 1;
             }
 
-            // Resolve or Create ReceiveNote (RN)
+            // Resolve ReceiveNote (RN) - strictly mandatory: PR -> PO -> RN -> BPB
             $rnCode = trim((string) ($request->input('rn_number') ?? $request->input('rnNumber') ?? ''));
-            $rn = null;
-            if ($rnCode !== '') {
-                $cleanRn = preg_replace('/[^A-Za-z0-9]/', '', $rnCode);
-                $rn = ReceiveNote::where('rn_number', $rnCode)
-                    ->orWhereRaw("REPLACE(REPLACE(rn_number, '/', ''), '-', '') = ?", [$cleanRn])
-                    ->first();
-            } else {
-                $rnCode = GeniusOneBackend::numbering()->generateRnNumber();
+            if ($rnCode === '') {
+                DB::rollBack();
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'RN Number is required. BPB / Receive Material must be created from an existing Receive Note.',
+                    'errors' => ['rn_number' => ['Please select an RN Number to create BPB.']],
+                ], 422);
+            }
+
+            $cleanRn = preg_replace('/[^A-Za-z0-9]/', '', $rnCode);
+            $rn = ReceiveNote::where('rn_number', $rnCode)
+                ->orWhereRaw("REPLACE(REPLACE(rn_number, '/', ''), '-', '') = ?", [$cleanRn])
+                ->first();
+
+            if (! $rn) {
+                DB::rollBack();
+                return response()->json([
+                    'status' => 'error',
+                    'message' => "Receive Note '{$rnCode}' not found. BPB must be created from an existing Receive Note.",
+                    'errors' => ['rn_number' => ['The selected RN does not exist in the database.']],
+                ], 422);
             }
 
             $rawItems = $request->input('items', []);
@@ -240,52 +253,31 @@ class WarehouseApiController extends Controller
             $invoiceNumber = $request->input('invoice_number') ?? $request->input('invoiceNumber');
             $taxInvoice = $request->input('tax_invoice') ?? $request->input('taxInvoice');
 
-            if (! $rn) {
-                $rn = ReceiveNote::create([
-                    'rn_number' => $rnCode,
-                    'supliers_id' => $supplierId,
-                    'currencies_id' => $headerPo?->valutas_id ?? 1,
-                    'rate' => $headerPo?->rate ?? 1.0,
-                    'arrival_date' => $receiveDate,
-                    'invoice_number' => $invoiceNumber,
-                    'invoice_date' => $invoiceDate,
-                    'tax_invoice' => $taxInvoice,
-                    'license_plate' => $plateNo,
-                    'sj_number' => $firstSj ?: 'SJ-'.date('Ymd').'-01',
-                    'sj_date' => $receiveDate,
-                    'pl_number' => $noPen ?: '088370',
-                    'pl_date' => $regDate ?: $receiveDate,
-                    'note' => $ajuNumber ?: ($request->input('note') ?? 'Inbound receipt'),
-                    'status' => 'Approved',
-                    'updated_by' => $creatorId,
-                ]);
-            } else {
-                // Update optional customs/logistics metadata if provided
-                $rnUpdates = [];
-                if ($invoiceNumber) {
-                    $rnUpdates['invoice_number'] = $invoiceNumber;
-                }
-                if ($invoiceDate) {
-                    $rnUpdates['invoice_date'] = $invoiceDate;
-                }
-                if ($taxInvoice) {
-                    $rnUpdates['tax_invoice'] = $taxInvoice;
-                }
-                if ($plateNo) {
-                    $rnUpdates['license_plate'] = $plateNo;
-                }
-                if ($firstSj) {
-                    $rnUpdates['sj_number'] = $firstSj;
-                }
-                if ($noPen) {
-                    $rnUpdates['pl_number'] = $noPen;
-                }
-                if ($ajuNumber) {
-                    $rnUpdates['note'] = $ajuNumber;
-                }
-                if (! empty($rnUpdates)) {
-                    $rn->update($rnUpdates);
-                }
+            // Update optional customs/logistics metadata on the Receive Note if provided
+            $rnUpdates = [];
+            if ($invoiceNumber) {
+                $rnUpdates['invoice_number'] = $invoiceNumber;
+            }
+            if ($invoiceDate) {
+                $rnUpdates['invoice_date'] = $invoiceDate;
+            }
+            if ($taxInvoice) {
+                $rnUpdates['tax_invoice'] = $taxInvoice;
+            }
+            if ($plateNo) {
+                $rnUpdates['license_plate'] = $plateNo;
+            }
+            if ($firstSj) {
+                $rnUpdates['sj_number'] = $firstSj;
+            }
+            if ($noPen) {
+                $rnUpdates['pl_number'] = $noPen;
+            }
+            if ($ajuNumber) {
+                $rnUpdates['note'] = $ajuNumber;
+            }
+            if (! empty($rnUpdates)) {
+                $rn->update($rnUpdates);
             }
 
             $noteText = $request->input('note') ?? $request->input('remark');
@@ -352,20 +344,40 @@ class WarehouseApiController extends Controller
                     $rafaksi = (float) ($itemData['rafaksi'] ?? 0);
                     $dnNumber = $itemData['deliveryNote'] ?? $itemData['dn_number'] ?? $itemData['sjNumber'] ?? $firstSj ?? 'SJ-'.date('Ymd');
 
-                    $poRn = PurchaseOrderReceiveNote::create([
-                        'purchase_order_id' => $itemPoId,
-                        'receive_note_id' => $rn->id,
-                        'dn_number' => $dnNumber,
-                        'job_number_id' => $itemJobId,
-                        'item_name' => $itemName,
-                        'quantity' => $qty,
-                        'rafaksi' => $rafaksi,
-                        'price' => (float) ($itemData['price'] ?? 0),
-                        'additional_price' => 0,
-                        'discount' => 0,
-                        'ppn' => 0,
-                        'grand_total' => 0,
-                    ]);
+                    $poRn = null;
+                    if (! empty($itemData['po_has_rn_id']) && is_numeric($itemData['po_has_rn_id'])) {
+                        $poRn = PurchaseOrderReceiveNote::where('id', (int) $itemData['po_has_rn_id'])
+                            ->where('receive_note_id', $rn->id)
+                            ->first();
+                    }
+                    if (! $poRn) {
+                        $poRn = PurchaseOrderReceiveNote::where('receive_note_id', $rn->id)
+                            ->where('item_name', $itemName)
+                            ->first();
+                    }
+
+                    if ($poRn) {
+                        $poRn->update([
+                            'quantity' => $qty,
+                            'rafaksi' => $rafaksi,
+                            'dn_number' => $dnNumber,
+                        ]);
+                    } else {
+                        $poRn = PurchaseOrderReceiveNote::create([
+                            'purchase_order_id' => $itemPoId,
+                            'receive_note_id' => $rn->id,
+                            'dn_number' => $dnNumber,
+                            'job_number_id' => $itemJobId,
+                            'item_name' => $itemName,
+                            'quantity' => $qty,
+                            'rafaksi' => $rafaksi,
+                            'price' => (float) ($itemData['price'] ?? 0),
+                            'additional_price' => 0,
+                            'discount' => 0,
+                            'ppn' => 0,
+                            'grand_total' => 0,
+                        ]);
+                    }
 
                     $bpb->mappings()->create([
                         'po_has_rn_id' => $poRn->id,
@@ -556,8 +568,11 @@ class WarehouseApiController extends Controller
                 'prDate' => $this->safeFormatDate($itemPr?->date, 'd-m-Y', $prDate),
                 'dnNumber' => $prn?->dn_number ?: $sjNumber,
                 'jobNumber' => $prn?->jobNumber?->code ?? '—',
+                'name' => $itName,
                 'item' => $itName,
                 'itemName' => $itName,
+                'material' => $itName,
+                'code' => $itCode,
                 'itemCode' => $itCode,
                 'itemAlias' => $itCode,
                 'quantity' => number_format($net, 2).' '.$itUnit,
@@ -566,6 +581,7 @@ class WarehouseApiController extends Controller
                 'rafaksi' => number_format($raf, 2).' '.$itUnit,
                 'unit' => $itUnit,
                 'remark' => $bpb->note ?? 'Operational Receipt',
+                'purpose' => $bpb->note ?? 'Operational Receipt',
                 'warehouse' => $map->warehouse?->name ?? 'Gudang Sparepart',
                 'location' => $map->warehouse?->name ?? 'Gudang Sparepart',
                 'warehouseLocation' => $map->warehouse?->name ?? 'Gudang Sparepart',

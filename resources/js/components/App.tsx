@@ -260,11 +260,13 @@ function resolveViewStateFromPath(pathname: string, defaultPage: PageKey = "dash
     cleanPath === "/warehouse/incoming/receive-material-bpb/create" ||
     cleanPath === "/warehouse/incoming/receive-material-bpb/add"
   ) {
-    const poParam =
+    const searchParams =
       typeof window !== "undefined"
-        ? new URLSearchParams(window.location.search).get("po") || undefined
-        : undefined;
-    return { type: "warehouse-create", poNumber: poParam };
+        ? new URLSearchParams(window.location.search)
+        : null;
+    const poParam = searchParams?.get("po") || undefined;
+    const rnParam = searchParams?.get("rn") || undefined;
+    return { type: "warehouse-create", poNumber: poParam, rnNumber: rnParam };
   }
 
   if (
@@ -1325,7 +1327,11 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
   }, []);
 
   // Navigate to create new record view
-  const handleNavigateCreate = useCallback((module: "warehouse" | "supplier" | "payment-term" | "purchase-category" | "delivery-terms" | "additional-costs" | "pph" | "unit" | "classification" | "department" | "brand" | "facility" | "hs" | "category" | "style" | "colour" | "color" | "item" | "receive-note" | "receive-note-return") => {
+  const handleNavigateCreate = useCallback((
+    module: "warehouse" | "supplier" | "payment-term" | "purchase-category" | "delivery-terms" | "additional-costs" | "pph" | "unit" | "classification" | "department" | "brand" | "facility" | "hs" | "category" | "style" | "colour" | "color" | "item" | "receive-note" | "receive-note-return",
+    poNumber?: string,
+    rnNumber?: string
+  ) => {
     if (module === "receive-note-return") {
       const nextState: ViewState = { type: "receive-note-return-create" };
       setViewState(nextState);
@@ -1533,12 +1539,16 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
       return;
     }
 
-    const nextState: ViewState = { type: "warehouse-create" };
+    const nextState: ViewState = { type: "warehouse-create", poNumber, rnNumber };
     setViewState(nextState);
 
     if (typeof window !== "undefined") {
       window.scrollTo(0, 0);
-      window.history.pushState(nextState, "", "/warehouse/incoming/receive-material-bpb/create");
+      const queryParams: string[] = [];
+      if (poNumber) queryParams.push(`po=${encodeURIComponent(poNumber)}`);
+      if (rnNumber) queryParams.push(`rn=${encodeURIComponent(rnNumber)}`);
+      const q = queryParams.length > 0 ? `?${queryParams.join("&")}` : "";
+      window.history.pushState(nextState, "", `/warehouse/incoming/receive-material-bpb/create${q}`);
     }
   }, []);
 
@@ -1956,7 +1966,7 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
   );
 
   const handleNavigateReceiveNoteDetail = useCallback((rnNumber: string) => {
-    const slug = rnNumber.replace(/[\/\\]/g, "-");
+    const slug = String(rnNumber || "").replace(/[\/\\]/g, "-");
     const nextState: ViewState = { type: "receive-note-detail", code: slug };
     setViewState(nextState);
 
@@ -2160,7 +2170,7 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
   }, []);
 
   const handleNavigateReceiveNoteReturnDetail = useCallback((rnNumber: string) => {
-    const slug = rnNumber.replace(/[\/\\]/g, "-");
+    const slug = String(rnNumber || "").replace(/[\/\\]/g, "-");
     const nextState: ViewState = { type: "receive-note-return-detail", code: slug };
     setViewState(nextState);
 
@@ -2171,7 +2181,7 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
   }, []);
 
   const handleNavigateDocumentHistoryDetail = useCallback((invoiceNumber: string) => {
-    const slug = invoiceNumber.replace(/[\/\\]/g, "-");
+    const slug = String(invoiceNumber || "").replace(/[\/\\]/g, "-");
     const nextState: ViewState = { type: "document-history-detail", code: slug };
     setViewState(nextState);
 
@@ -3082,7 +3092,7 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
                 (r) =>
                   r.id === viewState.code ||
                   r.rnNumber === viewState.code ||
-                  r.rnNumber.replace(/[\/\\]/g, "-") === viewState.code
+                  (typeof r.rnNumber === "string" && r.rnNumber.replace(/[\/\\]/g, "-") === viewState.code)
               )
             }
             onApprovalChange={(rnNum, nextState) => {
@@ -3112,6 +3122,7 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
               );
             }}
             onBack={() => handleNavigateList("receive-note", "/exim/receive-note")}
+            onCreateBpb={(rnNum) => handleNavigateCreate("warehouse", undefined, rnNum)}
           />
         )}
 
@@ -3124,7 +3135,7 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
                 (r) =>
                   r.id === viewState.code ||
                   r.rnNumber === viewState.code ||
-                  r.rnNumber.replace(/[\/\\]/g, "-") === viewState.code
+                  (typeof r.rnNumber === "string" && r.rnNumber.replace(/[\/\\]/g, "-") === viewState.code)
               )
             }
             onBack={() => handleNavigateList("receive-note-return", "/exim/receive-note-return")}
@@ -3140,7 +3151,7 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
                 (r) =>
                   r.id === viewState.code ||
                   r.invoiceNumber === viewState.code ||
-                  r.invoiceNumber.replace(/[\/\\]/g, "-") === viewState.code
+                  (typeof r.invoiceNumber === "string" && r.invoiceNumber.replace(/[\/\\]/g, "-") === viewState.code)
               )
             }
             onBack={() => handleNavigateList("document-history", "/exim/document-history")}
@@ -3208,6 +3219,7 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
         {viewState.type === "warehouse-create" && (
           <WarehouseCreate
             initialPoNumber={viewState.poNumber}
+            initialRnNumber={viewState.rnNumber}
             onBack={() => handleNavigateList("warehouse", "/warehouse/incoming/receive-material-bpb")}
             onSaved={() => handleNavigateList("warehouse", "/warehouse/incoming/receive-material-bpb")}
           />

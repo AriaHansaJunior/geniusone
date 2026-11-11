@@ -111,9 +111,9 @@ export function WarehouseDetail({
   const totalQty = String(row._rawTotalQty || "25.00");
   const createdBy = String(row._rawCreatedBy || "ADMINISTRATOR");
   const createdAt = String(row._rawCreatedAt || receiveDate);
-  const remark = String(row._rawRemark || "Inbound physical receipt verified at warehouse");
-  const materialName = String(row._rawMaterialName || "Mur Baut M 10 x 40 + ring pir");
-  const materialCode = String(row._rawMaterialCode || "60.149.301.404");
+  const remark = String(row._rawRemark || row.remark || "Inbound physical receipt verified at warehouse");
+  const materialName = String(row._rawMaterialName || row.material || row.itemName || "Mur Baut M 10 x 40 + ring pir");
+  const materialCode = String(row._rawMaterialCode || row.itemCode || row.code || "60.149.301.404");
 
   const backendNormalizedStatus = normalizeApprovalStatus(rawStatus);
 

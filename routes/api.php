@@ -100,6 +100,8 @@ Route::prefix('procurement')->group(function () {
         Route::apiResource('countries', CountryApiController::class);
         Route::apiResource('rafaksi-types', RafaksiTypeApiController::class);
         Route::apiResource('currencies', CurrencyApiController::class);
+        Route::apiResource('job-numbers', \App\Http\Controllers\Api\Exim\Master\JobNumberApiController::class);
+        Route::apiResource('items', \App\Http\Controllers\Api\Exim\Master\ItemApiController::class);
     });
 });
 

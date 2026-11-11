@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Icon } from "../../../components/ui/Icon";
 import { Button } from "../../../components/ui/Button";
 import { Badge } from "../../../components/ui/Badge";
@@ -289,8 +289,8 @@ export function PurchaseOrderDetail({
           {
             no: 1,
             prNumber: row._rawPr || row.prNumber || "0135/PR-IMLI/IX/2026",
-            item: row._rawRemark && row._rawRemark !== "—" ? row._rawRemark : "Industrial Procurement Material",
-            itemName: row._rawRemark && row._rawRemark !== "—" ? row._rawRemark : "Industrial Procurement Material",
+            item: row.material || row.itemName || "Industrial Procurement Material",
+            itemName: row.material || row.itemName || "Industrial Procurement Material",
             itemCode: "10.100.100.001",
             itemAlias: "—",
             quantity: row._totalQty || "1.0000 KGM",
@@ -312,6 +312,49 @@ export function PurchaseOrderDetail({
         ];
 
   const otherCosts = row._otherCosts || [];
+
+  const prNumbersList = useMemo(() => {
+    const list: string[] = [];
+    if (row.prNumbers && Array.isArray(row.prNumbers)) {
+      row.prNumbers.forEach((p: string) => {
+        if (p && p !== "—" && !list.includes(p)) list.push(p);
+      });
+    }
+    if (prNumber && prNumber !== "—") {
+      prNumber.split(",").forEach((p) => {
+        const trimmed = p.trim();
+        if (trimmed && trimmed !== "—" && !list.includes(trimmed)) list.push(trimmed);
+      });
+    }
+    if (poItems && Array.isArray(poItems)) {
+      poItems.forEach((it: any) => {
+        const itPr = it.prNumber || it._rawPr;
+        if (itPr && itPr !== "—") {
+          String(itPr).split(",").forEach((p) => {
+            const trimmed = p.trim();
+            if (trimmed && trimmed !== "—" && !list.includes(trimmed)) list.push(trimmed);
+          });
+        }
+      });
+    }
+    return list;
+  }, [row.prNumbers, prNumber, poItems]);
+
+  const receivingNumbersList = useMemo(() => {
+    const list: string[] = [];
+    if (row.receivingNumbers && Array.isArray(row.receivingNumbers)) {
+      row.receivingNumbers.forEach((r: string) => {
+        if (r && r !== "—" && !list.includes(r)) list.push(r);
+      });
+    }
+    if (rmNumber && rmNumber !== "—") {
+      rmNumber.split(",").forEach((r) => {
+        const trimmed = r.trim();
+        if (trimmed && trimmed !== "—" && !list.includes(trimmed)) list.push(trimmed);
+      });
+    }
+    return list;
+  }, [row.receivingNumbers, rmNumber]);
 
   return (
     <div className="full-page-detail">
@@ -418,15 +461,43 @@ export function PurchaseOrderDetail({
       <div className="detail-pipeline">
         <div
           className="pipeline-node active"
-          style={{ cursor: "pointer" }}
-          onClick={() => onNavigateDetail && onNavigateDetail("pr", docToSlug(prNumber))}
+          style={{ cursor: prNumbersList.length === 1 ? "pointer" : "default" }}
+          onClick={() => {
+            if (prNumbersList.length === 1 && onNavigateDetail) {
+              onNavigateDetail("pr", docToSlug(prNumbersList[0]));
+            }
+          }}
         >
           <div className="pipeline-node__icon">
             <Icon name="file" size={16} />
           </div>
           <div className="pipeline-node__text">
             <span>Step 1 · Purchase Requisition</span>
-            <strong>{prNumber}</strong>
+            <strong>
+              {prNumbersList.length > 0 ? (
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}>
+                  {prNumbersList.map((pr: string, idx: number) => (
+                    <span
+                      key={idx}
+                      style={{
+                        textDecoration: "underline",
+                        cursor: "pointer",
+                        color: "var(--blue-700, #1d4ed8)",
+                      }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (onNavigateDetail) onNavigateDetail("pr", docToSlug(pr));
+                      }}
+                      title={`Open Purchase Requisition ${pr}`}
+                    >
+                      {pr}{idx < prNumbersList.length - 1 ? "," : ""}
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                prNumber
+              )}
+            </strong>
           </div>
         </div>
 
@@ -445,22 +516,22 @@ export function PurchaseOrderDetail({
         <Icon name="arrowRight" size={16} className="pipeline-arrow" />
 
         <div
-          className={`pipeline-node ${rmNumber !== "—" ? "active" : ""}`}
+          className={`pipeline-node ${receivingNumbersList.length > 0 ? "active" : ""}`}
           style={{
-            cursor: rmNumber !== "—" || isApproved ? "pointer" : "not-allowed",
-            opacity: rmNumber !== "—" || isApproved ? 1 : 0.6,
+            cursor: receivingNumbersList.length > 0 || isApproved ? "pointer" : "not-allowed",
+            opacity: receivingNumbersList.length > 0 || isApproved ? 1 : 0.6,
           }}
           title={
-            !isApproved && rmNumber === "—"
+            !isApproved && receivingNumbersList.length === 0
               ? "PO must be fully approved (Stage 2) before receiving material (BPB)"
-              : rmNumber !== "—"
+              : receivingNumbersList.length > 0
               ? "View Receive Material (BPB)"
               : "Click to Receive Material (BPB) from this Approved PO"
           }
           onClick={() => {
-            if (rmNumber !== "—" && onNavigateDetail) {
-              onNavigateDetail("warehouse", docToSlug(rmNumber));
-            } else if (isApproved && onNavigateDetail) {
+            if (receivingNumbersList.length === 1 && onNavigateDetail) {
+              onNavigateDetail("warehouse", docToSlug(receivingNumbersList[0]));
+            } else if (isApproved && receivingNumbersList.length === 0 && onNavigateDetail) {
               onNavigateDetail("warehouse-create" as any, docNumber);
             }
           }}
@@ -471,11 +542,31 @@ export function PurchaseOrderDetail({
           <div className="pipeline-node__text">
             <span>Step 3 · Receive Material</span>
             <strong>
-              {rmNumber !== "—"
-                ? rmNumber
-                : isApproved
-                ? "+ Create BPB from PO"
-                : "Awaiting PO Approval"}
+              {receivingNumbersList.length > 0 ? (
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}>
+                  {receivingNumbersList.map((rn: string, idx: number) => (
+                    <span
+                      key={idx}
+                      style={{
+                        textDecoration: "underline",
+                        cursor: "pointer",
+                        color: "var(--blue-700, #1d4ed8)",
+                      }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (onNavigateDetail) onNavigateDetail("warehouse", docToSlug(rn));
+                      }}
+                      title={`Open Receive Material ${rn}`}
+                    >
+                      {rn}{idx < receivingNumbersList.length - 1 ? "," : ""}
+                    </span>
+                  ))}
+                </div>
+              ) : isApproved ? (
+                "+ Create BPB from PO"
+              ) : (
+                "Awaiting PO Approval"
+              )}
             </strong>
           </div>
         </div>
@@ -557,9 +648,34 @@ export function PurchaseOrderDetail({
                       />
                     </td>
                     <td>
-                      <strong style={{ color: "var(--ink)", fontSize: "11px" }}>
-                        {item.prNumber || prNumber}
-                      </strong>
+                      {(() => {
+                        const rawPrItem = String(item.prNumber || prNumber || "—");
+                        if (rawPrItem === "—") return <span style={{ color: "var(--muted)" }}>—</span>;
+                        const prs = rawPrItem.split(",").map((p) => p.trim()).filter(Boolean);
+                        return (
+                          <div style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}>
+                            {prs.map((pr, pIdx) => (
+                              <strong
+                                key={pIdx}
+                                className="cell-code"
+                                style={{
+                                  color: "var(--blue-700, #1d4ed8)",
+                                  textDecoration: "underline",
+                                  cursor: "pointer",
+                                  fontSize: "11px",
+                                }}
+                                title={`Open Purchase Requisition ${pr}`}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (onNavigateDetail) onNavigateDetail("pr", docToSlug(pr));
+                                }}
+                              >
+                                {pr}{pIdx < prs.length - 1 ? "," : ""}
+                              </strong>
+                            ))}
+                          </div>
+                        );
+                      })()}
                     </td>
                     <td>
                       <Badge tone="purple">{facility}</Badge>

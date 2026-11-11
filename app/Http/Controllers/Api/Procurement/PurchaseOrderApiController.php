@@ -147,8 +147,10 @@ class PurchaseOrderApiController extends Controller
         $supplierName = $po->supplier ? "[{$po->supplier->code}] {$po->supplier->name}" : '—';
         $firstItem = $po->items->first();
         $firstItemUnit = $firstItem?->item?->unitOfMeasurement?->name ?? 'PCS';
-        $firstPr = $firstItem?->requisitionItem?->purchaseRequisition;
-        $prNumber = $firstPr?->pr_number ?? '—';
+        $prNumbers = $po->items->map(function ($it) {
+            return $it->requisitionItem?->purchaseRequisition?->pr_number;
+        })->filter()->unique()->values();
+        $prNumber = $prNumbers->isNotEmpty() ? $prNumbers->join(', ') : '—';
         $rnRecord = $po->receiveNotes->first();
         $bpbNumber = $rnRecord?->bpbRecords?->first()?->bpbReceiveMaterial?->bpb_number;
         $rnNumber = $bpbNumber ?? $rnRecord?->receiveNote?->rn_number ?? '—';
@@ -323,7 +325,12 @@ class PurchaseOrderApiController extends Controller
             'poNumber' => $po->po_number,
             'date' => $this->safeFormatDate($po->date, 'd-M-Y', $po->created_at?->format('d-M-Y') ?? '-'),
             'supplier' => $supplierName,
+            'statusFacility' => $po->facility_status ?? 'FASILITAS',
+            'deptCreated' => $po->creator?->department?->name ?? 'Purchasing',
+            'totalPrice' => $currencyCode.' '.number_format((float) $po->grand_total, 2),
+            'totalQuantity' => number_format($totalOrderQty, 4),
             'status' => $status,
+            'lastUpdated' => ($po->updatedByUser?->name ?? $creatorName).' '.($po->updated_at?->format('d-M-Y H:i') ?? $createdTime),
             'paymentTerm' => $po->paymentTerm?->name ?? 'Cash On Delivery',
             'totalItem' => $po->items->count(),
             'totalOrder' => number_format($totalOrderQty, 4),
@@ -449,8 +456,14 @@ class PurchaseOrderApiController extends Controller
                 $discType = 'none';
                 $discVal = 0;
             } else {
-                $discTypeId = $it['discount_types_id'] ?? ($discType === 'amount' || $discType === 'nominal' ? 2 : 1);
+                $rawDiscTypeId = $it['discount_types_id'] ?? ($discType === 'amount' || $discType === 'nominal' ? 2 : 1);
+                $discTypeId = ! empty($rawDiscTypeId) && is_numeric($rawDiscTypeId) && \Illuminate\Support\Facades\DB::table('discount_types')->where('id', $rawDiscTypeId)->exists()
+                    ? (int) $rawDiscTypeId
+                    : null;
             }
+
+            $pphId = ! empty($it['pph_id']) && is_numeric($it['pph_id']) && \Illuminate\Support\Facades\DB::table('pph')->where('id', $it['pph_id'])->exists() ? (int) $it['pph_id'] : null;
+            $ppnId = ! empty($it['ppn_id']) && is_numeric($it['ppn_id']) && \Illuminate\Support\Facades\DB::table('ppn')->where('id', $it['ppn_id'])->exists() ? (int) $it['ppn_id'] : null;
 
             $processedItems[] = [
                 'pr_has_items_id' => $prHasItemId,
@@ -461,8 +474,8 @@ class PurchaseOrderApiController extends Controller
                 'discount_type' => $discType,
                 'discount_types_id' => $discTypeId,
                 'discount_val' => $discVal,
-                'pph_id' => ! empty($it['pph_id']) && is_numeric($it['pph_id']) ? (int) $it['pph_id'] : null,
-                'ppn_id' => ! empty($it['ppn_id']) && is_numeric($it['ppn_id']) ? (int) $it['ppn_id'] : null,
+                'pph_id' => $pphId,
+                'ppn_id' => $ppnId,
             ];
         }
 

@@ -1,10 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import * as XLSX from "xlsx";
 import { Icon } from "../../../components/ui/Icon";
 import { Button } from "../../../components/ui/Button";
 import { Badge } from "../../../components/ui/Badge";
 import { Material } from "../../../components/common/CommonCells";
-import { prRows, findRowBySlug } from "../../../data/mockData";
+import { prRows, findRowBySlug, docToSlug } from "../../../data/mockData";
 import { fetchDetail } from "../../../data/api";
 import type { TableRow } from "../../../types";
 import { ApprovalActionBar } from "../../../components/approval/ApprovalActionBar";
@@ -128,6 +128,34 @@ export function PurchaseRequisitionDetail({
     : (row.items && Array.isArray(row.items) && row.items.length > 0)
     ? row.items
     : [];
+
+  const poNumbersList = useMemo(() => {
+    const list: string[] = [];
+    if (row.poNumbers && Array.isArray(row.poNumbers)) {
+      row.poNumbers.forEach((p: string) => {
+        if (p && p !== "—" && !list.includes(p)) list.push(p);
+      });
+    }
+    const rawPoStr = String(row._rawPo || row.poNumber || row.po_number || "");
+    if (rawPoStr && rawPoStr !== "—") {
+      rawPoStr.split(",").forEach((p) => {
+        const trimmed = p.trim();
+        if (trimmed && trimmed !== "—" && !list.includes(trimmed)) list.push(trimmed);
+      });
+    }
+    if (items && Array.isArray(items)) {
+      items.forEach((it: any) => {
+        const itPo = it.poNumber || it.po_number || it._rawPo;
+        if (itPo && itPo !== "—") {
+          String(itPo).split(",").forEach((p) => {
+            const trimmed = p.trim();
+            if (trimmed && trimmed !== "—" && !list.includes(trimmed)) list.push(trimmed);
+          });
+        }
+      });
+    }
+    return list;
+  }, [row.poNumbers, row._rawPo, row.poNumber, row.po_number, items]);
 
   const backendNormalizedStatus = normalizeApprovalStatus(rawStatus);
 
@@ -621,18 +649,22 @@ SPECIFICATION DETAILS:
 
           return (
             <div
-              className={`pipeline-node ${canConvertToPo ? "current" : ""}`}
+              className={`pipeline-node ${poNumbersList.length > 0 ? "active" : canConvertToPo ? "current" : ""}`}
               style={{
-                cursor: canConvertToPo ? "pointer" : "not-allowed",
-                opacity: canConvertToPo ? 1 : 0.5,
+                cursor: poNumbersList.length > 0 || canConvertToPo ? "pointer" : "not-allowed",
+                opacity: poNumbersList.length > 0 || canConvertToPo ? 1 : 0.5,
               }}
               onClick={() => {
-                if (canConvertToPo && onNavigateDetail) {
+                if (poNumbersList.length === 1 && onNavigateDetail) {
+                  onNavigateDetail("po", docToSlug(poNumbersList[0]));
+                } else if (poNumbersList.length === 0 && canConvertToPo && onNavigateDetail) {
                   onNavigateDetail("po-create" as any, docNumber);
                 }
               }}
               title={
-                isAllClosed
+                poNumbersList.length > 0
+                  ? `View Purchase Order (${poNumbersList.join(", ")})`
+                  : isAllClosed
                   ? "All items in this PR are closed (cannot convert to PO)"
                   : !isApproved
                   ? "Locked: Requires Stage 2 Director Approval"
@@ -645,11 +677,54 @@ SPECIFICATION DETAILS:
               <div className="pipeline-node__text">
                 <span>Step 2 · Purchase Order</span>
                 <strong>
-                  {isAllClosed
-                    ? "PR Closing (All Items Closed)"
-                    : canConvertToPo
-                    ? "Ready for PO Conversion"
-                    : "Pending PR Approval"}
+                  {poNumbersList.length > 0 ? (
+                    <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "4px" }}>
+                      {poNumbersList.map((po: string, idx: number) => (
+                        <span
+                          key={idx}
+                          style={{
+                            textDecoration: "underline",
+                            cursor: "pointer",
+                            color: "var(--blue-700, #1d4ed8)",
+                          }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (onNavigateDetail) onNavigateDetail("po", docToSlug(po));
+                          }}
+                          title={`Open Purchase Order ${po}`}
+                        >
+                          {po}{idx < poNumbersList.length - 1 ? "," : ""}
+                        </span>
+                      ))}
+                      {canConvertToPo && (
+                        <span
+                          style={{
+                            fontSize: "10px",
+                            padding: "1px 6px",
+                            borderRadius: "4px",
+                            background: "var(--blue-50, #eff6ff)",
+                            color: "var(--blue-700, #1d4ed8)",
+                            cursor: "pointer",
+                            border: "1px solid var(--blue-200, #bfdbfe)",
+                            marginLeft: "4px",
+                          }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (onNavigateDetail) onNavigateDetail("po-create" as any, docNumber);
+                          }}
+                          title="Create another PO from remaining items"
+                        >
+                          + New PO
+                        </span>
+                      )}
+                    </div>
+                  ) : isAllClosed ? (
+                    "PR Closing (All Items Closed)"
+                  ) : canConvertToPo ? (
+                    "Ready for PO Conversion"
+                  ) : (
+                    "Pending PR Approval"
+                  )}
                 </strong>
               </div>
             </div>
@@ -659,16 +734,16 @@ SPECIFICATION DETAILS:
         <Icon name="arrowRight" size={16} className="pipeline-arrow" />
 
         <div
-          className="pipeline-node"
-          style={{ opacity: 0.5 }}
-          title="Inbound Warehouse Gate Receiving"
+          className={`pipeline-node ${poNumbersList.length > 0 ? "active" : ""}`}
+          style={{ opacity: poNumbersList.length > 0 ? 1 : 0.5 }}
+          title={poNumbersList.length > 0 ? "Track fulfillment in Purchase Order / Warehouse" : "Inbound Warehouse Gate Receiving"}
         >
           <div className="pipeline-node__icon">
             <Icon name="box" size={16} />
           </div>
           <div className="pipeline-node__text">
             <span>Step 3 · Receive Material</span>
-            <strong>Pending Fulfillment</strong>
+            <strong>{poNumbersList.length > 0 ? "Track in PO / Warehouse" : "Pending Fulfillment"}</strong>
           </div>
         </div>
       </div>
@@ -697,6 +772,7 @@ SPECIFICATION DETAILS:
                 <th style={{ width: "85px" }}>Due Date</th>
                 <th style={{ width: "75px" }}>Job Number</th>
                 <th style={{ width: "85px" }}>Department</th>
+                <th style={{ minWidth: "125px" }}>PO Reference</th>
                 <th style={{ minWidth: "120px" }}>Purpose / Remark</th>
                 <th style={{ width: "105px", textAlign: "center" }}>Action</th>
               </tr>
@@ -738,6 +814,38 @@ SPECIFICATION DETAILS:
                       <td>{it.dueDate || dueDate}</td>
                       <td>{it.jobNumber || "—"}</td>
                       <td><strong style={{ color: "var(--ink)" }}>{dept}</strong></td>
+                      <td>
+                        {(() => {
+                          const itemPoStr = it.poNumber || it.po_number;
+                          if (!itemPoStr || itemPoStr === "—") {
+                            return <span style={{ color: "var(--muted)" }}>—</span>;
+                          }
+                          const pos = String(itemPoStr).split(",").map((p) => p.trim()).filter(Boolean);
+                          return (
+                            <div style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}>
+                              {pos.map((po, pIdx) => (
+                                <strong
+                                  key={pIdx}
+                                  className="cell-code"
+                                  style={{
+                                    color: "var(--blue-700, #1d4ed8)",
+                                    textDecoration: "underline",
+                                    cursor: "pointer",
+                                    fontSize: "11px",
+                                  }}
+                                  title={`Open Purchase Order ${po}`}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (onNavigateDetail) onNavigateDetail("po", docToSlug(po));
+                                  }}
+                                >
+                                  {po}{pIdx < pos.length - 1 ? "," : ""}
+                                </strong>
+                              ))}
+                            </div>
+                          );
+                        })()}
+                      </td>
                       <td style={{ fontSize: "11px", color: "var(--ink-soft)" }}>
                         {it.remark || remark}
                       </td>
@@ -773,7 +881,7 @@ SPECIFICATION DETAILS:
                 })
               ) : (
                 <tr>
-                  <td colSpan={10} style={{ textAlign: "center", padding: "16px", color: "var(--muted)" }}>
+                  <td colSpan={11} style={{ textAlign: "center", padding: "16px", color: "var(--muted)" }}>
                     No requisition line items found.
                   </td>
                 </tr>
@@ -788,7 +896,7 @@ SPECIFICATION DETAILS:
                   {items.reduce((sum: number, it: any) => sum + (parseFloat(String(it.quantity).replace(/[^0-9.]/g, "")) || 0), 0).toFixed(4)}
                 </td>
                 <td style={{ padding: "8px 10px" }}>{items[0]?.unit || "PCE"}</td>
-                <td colSpan={5} style={{ padding: "8px 10px", color: "var(--muted)", fontSize: "11px" }}>
+                <td colSpan={6} style={{ padding: "8px 10px", color: "var(--muted)", fontSize: "11px" }}>
                   {items.filter((it, idx) => !isPrItemClosed(docNumber, it, idx)).length} active ·{" "}
                   {items.filter((it, idx) => isPrItemClosed(docNumber, it, idx)).length} closing
                 </td>

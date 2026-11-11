@@ -49,7 +49,7 @@ export function DocumentHistoryDetail({
       (r) =>
         r.id === code ||
         r.invoiceNumber === code ||
-        r.invoiceNumber.replace(/[\/\\]/g, "-") === code
+        (typeof r.invoiceNumber === "string" && r.invoiceNumber.replace(/[\/\\]/g, "-") === code)
     ) ||
     initialDocumentHistoryRecords[0];
 

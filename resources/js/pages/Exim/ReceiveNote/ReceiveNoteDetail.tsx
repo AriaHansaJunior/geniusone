@@ -14,6 +14,7 @@ interface ReceiveNoteDetailProps {
   onBack: () => void;
   record?: ReceiveNoteRecord;
   onApprovalChange?: (rnNumber: string, state: DocumentApprovalState) => void;
+  onCreateBpb?: (rnNumber: string) => void;
 }
 
 export function ReceiveNoteDetail({
@@ -21,6 +22,7 @@ export function ReceiveNoteDetail({
   onBack,
   record,
   onApprovalChange,
+  onCreateBpb,
 }: ReceiveNoteDetailProps) {
   const [printMenuOpen, setPrintMenuOpen] = useState(false);
   const printMenuRef = useRef<HTMLDivElement>(null);
@@ -48,7 +50,7 @@ export function ReceiveNoteDetail({
       (r) =>
         r.id === code ||
         r.rnNumber === code ||
-        r.rnNumber.replace(/[\/\\]/g, "-") === code
+        (typeof r.rnNumber === "string" && r.rnNumber.replace(/[\/\\]/g, "-") === code)
     ) ||
     initialReceiveNoteRecords[0];
 
@@ -85,6 +87,16 @@ export function ReceiveNoteDetail({
             <span className="badge badge--green" style={{ fontSize: "11px", fontWeight: 700 }}>
               <Icon name="lock" size={12} style={{ marginRight: "3px" }} /> Locked
             </span>
+          )}
+          {isApproved && onCreateBpb && (
+            <Button
+              variant="primary"
+              icon="box"
+              onClick={() => onCreateBpb(rnData.rnNumber)}
+              title="Create Receive Material (BPB) for this Approved RN"
+            >
+              Create BPB
+            </Button>
           )}
           <Button variant="secondary" icon="print" onClick={() => handlePrint("po")}>
             Print Document

@@ -31,7 +31,7 @@ class PurchaseRequisitionApiController extends Controller
             'items.item.unitOfMeasurement',
             'items.item.facility',
             'items.closedByUser',
-            'items.orderItems',
+            'items.orderItems.purchaseOrder',
             'approvals.user',
         ]);
 
@@ -104,6 +104,8 @@ class PurchaseRequisitionApiController extends Controller
                 $orderedQty = (float) ($it->orderItems ? $it->orderItems->sum('order') : 0);
                 $remainingQty = max(0, (float) $it->quantity - $orderedQty);
                 $hasPo = $it->orderItems && $it->orderItems->isNotEmpty();
+                $itemPoNumbers = $it->orderItems ? $it->orderItems->map(fn ($oi) => $oi->purchaseOrder?->po_number)->filter()->unique()->values() : collect();
+                $itemPoNumberStr = $itemPoNumbers->isNotEmpty() ? $itemPoNumbers->join(', ') : '—';
 
                 return [
                     'id' => $it->id,
@@ -123,6 +125,9 @@ class PurchaseRequisitionApiController extends Controller
                     'has_po' => $hasPo,
                     'hasPo' => $hasPo,
                     'po_count' => $it->orderItems ? $it->orderItems->count() : 0,
+                    'poNumber' => $itemPoNumberStr,
+                    'po_number' => $itemPoNumberStr,
+                    'poNumbers' => $itemPoNumbers->toArray(),
                     'unit' => $it->item?->unitOfMeasurement?->name ?? 'PCE',
                     'remark' => $it->remark ?? $it->note ?? 'PP Sby Kebutuhan Operasional',
                     'dueDate' => $this->safeFormatDate($it->due_date),
@@ -139,6 +144,11 @@ class PurchaseRequisitionApiController extends Controller
 
             $prRemark = $firstItem?->note ?? $firstItem?->remark ?? 'PP Sby Pengadaan Material';
 
+            $poNumbers = $pr->items->flatMap(function ($it) {
+                return $it->orderItems ? $it->orderItems->map(fn ($oi) => $oi->purchaseOrder?->po_number) : collect();
+            })->filter()->unique()->values();
+            $poNumberStr = $poNumbers->isNotEmpty() ? $poNumbers->join(', ') : '—';
+
             return [
                 'id' => $pr->id,
                 '_id' => "pr-{$pr->id}",
@@ -152,6 +162,10 @@ class PurchaseRequisitionApiController extends Controller
                 '_rawCreatedBy' => "{$creatorName} {$createdTime}",
                 '_rawLastUpdated' => "{$creatorName} {$createdTime}",
                 '_rawPr' => $pr->pr_number,
+                '_rawPo' => $poNumberStr,
+                'poNumber' => $poNumberStr,
+                'po_number' => $poNumberStr,
+                'poNumbers' => $poNumbers->toArray(),
                 '_totalQty' => number_format((float) $pr->items->sum('quantity'), 4).' '.($firstItem?->item?->unitOfMeasurement?->name ?? 'PCE'),
                 'items' => $lineItems,
                 '_items' => $lineItems,
@@ -171,7 +185,7 @@ class PurchaseRequisitionApiController extends Controller
                 'attachment_file' => $pr->attachment_file ? basename($pr->attachment_file) : null,
                 'attachment_url' => $pr->attachment_file ? url('storage/'.$pr->attachment_file) : null,
                 'actions' => '',
-                '_search' => "{$pr->pr_number} {$pr->department?->name} {$creatorName} {$status} {$prRemark}",
+                '_search' => "{$pr->pr_number} {$pr->department?->name} {$creatorName} {$status} {$prRemark} {$poNumberStr}",
                 'is_approved' => $isApproved2,
                 'is_approved_1' => $isApproved1,
                 'is_approved_2' => $isApproved2,
@@ -219,7 +233,7 @@ class PurchaseRequisitionApiController extends Controller
             'items.item.unitOfMeasurement',
             'items.item.facility',
             'items.closedByUser',
-            'items.orderItems',
+            'items.orderItems.purchaseOrder',
             'approvals.user',
         ])
             ->where('pr_number', $rawCode)
@@ -246,6 +260,8 @@ class PurchaseRequisitionApiController extends Controller
             $orderedQty = (float) ($it->orderItems ? $it->orderItems->sum('order') : 0);
             $remainingQty = max(0, (float) $it->quantity - $orderedQty);
             $hasPo = $it->orderItems && $it->orderItems->isNotEmpty();
+            $itemPoNumbers = $it->orderItems ? $it->orderItems->map(fn ($oi) => $oi->purchaseOrder?->po_number)->filter()->unique()->values() : collect();
+            $itemPoNumberStr = $itemPoNumbers->isNotEmpty() ? $itemPoNumbers->join(', ') : '—';
 
             return [
                 'id' => $it->id,
@@ -265,6 +281,9 @@ class PurchaseRequisitionApiController extends Controller
                 'has_po' => $hasPo,
                 'hasPo' => $hasPo,
                 'po_count' => $it->orderItems ? $it->orderItems->count() : 0,
+                'poNumber' => $itemPoNumberStr,
+                'po_number' => $itemPoNumberStr,
+                'poNumbers' => $itemPoNumbers->toArray(),
                 'unit' => $it->item?->unitOfMeasurement?->name ?? 'PCE',
                 'remark' => $it->remark ?? $it->note ?? 'PP Sby Kebutuhan Operasional',
                 'dueDate' => $this->safeFormatDate($it->due_date),
@@ -312,6 +331,11 @@ class PurchaseRequisitionApiController extends Controller
             $detailStatus = 'Partial Closing';
         }
 
+        $poNumbers = $pr->items->flatMap(function ($it) {
+            return $it->orderItems ? $it->orderItems->map(fn ($oi) => $oi->purchaseOrder?->po_number) : collect();
+        })->filter()->unique()->values();
+        $poNumberStr = $poNumbers->isNotEmpty() ? $poNumbers->join(', ') : '—';
+
         $detailRow = [
             'id' => $pr->id,
             '_id' => "pr-{$pr->id}",
@@ -320,6 +344,10 @@ class PurchaseRequisitionApiController extends Controller
             '_rawNumber' => $pr->pr_number,
             'status' => $detailStatus,
             '_rawStatus' => $detailStatus,
+            'poNumber' => $poNumberStr,
+            'po_number' => $poNumberStr,
+            '_rawPo' => $poNumberStr,
+            'poNumbers' => $poNumbers->toArray(),
             'is_approved' => $isApproved2,
             'is_approved_1' => $isApproved1,
             'is_approved_2' => $isApproved2,

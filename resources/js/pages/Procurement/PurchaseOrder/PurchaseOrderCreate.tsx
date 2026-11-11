@@ -99,6 +99,20 @@ export function PurchaseOrderCreate({
   const [latestDelivery, setLatestDelivery] = useState(defaultDue);
   const [remarkPo, setRemarkPo] = useState("");
 
+  const handleRemarkPoChange = (newVal: string) => {
+    const oldVal = remarkPo;
+    setRemarkPo(newVal);
+    // Remark per barang mengikuti note/remark PO (dibagian bawah halaman tambah PO)
+    setItems((prev) =>
+      prev.map((it) => {
+        if (!it.remark || it.remark === "-" || it.remark === oldVal) {
+          return { ...it, remark: newVal };
+        }
+        return it;
+      })
+    );
+  };
+
   // Items State
   const [items, setItems] = useState<POItemRow[]>([
     {
@@ -573,7 +587,7 @@ export function PurchaseOrderCreate({
       percentageLme: 0,
       pphRate: 0,
       subtotalPph: 0,
-      remark: "",
+      remark: remarkPo || "",
     };
     setItems((prev) => [...prev, newRow]);
   };
@@ -629,7 +643,7 @@ export function PurchaseOrderCreate({
           percentageLme: it.percentageLme ?? 0,
           pphRate: 0,
           subtotalPph: 0,
-          remark: it.remark || "",
+          remark: it.remark || remarkPo || "",
         };
       });
 
@@ -871,7 +885,8 @@ export function PurchaseOrderCreate({
       } else {
         // Fallback if PR summary row has empty _items: populate with basic info and fetchDetail
         const totalQty = parseFloat(safeExtractString(matchedPr.totalQuantity || matchedPr._totalQty || "1").replace(/[^0-9.]/g, "") || "1") || 1;
-        const reqRemark = safeExtractString(matchedPr._rawRemark || matchedPr.remark || "Material Item");
+        const reqItemName = safeExtractString(matchedPr.item || matchedPr.itemName || matchedPr.material || "Industrial Material");
+        const prRemark = safeExtractString(matchedPr._rawRemark || matchedPr.remark || "");
         setItems((prev) =>
           prev.map((r) => {
             if (r.id !== rowId) return r;
@@ -879,11 +894,11 @@ export function PurchaseOrderCreate({
             return {
               ...r,
               prNumber: selectedPrNumber,
-              itemName: reqRemark,
+              itemName: reqItemName,
               requestedQty: totalQty,
               purchasedQty: 0,
               orderQty: totalQty,
-              remark: reqRemark,
+              remark: remarkPo || prRemark || "",
               subtotal: sub,
               subtotalPph: sub * (Number(r.pphRate) || 0),
             };
@@ -1133,7 +1148,7 @@ export function PurchaseOrderCreate({
             discount_val: discVal,
             discountPercent: it.discountType === "percent" ? discVal : 0,
             unit: it.unit,
-            remark: it.remark,
+            remark: it.remark?.trim() ? it.remark : (remarkPo?.trim() || "-"),
           };
         }),
         additional_costs: additionalCosts.map((c) => ({
@@ -2246,7 +2261,7 @@ export function PurchaseOrderCreate({
               placeholder="Enter overall Purchase Order remarks..."
               rows={3}
               value={remarkPo}
-              onChange={(e) => setRemarkPo(e.target.value)}
+              onChange={(e) => handleRemarkPoChange(e.target.value)}
             />
           </div>
 

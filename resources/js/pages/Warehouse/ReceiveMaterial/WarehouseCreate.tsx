@@ -14,6 +14,7 @@ import { getLocalApprovalState } from "../../../services/approvalApi";
 export interface BPBItemRow {
   id: string;
   po_has_items_id?: number;
+  po_has_rn_id?: number;
   poNumber: string;
   prNumber?: string;
   name: string;
@@ -29,12 +30,14 @@ export interface BPBItemRow {
 
 interface WarehouseCreateProps {
   initialPoNumber?: string;
+  initialRnNumber?: string;
   onBack: () => void;
   onSaved: (newBpb?: any) => void;
 }
 
 export function WarehouseCreate({
   initialPoNumber,
+  initialRnNumber,
   onBack,
   onSaved,
 }: WarehouseCreateProps) {
@@ -202,8 +205,8 @@ export function WarehouseCreate({
           id: `bpb-item-${Date.now()}`,
           poNumber: poNum,
           prNumber: prNum,
-          name: poObj._rawRemark && poObj._rawRemark !== "-" ? poObj._rawRemark : "Material Item",
-          code: "10.100.100.001",
+          name: poObj.material || poObj._rawMaterialName || poObj.itemName || poObj.item || (poObj.items && poObj.items[0]?.itemName) || "Material Item",
+          code: poObj.itemCode || poObj._rawMaterialCode || "10.100.100.001",
           jobNumber: "—",
           deliveryNote: defaultSj,
           orderedQty: totalQtyNum,
@@ -294,6 +297,7 @@ export function WarehouseCreate({
         return {
           id: `bpb-item-${Date.now()}-${idx}`,
           po_has_items_id: poItem?.id || it.id,
+          po_has_rn_id: typeof it.id === "number" ? it.id : undefined,
           poNumber: poNum,
           prNumber: prDoc?.pr_number || "—",
           name: itemName,
@@ -436,8 +440,16 @@ export function WarehouseCreate({
         const rns = d?.rows || (Array.isArray(d?.data) ? d.data : d?.data?.data) || [];
         if (Array.isArray(rns) && rns.length > 0) {
           setExistingRns(rns);
-          if (!rnNumber) {
-            populateFromRn(rns[0]);
+          // Only auto-populate if an initial RN was explicitly requested
+          if (initialRnNumber) {
+            const cleanTarget = String(initialRnNumber).replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
+            const matched = rns.find((r: any) => {
+              const num = getSafeDocString(r.rn_number) || getSafeDocString(r._rawRn) || getSafeDocString(r.rnNumber);
+              return num && String(num).replace(/[^a-zA-Z0-9]/g, "").toLowerCase() === cleanTarget;
+            });
+            if (matched) {
+              populateFromRn(matched);
+            }
           }
         }
       })
@@ -630,6 +642,7 @@ export function WarehouseCreate({
         note: remark.trim() || "Inbound physical receipt verified at warehouse",
         items: items.map((it) => ({
           po_has_items_id: it.po_has_items_id,
+          po_has_rn_id: it.po_has_rn_id,
           poNumber: it.poNumber || poNumberHeader || "POL-1026-0040",
           prNumber: it.prNumber || "—",
           code: it.code || "10.100.100.001",
@@ -687,6 +700,14 @@ export function WarehouseCreate({
         value: num,
         label: `${num} ${sup ? `(${sup} · ${itemsCount} item${itemsCount > 1 ? "s" : ""})` : ""}${bpbWarning}`,
       });
+    });
+
+    list.sort((a, b) => {
+      const aInBpb = a.label.includes("[In BPB:");
+      const bInBpb = b.label.includes("[In BPB:");
+      if (aInBpb && !bInBpb) return 1;
+      if (!aInBpb && bInBpb) return -1;
+      return 0;
     });
 
     return list;
@@ -1053,8 +1074,30 @@ export function WarehouseCreate({
 
                         {/* Item & Code */}
                         <td>
-                          <div style={{ fontWeight: 600, color: "var(--ink)" }}>{it.name}</div>
-                          <div style={{ fontSize: "11px", color: "var(--muted)", fontFamily: "monospace" }}>{it.code}</div>
+                          {it.name && it.po_has_items_id ? (
+                            <div>
+                              <div style={{ fontWeight: 600, color: "var(--ink)" }}>{it.name}</div>
+                              <div style={{ fontSize: "11px", color: "var(--muted)", fontFamily: "monospace" }}>{it.code || "10.100.100.001"}</div>
+                            </div>
+                          ) : (
+                            <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                              <input
+                                type="text"
+                                className="tx-input-cell"
+                                placeholder="Material Item name..."
+                                value={it.name}
+                                onChange={(e) => handleUpdateItemField(it.id, "name", e.target.value)}
+                              />
+                              <input
+                                type="text"
+                                className="tx-input-cell font-mono"
+                                style={{ fontSize: "11px", color: "var(--muted)" }}
+                                placeholder="Item code (optional)..."
+                                value={it.code}
+                                onChange={(e) => handleUpdateItemField(it.id, "code", e.target.value)}
+                              />
+                            </div>
+                          )}
                         </td>
 
                         {/* Job Number */}

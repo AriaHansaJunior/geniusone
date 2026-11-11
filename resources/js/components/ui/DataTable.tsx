@@ -123,47 +123,109 @@ export function DataTable({
                             {(safeCurrentPage - 1) * pageSize + index + 1}
                           </span>
                         ) : isPoCol ? (
-                          <strong
-                            className="cell-code"
-                            style={{
-                              color: "var(--blue-700, #1d4ed8)",
-                              textDecoration: "underline",
-                              cursor: "pointer",
-                            }}
-                            title="Open Purchase Order"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              const targetPo = String(row._rawPo || row.poNumber || "").trim();
-                              if (onSelectPo && targetPo && targetPo !== "—") {
-                                onSelectPo(targetPo, row);
-                              } else {
-                                onDetail(row);
-                              }
-                            }}
-                          >
-                            {React.isValidElement(rawVal) ? rawVal : String(rawVal)}
-                          </strong>
+                          React.isValidElement(rawVal) ? (
+                            <strong
+                              className="cell-code"
+                              style={{
+                                color: "var(--blue-700, #1d4ed8)",
+                                textDecoration: "underline",
+                                cursor: "pointer",
+                              }}
+                              title="Open Purchase Order"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const targetPo = String(row._rawPo || row.poNumber || "").trim();
+                                if (onSelectPo && targetPo && targetPo !== "—") {
+                                  onSelectPo(targetPo, row);
+                                } else {
+                                  onDetail(row);
+                                }
+                              }}
+                            >
+                              {rawVal}
+                            </strong>
+                          ) : (
+                            <div style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}>
+                              {String(rawVal)
+                                .split(",")
+                                .map((p) => p.trim())
+                                .filter(Boolean)
+                                .map((p, pIdx) => (
+                                  <strong
+                                    key={pIdx}
+                                    className="cell-code"
+                                    style={{
+                                      color: "var(--blue-700, #1d4ed8)",
+                                      textDecoration: "underline",
+                                      cursor: "pointer",
+                                    }}
+                                    title={`Open Purchase Order ${p}`}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      if (onSelectPo && p && p !== "—") {
+                                        onSelectPo(p, row);
+                                      } else {
+                                        onDetail(row);
+                                      }
+                                    }}
+                                  >
+                                    {p}
+                                  </strong>
+                                ))}
+                            </div>
+                          )
                         ) : isPrCol ? (
-                          <strong
-                            className="cell-code"
-                            style={{
-                              color: "var(--blue-700, #1d4ed8)",
-                              textDecoration: "underline",
-                              cursor: "pointer",
-                            }}
-                            title="Open Purchase Requisition"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              const targetPr = String(row._rawPr || row.prNumber || "").trim();
-                              if (onSelectPr && targetPr && targetPr !== "—") {
-                                onSelectPr(targetPr, row);
-                              } else {
-                                onDetail(row);
-                              }
-                            }}
-                          >
-                            {React.isValidElement(rawVal) ? rawVal : String(rawVal)}
-                          </strong>
+                          React.isValidElement(rawVal) ? (
+                            <strong
+                              className="cell-code"
+                              style={{
+                                color: "var(--blue-700, #1d4ed8)",
+                                textDecoration: "underline",
+                                cursor: "pointer",
+                              }}
+                              title="Open Purchase Requisition"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const targetPr = String(row._rawPr || row.prNumber || "").trim();
+                                if (onSelectPr && targetPr && targetPr !== "—") {
+                                  onSelectPr(targetPr, row);
+                                } else {
+                                  onDetail(row);
+                                }
+                              }}
+                            >
+                              {rawVal}
+                            </strong>
+                          ) : (
+                            <div style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}>
+                              {String(rawVal)
+                                .split(",")
+                                .map((p) => p.trim())
+                                .filter(Boolean)
+                                .map((p, pIdx) => (
+                                  <strong
+                                    key={pIdx}
+                                    className="cell-code"
+                                    style={{
+                                      color: "var(--blue-700, #1d4ed8)",
+                                      textDecoration: "underline",
+                                      cursor: "pointer",
+                                    }}
+                                    title={`Open Purchase Requisition ${p}`}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      if (onSelectPr && p && p !== "—") {
+                                        onSelectPr(p, row);
+                                      } else {
+                                        onDetail(row);
+                                      }
+                                    }}
+                                  >
+                                    {p}
+                                  </strong>
+                                ))}
+                            </div>
+                          )
                         ) : (
                           formatCell(col.key, rawVal)
                         )}

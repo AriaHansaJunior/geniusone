@@ -46,7 +46,7 @@ export function ReceiveNoteReturnDetail({
       (r) =>
         r.id === code ||
         r.rnNumber === code ||
-        r.rnNumber.replace(/[\/\\]/g, "-") === code
+        (typeof r.rnNumber === "string" && r.rnNumber.replace(/[\/\\]/g, "-") === code)
     ) ||
     initialReceiveNoteReturnRecords[0];
 
