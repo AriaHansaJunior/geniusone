@@ -7,13 +7,13 @@
 .kwt-print-modal-backdrop {
   position: fixed;
   inset: 0;
-  background-color: rgba(15, 23, 42, 0.7);
+  background-color: rgba(15, 23, 42, 0.75);
   backdrop-filter: blur(4px);
   z-index: 9999;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 20px;
+  padding: 16px;
   animation: kwtModalFadeIn 0.2s ease-out;
 }
 
@@ -29,23 +29,24 @@
 .kwt-print-modal {
   background: #ffffff;
   border-radius: 12px;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35);
   display: flex;
   flex-direction: column;
-  max-width: 950px;
+  max-width: 900px;
   width: 100%;
   max-height: 94vh;
   overflow: hidden;
-  border: 1px solid var(--line, #e2e8f0);
+  border: 1px solid var(--line, #cbd5e1);
 }
 
 .kwt-print-modal__header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 20px;
+  padding: 12px 20px;
   background: #f8fafc;
   border-bottom: 1px solid #e2e8f0;
+  flex-shrink: 0;
 }
 
 .kwt-print-modal__title-box {
@@ -106,23 +107,50 @@
 .kwt-print-modal__body {
   flex: 1;
   overflow-y: auto;
-  padding: 24px;
-  background: #64748b;
+  padding: 24px 16px;
+  background: #475569;
   display: flex;
   justify-content: center;
 }
 
-/* Document Paper Sheet (A4 Dimensions / Appearance) */
+/* ==========================================================================
+   RESET & ISOLATION FOR KWT PRINT CONTAINER
+   (Overrides global table { min-width: max-content }, th { white-space: nowrap })
+   ========================================================================== */
+.kwt-print-sheet table,
+.kwt-doc-box table,
+.kwt-doc-header-meta table {
+  min-width: 0 !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  border-collapse: collapse !important;
+  background: #ffffff !important;
+}
+
+.kwt-print-sheet th,
+.kwt-doc-box th {
+  white-space: normal !important;
+  position: static !important;
+  top: auto !important;
+  user-select: auto !important;
+  background: #ffffff !important;
+  color: #000000 !important;
+  letter-spacing: normal !important;
+}
+
+/* Document Paper Sheet (A4 Dimensions Proportions) */
 .kwt-print-sheet {
   background: #ffffff;
   color: #000000;
   width: 100%;
-  max-width: 820px;
+  max-width: 760px;
+  min-height: 1060px;
   box-sizing: border-box;
-  padding: 20px 24px 24px 24px;
+  padding: 28px 32px 32px 32px;
   font-family: "Times New Roman", Times, Georgia, serif;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.35);
   line-height: 1.25;
+  margin: 0 auto;
 }
 
 /* Document Top Metadata */
@@ -135,176 +163,241 @@
   color: #000000;
 }
 
-.kwt-doc-header-meta table {
-  border-collapse: collapse;
+.kwt-doc-header-meta-table {
+  width: auto !important;
+  max-width: 260px !important;
+  border-collapse: collapse !important;
+  margin: 0 !important;
 }
 
-.kwt-doc-header-meta td {
-  padding: 1px 4px 1px 0;
-  font-size: 11px;
+.kwt-doc-header-meta-table td {
+  padding: 1px 4px 1px 0 !important;
+  font-size: 11px !important;
+  border: none !important;
+  color: #000000 !important;
+  white-space: nowrap !important;
 }
 
 /* Outer Double-Border Box */
 .kwt-doc-box {
-  border: 3px double #000000;
-  box-sizing: border-box;
-  width: 100%;
+  border: 3px double #000000 !important;
+  box-sizing: border-box !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow: hidden !important;
+  margin: 0 !important;
+  padding: 0 !important;
 }
 
-/* Header Grid / Section */
+/* Header Table */
 .kwt-header-table {
-  width: 100%;
-  border-collapse: collapse;
-  border-bottom: 1px solid #000000;
+  width: 100% !important;
+  max-width: 100% !important;
+  table-layout: fixed !important;
+  border-collapse: collapse !important;
+  border-bottom: 1px solid #000000 !important;
+  box-sizing: border-box !important;
+  margin: 0 !important;
 }
 
 .kwt-header-left {
-  width: 58%;
-  vertical-align: middle;
-  padding: 8px 12px;
-  border-right: 1px solid #000000;
+  width: 58% !important;
+  vertical-align: middle !important;
+  padding: 8px 10px !important;
+  border-right: 1px solid #000000 !important;
+  border-left: none !important;
+  border-top: none !important;
+  box-sizing: border-box !important;
 }
 
 .kwt-header-left-inner {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 12px;
 }
 
 .kwt-header-logo {
-  height: 52px;
+  height: 48px;
   width: auto;
   object-fit: contain;
+  flex-shrink: 0;
 }
 
 .kwt-header-titles {
   display: flex;
   flex-direction: column;
   justify-content: center;
+  min-width: 0;
 }
 
 .kwt-header-company-name {
   font-family: "Times New Roman", Times, serif;
-  font-size: 17px;
+  font-size: 16px;
   font-weight: 900;
   letter-spacing: 0.5px;
   color: #000000;
   margin: 0;
   line-height: 1.2;
+  white-space: nowrap;
 }
 
 .kwt-header-doc-title {
   font-family: "Times New Roman", Times, serif;
-  font-size: 13.5px;
+  font-size: 13px;
   font-weight: 800;
   letter-spacing: 0.5px;
   color: #000000;
-  margin-top: 4px;
+  margin: 4px 0 0 0;
   line-height: 1.2;
 }
 
 .kwt-header-right {
-  width: 42%;
-  vertical-align: top;
-  padding: 6px 10px;
+  width: 42% !important;
+  vertical-align: top !important;
+  padding: 6px 8px !important;
+  border-right: none !important;
+  border-top: none !important;
+  box-sizing: border-box !important;
 }
 
 .kwt-meta-table {
-  width: 100%;
-  border-collapse: collapse;
+  width: 100% !important;
+  table-layout: fixed !important;
+  border-collapse: collapse !important;
   font-family: "Times New Roman", Times, serif;
-  font-size: 12px;
+  font-size: 11.5px;
+  box-sizing: border-box !important;
+  margin: 0 !important;
 }
 
 .kwt-meta-table td {
-  padding: 2px 2px;
-  vertical-align: top;
+  padding: 2px 2px !important;
+  vertical-align: top !important;
+  border: none !important;
+  color: #000000 !important;
 }
 
 .kwt-meta-table td.kwt-meta-label {
-  font-weight: 700;
-  white-space: nowrap;
+  width: 95px !important;
+  font-weight: 700 !important;
+  white-space: nowrap !important;
 }
 
 .kwt-meta-table td.kwt-meta-colon {
-  width: 8px;
-  font-weight: 700;
-  text-align: center;
+  width: 10px !important;
+  font-weight: 700 !important;
+  text-align: center !important;
 }
 
 .kwt-meta-table td.kwt-meta-val {
-  font-weight: 600;
-  word-break: break-word;
+  font-weight: 600 !important;
+  word-break: break-word !important;
 }
 
-/* Items Table */
+/* ==========================================================================
+   ITEMS TABLE (STRICT TABLE-LAYOUT: FIXED & EXACT PERCENTAGE WIDTHS)
+   ========================================================================== */
 .kwt-items-table {
-  width: 100%;
-  border-collapse: collapse;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  table-layout: fixed !important;
+  border-collapse: collapse !important;
   font-family: "Times New Roman", Times, serif;
-  font-size: 11.5px;
+  font-size: 11px;
+  box-sizing: border-box !important;
+  margin: 0 !important;
 }
 
 .kwt-items-table th,
 .kwt-items-table td {
-  border: 1px solid #000000;
-  padding: 4px 6px;
-  box-sizing: border-box;
+  border: 1px solid #000000 !important;
+  padding: 4px 5px !important;
+  box-sizing: border-box !important;
+  word-wrap: break-word !important;
+  overflow-wrap: break-word !important;
+  word-break: break-word !important;
+  white-space: normal !important;
+  color: #000000 !important;
 }
 
 .kwt-items-table th {
-  font-weight: 800;
-  text-align: center;
-  background-color: #ffffff;
-  padding: 6px 4px;
-  font-size: 12px;
+  font-weight: 800 !important;
+  text-align: center !important;
+  background-color: #ffffff !important;
+  padding: 5px 4px !important;
+  font-size: 11.5px !important;
+  height: auto !important;
+  border-top: none !important;
+}
+
+/* Outer column borders merge into .kwt-doc-box cleanly */
+.kwt-items-table th:first-child,
+.kwt-items-table td:first-child {
+  border-left: none !important;
+}
+
+.kwt-items-table th:last-child,
+.kwt-items-table td:last-child {
+  border-right: none !important;
 }
 
 .kwt-items-table tr.kwt-row-empty td {
-  height: 24px;
+  height: 22px !important;
 }
 
 .kwt-col-center {
-  text-align: center;
+  text-align: center !important;
 }
 
 .kwt-col-right {
-  text-align: right;
+  text-align: right !important;
 }
 
 .kwt-col-left {
-  text-align: left;
+  text-align: left !important;
 }
 
 /* Legend Section (PR Forms) */
 .kwt-legend-box {
-  border-bottom: 1px solid #000000;
-  padding: 4px 10px;
+  width: 100% !important;
+  border-bottom: 1px solid #000000 !important;
+  border-left: none !important;
+  border-right: none !important;
+  padding: 3px 8px !important;
   font-family: "Times New Roman", Times, serif;
-  font-size: 11.5px;
+  font-size: 11px;
   line-height: 1.35;
+  box-sizing: border-box !important;
 }
 
 /* Footer Section */
 .kwt-footer-table {
-  width: 100%;
-  border-collapse: collapse;
+  width: 100% !important;
+  max-width: 100% !important;
+  table-layout: fixed !important;
+  border-collapse: collapse !important;
   font-family: "Times New Roman", Times, serif;
-  font-size: 11.5px;
+  font-size: 11px;
+  box-sizing: border-box !important;
+  margin: 0 !important;
 }
 
 .kwt-footer-table td {
-  vertical-align: top;
-  box-sizing: border-box;
+  vertical-align: top !important;
+  box-sizing: border-box !important;
+  border: none !important;
 }
 
 .kwt-distribution-cell {
-  width: 32%;
-  border-right: 1px solid #000000;
-  padding: 6px 10px 8px 10px;
+  width: 30% !important;
+  border-right: 1px solid #000000 !important;
+  border-left: none !important;
+  padding: 6px 8px 8px 8px !important;
   font-family: "Times New Roman", Times, serif;
-  font-size: 11.5px;
+  font-size: 11px;
   line-height: 1.45;
+  box-sizing: border-box !important;
 }
 
 .kwt-distribution-list {
@@ -315,16 +408,16 @@
 
 .kwt-distribution-item {
   display: flex;
-  gap: 8px;
+  gap: 6px;
 }
 
 .kwt-dist-num {
-  width: 12px;
+  width: 10px;
   font-weight: 600;
 }
 
 .kwt-dist-color {
-  width: 50px;
+  width: 48px;
 }
 
 .kwt-dist-colon {
@@ -339,6 +432,7 @@
 .kwt-signatures-container {
   display: flex;
   width: 100%;
+  box-sizing: border-box;
 }
 
 .kwt-sign-col {
@@ -347,55 +441,63 @@
   flex-direction: column;
   align-items: center;
   justify-content: space-between;
-  padding: 6px 8px 6px 8px;
-  min-height: 90px;
+  padding: 6px 6px;
+  min-height: 85px;
   text-align: center;
+  box-sizing: border-box;
 }
 
 .kwt-sign-col + .kwt-sign-col {
-  border-left: 1px solid #000000;
+  border-left: 1px solid #000000 !important;
 }
 
 .kwt-sign-title {
   font-weight: 800;
-  font-size: 12px;
+  font-size: 11.5px;
 }
 
 .kwt-sign-space {
-  height: 50px;
+  height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .kwt-sign-actor {
-  font-size: 11px;
+  font-size: 10.5px;
   font-style: italic;
   color: #334155;
 }
 
 .kwt-sign-role {
   font-weight: 800;
-  font-size: 12px;
+  font-size: 11.5px;
 }
 
 /* NPB (KWT-PPIC-004) Specific Footer */
 .kwt-npb-footer {
-  width: 100%;
-  border-collapse: collapse;
+  width: 100% !important;
+  max-width: 100% !important;
+  table-layout: fixed !important;
+  border-collapse: collapse !important;
+  box-sizing: border-box !important;
+  margin: 0 !important;
 }
 
 .kwt-npb-footer td {
-  border: 1px solid #000000;
-  vertical-align: top;
-  box-sizing: border-box;
+  border: 1px solid #000000 !important;
+  vertical-align: top !important;
+  box-sizing: border-box !important;
 }
 
 .kwt-npb-notes-cell {
-  width: 50%;
-  padding: 6px 10px;
-  min-height: 85px;
-  font-size: 12px;
+  width: 50% !important;
+  padding: 6px 8px !important;
+  min-height: 80px !important;
+  font-size: 11.5px !important;
+  border-left: none !important;
+  border-bottom: none !important;
+  border-right: 1px solid #000000 !important;
 }
 
 .kwt-npb-notes-title {
@@ -404,46 +506,55 @@
 }
 
 .kwt-npb-notes-content {
-  font-size: 11.5px;
+  font-size: 11px;
   line-height: 1.35;
   color: #1e293b;
 }
 
 .kwt-npb-signs-cell {
-  width: 50%;
-  padding: 0;
+  width: 50% !important;
+  padding: 0 !important;
+  border-right: none !important;
+  border-bottom: none !important;
 }
 
 .kwt-npb-signs-table {
-  width: 100%;
-  border-collapse: collapse;
-  height: 100%;
+  width: 100% !important;
+  table-layout: fixed !important;
+  border-collapse: collapse !important;
+  height: 100% !important;
+  box-sizing: border-box !important;
+  margin: 0 !important;
 }
 
 .kwt-npb-signs-table th {
-  border-bottom: 1px solid #000000;
-  border-right: 1px solid #000000;
-  padding: 4px;
-  font-size: 12px;
-  font-weight: 800;
-  text-align: center;
+  border-bottom: 1px solid #000000 !important;
+  border-right: 1px solid #000000 !important;
+  border-top: none !important;
+  padding: 3px !important;
+  font-size: 11.5px !important;
+  font-weight: 800 !important;
+  text-align: center !important;
 }
 
-.kwt-npb-signs-table th:last-child {
-  border-right: none;
+.kwt-npb-signs-table th:first-child,
+.kwt-npb-signs-table td:first-child {
+  border-left: none !important;
+}
+
+.kwt-npb-signs-table th:last-child,
+.kwt-npb-signs-table td:last-child {
+  border-right: none !important;
 }
 
 .kwt-npb-signs-table td {
-  border-right: 1px solid #000000;
-  height: 60px;
-  padding: 4px;
-  text-align: center;
-  vertical-align: bottom;
-  font-size: 10.5px;
-}
-
-.kwt-npb-signs-table td:last-child {
-  border-right: none;
+  border-right: 1px solid #000000 !important;
+  border-bottom: none !important;
+  height: 55px !important;
+  padding: 3px !important;
+  text-align: center !important;
+  vertical-align: bottom !important;
+  font-size: 10.5px !important;
 }
 
 /* ==========================================================================
@@ -458,7 +569,7 @@
 @media print {
   @page {
     size: A4 portrait;
-    margin: 8mm 10mm;
+    margin: 10mm 12mm;
   }
 
   html,
@@ -468,20 +579,22 @@
     margin: 0 !important;
     padding: 0 !important;
     width: 100% !important;
+    height: auto !important;
   }
 
-  /* Hide the rest of the application */
+  /* Hide everything outside of print targets */
   body * {
     visibility: hidden !important;
   }
 
-  /* Modal preview should hide chrome and show sheet */
+  /* When modal is open during print, strip modal chrome */
   .kwt-print-modal-backdrop {
     position: static !important;
     background: none !important;
     backdrop-filter: none !important;
     padding: 0 !important;
     display: block !important;
+    inset: auto !important;
   }
 
   .kwt-print-modal {
@@ -493,6 +606,7 @@
     height: auto !important;
     max-height: none !important;
     overflow: visible !important;
+    background: transparent !important;
   }
 
   .kwt-print-modal__header {
@@ -506,7 +620,7 @@
     display: block !important;
   }
 
-  /* Standalone print container or sheet inside modal */
+  /* Standalone print target visibility */
   .kwt-print-target,
   .kwt-print-target * {
     visibility: visible !important;
@@ -527,8 +641,30 @@
     box-shadow: none !important;
     max-width: 100% !important;
     width: 100% !important;
+    min-height: auto !important;
     padding: 0 !important;
     margin: 0 !important;
+    display: block !important;
+  }
+
+  .kwt-doc-box {
+    width: 100% !important;
+    max-width: 100% !important;
+    border: 3px double #000000 !important;
+    box-sizing: border-box !important;
+    overflow: hidden !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  .kwt-items-table,
+  .kwt-header-table,
+  .kwt-footer-table,
+  .kwt-npb-footer {
+    width: 100% !important;
+    max-width: 100% !important;
+    table-layout: fixed !important;
+    box-sizing: border-box !important;
   }
 
   /* Force print borders & graphics */
@@ -536,22 +672,4 @@
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
-
-  .kwt-doc-box {
-    border: 3px double #000000 !important;
-  }
-
-  .kwt-items-table th,
-  .kwt-items-table td,
-  .kwt-header-table,
-  .kwt-header-left,
-  .kwt-legend-box,
-  .kwt-distribution-cell,
-  .kwt-sign-col,
-  .kwt-npb-footer td,
-  .kwt-npb-signs-table th,
-  .kwt-npb-signs-table td {
-    border-color: #000000 !important;
-  }
 }
-

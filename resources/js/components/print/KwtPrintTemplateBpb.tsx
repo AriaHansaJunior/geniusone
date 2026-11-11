@@ -45,21 +45,21 @@ export const KwtPrintTemplateBpb: React.FC<KwtPrintBpbProps> = ({
     <div className="kwt-print-sheet kwt-print-target">
       {/* Top Form Identification */}
       <div className="kwt-doc-header-meta">
-        <table>
+        <table className="kwt-doc-header-meta-table">
           <tbody>
             <tr>
-              <td>Form</td>
-              <td>:</td>
+              <td style={{ width: "42px" }}>Form</td>
+              <td style={{ width: "10px", textAlign: "center" }}>:</td>
               <td>{formCode}</td>
             </tr>
             <tr>
               <td>Rev</td>
-              <td>:</td>
+              <td style={{ textAlign: "center" }}>:</td>
               <td>1</td>
             </tr>
             <tr>
               <td>Date</td>
-              <td>:</td>
+              <td style={{ textAlign: "center" }}>:</td>
               <td>10.11.2026</td>
             </tr>
           </tbody>
@@ -122,14 +122,22 @@ export const KwtPrintTemplateBpb: React.FC<KwtPrintBpbProps> = ({
 
         {/* Items Table */}
         <table className="kwt-items-table">
+          <colgroup>
+            <col style={{ width: "5%" }} />
+            <col style={{ width: "35%" }} />
+            <col style={{ width: "10%" }} />
+            <col style={{ width: "8%" }} />
+            <col style={{ width: "18%" }} />
+            <col style={{ width: "24%" }} />
+          </colgroup>
           <thead>
             <tr>
-              <th style={{ width: "35px" }}>No.</th>
-              <th style={{ width: "270px" }}>Nama Barang</th>
-              <th style={{ width: "70px" }}>Jumlah</th>
-              <th style={{ width: "60px" }}>Satuan</th>
-              <th style={{ width: "130px" }}>No. PP</th>
-              <th>Keterangan</th>
+              <th style={{ width: "5%" }}>No.</th>
+              <th style={{ width: "35%" }}>Nama Barang</th>
+              <th style={{ width: "10%" }}>Jumlah</th>
+              <th style={{ width: "8%" }}>Satuan</th>
+              <th style={{ width: "18%" }}>No. PP</th>
+              <th style={{ width: "24%" }}>Keterangan</th>
             </tr>
           </thead>
           <tbody>

@@ -46,21 +46,21 @@ export const KwtPrintTemplateNpb: React.FC<KwtPrintNpbProps> = ({
     <div className="kwt-print-sheet kwt-print-target">
       {/* Top Form Identification */}
       <div className="kwt-doc-header-meta">
-        <table>
+        <table className="kwt-doc-header-meta-table">
           <tbody>
             <tr>
-              <td>Form</td>
-              <td>:</td>
+              <td style={{ width: "42px" }}>Form</td>
+              <td style={{ width: "10px", textAlign: "center" }}>:</td>
               <td>{formCode}</td>
             </tr>
             <tr>
               <td>Rev</td>
-              <td>:</td>
+              <td style={{ textAlign: "center" }}>:</td>
               <td>1</td>
             </tr>
             <tr>
               <td>Date</td>
-              <td>:</td>
+              <td style={{ textAlign: "center" }}>:</td>
               <td>10.11.2026</td>
             </tr>
           </tbody>
@@ -118,13 +118,20 @@ export const KwtPrintTemplateNpb: React.FC<KwtPrintNpbProps> = ({
 
         {/* Items Table */}
         <table className="kwt-items-table">
+          <colgroup>
+            <col style={{ width: "6%" }} />
+            <col style={{ width: "42%" }} />
+            <col style={{ width: "12%" }} />
+            <col style={{ width: "10%" }} />
+            <col style={{ width: "30%" }} />
+          </colgroup>
           <thead>
             <tr>
-              <th style={{ width: "35px" }}>No.</th>
-              <th style={{ width: "310px" }}>Nama Barang</th>
-              <th style={{ width: "80px" }}>Jumlah</th>
-              <th style={{ width: "70px" }}>Satuan</th>
-              <th>Keterangan</th>
+              <th style={{ width: "6%" }}>No.</th>
+              <th style={{ width: "42%" }}>Nama Barang</th>
+              <th style={{ width: "12%" }}>Jumlah</th>
+              <th style={{ width: "10%" }}>Satuan</th>
+              <th style={{ width: "30%" }}>Keterangan</th>
             </tr>
           </thead>
           <tbody>

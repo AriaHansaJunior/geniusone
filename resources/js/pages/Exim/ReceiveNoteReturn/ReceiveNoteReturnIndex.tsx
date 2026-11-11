@@ -552,13 +552,17 @@ export function ReceiveNoteReturnIndex({
                 paginatedRecords.map((rnr, idx) => {
                   const sequentialNumber = (safeCurrentPage - 1) * pageSize + idx + 1;
                   return (
-                    <tr key={rnr.id}>
+                    <tr
+                      key={rnr.id}
+                      className="rnr-clickable-row"
+                      onClick={() => onViewDetail(rnr.rnNumber)}
+                      style={{ cursor: "pointer" }}
+                      title={`Click row to view details of Receive Note Return ${rnr.rnNumber}`}
+                    >
                       <td className="rnr-td-no text-center">{sequentialNumber}</td>
                       {isColVisible("rnNumber") && (
                         <td
                           className="rnr-td-rnNumber"
-                          onClick={() => onViewDetail(rnr.rnNumber)}
-                          style={{ cursor: "pointer" }}
                           title={`Open Receive Note Return ${rnr.rnNumber}`}
                         >
                           <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
@@ -658,11 +662,14 @@ export function ReceiveNoteReturnIndex({
                           </div>
                         </td>
                       )}
-                      <td className="rnr-td-option text-center">
+                      <td className="rnr-td-option text-center" onClick={(e) => e.stopPropagation()}>
                         <button
                           type="button"
                           className="rnr-btn-row-action"
-                          onClick={() => onViewDetail(rnr.rnNumber)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onViewDetail(rnr.rnNumber);
+                          }}
                           title="View Detail Receive Note"
                           aria-label={`View detail for ${rnr.rnNumber}`}
                         >
