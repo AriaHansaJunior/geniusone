@@ -236,6 +236,9 @@ class PurchaseOrderService
                     percentageLme: (float) ($item['percentage_lme'] ?? 0)
                 );
 
+                $prItem = $resolvedPrHasItemId ? \App\Models\Procurement\PurchaseRequest\PurchaseRequisitionItem::find($resolvedPrHasItemId) : null;
+                $itemRemark = !empty($item['remark']) && $item['remark'] !== '-' ? $item['remark'] : ($item['note'] ?? $prItem?->remark ?? null);
+
                 PurchaseOrderItem::create([
                     'purchase_order_id' => $order->id,
                     'pr_has_items_id' => $resolvedPrHasItemId,
@@ -259,6 +262,7 @@ class PurchaseOrderService
                     'total_addional_cost' => 0,
                     'total_pph' => $calc['pph_amount'],
                     'grand_total' => $calc['grand_total'],
+                    'remark' => $itemRemark,
                 ]);
             }
 

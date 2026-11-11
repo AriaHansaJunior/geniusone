@@ -104,7 +104,9 @@ export function DetailDrawer({ row, onClose }: { row: TableRow; onClose: () => v
               <Badge tone={badgeTone}>✓ {status}</Badge>
               {isPo && (
                 <>
-                  <Badge tone="purple">{String(row._rawFacility || "FASILITAS")}</Badge>
+                  <Badge tone={/non/i.test(String(row._rawFacility || "")) ? "gray" : "purple"}>
+                    {/non/i.test(String(row._rawFacility || "")) ? "NON FASILITAS" : "FASILITAS"}
+                  </Badge>
                   <Badge tone="gray">
                     {String(row._rawCurrency || "IDR")} · Rate: {String(row._rawRate || "1.00")}
                   </Badge>
@@ -112,8 +114,8 @@ export function DetailDrawer({ row, onClose }: { row: TableRow; onClose: () => v
               )}
               {isReport && (
                 <>
-                  <Badge tone={row._rawFacility === "Facility" ? "purple" : "gray"}>
-                    {String(row._rawFacility || "Non Facility")}
+                  <Badge tone={/non/i.test(String(row._rawFacility || "")) ? "gray" : "purple"}>
+                    {/non/i.test(String(row._rawFacility || "")) ? "NON FASILITAS" : "FASILITAS"}
                   </Badge>
                   <Badge tone="gray">
                     {String(row._rawCurrency || "IDR")}
@@ -512,8 +514,8 @@ export function DetailDrawer({ row, onClose }: { row: TableRow; onClose: () => v
                           PR: <strong>{String(row._rawPr || "—")}</strong> · PO: <strong>{String(row._rawPo || "—")}</strong>
                         </small>
                       </div>
-                      <Badge tone={row._rawFacility === "Facility" ? "purple" : "gray"}>
-                        {String(row._rawFacility || "Non Facility")}
+                      <Badge tone={/non/i.test(String(row._rawFacility || "")) ? "gray" : "purple"}>
+                        {/non/i.test(String(row._rawFacility || "")) ? "NON FASILITAS" : "FASILITAS"}
                       </Badge>
                     </div>
 

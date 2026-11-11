@@ -1986,15 +1986,19 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
         currency: newRecord.currency,
         rate: newRecord.rate,
         arrival_date: newRecord.arrivalDate,
-        invoice_number: newRecord.invoiceNumber,
-        invoice_date: newRecord.invoiceDate,
-        tax_invoice: newRecord.taxInvoiceNumber,
-        tax_invoice_date: newRecord.taxInvoiceDate,
-        license_plate: newRecord.licensePlate,
-        note: newRecord.description,
-        sj_number: newRecord.nomorPackingList,
-        sj_date: newRecord.tanggalPackingList,
+        facility: newRecord.facility,
+        invoice_number: newRecord.invoiceNumber && newRecord.invoiceNumber !== "-" ? newRecord.invoiceNumber : undefined,
+        invoice_date: newRecord.invoiceDate && newRecord.invoiceDate !== "-" ? newRecord.invoiceDate : undefined,
+        tax_invoice: newRecord.taxInvoiceNumber && newRecord.taxInvoiceNumber !== "-" ? newRecord.taxInvoiceNumber : undefined,
+        tax_invoice_date: newRecord.taxInvoiceDate && newRecord.taxInvoiceDate !== "-" ? newRecord.taxInvoiceDate : undefined,
+        license_plate: newRecord.licensePlate && newRecord.licensePlate !== "-" ? newRecord.licensePlate : undefined,
+        note: newRecord.description && newRecord.description !== "-" ? newRecord.description : undefined,
+        sj_number: (newRecord as any).nomorSuratJalan && (newRecord as any).nomorSuratJalan !== "-" ? (newRecord as any).nomorSuratJalan : newRecord.nomorPackingList,
+        sj_date: (newRecord as any).tanggalSuratJalan && (newRecord as any).tanggalSuratJalan !== "-" ? (newRecord as any).tanggalSuratJalan : newRecord.tanggalPackingList,
+        pl_number: newRecord.nomorPackingList && newRecord.nomorPackingList !== "-" ? newRecord.nomorPackingList : undefined,
+        pl_date: newRecord.tanggalPackingList && newRecord.tanggalPackingList !== "-" ? newRecord.tanggalPackingList : undefined,
         items: newRecord.items?.map((it) => ({
+          purchase_order_id: (it as any).purchase_order_id || (it as any).po_id,
           poNumber: it.poNumber,
           itemName: it.itemName,
           suratJalanQty: it.suratJalanQty,
@@ -3100,23 +3104,23 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
                 nextState.status === "APPROVED"
                   ? "Approved"
                   : nextState.status === "WAITING_APPROVE_2"
-                  ? "Waiting for Approve 2"
-                  : nextState.status === "REJECTED"
-                  ? "Rejected"
-                  : "Waiting for Approve 1";
+                    ? "Waiting for Approve 2"
+                    : nextState.status === "REJECTED"
+                      ? "Rejected"
+                      : "Waiting for Approve 1";
               setReceiveNoteRecords((prev) =>
                 prev.map((r) =>
                   r.rnNumber === rnNum
                     ? {
-                        ...r,
-                        status: mappedStatus as any,
-                        approval1At: nextState.approved1At
-                          ? `${nextState.approved1At}${nextState.approved1By ? ` by ${nextState.approved1By}` : ""}`
-                          : r.approval1At,
-                        approval2At: nextState.approved2At
-                          ? `${nextState.approved2At}${nextState.approved2By ? ` by ${nextState.approved2By}` : ""}`
-                          : r.approval2At,
-                      }
+                      ...r,
+                      status: mappedStatus as any,
+                      approval1At: nextState.approved1At
+                        ? `${nextState.approved1At}${nextState.approved1By ? ` by ${nextState.approved1By}` : ""}`
+                        : r.approval1At,
+                      approval2At: nextState.approved2At
+                        ? `${nextState.approved2At}${nextState.approved2By ? ` by ${nextState.approved2By}` : ""}`
+                        : r.approval2At,
+                    }
                     : r
                 )
               );

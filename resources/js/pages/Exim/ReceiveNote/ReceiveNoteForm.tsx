@@ -62,10 +62,35 @@ export function ReceiveNoteForm({ onBack, onSave }: ReceiveNoteFormProps) {
   const [plNumber, setPlNumber] = useState("");
   const [plDate, setPlDate] = useState("");
 
-  // Additional Options
-  const [statusDn, setStatusDn] = useState(false);
+  // Additional Options & Facility Status
+  const [facilityStatus, setFacilityStatus] = useState<"FASILITAS" | "NON FASILITAS">("FASILITAS");
+  const [statusDn, setStatusDn] = useState(true);
   const [serviceSubkon, setServiceSubkon] = useState(false);
-  const [typeOfDocument, setTypeOfDocument] = useState("");
+  const [typeOfDocument, setTypeOfDocument] = useState("BC 4.0");
+
+  const handleDocTypeChange = (val: string) => {
+    setTypeOfDocument(val);
+    if (val.toUpperCase().includes("NON")) {
+      setFacilityStatus("NON FASILITAS");
+      setStatusDn(false);
+    } else if (val) {
+      setFacilityStatus("FASILITAS");
+      setStatusDn(true);
+    }
+    if (formErrors.typeOfDocument) {
+      setFormErrors((prev) => ({ ...prev, typeOfDocument: "" }));
+    }
+  };
+
+  const handleFacilityChange = (val: "FASILITAS" | "NON FASILITAS") => {
+    setFacilityStatus(val);
+    setStatusDn(val === "FASILITAS");
+    if (val === "NON FASILITAS" && (!typeOfDocument || typeOfDocument.startsWith("BC"))) {
+      setTypeOfDocument("Non-Fasilitas");
+    } else if (val === "FASILITAS" && (!typeOfDocument || typeOfDocument === "Non-Fasilitas")) {
+      setTypeOfDocument("BC 4.0");
+    }
+  };
 
   // Items table
   const [items, setItems] = useState<ReceiveNoteItem[]>([]);

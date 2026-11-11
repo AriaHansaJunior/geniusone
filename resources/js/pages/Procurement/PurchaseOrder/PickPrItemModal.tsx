@@ -135,7 +135,7 @@ export function PickPrItemModal({
                 remainingQty: remQty,
                 unit: it.unit || "PCE",
                 facility: fac,
-                remark: it.remark || it.note || pr.remark || pr._rawRemark || "-",
+                remark: it.remark || it.note || "",
                 dueDate: it.dueDate || pr.dueDate || "-",
                 hasPo,
                 poCount,
@@ -432,7 +432,7 @@ export function PickPrItemModal({
                       </td>
                       <td style={{ textAlign: "center" }}>
                         <Badge tone={isNonFac ? "gray" : "purple"}>
-                          {isNonFac ? "Non Facility" : "Facility"}
+                          {isNonFac ? "NON FASILITAS" : "FASILITAS"}
                         </Badge>
                       </td>
                       <td style={{ fontSize: "11.5px", color: "var(--ink-soft)" }}>

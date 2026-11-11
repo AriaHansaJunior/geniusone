@@ -100,7 +100,8 @@ class PurchaseRequisitionApiController extends Controller
 
             $lineItems = $pr->items->map(function ($it, $itIdx) use ($pr) {
                 $isClosed = (bool) ($it->is_closed ?? false);
-                $facilityName = $it->item?->facility?->name ?? 'FASILITAS';
+                $rawFac = $it->item?->facility?->name ?? 'FASILITAS';
+                $facilityName = stripos((string) $rawFac, 'non') !== false ? 'NON FASILITAS' : 'FASILITAS';
                 $orderedQty = (float) ($it->orderItems ? $it->orderItems->sum('order') : 0);
                 $remainingQty = max(0, (float) $it->quantity - $orderedQty);
                 $hasPo = $it->orderItems && $it->orderItems->isNotEmpty();
@@ -256,7 +257,8 @@ class PurchaseRequisitionApiController extends Controller
 
         $lineItems = $pr->items->map(function ($it, $itIdx) use ($pr) {
             $isClosed = (bool) ($it->is_closed ?? false);
-            $facilityName = $it->item?->facility?->name ?? 'FASILITAS';
+            $rawFac = $it->item?->facility?->name ?? 'FASILITAS';
+            $facilityName = stripos((string) $rawFac, 'non') !== false ? 'NON FASILITAS' : 'FASILITAS';
             $orderedQty = (float) ($it->orderItems ? $it->orderItems->sum('order') : 0);
             $remainingQty = max(0, (float) $it->quantity - $orderedQty);
             $hasPo = $it->orderItems && $it->orderItems->isNotEmpty();

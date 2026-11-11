@@ -41,6 +41,7 @@ class PurchaseOrderItem extends Model
         'total_addional_cost',
         'total_pph',
         'grand_total',
+        'remark',
     ];
 
     public function purchaseOrder(): BelongsTo

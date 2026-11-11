@@ -3,6 +3,7 @@ import { Icon } from "../../../components/ui/Icon";
 import { Button } from "../../../components/ui/Button";
 import { SearchField } from "../../../components/ui/SearchField";
 import { Pagination } from "../../../components/ui/Pagination";
+import { Badge } from "../../../components/ui/Badge";
 import { availablePoItemsToPick } from "./receive-note-data";
 import type { PoItemToPick } from "./receive-note-types";
 
@@ -26,9 +27,19 @@ export function PickPoItemModal({
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [itemsList, setItemsList] = useState<PoItemToPick[]>(availablePoItemsToPick);
+  const [selectedFacility, setSelectedFacility] = useState<string>(facilityFilter || "All");
+
+  // Keep local filter synced when prop changes or modal opens
+  useEffect(() => {
+    if (isOpen) {
+      setSelectedFacility(facilityFilter || "All");
+      setSelectedIds(new Set());
+    }
+  }, [isOpen, facilityFilter]);
 
   // Fetch approved PO items from backend API
   useEffect(() => {
+    if (!isOpen) return;
     let isMounted = true;
     fetch("/api/procurement/po?per_page=100", { headers: { Accept: "application/json" } })
       .then((r) => r.json())
@@ -38,6 +49,24 @@ export function PickPoItemModal({
         if (Array.isArray(pos) && pos.length > 0) {
           const dynamicItems: PoItemToPick[] = [];
           pos.forEach((po: any) => {
+            // Strict Downstream Gating: Linked Purchase Order must be Approved
+            const isApproved =
+              po.status === "Approved" ||
+              po.status === "Approved 2" ||
+              po.is_approved === true ||
+              po.is_approved_2 === true ||
+              po._rawStatus === "Approved" ||
+              (Array.isArray(po.approvals) &&
+                po.approvals.some(
+                  (a: any) =>
+                    (a.tier === 2 || a.approval_ke == 2) &&
+                    (a.status === 1 || a.status === "Approved")
+                ));
+
+            if (!isApproved) {
+              return;
+            }
+
             const poNum = po.po_number || po.poNumber || po._rawNumber || "";
             const rawItems = po.items || po._items || [];
             const poFac = String(po.facility || po.facility_status || po._rawFacility || "FASILITAS");
@@ -83,9 +112,9 @@ export function PickPoItemModal({
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [isOpen]);
 
-  // Filter available items based on search and exclude already selected items
+  // Filter available items based on search, facility, and exclude already selected items
   const filteredItems = useMemo(() => {
     return itemsList.filter((item) => {
       const uniqueKey = `${item.poNumber}-${item.itemCode}`;
@@ -93,8 +122,8 @@ export function PickPoItemModal({
         return false;
       }
 
-      if (facilityFilter) {
-        const normFilter = facilityFilter.toUpperCase().includes("NON") ? "NON FASILITAS" : "FASILITAS";
+      if (selectedFacility && selectedFacility !== "All") {
+        const normFilter = selectedFacility.toUpperCase().includes("NON") ? "NON FASILITAS" : "FASILITAS";
         const itemFac = (item.facility || "FASILITAS").toUpperCase().includes("NON") ? "NON FASILITAS" : "FASILITAS";
         if (normFilter !== itemFac) {
           return false;
@@ -110,10 +139,11 @@ export function PickPoItemModal({
         item.poNumberAlias.toLowerCase().includes(q) ||
         item.itemName.toLowerCase().includes(q) ||
         item.itemCode.toLowerCase().includes(q) ||
-        item.remark.toLowerCase().includes(q)
+        item.remark.toLowerCase().includes(q) ||
+        (item.facility && item.facility.toLowerCase().includes(q))
       );
     });
-  }, [itemsList, alreadySelectedKeys, search]);
+  }, [itemsList, alreadySelectedKeys, selectedFacility, search]);
 
   // Pagination
   const totalRecords = filteredItems.length;
@@ -216,15 +246,33 @@ export function PickPoItemModal({
 
         {/* Filters Toolbar */}
         <div className="item-picker-toolbar">
-          <div className="item-picker-search-group">
-            <SearchField
-              value={search}
-              onChange={(val) => {
-                setSearch(val);
-                setCurrentPage(1);
-              }}
-              placeholder="Search job number, PO number, alias, item name..."
-            />
+          <div className="item-picker-search-group" style={{ display: "flex", gap: "8px", alignItems: "center", flex: 1 }}>
+            <div style={{ flex: 1 }}>
+              <SearchField
+                value={search}
+                onChange={(val) => {
+                  setSearch(val);
+                  setCurrentPage(1);
+                }}
+                placeholder="Search job number, PO number, alias, item name..."
+              />
+            </div>
+            <div style={{ minWidth: "150px" }}>
+              <select
+                value={selectedFacility}
+                onChange={(e) => {
+                  setSelectedFacility(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="master-form-select"
+                style={{ height: "36px", fontSize: "12px", width: "100%" }}
+                aria-label="Filter by Facility"
+              >
+                <option value="All">All Facilities</option>
+                <option value="FASILITAS">FASILITAS</option>
+                <option value="NON FASILITAS">NON FASILITAS</option>
+              </select>
+            </div>
           </div>
 
           <div className="item-picker-actions-group">
@@ -265,6 +313,7 @@ export function PickPoItemModal({
                 <th>PO Number Alias</th>
                 <th>Remark</th>
                 <th>Item Name</th>
+                <th style={{ minWidth: "110px", textAlign: "center" }}>Facility</th>
                 <th>Unit</th>
                 <th style={{ textAlign: "right" }}>PO Qty</th>
                 <th style={{ textAlign: "right" }}>RN Qty</th>
@@ -275,13 +324,13 @@ export function PickPoItemModal({
             <tbody>
               {paginatedItems.length === 0 ? (
                 <tr>
-                  <td colSpan={12} className="empty-table-cell">
+                  <td colSpan={13} className="empty-table-cell">
                     <div className="empty">
                       <div className="empty__icon">
                         <Icon name="search" />
                       </div>
                       <strong>No purchase order items found</strong>
-                      <span>Try adjusting your search query.</span>
+                      <span>Try adjusting your search query or facility filter.</span>
                     </div>
                   </td>
                 </tr>
@@ -325,6 +374,11 @@ export function PickPoItemModal({
                         <div style={{ fontSize: "10.5px", color: "var(--muted)", fontFamily: "var(--font-mono, monospace)" }}>
                           {item.itemCode}
                         </div>
+                      </td>
+                      <td style={{ textAlign: "center" }}>
+                        <Badge tone={item.facility?.includes("NON") ? "gray" : "purple"}>
+                          {item.facility?.includes("NON") ? "NON FASILITAS" : "FASILITAS"}
+                        </Badge>
                       </td>
                       <td>{item.unit}</td>
                       <td style={{ textAlign: "right", fontFamily: "var(--font-mono, monospace)" }}>

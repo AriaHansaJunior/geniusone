@@ -45,7 +45,7 @@ export function PurchaseRequisitionDetail({
               return parsed.item;
             }
           }
-        } catch (_) {}
+        } catch (_) { }
       }
     }
     const match = findRowBySlug(prRows, code);
@@ -110,10 +110,10 @@ export function PurchaseRequisitionDetail({
   const docNumber = typeof row._rawNumber === "string" && row._rawNumber
     ? row._rawNumber
     : typeof row.prNumber === "string" && row.prNumber
-    ? row.prNumber
-    : typeof code === "string"
-    ? code.replace(/-/g, "/")
-    : "PR";
+      ? row.prNumber
+      : typeof code === "string"
+        ? code.replace(/-/g, "/")
+        : "PR";
   const rawStatus = row._rawStatus || row.status || "Waiting for Approve 1";
   const reqDate = row._rawDate || row.date || "-";
   const dueDate = row._rawDueDate || row.dueDate || "-";
@@ -126,8 +126,8 @@ export function PurchaseRequisitionDetail({
   const items: any[] = (row._items && row._items.length > 0)
     ? row._items
     : (row.items && Array.isArray(row.items) && row.items.length > 0)
-    ? row.items
-    : [];
+      ? row.items
+      : [];
 
   const poNumbersList = useMemo(() => {
     const list: string[] = [];
@@ -620,10 +620,10 @@ SPECIFICATION DETAILS:
             {isApproved || approvalState.approved2By
               ? `Approved by ${approvalState.approved2By || "Administrator GeniusOne"}`
               : approvalState.status === "WAITING_APPROVE_2" || approvalState.approved1By
-              ? `Verified by Stage 1: ${approvalState.approved1By || "Department Lead"}`
-              : approvalState.status === "REJECTED"
-              ? `Rejected by ${approvalState.rejectedBy || "Approver"}`
-              : "Awaiting Stage 1 verification"}
+                ? `Verified by Stage 1: ${approvalState.approved1By || "Department Lead"}`
+                : approvalState.status === "REJECTED"
+                  ? `Rejected by ${approvalState.rejectedBy || "Approver"}`
+                  : "Awaiting Stage 1 verification"}
           </small>
         </div>
       </div>
@@ -665,10 +665,10 @@ SPECIFICATION DETAILS:
                 poNumbersList.length > 0
                   ? `View Purchase Order (${poNumbersList.join(", ")})`
                   : isAllClosed
-                  ? "All items in this PR are closed (cannot convert to PO)"
-                  : !isApproved
-                  ? "Locked: Requires Stage 2 Director Approval"
-                  : "Proceed to Create Purchase Order from this PR"
+                    ? "All items in this PR are closed (cannot convert to PO)"
+                    : !isApproved
+                      ? "Locked: Requires Stage 2 Director Approval"
+                      : "Proceed to Create Purchase Order from this PR"
               }
             >
               <div className="pipeline-node__icon">
@@ -783,7 +783,7 @@ SPECIFICATION DETAILS:
                   const qtyStr = it.quantity ? String(it.quantity) : "1.0000";
                   const qtyOnly = parseFloat(qtyStr.replace(/[^0-9.]/g, "") || "1").toFixed(4);
                   const unitStr = it.unit || qtyStr.replace(/[0-9.\s]/g, "") || "PCE";
-                  const itFacility = it.facility === "FASILITAS" || it.facility === "Fasilitas" ? "FASILITAS" : "NON FASILITAS";
+                  const itFacility = /non/i.test(String(it.facility || it.facility_status || "")) ? "NON FASILITAS" : "FASILITAS";
                   // UI-05: Check Closing status (closedMapVersion triggers re-evaluation)
                   const isClosed = closedMapVersion >= 0 && isPrItemClosed(docNumber, it, idx);
                   return (
@@ -805,7 +805,7 @@ SPECIFICATION DETAILS:
                         </div>
                       </td>
                       <td>
-                        <Badge tone={itFacility === "FASILITAS" ? "blue" : "purple"}>{itFacility}</Badge>
+                        <Badge tone={itFacility === "NON FASILITAS" ? "gray" : "purple"}>{itFacility}</Badge>
                       </td>
                       <td style={{ textAlign: "right", fontFamily: "ui-monospace, monospace", fontWeight: 700 }}>
                         {qtyOnly}

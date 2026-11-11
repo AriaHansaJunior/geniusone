@@ -176,7 +176,8 @@ class PurchaseOrderApiController extends Controller
             $price = (float) $it->price;
             $disc = (float) $it->discount;
             $sub = (float) $it->subtotal;
-            $facilityName = $itemObj?->facility?->name ?? ($it->requisitionItem?->item?->facility?->name ?? ($po->facility_status ?? 'FASILITAS'));
+            $rawFac = $itemObj?->facility?->name ?? ($it->requisitionItem?->item?->facility?->name ?? ($po->facility_status ?? 'FASILITAS'));
+            $facilityName = stripos((string) $rawFac, 'non') !== false ? 'NON FASILITAS' : 'FASILITAS';
 
             return [
                 'id' => $it->id,
@@ -204,7 +205,7 @@ class PurchaseOrderApiController extends Controller
                 'lmePercentage' => $it->percentage_lme ? number_format((float) $it->percentage_lme, 2) : '—',
                 'subtotalPph' => number_format((float) $it->subtotal_pph, 2),
                 'currency' => $currencyCode,
-                'remark' => $po->remark ?? 'U/ Proses BB',
+                'remark' => (string) ($it->remark ?? ($it->requisitionItem?->remark ?? '')),
             ];
         })->toArray();
 
@@ -299,12 +300,15 @@ class PurchaseOrderApiController extends Controller
             '_rawRate' => number_format((float) $po->rate, 2),
             '_rawPaymentMethod' => $po->paymentMethod?->name ?? 'Cash On Delivery',
             '_rawPaymentTerm' => $po->paymentTerm?->name ?? 'Cash On Delivery',
-            '_rawFacility' => $po->facility_status ?? 'FASILITAS',
+            'facility' => stripos((string) ($po->facility_status ?? ''), 'non') !== false ? 'NON FASILITAS' : 'FASILITAS',
+            '_rawFacility' => stripos((string) ($po->facility_status ?? ''), 'non') !== false ? 'NON FASILITAS' : 'FASILITAS',
             '_rawCreatedBy' => "{$creatorName} {$createdTime}",
             '_rawLastUpdated' => "{$creatorName} {$updatedTime}",
             '_rawReleasedBy' => $releasedBy,
             '_rawApprovedBy' => $approvedBy,
-            '_rawRemark' => $po->remark ?? 'U/ Proses BB',
+            '_rawRemark' => $po->remark ?? '',
+            'poNote' => $po->remark ?? '',
+            'note' => $po->remark ?? '',
             '_rawRevision' => (string) ($po->revision ?? 0),
             '_rawSubkon' => $po->service_subkon ? 'Yes' : 'No',
             '_rawDeptCreated' => 'Purchasing',
@@ -325,7 +329,8 @@ class PurchaseOrderApiController extends Controller
             'poNumber' => $po->po_number,
             'date' => $this->safeFormatDate($po->date, 'd-M-Y', $po->created_at?->format('d-M-Y') ?? '-'),
             'supplier' => $supplierName,
-            'statusFacility' => $po->facility_status ?? 'FASILITAS',
+            'facility' => stripos((string) ($po->facility_status ?? ''), 'non') !== false ? 'NON FASILITAS' : 'FASILITAS',
+            'statusFacility' => stripos((string) ($po->facility_status ?? ''), 'non') !== false ? 'NON FASILITAS' : 'FASILITAS',
             'deptCreated' => $po->creator?->department?->name ?? 'Purchasing',
             'totalPrice' => $currencyCode.' '.number_format((float) $po->grand_total, 2),
             'totalQuantity' => number_format($totalOrderQty, 4),
@@ -476,6 +481,7 @@ class PurchaseOrderApiController extends Controller
                 'discount_val' => $discVal,
                 'pph_id' => $pphId,
                 'ppn_id' => $ppnId,
+                'remark' => !empty($it['remark']) ? $it['remark'] : ($it['note'] ?? null),
             ];
         }
 

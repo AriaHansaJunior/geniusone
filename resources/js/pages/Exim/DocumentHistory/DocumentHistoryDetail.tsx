@@ -209,8 +209,8 @@ export function DocumentHistoryDetail({
               notice.type === "info"
                 ? "info"
                 : notice.type === "success"
-                ? "check"
-                : "alertTriangle"
+                  ? "check"
+                  : "alertTriangle"
             }
             size={16}
           />
@@ -415,9 +415,8 @@ export function DocumentHistoryDetail({
                         <td className="text-center">
                           <button
                             type="button"
-                            className={`dh-btn-history-toggle ${
-                              isExpanded ? "dh-btn-history-toggle--hide" : ""
-                            }`}
+                            className={`dh-btn-history-toggle ${isExpanded ? "dh-btn-history-toggle--hide" : ""
+                              }`}
                             onClick={() => handleToggleHistory(it.id)}
                             title={isExpanded ? "Hide history" : "Show history"}
                           >

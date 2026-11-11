@@ -109,8 +109,8 @@ class ReceiveNoteApiController extends Controller
 
         // Resolve Items
         $rawItems = $request->input('items', []);
-        $firstPo = PurchaseOrder::first();
-        $fallbackPoId = $firstPo?->id ?? 1;
+        $firstApprovedPo = PurchaseOrder::whereIn('status', ['Approved', 'Approved 2'])->first();
+        $fallbackPoId = $firstApprovedPo?->id ?? PurchaseOrder::first()?->id ?? 1;
 
         $processedItems = [];
         if (! empty($rawItems)) {
@@ -120,8 +120,10 @@ class ReceiveNoteApiController extends Controller
                     $poId = (int) $it['purchase_order_id'];
                 } elseif (! empty($it['poNumber']) || ! empty($it['po_number'])) {
                     $poCode = $it['poNumber'] ?? $it['po_number'];
-                    $poObj = PurchaseOrder::where('po_number', $poCode)->first();
-                    $poId = $poObj?->id;
+                    if ($poCode !== '—' && $poCode !== '-') {
+                        $poObj = PurchaseOrder::where('po_number', $poCode)->first();
+                        $poId = $poObj?->id;
+                    }
                 }
                 if (! $poId) {
                     $poId = $fallbackPoId;
@@ -144,11 +146,14 @@ class ReceiveNoteApiController extends Controller
             ];
         }
 
-        $arrivalDate = $request->input('arrival_date') ?? $request->input('arrivalDate') ?? date('Y-m-d');
-        if (str_contains($arrivalDate, '-') && strlen(explode('-', $arrivalDate)[0]) === 2) {
-            $parts = explode('-', $arrivalDate);
-            $arrivalDate = "{$parts[2]}-{$parts[1]}-{$parts[0]}";
-        }
+        $arrivalDate = $this->sanitizeDate($request->input('arrival_date') ?? $request->input('arrivalDate')) ?? date('Y-m-d');
+        $invoiceDate = $this->sanitizeDate($request->input('invoice_date') ?? $request->input('invoiceDate'));
+        $taxInvoiceDate = $this->sanitizeDate($request->input('tax_invoice_date') ?? $request->input('taxInvoiceDate'));
+        $sjDate = $this->sanitizeDate($request->input('sj_date') ?? $request->input('sjDate') ?? $request->input('tanggalSuratJalan') ?? $request->input('tanggalPackingList'));
+        $plDate = $this->sanitizeDate($request->input('pl_date') ?? $request->input('plDate') ?? $request->input('tanggalPackingList'));
+
+        $rawSjNum = $request->input('sj_number') ?? $request->input('sjNumber') ?? $request->input('nomorSuratJalan');
+        $rawPlNum = $request->input('pl_number') ?? $request->input('plNumber') ?? $request->input('nomorPackingList');
 
         $headerData = [
             'rn_number' => $request->input('rn_number') ?? $request->input('rnNumber'),
@@ -156,14 +161,18 @@ class ReceiveNoteApiController extends Controller
             'currencies_id' => (int) ($request->input('currencies_id') ?? 1),
             'rate' => (float) ($request->input('rate') ?? 1.0),
             'arrival_date' => $arrivalDate,
-            'invoice_number' => $request->input('invoice_number') ?? $request->input('invoiceNumber'),
-            'invoice_date' => $request->input('invoice_date') ?? $request->input('invoiceDate'),
-            'tax_invoice' => $request->input('tax_invoice') ?? $request->input('taxInvoiceNumber'),
-            'tax_invoice_date' => $request->input('tax_invoice_date') ?? $request->input('taxInvoiceDate'),
-            'license_plate' => $request->input('license_plate') ?? $request->input('licensePlate'),
-            'note' => $request->input('note') ?? $request->input('notes'),
-            'sj_number' => $request->input('sj_number') ?? $request->input('nomorPackingList'),
-            'sj_date' => $request->input('sj_date') ?? $request->input('tanggalPackingList'),
+            'invoice_number' => !empty($request->input('invoice_number')) ? $request->input('invoice_number') : ($request->input('invoiceNumber') ?: null),
+            'invoice_date' => $invoiceDate,
+            'tax_invoice' => !empty($request->input('tax_invoice')) ? $request->input('tax_invoice') : ($request->input('taxInvoiceNumber') ?: null),
+            'tax_invoice_date' => $taxInvoiceDate,
+            'license_plate' => !empty($request->input('license_plate')) ? $request->input('license_plate') : ($request->input('licensePlate') ?: null),
+            'note' => !empty($request->input('note')) ? $request->input('note') : ($request->input('notes') ?: null),
+            'sj_number' => !empty($rawSjNum) && $rawSjNum !== '-' ? $rawSjNum : ($rawPlNum ?: null),
+            'sj_date' => $sjDate,
+            'pl_number' => !empty($rawPlNum) && $rawPlNum !== '-' ? $rawPlNum : null,
+            'pl_date' => $plDate,
+            'dn_status' => $request->has('dn_status') ? (int) $request->input('dn_status') : (stripos((string) $request->input('facility', ''), 'non') === false ? 1 : 0),
+            'service_subkon' => (int) ($request->input('service_subkon') ? 1 : 0),
         ];
 
         $rn = GeniusOneBackend::warehouse()->createReceiveNote($headerData, $processedItems, $userId);
@@ -207,5 +216,32 @@ class ReceiveNoteApiController extends Controller
             'message' => 'Receive Note rejected successfully',
             'data' => (new ReceiveNoteViewModel($rn))->toArray(),
         ]);
+    }
+
+    /**
+     * Sanitize and format date strings into Y-m-d or null.
+     */
+    private function sanitizeDate($date): ?string
+    {
+        if (empty($date) || $date === '-' || $date === '—') {
+            return null;
+        }
+        $str = trim((string) $date);
+        if ($str === '') {
+            return null;
+        }
+        // If DD-MM-YYYY or DD/MM/YYYY
+        if (preg_match('/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})$/', $str, $matches)) {
+            $day = str_pad($matches[1], 2, '0', STR_PAD_LEFT);
+            $month = str_pad($matches[2], 2, '0', STR_PAD_LEFT);
+            $year = $matches[3];
+            return "{$year}-{$month}-{$day}";
+        }
+        // If YYYY-MM-DD
+        if (preg_match('/^\d{4}-\d{2}-\d{2}/', $str)) {
+            return substr($str, 0, 10);
+        }
+        $parsed = strtotime($str);
+        return $parsed ? date('Y-m-d', $parsed) : null;
     }
 }

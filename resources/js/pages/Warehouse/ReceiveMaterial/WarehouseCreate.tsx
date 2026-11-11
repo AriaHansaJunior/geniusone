@@ -731,10 +731,10 @@ export function WarehouseCreate({
                   ? "#fffbeb"
                   : "#f0fdf4",
             border: `1px solid ${notification.type === "error"
-                ? "#fecaca"
-                : notification.type === "warning"
-                  ? "#fde68a"
-                  : "#bbf7d0"
+              ? "#fecaca"
+              : notification.type === "warning"
+                ? "#fde68a"
+                : "#bbf7d0"
               }`,
             borderRadius: "var(--radius-sm)",
             color:

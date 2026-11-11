@@ -590,6 +590,9 @@ class WarehouseApiController extends Controller
             ];
         })->toArray();
 
+        $poFacility = $po?->facility_status ?? ($firstPoItem?->item?->facility?->name ?? 'FASILITAS');
+        $bpbFacility = stripos((string) $poFacility, 'non') !== false ? 'NON FASILITAS' : 'FASILITAS';
+
         return [
             'id' => $bpb->id,
             '_id' => "bpb-{$bpb->id}",
@@ -631,7 +634,9 @@ class WarehouseApiController extends Controller
             '_rawInvoiceDate' => $this->safeFormatDate($rn?->invoice_date, 'd-m-Y', '-'),
             '_rawTaxInvoice' => $rn?->tax_invoice ?? '-',
             '_rawCurrency' => 'IDR',
-            '_rawFacility' => 'FASILITAS',
+            '_rawFacility' => $bpbFacility,
+            'facility' => $bpbFacility,
+            'statusFacility' => $bpbFacility,
             'bpbType' => $bpbType,
             '_rawBpbType' => $bpbType,
             '_rawWarehouseLocation' => $warehouseName,

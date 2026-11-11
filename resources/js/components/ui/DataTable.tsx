@@ -21,7 +21,10 @@ function formatCell(key: string, value: any) {
   }
 
   if (key === "statusFacility" || key === "facility") {
-    return <Badge tone="purple">{String(value)}</Badge>;
+    const str = String(value || "").trim();
+    const isNon = /non/i.test(str);
+    const label = isNon ? "NON FASILITAS" : "FASILITAS";
+    return <Badge tone={isNon ? "gray" : "purple"}>{label}</Badge>;
   }
 
   if (key === "bpbType") {

@@ -431,8 +431,8 @@ export function ReceiveNoteDetail({
                 <td className="text-right font-mono font-bold">
                   {rnData.items.length > 0
                     ? rnData.items[0].pricePerUnit.toLocaleString("en-US", {
-                        minimumFractionDigits: 4,
-                      })
+                      minimumFractionDigits: 4,
+                    })
                     : "0.0000"}
                   <div className="text-xs font-normal text-muted">IDR</div>
                 </td>
@@ -446,8 +446,8 @@ export function ReceiveNoteDetail({
                 <td className="text-right font-mono font-bold">
                   {rnData.items.length > 0
                     ? rnData.items[0].price2PerUnit.toLocaleString("en-US", {
-                        minimumFractionDigits: 4,
-                      })
+                      minimumFractionDigits: 4,
+                    })
                     : "0.0000"}
                   <div className="text-xs font-normal text-muted">IDR</div>
                 </td>

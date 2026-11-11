@@ -39,7 +39,7 @@ export function PurchaseOrderDetail({
               return parsed.item;
             }
           }
-        } catch (_) {}
+        } catch (_) { }
       }
     }
     const match = findRowBySlug(poRows, code);
@@ -75,10 +75,10 @@ export function PurchaseOrderDetail({
   const docNumber = typeof row._rawNumber === "string" && row._rawNumber
     ? row._rawNumber
     : typeof row.poNumber === "string" && row.poNumber
-    ? row.poNumber
-    : typeof code === "string"
-    ? code.replace(/-/g, "/")
-    : "PO";
+      ? row.poNumber
+      : typeof code === "string"
+        ? code.replace(/-/g, "/")
+        : "PO";
   const prNumber = String(row._rawPr || row.prNumber || "—");
   const rmNumber = String(row._rawRn || row.rnNumber || "—");
   const supplierName = String(row._rawSupplier || row.supplier || "—");
@@ -86,7 +86,8 @@ export function PurchaseOrderDetail({
   const rawStatus = row._rawStatus || row.status || "Waiting for Approve 1";
   const dateStr = row._rawDate || row.date || "-";
   const dueDate = row._rawDueDate || row.dueDate || "-";
-  const facility = String(row._rawFacility || "FASILITAS");
+  const facility = String(row._rawFacility || row.statusFacility || row.facility || "FASILITAS");
+  const isHeaderNonFac = /non/i.test(facility);
   const currency = String(row._rawCurrency || "IDR");
   const rate = String(row._rawRate || "1.00");
   const paymentMethod = String(row._rawPaymentMethod || "TRANSFER");
@@ -94,7 +95,8 @@ export function PurchaseOrderDetail({
   const createdBy = String(row._rawCreatedBy || "-");
   const releasedBy = String(row._rawReleasedBy || "-");
   const approvedBy = String(row._rawApprovedBy || "-");
-  const remark = String(row._rawRemark || "-");
+  const poNote = String(row.poNote || row.note || row._rawRemark || "");
+  const remark = poNote;
 
   const backendNormalizedStatus = normalizeApprovalStatus(rawStatus);
 
@@ -113,8 +115,8 @@ export function PurchaseOrderDetail({
           backendNormalizedStatus === "WAITING_APPROVE_2"
             ? 2
             : backendNormalizedStatus === "APPROVED"
-            ? 2
-            : 1,
+              ? 2
+              : 1,
       };
     }
     return local;
@@ -284,8 +286,8 @@ export function PurchaseOrderDetail({
     row._items && row._items.length > 0
       ? row._items
       : row.items && Array.isArray(row.items) && row.items.length > 0
-      ? row.items
-      : [
+        ? row.items
+        : [
           {
             no: 1,
             prNumber: row._rawPr || row.prNumber || "0135/PR-IMLI/IX/2026",
@@ -371,7 +373,9 @@ export function PurchaseOrderDetail({
         </div>
 
         <div className="detail-top-bar__right">
-          <Badge tone="purple">{facility}</Badge>
+          <Badge tone={isHeaderNonFac ? "gray" : "purple"}>
+            {isHeaderNonFac ? "NON FASILITAS" : "FASILITAS"}
+          </Badge>
           <Badge tone="gray">
             {currency} · Rate {rate}
           </Badge>
@@ -389,7 +393,9 @@ export function PurchaseOrderDetail({
           <div className="detail-header-card__title-row">
             <h2 className="detail-header-card__title">{docNumber}</h2>
             <ApprovalStatusBadge status={approvalState.status} />
-            <Badge tone="purple">{facility}</Badge>
+            <Badge tone={isHeaderNonFac ? "gray" : "purple"}>
+              {isHeaderNonFac ? "NON FASILITAS" : "FASILITAS"}
+            </Badge>
           </div>
           <span className="detail-header-card__meta">
             Supplier: <strong>{supplierName}</strong> · Total Value: <strong>{orderTotal}</strong> · Order Date: <strong>{dateStr}</strong>
@@ -525,8 +531,8 @@ export function PurchaseOrderDetail({
             !isApproved && receivingNumbersList.length === 0
               ? "PO must be fully approved (Stage 2) before receiving material (BPB)"
               : receivingNumbersList.length > 0
-              ? "View Receive Material (BPB)"
-              : "Click to Receive Material (BPB) from this Approved PO"
+                ? "View Receive Material (BPB)"
+                : "Click to Receive Material (BPB) from this Approved PO"
           }
           onClick={() => {
             if (receivingNumbersList.length === 1 && onNavigateDetail) {
@@ -678,7 +684,15 @@ export function PurchaseOrderDetail({
                       })()}
                     </td>
                     <td>
-                      <Badge tone="purple">{facility}</Badge>
+                      {(() => {
+                        const itemFac = String(item.facility || item.facility_status || facility);
+                        const isNon = /non/i.test(itemFac);
+                        return (
+                          <Badge tone={isNon ? "gray" : "purple"}>
+                            {isNon ? "NON FASILITAS" : "FASILITAS"}
+                          </Badge>
+                        );
+                      })()}
                     </td>
                     <td style={{ textAlign: "right", fontFamily: "ui-monospace, monospace", fontWeight: 700 }}>
                       {item.quantity}
@@ -705,7 +719,7 @@ export function PurchaseOrderDetail({
                       {item.subtotalPph || "0.00"}
                     </td>
                     <td style={{ fontSize: "11.5px", color: "var(--ink-soft)" }}>
-                      {item.remark || remark}
+                      {item.remark || "—"}
                     </td>
                   </tr>
                 ))}
@@ -842,10 +856,10 @@ export function PurchaseOrderDetail({
               </div>
             </div>
 
-            {/* PO Remark Section */}
+            {/* PO Note Section */}
             <div>
               <span style={{ fontSize: "10.5px", fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.4px" }}>
-                PO Remark & Delivery Instructions
+                PO Note & Delivery Instructions
               </span>
               <div
                 style={{
@@ -859,7 +873,7 @@ export function PurchaseOrderDetail({
                   lineHeight: "1.45",
                 }}
               >
-                <strong>{remark}</strong>
+                <strong>{poNote || "—"}</strong>
                 <small style={{ display: "block", color: "var(--muted)", marginTop: "4px", fontSize: "11px" }}>
                   Delivery to Warehouse Raw Material yard. Vendor requires 3-day notice prior to dispatch.
                 </small>

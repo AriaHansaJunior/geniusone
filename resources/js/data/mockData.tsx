@@ -2445,9 +2445,11 @@ export const pageConfigs: Record<
   },
 };
 
-export function docToSlug(docNumber?: string): string {
+export function docToSlug(docNumber?: any): string {
   if (!docNumber) return "unknown";
-  return docNumber.replace(/\//g, "-").replace(/\s+/g, "_");
+  const str = typeof docNumber === "string" ? docNumber : (typeof docNumber === "object" ? "" : String(docNumber));
+  if (!str) return "unknown";
+  return str.replace(/\//g, "-").replace(/\s+/g, "_");
 }
 
 export function findRowBySlug(rows: TableRow[], slug: string): TableRow | undefined {

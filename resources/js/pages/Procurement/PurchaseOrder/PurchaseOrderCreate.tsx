@@ -100,17 +100,7 @@ export function PurchaseOrderCreate({
   const [remarkPo, setRemarkPo] = useState("");
 
   const handleRemarkPoChange = (newVal: string) => {
-    const oldVal = remarkPo;
     setRemarkPo(newVal);
-    // Remark per barang mengikuti note/remark PO (dibagian bawah halaman tambah PO)
-    setItems((prev) =>
-      prev.map((it) => {
-        if (!it.remark || it.remark === "-" || it.remark === oldVal) {
-          return { ...it, remark: newVal };
-        }
-        return it;
-      })
-    );
   };
 
   // Items State
@@ -195,7 +185,7 @@ export function PurchaseOrderCreate({
 
       const upper = rawFac.toUpperCase().trim();
       if (upper.includes("NON")) return "Non Facility";
-      if (upper === "FASILITAS" || upper === "FACILITY" || upper.includes("FASILITAS") || upper.includes("FACILITY")) return "Facility";
+      if (upper) return "Facility";
     }
 
     const code = typeof itemObjOrName === "object" ? safeExtractString(itemObjOrName.itemCode || itemObjOrName.itemAlias || itemObjOrName.code || "") : "";
@@ -214,9 +204,9 @@ export function PurchaseOrderCreate({
       const mFac = typeof mFacField === "object" && mFacField !== null ? (mFacField as any).name : mFacField;
       const mUpper = String(mFac || "").toUpperCase();
       if (mUpper.includes("NON")) return "Non Facility";
-      if (mUpper === "FASILITAS" || mUpper === "FACILITY" || mUpper.includes("FASILITAS")) return "Facility";
+      if (mUpper) return "Facility";
     }
-    return null;
+    return "Facility";
   };
 
   // Helper to extract open (non-Closed) items from a PR row object (UI-05)
@@ -587,7 +577,7 @@ export function PurchaseOrderCreate({
       percentageLme: 0,
       pphRate: 0,
       subtotalPph: 0,
-      remark: remarkPo || "",
+      remark: "",
     };
     setItems((prev) => [...prev, newRow]);
   };
@@ -643,7 +633,7 @@ export function PurchaseOrderCreate({
           percentageLme: it.percentageLme ?? 0,
           pphRate: 0,
           subtotalPph: 0,
-          remark: it.remark || remarkPo || "",
+          remark: it.remark || "",
         };
       });
 
@@ -898,7 +888,7 @@ export function PurchaseOrderCreate({
               requestedQty: totalQty,
               purchasedQty: 0,
               orderQty: totalQty,
-              remark: remarkPo || prRemark || "",
+              remark: prRemark || "",
               subtotal: sub,
               subtotalPph: sub * (Number(r.pphRate) || 0),
             };
@@ -1148,7 +1138,7 @@ export function PurchaseOrderCreate({
             discount_val: discVal,
             discountPercent: it.discountType === "percent" ? discVal : 0,
             unit: it.unit,
-            remark: it.remark?.trim() ? it.remark : (remarkPo?.trim() || "-"),
+            remark: it.remark?.trim() ? it.remark.trim() : "",
           };
         }),
         additional_costs: additionalCosts.map((c) => ({
@@ -2250,15 +2240,15 @@ export function PurchaseOrderCreate({
             </div>
           </div>
 
-          {/* Remark PO */}
+          {/* PO Note */}
           <div className="master-form-group" style={{ marginBottom: "20px" }}>
             <label htmlFor="remarkPo" className="master-form-label">
-              Remark PO
+              PO Note
             </label>
             <textarea
               id="remarkPo"
               className="master-form-textarea"
-              placeholder="Enter overall Purchase Order remarks..."
+              placeholder="Enter overall Purchase Order notes / delivery instructions..."
               rows={3}
               value={remarkPo}
               onChange={(e) => handleRemarkPoChange(e.target.value)}
