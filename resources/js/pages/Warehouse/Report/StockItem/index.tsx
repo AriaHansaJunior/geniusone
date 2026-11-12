@@ -71,24 +71,34 @@ export function StockItemIndex() {
       .then((json) => {
         if (!isMounted) return;
         if (json?.status === "success" && Array.isArray(json.data) && json.data.length > 0) {
-          const mapped: WarehouseStockRecord[] = json.data.map((it: any, idx: number) => ({
-            id: String(it.id || idx + 1),
-            no: idx + 1,
-            itemCode: it.item_code,
-            itemName: it.item_name,
-            classification: it.category || "General",
-            coordinate: "A-01-01",
-            warehouse: it.warehouse || "Main Warehouse",
-            facility: "Bonded Zone",
-            locationType: "Warehouse",
-            stockStatus: it.current_stock > 0 ? "Available" : "Not Available",
-            qty: Number(it.current_stock) || 0,
-            unit: it.unit || "PCS",
-            pendingQty: 0,
-            availableQty: Number(it.current_stock) || 0,
-            lotNo: "LOT-2026-A",
-            lastUpdate: "2026-10-20",
-          }));
+          const mapped: WarehouseStockRecord[] = json.data.map((it: any, idx: number) => {
+            const stockQty = Number(it.quantity ?? it.current_stock) || 0;
+            return {
+              id: String(it.id || idx + 1),
+              number: idx + 1,
+              materialCode: it.materialCode || it.item_code || "",
+              externalCode: it.externalCode || it.external_code || "—",
+              materialItem: it.materialItem || it.item_name || "",
+              classification: it.classification || it.category || "General",
+              coordinate: it.coordinate || "A-01-01",
+              warehouseName: it.warehouseName || it.warehouse || "Main Warehouse",
+              facility: it.facility || "FASILITAS",
+              locationType: (it.locationType as any) || "Warehouse",
+              stockStatus: stockQty > 0 ? "Available" : "Not Available",
+              quantity: stockQty,
+              unit: it.unit || "PCS",
+              pendingQty: 0,
+              availableQty: stockQty,
+              date: it.date || "2026-10-20",
+              lotNumber: it.lotNumber || "LOT-2026-A",
+              zone: "Zone A - General Storage",
+              rack: "Rack 01",
+              bin: "Bin 01",
+              allocatedQty: 0,
+              lastMovementDate: it.date || "2026-10-20",
+              remark: it.status || "Verified in stock",
+            };
+          });
           setLiveRecords(mapped);
         }
       })

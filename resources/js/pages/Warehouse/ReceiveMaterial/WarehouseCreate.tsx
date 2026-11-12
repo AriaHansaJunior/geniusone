@@ -116,7 +116,7 @@ export function WarehouseCreate({
   };
 
   // Helper to detect if an RN has already been received into an existing BPB (Double BPB Prevention)
-  const findExistingBpbForRn = (rnNum: string): { bpbNumber: string; date?: string } | null => {
+  const findExistingBpbForRn = (rnNum: string): { bpbNumber: string; date?: string; status?: string } | null => {
     const targetStr = getSafeDocString(rnNum);
     if (!targetStr) return null;
     const cleanTarget = String(targetStr).replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
@@ -128,24 +128,48 @@ export function WarehouseCreate({
       const num = rawRn ? String(rawRn).replace(/[^a-zA-Z0-9]/g, "").toLowerCase() : "";
       return num && num === cleanTarget;
     });
-    if (matchedRn?.bpb_number) {
-      return { bpbNumber: matchedRn.bpb_number };
+    if (matchedRn?.bpb_number && matchedRn?.bpb_status !== "Rejected") {
+      return { bpbNumber: matchedRn.bpb_number, status: matchedRn.bpb_status };
     }
     if (Array.isArray(matchedRn?.bpb_numbers) && matchedRn.bpb_numbers.length > 0) {
       return { bpbNumber: matchedRn.bpb_numbers[0] };
     }
 
-    // 2. Check existingBpbs list
+    // 2. Check existingBpbs list (excluding Rejected BPBs)
     const pool = existingBpbs.length > 0 ? existingBpbs : (warehouseRows || []);
     for (const bpb of pool) {
+      const bpbStatus = String(bpb.status || bpb._rawStatus || bpb._rawApproval || "").toLowerCase();
+      if (bpbStatus === "rejected") continue;
       const bpbNum = getSafeDocString(bpb._rawNumber) || getSafeDocString(bpb.bpbNumber) || getSafeDocString(bpb.bpb_number);
       const rawRn = getSafeDocString(bpb._rawRn) || getSafeDocString(bpb.rn_number) || getSafeDocString(bpb.rnNumber);
       const cleanRawRn = rawRn ? String(rawRn).replace(/[^a-zA-Z0-9]/g, "").toLowerCase() : "";
       if (cleanRawRn && cleanRawRn === cleanTarget) {
-        return { bpbNumber: bpbNum, date: bpb.date || bpb.receiveDate };
+        return { bpbNumber: bpbNum, date: bpb.date || bpb.receiveDate, status: bpbStatus };
       }
     }
     return null;
+  };
+
+  // Helper to check if an RN is fully Approved (not pending, not rejected)
+  const isRnApproved = (r: any): boolean => {
+    const rawSt = String(r.status || r._rawStatus || "").toLowerCase().trim();
+    if (rawSt === "approved" || rawSt === "approved 2") return true;
+    if (rawSt === "rejected") return false;
+
+    const num = getSafeDocString(r.rn_number) || getSafeDocString(r._rawRn) || getSafeDocString(r.rnNumber);
+    if (num) {
+      const local = getLocalApprovalState("receive_note", num);
+      if (local?.status === "APPROVED") return true;
+      if (local?.status === "REJECTED") return false;
+    }
+
+    if (Array.isArray(r.approvals)) {
+      const tier2 = r.approvals.find((a: any) => String(a.tier || a.approval_ke) === "2");
+      if (tier2 && (String(tier2.status).toLowerCase() === "approved" || Number(tier2.status) === 1)) {
+        return true;
+      }
+    }
+    return false;
   };
 
   // Populate form from selected PO
@@ -318,8 +342,8 @@ export function WarehouseCreate({
   };
 
   const handleSelectRn = (selectedRnNumber: string) => {
-    setRnNumber(selectedRnNumber);
     if (!selectedRnNumber) {
+      setRnNumber("");
       setSupplier("");
       setInvoiceNumber("");
       setInvoiceDate(today);
@@ -335,15 +359,16 @@ export function WarehouseCreate({
       return;
     }
 
-    // Check for duplicate BPB warning
+    // Check for duplicate BPB prevention
     const existingBpb = findExistingBpbForRn(selectedRnNumber);
     if (existingBpb) {
       setNotification({
-        type: "warning",
-        message: `Warning: RN ${selectedRnNumber} has already been received in BPB ${existingBpb.bpbNumber}. Please verify to avoid duplicate material receipt (Double BPB).`,
+        type: "error",
+        message: `RN ${selectedRnNumber} has already been received in BPB ${existingBpb.bpbNumber}. You cannot select this RN again to prevent duplicate material receipt.`,
       });
-    } else {
-      setNotification(null);
+      setRnNumber("");
+      setItems([]);
+      return;
     }
 
     const matchedRn = existingRns.find((r) => {
@@ -351,11 +376,35 @@ export function WarehouseCreate({
       return num === selectedRnNumber;
     });
 
+    if (matchedRn && !isRnApproved(matchedRn)) {
+      setNotification({
+        type: "error",
+        message: `RN ${selectedRnNumber} has not been approved yet. Only approved Receive Notes can be accepted into the warehouse.`,
+      });
+      setRnNumber("");
+      setItems([]);
+      return;
+    }
+
+    setRnNumber(selectedRnNumber);
+    setNotification(null);
+
     if (matchedRn) {
       populateFromRn(matchedRn);
     } else {
       fetchDetail("rn", selectedRnNumber).then((detail) => {
-        if (detail) populateFromRn(detail);
+        if (detail) {
+          if (findExistingBpbForRn(selectedRnNumber)) {
+            setNotification({
+              type: "error",
+              message: `RN ${selectedRnNumber} has already been received into warehouse.`,
+            });
+            setRnNumber("");
+            setItems([]);
+            return;
+          }
+          populateFromRn(detail);
+        }
       });
     }
   };
@@ -448,7 +497,20 @@ export function WarehouseCreate({
               return num && String(num).replace(/[^a-zA-Z0-9]/g, "").toLowerCase() === cleanTarget;
             });
             if (matched) {
-              populateFromRn(matched);
+              const existingBpb = findExistingBpbForRn(initialRnNumber);
+              if (existingBpb) {
+                setNotification({
+                  type: "error",
+                  message: `RN ${initialRnNumber} has already been received in BPB ${existingBpb.bpbNumber}. Duplicate receipt is prohibited.`,
+                });
+              } else if (!isRnApproved(matched)) {
+                setNotification({
+                  type: "error",
+                  message: `RN ${initialRnNumber} has not been approved yet. Only approved Receive Notes can be received into warehouse.`,
+                });
+              } else {
+                populateFromRn(matched);
+              }
             }
           }
         }
@@ -587,7 +649,21 @@ export function WarehouseCreate({
   // Validation
   const validate = () => {
     const errors: Record<string, string> = {};
-    if (!rnNumber.trim()) errors.rnNumber = "RN Number is required.";
+    if (!rnNumber.trim()) {
+      errors.rnNumber = "RN Number is required.";
+    } else {
+      const existingBpb = findExistingBpbForRn(rnNumber.trim());
+      if (existingBpb) {
+        errors.rnNumber = `RN ${rnNumber} has already been received in BPB ${existingBpb.bpbNumber}. Duplicate receipt is prohibited.`;
+      }
+      const matchedRn = existingRns.find((r) => {
+        const num = getSafeDocString(r.rn_number) || getSafeDocString(r._rawRn) || getSafeDocString(r.rnNumber);
+        return num === rnNumber.trim();
+      });
+      if (matchedRn && !isRnApproved(matchedRn)) {
+        errors.rnNumber = `RN ${rnNumber} has not been approved yet. Only approved Receive Notes can be accepted into the warehouse.`;
+      }
+    }
     if (!receiveDate.trim()) errors.receiveDate = "Receive Date is required.";
 
     if (items.length === 0) {
@@ -613,7 +689,15 @@ export function WarehouseCreate({
     if (!validate()) {
       setNotification({
         type: "error",
-        message: "Please select an RN Number and complete all required fields before saving.",
+        message: "Please complete all required fields and ensure the selected RN is valid and approved before saving.",
+      });
+      return;
+    }
+    const existingBpb = findExistingBpbForRn(rnNumber.trim());
+    if (existingBpb) {
+      setNotification({
+        type: "error",
+        message: `RN ${rnNumber} has already been received in BPB ${existingBpb.bpbNumber}. Duplicate BPB receipt is not allowed.`,
       });
       return;
     }
@@ -623,6 +707,17 @@ export function WarehouseCreate({
   const handleConfirmSubmit = async () => {
     setIsSubmitting(true);
     setNotification(null);
+
+    const existingBpb = findExistingBpbForRn(rnNumber.trim());
+    if (existingBpb) {
+      setNotification({
+        type: "error",
+        message: `RN ${rnNumber} has already been received in BPB ${existingBpb.bpbNumber}. Duplicate BPB receipt is not allowed.`,
+      });
+      setIsSubmitting(false);
+      setShowSaveConfirm(false);
+      return;
+    }
 
     try {
       const payload = {
@@ -683,7 +778,8 @@ export function WarehouseCreate({
     return Array.from(locs);
   }, [warehouses]);
 
-  // Compile RN options list for single RN selection
+  // Compile RN options list for single RN selection:
+  // Must be Approved AND NOT yet received in any active BPB (Double BPB Prevention)
   const rnOptions = useMemo(() => {
     const list: Array<{ value: string; label: string }> = [];
     const seen = new Set<string>();
@@ -691,23 +787,22 @@ export function WarehouseCreate({
     existingRns.forEach((r) => {
       const num = getSafeDocString(r.rn_number) || getSafeDocString(r._rawRn) || getSafeDocString(r.rnNumber);
       if (!num || seen.has(num)) return;
+
+      // Filter out unapproved RNs
+      if (!isRnApproved(r)) return;
+
+      // Filter out RNs that have already been received in an existing non-rejected BPB
+      const existingBpb = findExistingBpbForRn(num);
+      if (existingBpb) return;
+      if (r.is_received_in_bpb && r.bpb_number && r.bpb_status !== "Rejected") return;
+
       seen.add(num);
       const sup = r.supplier?.name || r.supplierName || (typeof r.supplier === "string" ? r.supplier : "");
       const itemsCount = (r.items?.length || r.purchase_order_receive_notes?.length || 1);
-      const existingBpb = findExistingBpbForRn(num);
-      const bpbWarning = existingBpb ? ` ⚠️ [In BPB: ${existingBpb.bpbNumber}]` : "";
       list.push({
         value: num,
-        label: `${num} ${sup ? `(${sup} · ${itemsCount} item${itemsCount > 1 ? "s" : ""})` : ""}${bpbWarning}`,
+        label: `${num} ${sup ? `(${sup} · ${itemsCount} item${itemsCount > 1 ? "s" : ""})` : ""}`,
       });
-    });
-
-    list.sort((a, b) => {
-      const aInBpb = a.label.includes("[In BPB:");
-      const bInBpb = b.label.includes("[In BPB:");
-      if (aInBpb && !bInBpb) return 1;
-      if (!aInBpb && bInBpb) return -1;
-      return 0;
     });
 
     return list;
@@ -798,9 +893,6 @@ export function WarehouseCreate({
                 options={[
                   { value: "", label: "Select RN Number..." },
                   ...rnOptions,
-                  ...(rnNumber && !rnOptions.some((o) => o.value === rnNumber)
-                    ? [{ value: rnNumber, label: rnNumber }]
-                    : []),
                 ]}
               />
               {(() => {
@@ -810,11 +902,11 @@ export function WarehouseCreate({
                     <div
                       style={{
                         fontSize: "11px",
-                        color: "#b45309",
-                        background: "#fef3c7",
-                        border: "1px solid #fde68a",
+                        color: "#b91c1c",
+                        background: "#fef2f2",
+                        border: "1px solid #fecaca",
                         borderRadius: "4px",
-                        padding: "3px 8px",
+                        padding: "4px 8px",
                         marginTop: "5px",
                         display: "flex",
                         alignItems: "center",
@@ -824,7 +916,7 @@ export function WarehouseCreate({
                     >
                       <Icon name="alertTriangle" size={13} />
                       <span>
-                        Notice: RN was already received in <strong>{existingBpb.bpbNumber}</strong>. Avoid duplicate BPB.
+                        Blocked: RN was already received in <strong>{existingBpb.bpbNumber}</strong>. Duplicate BPB is strictly prohibited.
                       </span>
                     </div>
                   );

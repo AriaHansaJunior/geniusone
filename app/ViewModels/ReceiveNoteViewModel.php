@@ -22,13 +22,17 @@ class ReceiveNoteViewModel
     {
         $currencyCode = $this->rn->currency?->name ?? 'IDR';
 
-        $bpbNumbers = $this->rn->purchaseOrders
+        $activeMappings = $this->rn->purchaseOrders
             ->flatMap(fn ($poItem) => $poItem->bpbMappings ?? collect())
+            ->filter(fn ($map) => $map->bpbReceiveMaterial && $map->bpbReceiveMaterial->status !== 'Rejected');
+
+        $bpbNumbers = $activeMappings
             ->map(fn ($map) => $map->bpbReceiveMaterial?->bpb_number)
             ->filter()
             ->unique()
             ->values();
         $primaryBpb = $bpbNumbers->first();
+        $firstBpbObj = $activeMappings->first()?->bpbReceiveMaterial;
 
         $appr1 = $this->rn->approvals->where('approval_ke', '1')->where('status', 1)->first();
         $appr2 = $this->rn->approvals->where('approval_ke', '2')->where('status', 1)->first();
@@ -39,7 +43,9 @@ class ReceiveNoteViewModel
             'status' => $this->rn->status,
             'bpb_number' => $primaryBpb,
             'bpb_numbers' => $bpbNumbers->toArray(),
+            'bpb_status' => $firstBpbObj?->status,
             'is_received_in_bpb' => ! empty($primaryBpb),
+            'is_bpb_approved' => $firstBpbObj && $firstBpbObj->status === 'Approved',
             'arrival_date' => $this->rn->arrival_date ? date('Y-m-d H:i', strtotime($this->rn->arrival_date)) : null,
             'formatted_arrival_date' => $this->rn->arrival_date ? date('d M Y H:i', strtotime($this->rn->arrival_date)) : '-',
             'license_plate' => $this->rn->license_plate ?? '-',
@@ -51,7 +57,10 @@ class ReceiveNoteViewModel
             'tax_invoice_date' => $this->rn->tax_invoice_date,
             'approval_1_at' => $appr1 ? ($appr1->updated_at?->format('d-m-Y H:i').' by '.($appr1->user?->name ?? 'Approver 1')) : '-',
             'approval_2_at' => $appr2 ? ($appr2->updated_at?->format('d-m-Y H:i').' by '.($appr2->user?->name ?? 'Approver 2')) : '-',
-            'note' => $this->rn->note,
+            'note' => $this->rn->note ?? '-',
+            'notes' => $this->rn->note ?? '-',
+            'description' => $this->rn->note ?? '-',
+            'remark' => $this->rn->note ?? '-',
             'supplier' => [
                 'id' => $this->rn->supliers_id,
                 'name' => $this->rn->supplier?->name ?? '-',
@@ -74,6 +83,8 @@ class ReceiveNoteViewModel
                     'formatted_price' => $currencyCode.' '.number_format((float) $poItem->price, 2),
                     'grand_total' => (float) $poItem->grand_total,
                     'formatted_grand_total' => $currencyCode.' '.number_format((float) $poItem->grand_total, 2),
+                    'remark' => $poItem->remark ?? '-',
+                    'note' => $poItem->remark ?? '-',
                 ];
             })->values()->toArray(),
             'total_items_count' => $this->rn->purchaseOrders->count(),

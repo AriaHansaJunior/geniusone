@@ -1992,7 +1992,9 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
         tax_invoice: newRecord.taxInvoiceNumber && newRecord.taxInvoiceNumber !== "-" ? newRecord.taxInvoiceNumber : undefined,
         tax_invoice_date: newRecord.taxInvoiceDate && newRecord.taxInvoiceDate !== "-" ? newRecord.taxInvoiceDate : undefined,
         license_plate: newRecord.licensePlate && newRecord.licensePlate !== "-" ? newRecord.licensePlate : undefined,
-        note: newRecord.description && newRecord.description !== "-" ? newRecord.description : undefined,
+        note: newRecord.description && newRecord.description !== "-" ? newRecord.description : (newRecord as any).note || undefined,
+        description: newRecord.description && newRecord.description !== "-" ? newRecord.description : (newRecord as any).note || undefined,
+        remark: newRecord.description && newRecord.description !== "-" ? newRecord.description : (newRecord as any).note || undefined,
         sj_number: (newRecord as any).nomorSuratJalan && (newRecord as any).nomorSuratJalan !== "-" ? (newRecord as any).nomorSuratJalan : newRecord.nomorPackingList,
         sj_date: (newRecord as any).tanggalSuratJalan && (newRecord as any).tanggalSuratJalan !== "-" ? (newRecord as any).tanggalSuratJalan : newRecord.tanggalPackingList,
         pl_number: newRecord.nomorPackingList && newRecord.nomorPackingList !== "-" ? newRecord.nomorPackingList : undefined,
@@ -2003,6 +2005,8 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
           itemName: it.itemName,
           suratJalanQty: it.suratJalanQty,
           price: (it as any).price ?? it.pricePerUnit ?? 0,
+          remark: it.remark || "-",
+          note: it.remark || "-",
         })),
       });
       if (res?.data?.rn_number) {
@@ -3433,6 +3437,7 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
           <ReceiveNoteForm
             onBack={() => handleNavigateList("receive-note", "/exim/receive-note")}
             onSave={handleSaveReceiveNote}
+            existingReceiveNotes={receiveNoteRecords}
           />
         )}
 

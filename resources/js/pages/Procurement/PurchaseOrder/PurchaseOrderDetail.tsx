@@ -87,7 +87,6 @@ export function PurchaseOrderDetail({
   const dateStr = row._rawDate || row.date || "-";
   const dueDate = row._rawDueDate || row.dueDate || "-";
   const facility = String(row._rawFacility || row.statusFacility || row.facility || "FASILITAS");
-  const isHeaderNonFac = /non/i.test(facility);
   const currency = String(row._rawCurrency || "IDR");
   const rate = String(row._rawRate || "1.00");
   const paymentMethod = String(row._rawPaymentMethod || "TRANSFER");
@@ -313,7 +312,176 @@ export function PurchaseOrderDetail({
           },
         ];
 
-  const otherCosts = row._otherCosts || [];
+  const isHeaderNonFac = useMemo(() => {
+    if (/non/i.test(facility)) return true;
+    if (poItems && poItems.length > 0) {
+      return poItems.some((it: any) => /non/i.test(String(it.facility || it.facility_status || "")));
+    }
+    return false;
+  }, [facility, poItems]);
+
+  const [localOtherCosts, setLocalOtherCosts] = useState<any[]>(() => row._otherCosts || []);
+
+  useEffect(() => {
+    if (row._otherCosts) {
+      setLocalOtherCosts(row._otherCosts);
+    }
+  }, [row._otherCosts]);
+
+  const [isAddingCost, setIsAddingCost] = useState(false);
+  const [costName, setCostName] = useState("");
+  const [costAmount, setCostAmount] = useState<number | "">("");
+  const [costNote, setCostNote] = useState("");
+  const [isSubmittingCost, setIsSubmittingCost] = useState(false);
+  const [costError, setCostError] = useState<string | null>(null);
+  const [availableCostTypes, setAvailableCostTypes] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetch("/api/procurement/master/additional-costs?per_page=100")
+      .then((res) => res.json())
+      .then((json) => {
+        if (json?.data && Array.isArray(json.data)) {
+          setAvailableCostTypes(json.data);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const handleSaveAdditionalCost = async () => {
+    if (!costName.trim()) {
+      setCostError("Cost Name is required");
+      return;
+    }
+    if (!costAmount || Number(costAmount) <= 0) {
+      setCostError("Valid amount is required");
+      return;
+    }
+    setCostError(null);
+    setIsSubmittingCost(true);
+    try {
+      const poTarget = row.id ? String(row.id) : docToSlug(docNumber);
+      const matched = availableCostTypes.find((t) => t.name === costName || t.code === costName);
+      const res = await fetch(`/api/po/${poTarget}/additional-costs`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+          "X-Requested-With": "XMLHttpRequest",
+          ...(document.querySelector('meta[name="csrf-token"]')
+            ? { "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]')?.getAttribute("content") || "" }
+            : {}),
+        },
+        body: JSON.stringify({
+          name: costName.trim(),
+          costName: costName.trim(),
+          amount: Number(costAmount),
+          value: Number(costAmount),
+          note: costNote.trim(),
+          additional_cost_types_id: matched?.id || null,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.message || "Failed to add additional cost");
+      }
+      const newCost = data.data || {
+        id: Date.now(),
+        name: costName.trim(),
+        costName: costName.trim(),
+        amount: Number(costAmount),
+        value: Number(costAmount),
+        nominal: `${currency} ${Number(costAmount).toLocaleString("en-US", { minimumFractionDigits: 2 })}`,
+        remark: costNote.trim(),
+        note: costNote.trim(),
+      };
+      setLocalOtherCosts((prev) => [...prev, newCost]);
+      setIsAddingCost(false);
+      setCostName("");
+      setCostAmount("");
+      setCostNote("");
+      fetchDetail("po", code).then((item) => {
+        if (item) setRow(item);
+      });
+    } catch (err: any) {
+      setCostError(err.message || "Error saving additional cost");
+    } finally {
+      setIsSubmittingCost(false);
+    }
+  };
+
+  const handleDeleteAdditionalCost = async (costId: number | string) => {
+    if (!window.confirm("Are you sure you want to delete this additional cost?")) return;
+    try {
+      const poTarget = row.id ? String(row.id) : docToSlug(docNumber);
+      const res = await fetch(`/api/po/${poTarget}/additional-costs/${costId}`, {
+        method: "DELETE",
+        headers: {
+          "Accept": "application/json",
+          "X-Requested-With": "XMLHttpRequest",
+          ...(document.querySelector('meta[name="csrf-token"]')
+            ? { "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]')?.getAttribute("content") || "" }
+            : {}),
+        },
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.message || "Failed to delete cost");
+      }
+      setLocalOtherCosts((prev) => prev.filter((c) => String(c.id) !== String(costId)));
+      fetchDetail("po", code).then((item) => {
+        if (item) setRow(item);
+      });
+    } catch (err: any) {
+      alert(err.message || "Error deleting cost");
+    }
+  };
+
+  const totalOtherCosts = useMemo(() => {
+    return localOtherCosts.reduce((sum, c) => {
+      const val = Number(c.value ?? c.amount ?? parseFloat(String(c.nominal || "0").replace(/[^0-9.]/g, "")) ?? 0);
+      return sum + (isNaN(val) ? 0 : val);
+    }, 0);
+  }, [localOtherCosts]);
+
+  const materialSubtotal = useMemo(() => {
+    if (row._financials?.subtotal) {
+      const num = parseFloat(String(row._financials.subtotal).replace(/[^0-9.]/g, ""));
+      if (!isNaN(num) && num > 0) return num;
+    }
+    return poItems.reduce((sum: number, it: any) => {
+      const rawSub = it.subtotalRp ?? it.subtotal ?? 0;
+      const val = parseFloat(String(rawSub).replace(/[^0-9.]/g, "")) || 0;
+      return sum + val;
+    }, 0);
+  }, [row._financials, poItems]);
+
+  const dppAmount = useMemo(() => {
+    if (row._financials?.dpp) {
+      const num = parseFloat(String(row._financials.dpp).replace(/[^0-9.]/g, ""));
+      if (!isNaN(num) && num > 0) return num;
+    }
+    return materialSubtotal;
+  }, [row._financials, materialSubtotal]);
+
+  const ppnRate = 12;
+  const ppnAmount = useMemo(() => {
+    if (isHeaderNonFac) return 0;
+    if (row._financials?.ppn) {
+      const num = parseFloat(String(row._financials.ppn).replace(/[^0-9.]/g, ""));
+      if (!isNaN(num)) return num;
+    }
+    return Math.round(dppAmount * (ppnRate / 100) * 100) / 100;
+  }, [row._financials, dppAmount, isHeaderNonFac]);
+
+  const computedGrandTotal = useMemo(() => {
+    return dppAmount + ppnAmount + totalOtherCosts;
+  }, [dppAmount, ppnAmount, totalOtherCosts]);
+
+  const displayOrderTotal = useMemo(() => {
+    return `${currency} ${computedGrandTotal.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  }, [currency, computedGrandTotal]);
+
+  const otherCosts = localOtherCosts;
 
   const prNumbersList = useMemo(() => {
     const list: string[] = [];
@@ -398,7 +566,7 @@ export function PurchaseOrderDetail({
             </Badge>
           </div>
           <span className="detail-header-card__meta">
-            Supplier: <strong>{supplierName}</strong> · Total Value: <strong>{orderTotal}</strong> · Order Date: <strong>{dateStr}</strong>
+            Supplier: <strong>{supplierName}</strong> · Total Value: <strong>{displayOrderTotal}</strong> · Order Date: <strong>{dateStr}</strong>
           </span>
         </div>
 
@@ -628,6 +796,7 @@ export function PurchaseOrderDetail({
                 <tr>
                   <th style={{ width: "36px", textAlign: "center" }}>No</th>
                   <th style={{ minWidth: "150px" }}>Material Item</th>
+                  <th style={{ minWidth: "140px" }}>Item Alias</th>
                   <th style={{ minWidth: "115px" }}>PR Reference</th>
                   <th style={{ width: "80px" }}>Facility</th>
                   <th style={{ width: "95px", textAlign: "right" }}>Quantity & Unit</th>
@@ -652,6 +821,15 @@ export function PurchaseOrderDetail({
                         name={item.item || "Battery Scrap"}
                         code={item.itemCode || "10.100.100.001"}
                       />
+                    </td>
+                    <td>
+                      <span style={{ fontWeight: 600, color: "var(--ink)" }}>
+                        {item.itemAlias && item.itemAlias !== "—"
+                          ? item.itemAlias
+                          : item.item_alias && item.item_alias !== "—"
+                            ? item.item_alias
+                            : item.itemName || item.item || "—"}
+                      </span>
                     </td>
                     <td>
                       {(() => {
@@ -738,30 +916,185 @@ export function PurchaseOrderDetail({
               pointerEvents: activeTab === "otherCosts" ? "auto" : "none",
             }}
           >
+            {/* Header action bar for Other Costs */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px", padding: "4px 2px" }}>
+              <div style={{ fontSize: "13px", fontWeight: 600, color: "var(--ink)" }}>
+                Additional Operational & Logistics Costs
+              </div>
+              {!isAddingCost && (
+                <Button variant="secondary" icon="plus" onClick={() => setIsAddingCost(true)}>
+                  Add Additional Cost
+                </Button>
+              )}
+            </div>
+
+            {/* Inline Add Cost Form */}
+            {isAddingCost && (
+              <div style={{
+                background: "var(--surface-hover, #f8fafc)",
+                border: "1px solid var(--border-color, #e2e8f0)",
+                borderRadius: "8px",
+                padding: "16px",
+                marginBottom: "16px",
+              }}>
+                <div style={{ fontWeight: 600, fontSize: "13px", color: "var(--ink)", marginBottom: "12px" }}>
+                  Add Additional Cost to {docNumber}
+                </div>
+                {costError && (
+                  <div style={{ color: "#dc2626", fontSize: "12px", marginBottom: "10px" }}>
+                    {costError}
+                  </div>
+                )}
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "12px", marginBottom: "12px" }}>
+                  <div>
+                    <label style={{ display: "block", fontSize: "11.5px", fontWeight: 600, color: "var(--muted)", marginBottom: "4px" }}>
+                      Cost Name / Type *
+                    </label>
+                    <input
+                      type="text"
+                      list="cost-type-suggestions"
+                      value={costName}
+                      onChange={(e) => setCostName(e.target.value)}
+                      placeholder="e.g. Ongkos Angkut / Freight"
+                      style={{
+                        width: "100%",
+                        height: "36px",
+                        padding: "6px 10px",
+                        border: "1px solid var(--line, #cbd5e1)",
+                        borderRadius: "6px",
+                        fontSize: "13px",
+                        background: "#fff",
+                      }}
+                    />
+                    <datalist id="cost-type-suggestions">
+                      {availableCostTypes.map((t) => (
+                        <option key={t.id} value={t.name}>{t.code ? `${t.code} - ${t.name}` : t.name}</option>
+                      ))}
+                      <option value="Ongkos Angkut (Freight)" />
+                      <option value="Bongkar Muat (Handling)" />
+                      <option value="Biaya Asuransi (Insurance)" />
+                      <option value="Biaya Kemasan (Packaging)" />
+                    </datalist>
+                  </div>
+
+                  <div>
+                    <label style={{ display: "block", fontSize: "11.5px", fontWeight: 600, color: "var(--muted)", marginBottom: "4px" }}>
+                      Amount ({currency}) *
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="any"
+                      value={costAmount}
+                      onChange={(e) => setCostAmount(e.target.value === "" ? "" : parseFloat(e.target.value))}
+                      placeholder="0.00"
+                      style={{
+                        width: "100%",
+                        height: "36px",
+                        padding: "6px 10px",
+                        border: "1px solid var(--line, #cbd5e1)",
+                        borderRadius: "6px",
+                        fontSize: "13px",
+                        background: "#fff",
+                        fontFamily: "ui-monospace, monospace",
+                      }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: "block", fontSize: "11.5px", fontWeight: 600, color: "var(--muted)", marginBottom: "4px" }}>
+                      Remark / Purpose
+                    </label>
+                    <input
+                      type="text"
+                      value={costNote}
+                      onChange={(e) => setCostNote(e.target.value)}
+                      placeholder="Optional purpose note..."
+                      style={{
+                        width: "100%",
+                        height: "36px",
+                        padding: "6px 10px",
+                        border: "1px solid var(--line, #cbd5e1)",
+                        borderRadius: "6px",
+                        fontSize: "13px",
+                        background: "#fff",
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px" }}>
+                  <Button
+                    variant="secondary"
+                    onClick={() => {
+                      setIsAddingCost(false);
+                      setCostError(null);
+                    }}
+                    disabled={isSubmittingCost}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="primary"
+                    onClick={() => handleSaveAdditionalCost()}
+                    disabled={isSubmittingCost}
+                  >
+                    {isSubmittingCost ? "Saving..." : "Save Cost"}
+                  </Button>
+                </div>
+              </div>
+            )}
+
             <table className="detail-data-table">
               <thead>
                 <tr>
                   <th style={{ width: "36px", textAlign: "center" }}>No</th>
                   <th style={{ minWidth: "160px" }}>Cost Name / Description</th>
-                  <th style={{ width: "120px", textAlign: "right" }}>Amount (IDR)</th>
+                  <th style={{ width: "140px", textAlign: "right" }}>Amount ({currency})</th>
                   <th style={{ minWidth: "160px" }}>Remark / Purpose</th>
+                  <th style={{ width: "60px", textAlign: "center" }}>Action</th>
                 </tr>
               </thead>
               <tbody>
                 {otherCosts.length > 0 ? (
-                  otherCosts.map((c, i) => (
-                    <tr key={i}>
-                      <td style={{ textAlign: "center", fontWeight: 700, color: "var(--muted)" }}>{i + 1}</td>
-                      <td><strong>{c.name}</strong></td>
-                      <td style={{ textAlign: "right", fontFamily: "ui-monospace, monospace", fontWeight: 700 }}>
-                        {c.amount}
-                      </td>
-                      <td>{c.remark || "—"}</td>
-                    </tr>
-                  ))
+                  otherCosts.map((c, i) => {
+                    const cVal = Number(c.value ?? c.amount ?? parseFloat(String(c.nominal || "0").replace(/[^0-9.]/g, "")) ?? 0);
+                    return (
+                      <tr key={c.id || i}>
+                        <td style={{ textAlign: "center", fontWeight: 700, color: "var(--muted)" }}>{i + 1}</td>
+                        <td><strong>{c.name || c.costName || "Operational Freight / Handling"}</strong></td>
+                        <td style={{ textAlign: "right", fontFamily: "ui-monospace, monospace", fontWeight: 700 }}>
+                          {currency} {cVal.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </td>
+                        <td>{c.note || c.remark || "—"}</td>
+                        <td style={{ textAlign: "center" }}>
+                          {c.id && (
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteAdditionalCost(c.id)}
+                              title="Delete Additional Cost"
+                              style={{
+                                background: "transparent",
+                                border: "none",
+                                color: "var(--red-600, #dc2626)",
+                                cursor: "pointer",
+                                padding: "4px",
+                                borderRadius: "4px",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                              }}
+                            >
+                              <Icon name="trash" size={14} />
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })
                 ) : (
                   <tr>
-                    <td colSpan={4} style={{ textAlign: "center", padding: "24px 20px", color: "var(--muted)" }}>
+                    <td colSpan={5} style={{ textAlign: "center", padding: "24px 20px", color: "var(--muted)" }}>
                       No additional logistics or transport costs recorded for this purchase order.
                     </td>
                   </tr>
@@ -773,10 +1106,10 @@ export function PurchaseOrderDetail({
                     Total Other Costs:
                   </td>
                   <td style={{ textAlign: "right", padding: "12px 14px", fontFamily: "ui-monospace, monospace" }}>
-                    IDR 0.00
+                    {currency} {totalOtherCosts.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </td>
-                  <td style={{ padding: "12px 14px", color: "var(--muted)", fontSize: "11px" }}>
-                    No surcharge active
+                  <td colSpan={2} style={{ padding: "12px 14px", color: "var(--muted)", fontSize: "11px" }}>
+                    {totalOtherCosts > 0 ? "Applied to Grand Total" : "No surcharge active"}
                   </td>
                 </tr>
               </tfoot>
@@ -809,34 +1142,38 @@ export function PurchaseOrderDetail({
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px" }}>
                 <span style={{ color: "var(--muted)" }}>Total Material Quantity</span>
                 <strong style={{ fontFamily: "ui-monospace, monospace" }}>
-                  {String(row._totalQty || "17,693.01000 KGM")}
+                  {String(row._totalQty || (poItems.length > 0 ? `${poItems.reduce((acc: number, it: any) => acc + (parseFloat(String(it.quantity || it.orderQty || 0).replace(/[^0-9.]/g, "")) || 0), 0).toFixed(4)} ${poItems[0]?.unit || "PCE"}` : "1.0000 PCE"))}
                 </strong>
               </div>
 
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px" }}>
                 <span style={{ color: "var(--muted)" }}>Material Subtotal</span>
                 <span style={{ fontFamily: "ui-monospace, monospace", fontWeight: 700 }}>
-                  IDR 234,335,955.60
+                  {currency} {materialSubtotal.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
               </div>
 
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px" }}>
                 <span style={{ color: "var(--muted)" }}>DPP (Tax Base Amount)</span>
                 <span style={{ fontFamily: "ui-monospace, monospace", fontWeight: 700 }}>
-                  IDR 214,807,959.00
+                  {currency} {dppAmount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
               </div>
 
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px" }}>
-                <span style={{ color: "var(--muted)" }}>Value Added Tax (VAT / PPn 12%)</span>
+                <span style={{ color: "var(--muted)" }}>
+                  {isHeaderNonFac ? "Value Added Tax (PPn Exempt / Non Facility)" : `Value Added Tax (VAT / PPn ${ppnRate}%)`}
+                </span>
                 <span style={{ fontFamily: "ui-monospace, monospace", fontWeight: 700, color: "var(--blue-600)" }}>
-                  IDR 25,776,955.08
+                  {currency} {ppnAmount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
               </div>
 
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px" }}>
                 <span style={{ color: "var(--muted)" }}>Total Other Costs</span>
-                <span style={{ fontFamily: "ui-monospace, monospace" }}>IDR 0.00</span>
+                <span style={{ fontFamily: "ui-monospace, monospace" }}>
+                  {currency} {totalOtherCosts.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
               </div>
 
               <div
@@ -851,7 +1188,7 @@ export function PurchaseOrderDetail({
               >
                 <strong style={{ color: "var(--ink)" }}>Grand Total</strong>
                 <strong style={{ color: "var(--blue-700)", fontFamily: "ui-monospace, monospace", fontSize: "15px" }}>
-                  {orderTotal}
+                  {displayOrderTotal}
                 </strong>
               </div>
             </div>

@@ -13,9 +13,10 @@ import type {
 interface ReceiveNoteFormProps {
   onBack: () => void;
   onSave?: (newRecord: ReceiveNoteRecord) => void;
+  existingReceiveNotes?: ReceiveNoteRecord[];
 }
 
-export function ReceiveNoteForm({ onBack, onSave }: ReceiveNoteFormProps) {
+export function ReceiveNoteForm({ onBack, onSave, existingReceiveNotes = [] }: ReceiveNoteFormProps) {
   // Supplier & Currency Information
   const [supplier, setSupplier] = useState("");
   const [availableSuppliers, setAvailableSuppliers] = useState<string[]>(() =>
@@ -269,6 +270,9 @@ export function ReceiveNoteForm({ onBack, onSave }: ReceiveNoteFormProps) {
         maximumFractionDigits: 2,
       })}`,
       description: notes || "-",
+      note: notes || "-",
+      notes: notes || "-",
+      remark: notes || "-",
       warehouseTransaction: "-",
       currency: currency.split(" - ")[0] || "IDR",
       rate: parseFloat(rate) || 1.0,
@@ -853,6 +857,7 @@ export function ReceiveNoteForm({ onBack, onSave }: ReceiveNoteFormProps) {
         onAddItems={handleAddPickedItems}
         alreadySelectedKeys={alreadySelectedKeys}
         facilityFilter={statusDn ? "FASILITAS" : "NON-FASILITAS"}
+        existingReceiveNotes={existingReceiveNotes}
       />
     </div>
   );

@@ -131,11 +131,13 @@ class ReceiveNoteApiController extends Controller
 
                 $processedItems[] = [
                     'purchase_order_id' => $poId,
+                    'po_has_items_id' => ! empty($it['po_has_items_id']) ? (int) $it['po_has_items_id'] : null,
                     'quantity' => (float) ($it['quantity'] ?? $it['suratJalanQty'] ?? 1),
                     'item_name' => $it['item_name'] ?? $it['itemName'] ?? 'Material Item',
                     'job_number_id' => ! empty($it['job_number_id']) ? (int) $it['job_number_id'] : null,
                     'rafaksi' => (float) ($it['rafaksi'] ?? 0),
                     'price' => (float) ($it['price'] ?? 0),
+                    'remark' => ! empty($it['remark']) ? $it['remark'] : ($it['note'] ?? null),
                 ];
             }
         } else {
@@ -166,7 +168,7 @@ class ReceiveNoteApiController extends Controller
             'tax_invoice' => !empty($request->input('tax_invoice')) ? $request->input('tax_invoice') : ($request->input('taxInvoiceNumber') ?: null),
             'tax_invoice_date' => $taxInvoiceDate,
             'license_plate' => !empty($request->input('license_plate')) ? $request->input('license_plate') : ($request->input('licensePlate') ?: null),
-            'note' => !empty($request->input('note')) ? $request->input('note') : ($request->input('notes') ?: null),
+            'note' => !empty($request->input('note')) ? $request->input('note') : ($request->input('notes') ?: ($request->input('description') ?: ($request->input('remark') ?: null))),
             'sj_number' => !empty($rawSjNum) && $rawSjNum !== '-' ? $rawSjNum : ($rawPlNum ?: null),
             'sj_date' => $sjDate,
             'pl_number' => !empty($rawPlNum) && $rawPlNum !== '-' ? $rawPlNum : null,

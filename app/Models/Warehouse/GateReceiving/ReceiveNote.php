@@ -99,6 +99,11 @@ class ReceiveNote extends Model
         return $this->hasMany(PurchaseOrderReceiveNote::class, 'receive_note_id');
     }
 
+    public function items(): HasMany
+    {
+        return $this->hasMany(PurchaseOrderReceiveNote::class, 'receive_note_id');
+    }
+
     public function approvals(): HasMany
     {
         return $this->hasMany(ApprovalRn::class, 'receive_note_id');

@@ -172,7 +172,7 @@ export async function saveDeliveryTermApi(name: string): Promise<DeliveryTermRec
 }
 
 export async function fetchMasterAdditionalCosts(): Promise<AdditionalCostRecord[] | null> {
-  const res = await apiGet<{ data: any[] }>("/api/procurement/master/additional-costs");
+  const res = await apiGet<{ data: any[] }>("/api/procurement/master/additional-costs?per_page=100");
   if (!res || !Array.isArray(res.data)) return null;
 
   return res.data.map((item: any): AdditionalCostRecord => ({

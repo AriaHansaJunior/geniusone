@@ -20,7 +20,7 @@ class AdditionalCostsApiController extends Controller
             });
         }
 
-        $perPage = (int) $request->query('per_page', 10);
+        $perPage = (int) $request->query('per_page', 100);
         $records = $query->latest('id')->paginate($perPage);
 
         return response()->json([

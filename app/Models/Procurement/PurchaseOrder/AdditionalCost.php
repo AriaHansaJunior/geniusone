@@ -17,7 +17,13 @@ class AdditionalCost extends Model
         'purchase_order_id',
         'additional_cost_types_id',
         'value',
+        'note',
     ];
+
+    public function getRemarkAttribute(): ?string
+    {
+        return $this->note;
+    }
 
     public function purchaseOrder(): BelongsTo
     {

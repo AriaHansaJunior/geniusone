@@ -13,6 +13,7 @@ interface PickPoItemModalProps {
   onAddItems: (selectedItems: PoItemToPick[]) => void;
   alreadySelectedKeys?: string[]; // e.g. `${poNumber}-${itemCode}`
   facilityFilter?: string | null;
+  existingReceiveNotes?: any[];
 }
 
 export function PickPoItemModal({
@@ -21,6 +22,7 @@ export function PickPoItemModal({
   onAddItems,
   alreadySelectedKeys = [],
   facilityFilter = null,
+  existingReceiveNotes = [],
 }: PickPoItemModalProps) {
   const [search, setSearch] = useState("");
   const [pageSize, setPageSize] = useState<number>(10);
@@ -82,6 +84,39 @@ export function PickPoItemModal({
                 ? "NON FASILITAS"
                 : "FASILITAS";
 
+              // Check backend received quantity
+              let rnReceived = Number(it.receivedQty ?? it.rnQty ?? 0);
+
+              // Also check against local non-rejected receive notes in memory
+              if (Array.isArray(existingReceiveNotes)) {
+                let localReceived = 0;
+                existingReceiveNotes.forEach((rn) => {
+                  const rnStatus = String(rn.status || rn._rawStatus || "");
+                  if (rnStatus === "Rejected") return;
+                  if (Array.isArray(rn.items)) {
+                    rn.items.forEach((rni: any) => {
+                      const rniPo = String(rni.poNumber || rni.po_number || "").trim();
+                      const rniName = String(rni.itemName || rni.item_name || "").trim();
+                      const rniCode = String(rni.itemCode || rni.item_code || "").trim();
+                      if (
+                        rniPo === poNum &&
+                        (rniName === name || rniCode === code || (it.item_alias && rniName === it.item_alias))
+                      ) {
+                        localReceived += Number(rni.quantity || rni.suratJalanQty || rni.qty || 0);
+                      }
+                    });
+                  }
+                });
+                rnReceived = Math.max(rnReceived, localReceived);
+              }
+
+              const remaining = it.remainingQty !== undefined && rnReceived === 0 ? Number(it.remainingQty) : Math.max(0, qty - rnReceived);
+
+              // Issue #1: If remaining quantity is <= 0 (fully received) and not rejected, it CANNOT be selected!
+              if (remaining <= 0 || (it.isFullyReceived && rnReceived >= qty)) {
+                return;
+              }
+
               dynamicItems.push({
                 id: `po-${po.id || poNum}-item-${it.id || idx}`,
                 jobNumber: it.job_number || "—",
@@ -92,19 +127,15 @@ export function PickPoItemModal({
                 itemCode: code,
                 unit: it.unit || "PCE",
                 poQty: qty,
-                rnQty: 0,
-                remainQty: qty,
+                rnQty: rnReceived,
+                remainQty: remaining,
                 unitPrice: price,
                 facility: cleanFac,
               });
             });
           });
           if (dynamicItems.length > 0) {
-            setItemsList((prev) => {
-              const existingIds = new Set(dynamicItems.map((x) => `${x.poNumber}-${x.itemCode}`));
-              const leftovers = prev.filter((p) => !existingIds.has(`${p.poNumber}-${p.itemCode}`));
-              return [...dynamicItems, ...leftovers];
-            });
+            setItemsList(dynamicItems);
           }
         }
       })
@@ -117,6 +148,11 @@ export function PickPoItemModal({
   // Filter available items based on search, facility, and exclude already selected items
   const filteredItems = useMemo(() => {
     return itemsList.filter((item) => {
+      // Exclude items already fully received or with zero remaining quantity
+      if (item.remainQty <= 0) {
+        return false;
+      }
+
       const uniqueKey = `${item.poNumber}-${item.itemCode}`;
       if (alreadySelectedKeys.includes(uniqueKey)) {
         return false;

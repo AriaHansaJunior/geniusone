@@ -176,7 +176,10 @@ export function PurchaseOrderCreate({
         itemObjOrName.facility ??
         itemObjOrName.facility_status ??
         itemObjOrName._rawFacility ??
-        itemObjOrName.facilityStatus;
+        itemObjOrName.facilityStatus ??
+        itemObjOrName.item?.facility ??
+        itemObjOrName.item?.facility_status ??
+        itemObjOrName.requisitionItem?.item?.facility;
 
       const rawFac =
         typeof facField === "object" && facField !== null
@@ -185,7 +188,8 @@ export function PurchaseOrderCreate({
 
       const upper = rawFac.toUpperCase().trim();
       if (upper.includes("NON")) return "Non Facility";
-      if (upper) return "Facility";
+      if (itemObjOrName.facilities_id === 3 || itemObjOrName.item?.facilities_id === 3 || itemObjOrName.requisitionItem?.item?.facilities_id === 3) return "Non Facility";
+      if (upper.includes("FASILITAS") || upper.includes("FACILITY") || upper.includes("BERIKAT")) return "Facility";
     }
 
     const code = typeof itemObjOrName === "object" ? safeExtractString(itemObjOrName.itemCode || itemObjOrName.itemAlias || itemObjOrName.code || "") : "";
@@ -200,11 +204,12 @@ export function PurchaseOrderCreate({
         (cleanName && ((m.itemName && m.itemName.toLowerCase() === cleanName) || (m.name && m.name.toLowerCase() === cleanName)))
     );
     if (match) {
+      if (match.facilities_id === 3) return "Non Facility";
       const mFacField = match.facility ?? match.facility_status;
       const mFac = typeof mFacField === "object" && mFacField !== null ? (mFacField as any).name : mFacField;
       const mUpper = String(mFac || "").toUpperCase();
       if (mUpper.includes("NON")) return "Non Facility";
-      if (mUpper) return "Facility";
+      if (mUpper.includes("FASILITAS") || mUpper.includes("FACILITY") || mUpper.includes("BERIKAT")) return "Facility";
     }
     return "Facility";
   };
@@ -290,10 +295,15 @@ export function PurchaseOrderCreate({
     }
 
     const firstFac = resolveFacilityFromItem(prItems[0]);
-    const targetFacility = statusFacility || firstFac || "Facility";
-    if (firstFac && !statusFacility) {
+    const isFormEmpty = items.length === 0 || items.every((r) => (!r.prNumber || r.prNumber === "—") && (!r.itemName || r.itemName === ""));
+    const targetFacility = isFormEmpty && firstFac ? firstFac : (statusFacility || firstFac || "Facility");
+    if (firstFac && (isFormEmpty || !statusFacility)) {
       setStatusFacility(firstFac);
-      if (firstFac === "Facility") setIsKawasanBerikat(true);
+      if (firstFac === "Facility") {
+        setIsKawasanBerikat(true);
+      } else {
+        setIsKawasanBerikat(false);
+      }
     }
 
     // Filter items matching targetFacility and having remaining quantity > 0 (belum dibeli atau outstanding)
@@ -331,7 +341,7 @@ export function PurchaseOrderCreate({
         prNumber: prNum,
         pr_has_items_id: it.pr_has_items_id || it.id,
         itemName: safeExtractString(it.item || it.itemName || "Material Item"),
-        itemAlias: safeExtractString(it.itemAlias || it.alias || it.itemCode || "—"),
+        itemAlias: safeExtractString(it.itemAlias || it.alias || it.itemName || it.item || it.itemCode || ""),
         itemCode: safeExtractString(it.itemCode || it.code || "—"),
         facility: targetFacility,
         price: 0,
@@ -464,7 +474,7 @@ export function PurchaseOrderCreate({
       .catch(() => { });
 
     // 6. Fetch master additional costs for dropdown (UI-01)
-    fetch("/api/procurement/master/additional-costs", { headers: { Accept: "application/json" } })
+    fetch("/api/procurement/master/additional-costs?per_page=100", { headers: { Accept: "application/json" } })
       .then((r) => r.json())
       .then((d) => {
         if (isMounted && d?.data && Array.isArray(d.data) && d.data.length > 0) {
@@ -491,7 +501,7 @@ export function PurchaseOrderCreate({
       .catch(() => { });
 
     // 8. Fetch master items for facility resolution
-    fetch("/api/exim/master/items", { headers: { Accept: "application/json" } })
+    fetch("/api/exim/master/items?per_page=100", { headers: { Accept: "application/json" } })
       .then((r) => r.json())
       .then((d) => {
         if (isMounted && d?.data && Array.isArray(d.data) && d.data.length > 0) {
@@ -592,7 +602,11 @@ export function PurchaseOrderCreate({
         : "Facility";
       if (!statusFacility) {
         setStatusFacility(firstFac);
-        if (firstFac === "Facility") setIsKawasanBerikat(true);
+        if (firstFac === "Facility") {
+          setIsKawasanBerikat(true);
+        } else {
+          setIsKawasanBerikat(false);
+        }
       }
     }
 
@@ -805,7 +819,7 @@ export function PurchaseOrderCreate({
         const orderQty = remQty > 0 ? remQty : reqQty;
         const itemName = safeExtractString(first.item || first.itemName || "Material Item");
         const itemCode = safeExtractString(first.itemCode || first.code || "—");
-        const itemAlias = safeExtractString(first.itemAlias || first.alias || first.itemCode || "—");
+        const itemAlias = safeExtractString(first.itemAlias || first.alias || first.itemName || first.item || first.itemCode || "");
         const unit = safeExtractString(first.unit || "PCE");
         const remark = safeExtractString(first.remark || matchedPr._rawRemark || matchedPr.remark || "");
         const prItemId = first.pr_has_items_id || first.id;
@@ -847,7 +861,7 @@ export function PurchaseOrderCreate({
                 pr_has_items_id: extra.pr_has_items_id || extra.id,
                 itemName: safeExtractString(extra.item || extra.itemName || "Material Item"),
                 itemCode: safeExtractString(extra.itemCode || extra.code || "—"),
-                itemAlias: safeExtractString(extra.itemAlias || extra.alias || extra.itemCode || "—"),
+                itemAlias: safeExtractString(extra.itemAlias || extra.alias || extra.itemName || extra.item || extra.itemCode || ""),
                 facility: targetFacility,
                 price: 0,
                 unit: safeExtractString(extra.unit || "PCE"),
@@ -919,7 +933,7 @@ export function PurchaseOrderCreate({
                   ...r,
                   pr_has_items_id: first.pr_has_items_id || first.id,
                   itemName: safeExtractString(first.item || first.itemName || "Material Item"),
-                  itemAlias: safeExtractString(first.itemCode || first.itemAlias || "—"),
+                  itemAlias: safeExtractString(first.itemAlias || first.alias || first.itemName || first.item || first.itemCode || ""),
                   facility: targetFacility,
                   unit: safeExtractString(first.unit || "PCE"),
                   requestedQty: reqQty,
@@ -945,7 +959,11 @@ export function PurchaseOrderCreate({
   // Handle changing facility status in the form header
   const handleFacilityStatusChange = (newFac: "Facility" | "Non Facility") => {
     setStatusFacility(newFac);
-    if (newFac === "Facility") setIsKawasanBerikat(true);
+    if (newFac === "Facility") {
+      setIsKawasanBerikat(true);
+    } else {
+      setIsKawasanBerikat(false);
+    }
 
     setItems((prev) => {
       const activeRows = prev.filter((r) => (r.prNumber && r.prNumber !== "—") || (r.itemName && r.itemName.trim()));
@@ -1118,8 +1136,8 @@ export function PurchaseOrderCreate({
         deliveryTerm,
         latest_delivery: latestDelivery,
         service_subkon: isSubkon,
-        facility_status: isKawasanBerikat || statusFacility === "Facility" ? "FASILITAS" : "NON FASILITAS",
-        is_kawasan_berikat: isKawasanBerikat,
+        facility_status: statusFacility === "Non Facility" ? "NON FASILITAS" : (isKawasanBerikat || statusFacility === "Facility" ? "FASILITAS" : "NON FASILITAS"),
+        is_kawasan_berikat: statusFacility === "Non Facility" ? false : isKawasanBerikat,
         remark: remarkPo,
         items: items.map((it) => {
           const hasDiscount = it.discountType && it.discountType !== "none";
@@ -1129,7 +1147,7 @@ export function PurchaseOrderCreate({
             prNumber: it.prNumber,
             itemName: it.itemName,
             item_code: it.itemCode,
-            item_alias: it.itemAlias,
+            item_alias: it.itemAlias && it.itemAlias !== "—" ? it.itemAlias : (it.itemName || it.itemCode || ""),
             price: it.price,
             order: it.orderQty,
             purchased: it.purchasedQty,
@@ -1141,11 +1159,20 @@ export function PurchaseOrderCreate({
             remark: it.remark?.trim() ? it.remark.trim() : "",
           };
         }),
-        additional_costs: additionalCosts.map((c) => ({
-          name: c.costName,
-          value: c.amount,
-          note: c.remark,
-        })),
+        additional_costs: additionalCosts.map((c) => {
+          const matchedMaster = masterAdditionalCosts.find((m) => m.costName === c.costName || m.costCode === c.costCode);
+          const rawId = matchedMaster?.id;
+          const numericId = rawId && !String(rawId).startsWith("ac-") && !isNaN(Number(rawId)) ? Number(rawId) : null;
+          return {
+            additional_cost_types_id: numericId,
+            name: c.costName,
+            costName: c.costName,
+            amount: c.amount,
+            value: c.amount,
+            note: c.remark || "",
+            remark: c.remark || "",
+          };
+        }),
       };
 
       const res = await createPurchaseOrder(payload);

@@ -21,6 +21,7 @@ class PurchaseOrderItem extends Model
     protected $fillable = [
         'purchase_order_id',
         'pr_has_items_id',
+        'items_id',
         'item_alias',
         'price',
         'purchased',
@@ -74,6 +75,11 @@ class PurchaseOrderItem extends Model
         return $this->requisitionItem();
     }
 
+    public function directItem(): BelongsTo
+    {
+        return $this->belongsTo(Item::class, 'items_id');
+    }
+
     public function item(): HasOneThrough
     {
         return $this->hasOneThrough(
@@ -88,12 +94,12 @@ class PurchaseOrderItem extends Model
 
     public function getItemAttribute(): ?Item
     {
-        return $this->requisitionItem?->item;
+        return $this->directItem ?? $this->requisitionItem?->item;
     }
 
     public function getItemsIdAttribute(): ?int
     {
-        return $this->requisitionItem?->items_id;
+        return $this->attributes['items_id'] ?? $this->requisitionItem?->items_id;
     }
 
     public function getQuantityAttribute(): float

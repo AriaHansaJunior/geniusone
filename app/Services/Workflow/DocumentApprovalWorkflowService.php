@@ -62,7 +62,7 @@ class DocumentApprovalWorkflowService
                 'po', 'purchase-order', 'purchase_order' => PurchaseOrder::findOrFail((int) $id),
                 'rn', 'receive-note', 'receive_note' => ReceiveNote::find((int) $id) ?? BpbReceiveMaterial::findOrFail((int) $id),
                 'bpb', 'bpb-receive-material', 'bpb_receive_material', 'warehouse' => BpbReceiveMaterial::find((int) $id) ?? ReceiveNote::findOrFail((int) $id),
-                'rm', 'request-material', 'request_material' => RequestMaterial::findOrFail((int) $id),
+                'rm', 'request-material', 'request_material', 'request-materials', 'request_materials' => RequestMaterial::findOrFail((int) $id),
                 'return', 'receive-note-return', 'receive_note_return' => ReceiveNoteReturn::findOrFail((int) $id),
                 default => throw new InvalidArgumentException("Unknown document module '{$module}'. Only operational transactions support approval."),
             };
@@ -77,7 +77,7 @@ class DocumentApprovalWorkflowService
                 ?? BpbReceiveMaterial::whereRaw("REPLACE(REPLACE(bpb_number, '/', ''), '-', '') = ?", [$clean])->firstOrFail(),
             'bpb', 'bpb-receive-material', 'bpb_receive_material', 'warehouse' => BpbReceiveMaterial::whereRaw("REPLACE(REPLACE(bpb_number, '/', ''), '-', '') = ?", [$clean])->first()
                 ?? ReceiveNote::whereRaw("REPLACE(REPLACE(rn_number, '/', ''), '-', '') = ?", [$clean])->firstOrFail(),
-            'rm', 'request-material', 'request_material' => RequestMaterial::whereRaw("REPLACE(REPLACE(request_number, '/', ''), '-', '') = ?", [$clean])->firstOrFail(),
+            'rm', 'request-material', 'request_material', 'request-materials', 'request_materials' => RequestMaterial::whereRaw("REPLACE(REPLACE(request_number, '/', ''), '-', '') = ?", [$clean])->firstOrFail(),
             'return', 'receive-note-return', 'receive_note_return' => ReceiveNoteReturn::whereRaw("REPLACE(REPLACE(rn_number, '/', ''), '-', '') = ?", [$clean])->firstOrFail(),
             default => throw new InvalidArgumentException("Unknown document module '{$module}'. Only operational transactions support approval."),
         };
@@ -95,7 +95,7 @@ class DocumentApprovalWorkflowService
             'po', 'purchase-order', 'purchase_order' => 'PO',
             'rn', 'receive-note', 'receive_note' => 'RN',
             'bpb', 'bpb-receive-material', 'bpb_receive_material', 'warehouse' => 'BPB',
-            'rm', 'request-material', 'request_material' => 'RM',
+            'rm', 'request-material', 'request_material', 'request-materials', 'request_materials' => 'RM',
             'return', 'receive-note-return', 'receive_note_return' => 'RETURN',
             default => strtoupper($module),
         };
@@ -641,7 +641,8 @@ class DocumentApprovalWorkflowService
             }
 
             $poItems = $poRn->purchaseOrder?->items ?? collect();
-            $matchedPoItem = $poItems->first(function ($it) use ($poRn) {
+            $poItemDirect = $poRn->po_has_items_id ? \App\Models\Procurement\PurchaseOrder\PurchaseOrderHasItem::with('requisitionItem.item')->find($poRn->po_has_items_id) : null;
+            $matchedPoItem = $poItemDirect ?? $poItems->first(function ($it) use ($poRn) {
                 return $it->requisitionItem?->item?->name === $poRn->item_name
                     || $it->item_alias === $poRn->item_name;
             });
@@ -652,6 +653,7 @@ class DocumentApprovalWorkflowService
                 ?? Item::where('code', $cleanName)->first()
                 ?? Item::whereRaw('LOWER(name) = ?', [strtolower($cleanName)])->first()
                 ?? Item::where('name', 'like', "%{$cleanName}%")->first()
+                ?? Item::whereRaw('? LIKE CONCAT("%", name, "%")', [$cleanName])->first()
                 ?? $poRn->purchaseOrder?->items?->first()?->requisitionItem?->item;
 
             if (! $item && ! empty($cleanName)) {
@@ -706,7 +708,8 @@ class DocumentApprovalWorkflowService
             }
 
             $poItems = $poRn->purchaseOrder?->items ?? collect();
-            $matchedPoItem = $poItems->first(function ($it) use ($poRn) {
+            $poItemDirect = $poRn->po_has_items_id ? \App\Models\Procurement\PurchaseOrder\PurchaseOrderHasItem::with('requisitionItem.item')->find($poRn->po_has_items_id) : null;
+            $matchedPoItem = $poItemDirect ?? $poItems->first(function ($it) use ($poRn) {
                 return $it->requisitionItem?->item?->name === $poRn->item_name
                     || $it->item_alias === $poRn->item_name;
             });
@@ -717,6 +720,7 @@ class DocumentApprovalWorkflowService
                 ?? Item::where('code', $cleanName)->first()
                 ?? Item::whereRaw('LOWER(name) = ?', [strtolower($cleanName)])->first()
                 ?? Item::where('name', 'like', "%{$cleanName}%")->first()
+                ?? Item::whereRaw('? LIKE CONCAT("%", name, "%")', [$cleanName])->first()
                 ?? $poRn->purchaseOrder?->items?->first()?->requisitionItem?->item;
 
             if ($item) {
@@ -744,7 +748,7 @@ class DocumentApprovalWorkflowService
         $items = $rm->items()->with('item')->get();
 
         foreach ($items as $rmItem) {
-            $qty = (float) ($rmItem->request_qty ?? $rmItem->quantity ?? 0);
+            $qty = (float) ($rmItem->request ?? $rmItem->request_qty ?? $rmItem->quantity ?? 0);
             if ($qty <= 0) {
                 continue;
             }
@@ -774,7 +778,7 @@ class DocumentApprovalWorkflowService
         $items = $rm->items()->with('item')->get();
 
         foreach ($items as $rmItem) {
-            $qty = (float) ($rmItem->request_qty ?? $rmItem->quantity ?? 0);
+            $qty = (float) ($rmItem->request ?? $rmItem->request_qty ?? $rmItem->quantity ?? 0);
             if ($qty <= 0) {
                 continue;
             }

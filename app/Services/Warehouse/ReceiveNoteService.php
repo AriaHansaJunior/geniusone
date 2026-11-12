@@ -66,6 +66,7 @@ class ReceiveNoteService
             foreach ($receivedItems as $item) {
                 PurchaseOrderReceiveNote::create([
                     'purchase_order_id' => $item['purchase_order_id'],
+                    'po_has_items_id' => $item['po_has_items_id'] ?? null,
                     'receive_note_id' => $receiveNote->id,
                     'dn_number' => $item['dn_number'] ?? null,
                     'job_number_id' => $item['job_number_id'] ?? $defaultJobId,
@@ -77,6 +78,7 @@ class ReceiveNoteService
                     'discount' => (float) ($item['discount'] ?? 0),
                     'ppn' => (float) ($item['ppn'] ?? 0),
                     'grand_total' => (float) ($item['grand_total'] ?? 0),
+                    'remark' => $item['remark'] ?? $item['note'] ?? null,
                 ]);
             }
 
