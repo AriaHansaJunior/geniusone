@@ -137,6 +137,8 @@ export function PurchaseRequisition({ onDetail, onCreate }: PurchaseRequisitionP
       let effectiveStatus = String(r._rawStatus || r.status || "Draft");
       if (allClosed || effectiveStatus.toLowerCase() === "closing" || effectiveStatus.toLowerCase() === "closed") {
         effectiveStatus = "Closing";
+      } else if (effectiveStatus.toLowerCase() === "ordered") {
+        effectiveStatus = "Ordered";
       } else if (effectiveStatus.toLowerCase() === "outstanding") {
         effectiveStatus = "Outstanding";
       } else if (hasClosed && (effectiveStatus.toLowerCase().includes("approved") || effectiveStatus === "Ready")) {
@@ -190,6 +192,8 @@ export function PurchaseRequisition({ onDetail, onCreate }: PurchaseRequisitionP
             (r as any).approval_status === "Approved" ||
           ((rowStatus === "outstanding" || rowStatus === "partial closing") && ((r as any).is_approved || (r as any).approval_status === "Approved"));
           if (!isAppr) return false;
+        } else if (statusVal === "ordered") {
+          if (!rowStatus.includes("ordered")) return false;
         } else if (statusVal === "outstanding") {
           if (!rowStatus.includes("outstanding")) return false;
         } else if (statusVal === "closing") {

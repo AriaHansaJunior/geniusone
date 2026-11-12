@@ -69,6 +69,12 @@ class ReceiveNoteService
             $defaultJobId = JobNumber::first()?->id ?? 1;
 
             foreach ($receivedItems as $item) {
+                $itemQty = (float) ($item['quantity'] ?? 0);
+                $itemPrice = (float) ($item['price'] ?? 0);
+                $itemGrandTotal = ! empty($item['grand_total']) && (float) $item['grand_total'] > 0
+                    ? (float) $item['grand_total']
+                    : ($itemQty * $itemPrice);
+
                 PurchaseOrderReceiveNote::create([
                     'purchase_order_id' => $item['purchase_order_id'],
                     'po_has_items_id' => $item['po_has_items_id'] ?? null,
@@ -76,13 +82,13 @@ class ReceiveNoteService
                     'dn_number' => $item['dn_number'] ?? null,
                     'job_number_id' => $item['job_number_id'] ?? $defaultJobId,
                     'item_name' => $item['item_name'] ?? null,
-                    'quantity' => (float) ($item['quantity'] ?? 0),
+                    'quantity' => $itemQty,
                     'rafaksi' => (float) ($item['rafaksi'] ?? 0),
-                    'price' => (float) ($item['price'] ?? 0),
+                    'price' => $itemPrice,
                     'additional_price' => (float) ($item['additional_price'] ?? 0),
                     'discount' => (float) ($item['discount'] ?? 0),
                     'ppn' => (float) ($item['ppn'] ?? 0),
-                    'grand_total' => (float) ($item['grand_total'] ?? 0),
+                    'grand_total' => $itemGrandTotal,
                     'remark' => $item['remark'] ?? $item['note'] ?? null,
                 ]);
             }

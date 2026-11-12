@@ -29,7 +29,7 @@ export function ApprovalStatusBadge({
   const label = getApprovalStatusLabel(normalized);
 
   let iconName: "check" | "close" | "clock" | "alertTriangle" = "clock";
-  if (normalized === "APPROVED") {
+  if (normalized === "APPROVED" || normalized === "ORDERED") {
     iconName = "check";
   } else if (normalized === "REJECTED" || normalized === "CLOSING") {
     iconName = "close";

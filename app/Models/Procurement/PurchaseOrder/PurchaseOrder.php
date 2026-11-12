@@ -117,7 +117,13 @@ class PurchaseOrder extends Model
 
     public function getSubtotalAttribute(): float
     {
-        return (float) $this->items->sum('subtotal');
+        return (float) $this->items->sum(function ($it) {
+            $sub = (float) $it->subtotal;
+            if ($sub <= 0 && (float) $it->price > 0) {
+                return round((float) $it->price * ((float) $it->order > 0 ? (float) $it->order : 1.0), 2);
+            }
+            return $sub;
+        });
     }
 
     public function getDiscountAttribute(): float
@@ -127,12 +133,27 @@ class PurchaseOrder extends Model
 
     public function getDppAttribute(): float
     {
-        return (float) $this->items->sum('dpp');
+        return (float) $this->items->sum(function ($it) {
+            $dpp = (float) $it->dpp;
+            if ($dpp <= 0 && (float) $it->price > 0) {
+                $sub = (float) $it->subtotal > 0 ? (float) $it->subtotal : round((float) $it->price * ((float) $it->order > 0 ? (float) $it->order : 1.0), 2);
+                $disc = (float) $it->discount_val;
+                return max(0.0, round($sub - $disc, 2));
+            }
+            return $dpp;
+        });
     }
 
     public function getPpnAttribute(): float
     {
-        return (float) $this->items->sum('subtotal_ppn');
+        return (float) $this->items->sum(function ($it) {
+            if ($it->ditangguhkan_kawasan_berikat || strtoupper((string) $this->facility_status) === 'FASILITAS') {
+                return 0.0;
+            }
+            $rate = $it->ppn?->value ?? 11.0;
+            $dpp = (float) $it->dpp > 0 ? (float) $it->dpp : round((float) $it->price * ((float) $it->order > 0 ? (float) $it->order : 1.0), 2);
+            return round(($dpp * $rate) / 100, 2);
+        });
     }
 
     public function getPphAttribute(): float
@@ -147,7 +168,12 @@ class PurchaseOrder extends Model
 
     public function getGrandTotalAttribute(): float
     {
-        return (float) $this->items->sum('grand_total') + $this->getAdditionalCostsTotalAttribute();
+        $dpp = $this->getDppAttribute();
+        $ppn = $this->getPpnAttribute();
+        $pph = $this->getPphAttribute();
+        $additional = $this->getAdditionalCostsTotalAttribute();
+
+        return round($dpp + $ppn + $additional - $pph, 2);
     }
 
     public function getStatusAttribute(): string

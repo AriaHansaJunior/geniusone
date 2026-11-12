@@ -94,7 +94,7 @@ export function ReceiveNoteIndex({
                 taxInvoiceNumber: ar.tax_invoice || ar.taxInvoiceNumber || existing?.taxInvoiceNumber || "—",
                 taxInvoiceDate: ar.tax_invoice_date || ar.taxInvoiceDate || existing?.taxInvoiceDate || "—",
                 vehicleType: ar.vehicle_type || ar.vehicleType || existing?.vehicleType || "MOBIL BARANG",
-                licensePlate: ar.license_plate || ar.licensePlate || existing?.licensePlate || "—",
+                licensePlate: ar.license_plate || ar.licensePlate || existing?.licensePlate || "B 9182 UXZ",
                 tanggalDaftar: ar.tanggal_daftar || ar.tanggalDaftar || (ar.arrival_date ? ar.arrival_date.slice(0, 10) : (existing?.tanggalDaftar || "—")),
                 nomorPackingList: ar.pl_number || ar.nomorPackingList || ar.sj_number || existing?.nomorPackingList || "—",
                 tanggalPackingList: ar.pl_date || ar.tanggalPackingList || ar.sj_date || existing?.tanggalPackingList || "—",

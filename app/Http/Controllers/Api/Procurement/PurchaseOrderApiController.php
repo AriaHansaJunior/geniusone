@@ -158,7 +158,7 @@ class PurchaseOrderApiController extends Controller
      */
     public function formatPoRow(PurchaseOrder $po, int $indexNo = 1, bool $includeFullHistory = false): array
     {
-        $currencyCode = $po->currency?->name ?? 'IDR';
+        $currencyCode = $po->currency?->code ?? $po->currency?->name ?? 'IDR';
         $supplierName = $po->supplier ? "[{$po->supplier->code}] {$po->supplier->name}" : '—';
         $firstItem = $po->items->first();
         $firstItemUnit = $firstItem?->item?->unitOfMeasurement?->name ?? 'PCS';
@@ -194,6 +194,9 @@ class PurchaseOrderApiController extends Controller
             $price = (float) $it->price;
             $disc = (float) $it->discount;
             $sub = (float) $it->subtotal;
+            if ($sub <= 0 && $price > 0 && $qty > 0) {
+                $sub = round($price * $qty, 2);
+            }
             $rawFac = $itemObj?->facility?->name ?? ($itemObj && $itemObj->facilities_id == 3 ? 'NON FASILITAS' : ($po->facility_status ?? 'FASILITAS'));
             $facilityName = stripos((string) $rawFac, 'non') !== false ? 'NON FASILITAS' : 'FASILITAS';
 

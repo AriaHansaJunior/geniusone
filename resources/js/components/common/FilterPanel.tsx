@@ -262,6 +262,8 @@ export function FilterPanel({ page, filters = {}, onFilterChange }: FilterPanelP
         value={getVal("status", "all")}
         options={[
           { value: "all", label: "All statuses" },
+          { value: "ordered", label: "Ordered" },
+          { value: "outstanding", label: "Outstanding" },
           { value: "waiting_1", label: "Waiting for Approve 1" },
           { value: "waiting_2", label: "Waiting for Approve 2" },
           { value: "approved_1", label: "Approved 1" },

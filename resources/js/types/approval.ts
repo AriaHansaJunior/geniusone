@@ -10,7 +10,8 @@ export type ApprovalStatus =
   | "REJECTED"
   | "CLOSING"
   | "PARTIAL_CLOSING"
-  | "OUTSTANDING";
+  | "OUTSTANDING"
+  | "ORDERED";
 
 export type ApprovalTier = 1 | 2;
 
@@ -73,6 +74,10 @@ export function normalizeApprovalStatus(rawStatus?: string | null): ApprovalStat
 
   const s = rawStatus.trim().toUpperCase().replace(/[\s_-]+/g, "_");
 
+  if (s === "ORDERED") {
+    return "ORDERED";
+  }
+
   if (s === "OUTSTANDING") {
     return "OUTSTANDING";
   }
@@ -120,6 +125,8 @@ export function getApprovalStatusLabel(status: ApprovalStatus): string {
       return "Partial Closing";
     case "OUTSTANDING":
       return "Outstanding";
+    case "ORDERED":
+      return "Ordered";
     default:
       return "Waiting Approve 1";
   }
@@ -136,6 +143,8 @@ export function getApprovalStatusBadgeTone(status: ApprovalStatus): "orange" | "
       return "blue";
     case "APPROVED":
       return "green";
+    case "ORDERED":
+      return "blue";
     case "REJECTED":
     case "CLOSING":
       return "red";

@@ -67,10 +67,12 @@ class PurchaseRequisitionViewModel
     protected function getStatusBadge(): string
     {
         return match ($this->pr->status) {
-            'Approved 2', 'Completed' => 'success',
-            'Approved 1' => 'info',
-            'Rejected' => 'danger',
-            'Pending', 'Draft' => 'warning',
+            'Ordered' => 'blue',
+            'Approved', 'Approved 2', 'Completed' => 'success',
+            'Approved 1', 'Waiting for Approve 2' => 'info',
+            'Outstanding', 'Partial Closing' => 'warning',
+            'Rejected', 'Closing' => 'danger',
+            'Pending', 'Draft' => 'secondary',
             default => 'secondary',
         };
     }

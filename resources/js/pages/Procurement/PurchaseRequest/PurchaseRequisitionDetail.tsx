@@ -212,6 +212,7 @@ export function PurchaseRequisitionDetail({
 
   const isApproved =
     approvalState.status === "APPROVED" ||
+    approvalState.status === "ORDERED" ||
     approvalState.status === "OUTSTANDING" ||
     Boolean(approvalState.approved2By) ||
     (row as any).is_approved === true ||

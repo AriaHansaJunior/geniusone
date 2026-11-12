@@ -641,7 +641,7 @@ class DocumentApprovalWorkflowService
             }
 
             $poItems = $poRn->purchaseOrder?->items ?? collect();
-            $poItemDirect = $poRn->po_has_items_id ? \App\Models\Procurement\PurchaseOrder\PurchaseOrderHasItem::with('requisitionItem.item')->find($poRn->po_has_items_id) : null;
+            $poItemDirect = $poRn->po_has_items_id ? \App\Models\Procurement\PurchaseOrder\PurchaseOrderItem::with('requisitionItem.item')->find($poRn->po_has_items_id) : null;
             $matchedPoItem = $poItemDirect ?? $poItems->first(function ($it) use ($poRn) {
                 return $it->requisitionItem?->item?->name === $poRn->item_name
                     || $it->item_alias === $poRn->item_name;
@@ -708,7 +708,7 @@ class DocumentApprovalWorkflowService
             }
 
             $poItems = $poRn->purchaseOrder?->items ?? collect();
-            $poItemDirect = $poRn->po_has_items_id ? \App\Models\Procurement\PurchaseOrder\PurchaseOrderHasItem::with('requisitionItem.item')->find($poRn->po_has_items_id) : null;
+            $poItemDirect = $poRn->po_has_items_id ? \App\Models\Procurement\PurchaseOrder\PurchaseOrderItem::with('requisitionItem.item')->find($poRn->po_has_items_id) : null;
             $matchedPoItem = $poItemDirect ?? $poItems->first(function ($it) use ($poRn) {
                 return $it->requisitionItem?->item?->name === $poRn->item_name
                     || $it->item_alias === $poRn->item_name;

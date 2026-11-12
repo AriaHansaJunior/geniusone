@@ -423,8 +423,24 @@ export function PurchaseOrderDetail({
     }
     return poItems.reduce((sum: number, it: any) => {
       const rawSub = it.subtotalRp ?? it.subtotal ?? 0;
-      const val = parseFloat(String(rawSub).replace(/[^0-9.]/g, "")) || 0;
+      let val = parseFloat(String(rawSub).replace(/[^0-9.]/g, "")) || 0;
+      if (val <= 0) {
+        const prc = parseFloat(String(it.priceRp ?? it.price ?? 0).replace(/[^0-9.]/g, "")) || 0;
+        const oQty = parseFloat(String(it.orderQty ?? it.quantity ?? 1).replace(/[^0-9.]/g, "")) || 1;
+        val = prc * oQty;
+      }
       return sum + val;
+    }, 0);
+  }, [row._financials, poItems]);
+
+  const discountAmount = useMemo(() => {
+    if (row._financials?.discount) {
+      const num = parseFloat(String(row._financials.discount).replace(/[^0-9.]/g, ""));
+      if (!isNaN(num) && num > 0) return num;
+    }
+    return poItems.reduce((sum: number, it: any) => {
+      const rawDisc = it.discountRp ?? it.discount ?? 0;
+      return sum + (parseFloat(String(rawDisc).replace(/[^0-9.]/g, "")) || 0);
     }, 0);
   }, [row._financials, poItems]);
 
@@ -433,26 +449,50 @@ export function PurchaseOrderDetail({
       const num = parseFloat(String(row._financials.dpp).replace(/[^0-9.]/g, ""));
       if (!isNaN(num) && num > 0) return num;
     }
-    return materialSubtotal;
-  }, [row._financials, materialSubtotal]);
+    return Math.max(0, materialSubtotal - discountAmount);
+  }, [row._financials, materialSubtotal, discountAmount]);
 
-  const ppnRate = 12;
+  const totalPph = useMemo(() => {
+    if (row._financials?.pph) {
+      const num = parseFloat(String(row._financials.pph).replace(/[^0-9.]/g, ""));
+      if (!isNaN(num) && num > 0) return num;
+    }
+    return poItems.reduce((sum: number, it: any) => {
+      const rawPph = it.subtotalPph ?? it.totalPph ?? 0;
+      return sum + (parseFloat(String(rawPph).replace(/[^0-9.]/g, "")) || 0);
+    }, 0);
+  }, [row._financials, poItems]);
+
+  const ppnRate = 11;
+  const isKawasanBerikat = !isHeaderNonFac;
+
   const ppnAmount = useMemo(() => {
-    if (isHeaderNonFac) return 0;
+    if (isKawasanBerikat) return 0;
     if (row._financials?.ppn) {
       const num = parseFloat(String(row._financials.ppn).replace(/[^0-9.]/g, ""));
       if (!isNaN(num)) return num;
     }
     return Math.round(dppAmount * (ppnRate / 100) * 100) / 100;
-  }, [row._financials, dppAmount, isHeaderNonFac]);
+  }, [row._financials, dppAmount, isKawasanBerikat, ppnRate]);
 
   const computedGrandTotal = useMemo(() => {
-    return dppAmount + ppnAmount + totalOtherCosts;
-  }, [dppAmount, ppnAmount, totalOtherCosts]);
+    if (row._financials?.grandTotal) {
+      const num = parseFloat(String(row._financials.grandTotal).replace(/[^0-9.]/g, ""));
+      if (!isNaN(num) && num > 0) return num;
+    }
+    return dppAmount + ppnAmount + totalOtherCosts - totalPph;
+  }, [row._financials, dppAmount, ppnAmount, totalOtherCosts, totalPph]);
 
   const displayOrderTotal = useMemo(() => {
     return `${currency} ${computedGrandTotal.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   }, [currency, computedGrandTotal]);
+
+  const totalMaterialQtyStr = useMemo(() => {
+    if (row._totalQty) return String(row._totalQty);
+    const sum = poItems.reduce((acc: number, it: any) => acc + (parseFloat(String(it.quantity || it.orderQty || 0).replace(/[^0-9.]/g, "")) || 0), 0);
+    const unit = poItems[0]?.unit || "PCS";
+    return `${sum.toFixed(4)} ${unit}`;
+  }, [row._totalQty, poItems]);
 
   const otherCosts = localOtherCosts;
 
@@ -587,8 +627,8 @@ export function PurchaseOrderDetail({
 
         <div className="detail-kpi-card">
           <span>PAYMENT TERMS</span>
-          <strong>100% by TT</strong>
-          <small>{paymentTerm}</small>
+          <strong>{paymentTerm && paymentTerm !== "—" && paymentTerm !== "-" ? paymentTerm : "100% by TT"}</strong>
+          <small>{paymentMethod && paymentMethod !== "—" ? paymentMethod : "Direct TT"}</small>
         </div>
 
         <div className="detail-kpi-card">
@@ -600,7 +640,7 @@ export function PurchaseOrderDetail({
         <div className="detail-kpi-card">
           <span>APPROVAL & REVISION</span>
           <strong>{approvedBy}</strong>
-          <small>Revision: — · Subcon: —</small>
+          <small>Revision: {row._rawRevision || "0"} · Subcon: {row._rawSubkon || "No"}</small>
         </div>
       </div>
 
@@ -791,8 +831,8 @@ export function PurchaseOrderDetail({
                     </td>
                     <td>
                       <Material
-                        name={item.item || "Battery Scrap"}
-                        code={item.itemCode || "10.100.100.001"}
+                        name={item.itemName || item.item || item.itemAlias || "Procurement Material"}
+                        code={item.itemCode && item.itemCode !== "—" ? item.itemCode : "-"}
                       />
                     </td>
                     <td>
@@ -857,22 +897,30 @@ export function PurchaseOrderDetail({
                       {item.quantity}
                     </td>
                     <td style={{ textAlign: "right", fontFamily: "ui-monospace, monospace" }}>
-                      IDR {item.priceRp || item.price || "13,244.55"}
+                      IDR {item.priceRp || item.price || "0.00"}
                     </td>
                     <td style={{ textAlign: "right", fontFamily: "ui-monospace, monospace", color: "var(--muted)" }}>
                       {item.discountRp || item.discount || "0.00"}
                     </td>
                     <td style={{ textAlign: "right", fontFamily: "ui-monospace, monospace", fontWeight: 700, color: "var(--ink)" }}>
-                      IDR {item.subtotalRp || item.subtotal || "234,335,955.60"}
+                      {(() => {
+                        const rawSub = item.subtotalRp || item.subtotal;
+                        const numSub = parseFloat(String(rawSub || 0).replace(/[^0-9.]/g, ""));
+                        if (numSub > 0) return `IDR ${rawSub}`;
+                        const prc = parseFloat(String(item.priceRp || item.price || 0).replace(/[^0-9.]/g, ""));
+                        const oQty = parseFloat(String(item.orderQty || item.quantity || 1).replace(/[^0-9.]/g, "")) || 1;
+                        const calc = prc * oQty;
+                        return `IDR ${calc > 0 ? calc.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : (rawSub || "0.00")}`;
+                      })()}
                     </td>
                     <td style={{ textAlign: "right", fontFamily: "ui-monospace, monospace" }}>
-                      {item.lme || "1,855"}
+                      {item.lme && item.lme !== "—" ? item.lme : "—"}
                     </td>
                     <td style={{ textAlign: "right", fontFamily: "ui-monospace, monospace" }}>
-                      {item.optionalRate || "17,849"}
+                      {item.optionalRate && item.optionalRate !== "—" ? item.optionalRate : "—"}
                     </td>
                     <td style={{ textAlign: "right", fontWeight: 700, color: "var(--blue-600)" }}>
-                      {item.lmePercentage || "40.00%"}
+                      {item.lmePercentage && item.lmePercentage !== "—" ? item.lmePercentage : "—"}
                     </td>
                     <td style={{ textAlign: "right", fontFamily: "ui-monospace, monospace" }}>
                       {item.subtotalPph || "0.00"}
@@ -883,6 +931,25 @@ export function PurchaseOrderDetail({
                   </tr>
                 ))}
               </tbody>
+              <tfoot>
+                <tr style={{ background: "#f8fafc", fontWeight: 700 }}>
+                  <td colSpan={5} style={{ textAlign: "right", padding: "12px 14px" }}>
+                    Total:
+                  </td>
+                  <td style={{ textAlign: "right", padding: "12px 14px", fontFamily: "ui-monospace, monospace" }}>
+                    {totalMaterialQtyStr}
+                  </td>
+                  <td colSpan={2}></td>
+                  <td style={{ textAlign: "right", padding: "12px 14px", fontFamily: "ui-monospace, monospace" }}>
+                    {currency} {materialSubtotal.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </td>
+                  <td colSpan={3}></td>
+                  <td style={{ textAlign: "right", padding: "12px 14px", fontFamily: "ui-monospace, monospace" }}>
+                    {currency} {totalPph.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </td>
+                  <td></td>
+                </tr>
+              </tfoot>
             </table>
           </div>
 
@@ -1100,7 +1167,7 @@ export function PurchaseOrderDetail({
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px" }}>
                 <span style={{ color: "var(--muted)" }}>Total Material Quantity</span>
                 <strong style={{ fontFamily: "ui-monospace, monospace" }}>
-                  {String(row._totalQty || (poItems.length > 0 ? `${poItems.reduce((acc: number, it: any) => acc + (parseFloat(String(it.quantity || it.orderQty || 0).replace(/[^0-9.]/g, "")) || 0), 0).toFixed(4)} ${poItems[0]?.unit || "PCE"}` : "1.0000 PCE"))}
+                  {totalMaterialQtyStr}
                 </strong>
               </div>
 
@@ -1111,6 +1178,15 @@ export function PurchaseOrderDetail({
                 </span>
               </div>
 
+              {discountAmount > 0 && (
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px" }}>
+                  <span style={{ color: "var(--muted)" }}>Discount</span>
+                  <span style={{ fontFamily: "ui-monospace, monospace", color: "var(--red-600, #dc2626)" }}>
+                    - {currency} {discountAmount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </span>
+                </div>
+              )}
+
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px" }}>
                 <span style={{ color: "var(--muted)" }}>DPP (Tax Base Amount)</span>
                 <span style={{ fontFamily: "ui-monospace, monospace", fontWeight: 700 }}>
@@ -1120,9 +1196,9 @@ export function PurchaseOrderDetail({
 
               <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px" }}>
                 <span style={{ color: "var(--muted)" }}>
-                  {isHeaderNonFac ? "Value Added Tax (PPn Exempt / Non Facility)" : `Value Added Tax (VAT / PPn ${ppnRate}%)`}
+                  {isKawasanBerikat ? "Value Added Tax (PPN Ditangguhkan - Kawasan Berikat)" : `Value Added Tax (VAT / PPn ${ppnRate}%)`}
                 </span>
-                <span style={{ fontFamily: "ui-monospace, monospace", fontWeight: 700, color: "var(--blue-600)" }}>
+                <span style={{ fontFamily: "ui-monospace, monospace", fontWeight: 700, color: isKawasanBerikat ? "var(--muted)" : "var(--blue-600)" }}>
                   {currency} {ppnAmount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
               </div>
@@ -1133,6 +1209,15 @@ export function PurchaseOrderDetail({
                   {currency} {totalOtherCosts.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </span>
               </div>
+
+              {totalPph > 0 && (
+                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px" }}>
+                  <span style={{ color: "var(--muted)" }}>Income Tax (PPh Deduction)</span>
+                  <span style={{ fontFamily: "ui-monospace, monospace", color: "var(--red-600, #dc2626)" }}>
+                    - {currency} {totalPph.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </span>
+                </div>
+              )}
 
               <div
                 style={{

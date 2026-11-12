@@ -44,6 +44,7 @@ export interface ReceiveNoteRecord {
   warehouseTransaction: string;
   bpb_number?: string;
   is_received_in_bpb?: boolean;
+  notes?: string;
   note?: string;
   remark?: string;
   // Detail metadata
@@ -58,6 +59,20 @@ export interface ReceiveNoteRecord {
   tanggalDaftar: string;
   nomorPackingList: string;
   tanggalPackingList: string;
+  // Optional backend aliases
+  invoice_number?: string;
+  invoice_date?: string;
+  tax_invoice?: string;
+  tax_invoice_number?: string;
+  tax_invoice_date?: string;
+  vehicle_type?: string;
+  license_plate?: string;
+  aju_number?: string;
+  no_daftar?: string;
+  tanggal_daftar?: string;
+  pl_number?: string;
+  pl_date?: string;
+  [key: string]: any;
   status: string; // e.g. "Approved 2"
   createdAt: string;
   lastUpdatedAt: string;

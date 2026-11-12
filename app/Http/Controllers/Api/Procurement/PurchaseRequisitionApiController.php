@@ -75,7 +75,8 @@ class PurchaseRequisitionApiController extends Controller
             $isApproved1 = $isApproved2 || ($status === 'Waiting for Approve 2') || ($appr1 && (int) $appr1->status === 1);
             $baseApprovalStatus = $status;
 
-            // Calculate Outstanding status: Approved PR with some items in PO but some remaining unclosed items not yet ordered
+            // Calculate Ordered / Outstanding status:
+            // "Kalau sudah dibuat PO (sudah masuk ke PO) itu status dibuat ordered aja. tapi kalau masih ada yang belum di beli dibuat outstanding"
             $unclosedItems = $pr->items->filter(fn ($it) => ! (bool) $it->is_closed);
             $totalUnclosed = $unclosedItems->count();
             $itemsWithPo = $unclosedItems->filter(fn ($it) => $it->orderItems && $it->orderItems->isNotEmpty());
@@ -88,10 +89,13 @@ class PurchaseRequisitionApiController extends Controller
                 return $orderedSum >= (float) $it->quantity;
             });
 
-            $isOutstanding = $isApproved2 && $itemsWithPo->isNotEmpty() && ($itemsFullyOrdered->count() < $totalUnclosed);
+            $isFullyOrdered = $isApproved2 && $totalUnclosed > 0 && ($itemsFullyOrdered->count() >= $totalUnclosed);
+            $isOutstanding = $isApproved2 && ! $isFullyOrdered;
 
             if ($allClosed) {
                 $status = 'Closing';
+            } elseif ($isFullyOrdered) {
+                $status = 'Ordered';
             } elseif ($isOutstanding) {
                 $status = 'Outstanding';
             } elseif ($hasClosed && in_array($status, ['Approved', 'Approved 1', 'Approved 2'])) {
@@ -310,7 +314,8 @@ class PurchaseRequisitionApiController extends Controller
         $isApproved1 = $isApproved2 || ($detailStatus === 'Waiting for Approve 2') || ($appr1 && (int) $appr1->status === 1);
         $baseApprovalStatus = $detailStatus;
 
-        // Calculate Outstanding status: Approved PR with some items in PO but some remaining unclosed items not yet ordered
+        // Calculate Ordered / Outstanding status:
+        // "Kalau sudah dibuat PO (sudah masuk ke PO) itu status dibuat ordered aja. tapi kalau masih ada yang belum di beli dibuat outstanding"
         $unclosedItems = $pr->items->filter(fn ($it) => ! (bool) $it->is_closed);
         $totalUnclosed = $unclosedItems->count();
         $itemsWithPo = $unclosedItems->filter(fn ($it) => $it->orderItems && $it->orderItems->isNotEmpty());
@@ -323,10 +328,13 @@ class PurchaseRequisitionApiController extends Controller
             return $orderedSum >= (float) $it->quantity;
         });
 
-        $isOutstanding = $isApproved2 && $itemsWithPo->isNotEmpty() && ($itemsFullyOrdered->count() < $totalUnclosed);
+        $isFullyOrdered = $isApproved2 && $totalUnclosed > 0 && ($itemsFullyOrdered->count() >= $totalUnclosed);
+        $isOutstanding = $isApproved2 && ! $isFullyOrdered;
 
         if ($allClosed) {
             $detailStatus = 'Closing';
+        } elseif ($isFullyOrdered) {
+            $detailStatus = 'Ordered';
         } elseif ($isOutstanding) {
             $detailStatus = 'Outstanding';
         } elseif ($hasClosed && in_array($detailStatus, ['Approved', 'Approved 1', 'Approved 2'])) {

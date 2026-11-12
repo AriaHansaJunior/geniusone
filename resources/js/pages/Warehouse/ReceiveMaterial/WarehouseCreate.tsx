@@ -1355,22 +1355,12 @@ export function WarehouseCreate({
       {/* Save Confirmation Dialog */}
       <ConfirmDialog
         isOpen={showSaveConfirm}
-        title={
-          findExistingBpbForRn(rnNumber)
-            ? "Submit Material Receipt with Duplicate Warning?"
-            : "Submit Receive Material (BPB)?"
-        }
-        message={(() => {
-          const dupBpb = findExistingBpbForRn(rnNumber);
-          if (dupBpb) {
-            return `Warning: RN ${rnNumber} has already been received in BPB ${dupBpb.bpbNumber}. Proceeding may result in duplicate material receipt (Double BPB). Are you sure you want to proceed and save this BPB?`;
-          }
-          return `Are you sure you want to record this Receive Material (BPB) for RN ${rnNumber} (${supplier}) with ${items.length} item line(s)?`;
-        })()}
-        confirmLabel={findExistingBpbForRn(rnNumber) ? "Proceed Anyway" : "Confirm & Save"}
+        title="Submit Receive Material (BPB)?"
+        message={`Are you sure you want to record this Receive Material (BPB) for RN ${rnNumber} (${supplier}) with ${items.length} item line(s)?`}
+        confirmLabel="Confirm & Save"
         cancelLabel="Review BPB"
-        confirmVariant={findExistingBpbForRn(rnNumber) ? "warning" : "primary"}
-        icon={findExistingBpbForRn(rnNumber) ? "alertTriangle" : "check"}
+        confirmVariant="primary"
+        icon="check"
         onConfirm={handleConfirmSubmit}
         onCancel={() => setShowSaveConfirm(false)}
       />

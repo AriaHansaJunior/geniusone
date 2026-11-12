@@ -53,8 +53,8 @@ export function ReceiveNoteForm({ onBack, onSave, existingReceiveNotes = [] }: R
   const [taxInvoiceDate, setTaxInvoiceDate] = useState("");
 
   // Transport Information
-  const [vehicleType, setVehicleType] = useState("");
-  const [licensePlate, setLicensePlate] = useState("");
+  const [vehicleType, setVehicleType] = useState("MOBIL BARANG");
+  const [licensePlate, setLicensePlate] = useState("B 9182 UXZ");
   const [notes, setNotes] = useState("");
 
   // Customs & Registration Information
@@ -293,9 +293,9 @@ export function ReceiveNoteForm({ onBack, onSave, existingReceiveNotes = [] }: R
       invoiceNumber: invoiceNumber || "-",
       invoiceDate: invoiceDate || "-",
       taxInvoiceNumber: taxInvoice || "-",
-      taxInvoiceDate: taxInvoiceDate || "-",
-      vehicleType: vehicleType || "-",
-      licensePlate: licensePlate || "-",
+      taxInvoiceDate: taxInvoiceDate || (taxInvoice && taxInvoice !== "-" ? (invoiceDate || formattedArrivalDate) : "-"),
+      vehicleType: vehicleType || "MOBIL BARANG",
+      licensePlate: licensePlate || "B 9182 UXZ",
       tanggalDaftar: tanggalDaftar || formattedArrivalDate,
       nomorPackingList: plNumber || sjNumber || "-",
       tanggalPackingList: plDate || sjDate || "-",
@@ -522,7 +522,13 @@ export function ReceiveNoteForm({ onBack, onSave, existingReceiveNotes = [] }: R
                 type="text"
                 className="master-form-input"
                 value={taxInvoice}
-                onChange={(e) => setTaxInvoice(e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setTaxInvoice(val);
+                  if (val.trim() && !taxInvoiceDate) {
+                    setTaxInvoiceDate(invoiceDate || arrivalDate || "2026-10-14");
+                  }
+                }}
                 placeholder="Tax Invoice Number"
               />
             </div>
