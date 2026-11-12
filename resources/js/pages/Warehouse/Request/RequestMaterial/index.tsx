@@ -8,6 +8,8 @@ import { Pagination } from "../../../../components/ui/Pagination";
 import { CustomDatePicker } from "../../../../components/ui/CustomDatePicker";
 import { CustomSelect } from "../../../../components/ui/CustomSelect";
 import { ApprovalStatusBadge } from "../../../../components/approval/ApprovalStatusBadge";
+import { getLocalApprovalState } from "../../../../services/approvalApi";
+import { normalizeApprovalStatus } from "../../../../types/approval";
 import {
   requestMaterialTypesList,
   requestMaterialCreatedByList,
@@ -528,7 +530,15 @@ export function RequestMaterialIndex({
                           {item.totalItems}
                         </td>
                         <td style={{ textAlign: "center" }}>
-                          <ApprovalStatusBadge status={item.approval} />
+                          <ApprovalStatusBadge
+                            status={
+                              getLocalApprovalState(
+                                "request_material",
+                                item.requestCode,
+                                normalizeApprovalStatus(item.approval)
+                              ).status
+                            }
+                          />
                         </td>
                         <td>{item.projectType}</td>
                         <td style={{ fontSize: "11px", color: "var(--muted)" }}>

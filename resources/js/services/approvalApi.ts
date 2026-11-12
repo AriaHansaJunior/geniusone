@@ -183,6 +183,21 @@ export async function executeApprove(params: {
     saveLocalApprovalState(module, documentNumber, updatedState);
   }
 
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(
+      new CustomEvent("geniusone_approval_changed", {
+        detail: {
+          module,
+          documentId: docIdStr,
+          documentNumber,
+          tier,
+          status: nextStatus,
+          state: updatedState,
+        },
+      })
+    );
+  }
+
   return {
     success: true,
     status: nextStatus,
@@ -284,6 +299,21 @@ export async function executeReject(params: {
   saveLocalApprovalState(module, docIdStr, updatedState);
   if (documentNumber && documentNumber !== docIdStr) {
     saveLocalApprovalState(module, documentNumber, updatedState);
+  }
+
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(
+      new CustomEvent("geniusone_approval_changed", {
+        detail: {
+          module,
+          documentId: docIdStr,
+          documentNumber,
+          tier,
+          status: "REJECTED",
+          state: updatedState,
+        },
+      })
+    );
   }
 
   return {
