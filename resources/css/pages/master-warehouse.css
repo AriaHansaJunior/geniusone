@@ -368,3 +368,11 @@
     align-items: stretch;
   }
 }
+
+.wh-table-row {
+  transition: background 0.12s ease;
+}
+
+.wh-table-row:hover td {
+  background: rgba(0, 113, 227, 0.03) !important;
+}

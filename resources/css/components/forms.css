@@ -232,14 +232,14 @@
 /* Filter Grids */
 .filters {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(195px, 1fr));
   gap: 12px;
   padding: 14px 18px 12px;
 }
 
 .filters--report {
   display: grid;
-  grid-template-columns: repeat(5, minmax(148px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
   gap: 12px;
   padding: 14px 18px 12px;
 }
@@ -841,17 +841,26 @@
   position: absolute;
   top: calc(100% + 4px);
   left: 0;
-  right: 0;
+  right: auto;
+  min-width: 100%;
+  width: max-content;
+  max-width: min(92vw, 420px);
   z-index: 1050;
   background: #ffffff;
   border: 1px solid rgba(226, 232, 240, 0.95);
   border-radius: var(--radius-md, 10px);
-  box-shadow: 0 14px 30px -4px rgba(15, 23, 42, 0.14), 0 4px 12px -2px rgba(15, 23, 42, 0.06);
-  max-height: 250px;
+  box-shadow: 0 14px 30px -4px rgba(15, 23, 42, 0.16), 0 4px 12px -2px rgba(15, 23, 42, 0.08);
+  max-height: 280px;
   overflow-y: auto;
+  overflow-x: hidden;
   padding: 6px;
   box-sizing: border-box;
   animation: selectFadeIn 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.custom-select-dropdown--align-right {
+  left: auto;
+  right: 0;
 }
 
 @keyframes selectFadeIn {
@@ -875,7 +884,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: 12px;
+  white-space: nowrap;
   transition: all 0.12s ease;
 }
 
@@ -895,11 +905,27 @@
   color: #ffffff;
 }
 
-.custom-select-option-text {
-  flex: 1;
+.custom-select-option-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.custom-select-option-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: space-between;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+}
+
+.custom-select-option-text {
+  flex: 1 1 auto;
+  white-space: nowrap;
+  overflow: visible;
+  text-overflow: clip;
 }
 
 .custom-select-option-check {
@@ -913,8 +939,13 @@
 .custom-select-dropdown--top {
   top: auto;
   bottom: calc(100% + 4px);
-  box-shadow: 0 -14px 30px -4px rgba(15, 23, 42, 0.14), 0 -4px 12px -2px rgba(15, 23, 42, 0.06);
+  box-shadow: 0 -14px 30px -4px rgba(15, 23, 42, 0.16), 0 -4px 12px -2px rgba(15, 23, 42, 0.08);
   animation: selectFadeInTop 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.custom-select-dropdown--top.custom-select-dropdown--align-right {
+  left: auto;
+  right: 0;
 }
 
 @keyframes selectFadeInTop {

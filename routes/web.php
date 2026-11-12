@@ -310,7 +310,9 @@ Route::get('/warehouse/adjustment/opname-material', fn () => view('app', ['page'
 Route::get('/warehouse/adjustment/adjustment-stock', fn () => view('app', ['page' => 'wh-adj-stock']));
 
 // Warehouse Incoming Routes
-Route::get('/warehouse/incoming/transfer-stock-return', fn () => view('app', ['page' => 'transfer-stock-return']));
+Route::get('/warehouse/incoming/transfer-stock-return', fn () => view('app', ['page' => 'transfer-stock-return']))->name('warehouse.transfer-stock-return');
+Route::get('/warehouse/transfer-stock-return', fn () => redirect('/warehouse/incoming/transfer-stock-return'));
+Route::get('/warehouse/transfer_stok_retur', fn () => redirect('/warehouse/incoming/transfer-stock-return'));
 Route::get('/warehouse/incoming/transfer-stock-result', fn () => view('app', ['page' => 'transfer-stock-result']));
 Route::get('/warehouse/incoming/receive-material-non-fasilitas', fn () => view('app', ['page' => 'receive-material-non-fasilitas']));
 Route::get('/warehouse/incoming/purchase-return', fn () => view('app', ['page' => 'purchase-return']));

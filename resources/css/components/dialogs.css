@@ -844,6 +844,21 @@
   }
 }
 
+@media (max-width: 480px) {
+  .po-item-metrics {
+    grid-template-columns: 1fr;
+  }
+  .drawer {
+    width: 100vw;
+  }
+  .drawer__header {
+    padding: 12px 14px;
+  }
+  .drawer__section {
+    padding: 12px 14px;
+  }
+}
+
 /* Reduced Motion Override */
 @media (prefers-reduced-motion: reduce) {
   .drawer,

@@ -87,6 +87,12 @@
   }
 }
 
+@media (max-width: 480px) {
+  .detail-kpi-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .detail-kpi-card {
   background: #ffffff;
   border: 1px solid var(--line);

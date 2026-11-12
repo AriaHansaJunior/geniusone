@@ -813,3 +813,15 @@
     max-width: 100%;
   }
 }
+
+@media (max-width: 480px) {
+  .rn-filter-settings {
+    flex-wrap: wrap;
+    justify-content: stretch;
+    width: 100%;
+    gap: 8px;
+  }
+  .rn-filter-settings .button {
+    flex: 1 1 auto;
+  }
+}

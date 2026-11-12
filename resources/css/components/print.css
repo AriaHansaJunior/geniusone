@@ -558,6 +558,46 @@
 }
 
 /* ==========================================================================
+   Responsive Screen Preview Modal (< 640px Mobile)
+   ========================================================================== */
+@media screen and (max-width: 640px) {
+  .kwt-print-modal-backdrop {
+    padding: 8px;
+  }
+  .kwt-print-modal {
+    max-height: 96vh;
+    border-radius: 8px;
+  }
+  .kwt-print-modal__header {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 10px 14px;
+    gap: 10px;
+  }
+  .kwt-print-modal__actions {
+    width: 100%;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .kwt-print-modal__type-switcher {
+    margin-right: 0;
+    width: 100%;
+    display: flex;
+  }
+  .kwt-print-modal__type-btn {
+    flex: 1 1 50%;
+    text-align: center;
+    padding: 6px 8px;
+  }
+  .kwt-print-modal__body {
+    padding: 12px 6px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* ==========================================================================
    Print Only Rules
    ========================================================================== */
 @media screen {

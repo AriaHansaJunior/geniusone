@@ -82,6 +82,7 @@ import {
   TypeOfRequestForm,
   DestinationLocationIndex,
   DestinationLocationForm,
+  TransferStockReturnIndex,
   UserPermissionAdmin,
   AuditLogAdmin,
 } from "../pages";
@@ -744,6 +745,14 @@ function resolveViewStateFromPath(pathname: string, defaultPage: PageKey = "dash
   if (cleanPath === "/warehouse/report/stock-card") return { type: "list", page: "wh-rep-stock-card" };
   if (cleanPath === "/warehouse/report/stock-item") return { type: "list", page: "wh-rep-stock-item" };
   if (cleanPath === "/warehouse/request/request-material") return { type: "list", page: "wh-req-material" };
+  if (
+    cleanPath === "/warehouse/incoming/transfer-stock-return" ||
+    cleanPath === "/warehouse/incoming/transfer-stock-retur" ||
+    cleanPath === "/warehouse/transfer-stock-return" ||
+    cleanPath === "/warehouse/transfer_stok_retur"
+  ) {
+    return { type: "list", page: "transfer-stock-return" };
+  }
 
   if (defaultPage === ("not-found" as any) || (cleanPath !== "" && cleanPath !== "/dashboard")) {
     return { type: "not-found", path: cleanPath };
@@ -758,6 +767,7 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
     }
     if (initialPage === "not-found") return { type: "not-found" };
     if (initialPage === "dashboard") return { type: "dashboard" };
+    if (initialPage === "transfer-stock-return") return { type: "list", page: "transfer-stock-return" };
     if (initialPage === "login") return { type: "login" };
     if (initialPage === "edit-profile" || initialPage === "profile.edit") return { type: "edit-profile" };
     if (initialPage === "warehouse-create") return { type: "warehouse-create" };
@@ -3026,6 +3036,11 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
           />
         )}
 
+        {/* Warehouse Incoming: Transfer Stock Return */}
+        {viewState.type === "list" && viewState.page === "transfer-stock-return" && (
+          <TransferStockReturnIndex />
+        )}
+
         {/* New Lightweight Placeholder Pages */}
         {viewState.type === "list" &&
           viewState.page !== "pr" &&
@@ -3034,6 +3049,7 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
           viewState.page !== "pr-report" &&
           viewState.page !== "po-report" &&
           viewState.page !== "warehouse" &&
+          viewState.page !== "transfer-stock-return" &&
           viewState.page !== "supplier" &&
           viewState.page !== "payment-term" &&
           viewState.page !== "purchase-category" &&

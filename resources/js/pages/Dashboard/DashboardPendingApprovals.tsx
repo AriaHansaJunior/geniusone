@@ -532,7 +532,7 @@ export function DashboardPendingApprovals({
         <div style={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0, flexWrap: "wrap" }}>
           <Button
             type="button"
-            variant="secondary"
+            className="button-refresh-sky"
             size="sm"
             onClick={loadApprovals}
             title="Refresh pending approvals queue"
@@ -580,20 +580,9 @@ export function DashboardPendingApprovals({
           )}
 
           {/* Controls Bar: Stage Filter Pills, Doc Type, Sort & Search */}
-          <div
-            style={{
-              padding: "10px 18px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: "12px",
-              borderBottom: "1px solid var(--line, #e2e8f0)",
-              background: "#fafafa",
-              flexWrap: "wrap",
-            }}
-          >
+          <div className="dashboard-approval-controls">
             {/* Left: Quick Stage Filter Pills */}
-            <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
+            <div className="dashboard-approval-pills">
               <button
                 type="button"
                 onClick={() => {
@@ -665,8 +654,8 @@ export function DashboardPendingApprovals({
             </div>
 
             {/* Right: Dropdown Filters & Search */}
-            <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
-              <div style={{ width: "160px" }}>
+            <div className="dashboard-approval-filters">
+              <div className="dashboard-approval-filter-item dashboard-approval-filter-item--doctype">
                 <CustomSelect
                   value={docTypeFilter}
                   onChange={(val) => {
@@ -684,7 +673,7 @@ export function DashboardPendingApprovals({
                 />
               </div>
 
-              <div style={{ width: "145px" }}>
+              <div className="dashboard-approval-filter-item dashboard-approval-filter-item--sort">
                 <CustomSelect
                   value={sortBy}
                   onChange={(val) => setSortBy(val as any)}
@@ -696,7 +685,7 @@ export function DashboardPendingApprovals({
                 />
               </div>
 
-              <div style={{ width: "230px" }}>
+              <div className="dashboard-approval-filter-item dashboard-approval-filter-item--search">
                 <SearchField
                   value={search}
                   onChange={(val) => {
@@ -710,8 +699,8 @@ export function DashboardPendingApprovals({
           </div>
 
           {/* Table Container */}
-          <div style={{ overflowX: "auto", width: "100%", background: "#ffffff" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "12px" }}>
+          <div className="dashboard-approval-table-wrapper" style={{ overflowX: "auto", WebkitOverflowScrolling: "touch", width: "100%", background: "#ffffff" }}>
+            <table style={{ width: "100%", minWidth: "980px", borderCollapse: "collapse", fontSize: "12px" }}>
               <thead>
                 <tr style={{ background: "#f8fafc", borderBottom: "1px solid var(--line, #e2e8f0)" }}>
                   <th style={{ width: "45px", padding: "10px 14px", textAlign: "center", fontSize: "10.5px", fontWeight: 800, color: "var(--slate-600)", textTransform: "uppercase", letterSpacing: "0.5px" }}>

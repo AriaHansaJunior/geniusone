@@ -97,8 +97,7 @@ export function DashboardStockAlert({
         <div style={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0, flexWrap: "wrap" }}>
           {onManageRules && (
             <Button
-              variant="secondary"
-              icon="list"
+              className="button-stock-notification"
               onClick={onManageRules}
             >
               Stock Notification
@@ -216,7 +215,7 @@ export function DashboardStockAlert({
             }}
           >
             <div className="table-scroll">
-              <table className="data-table" style={{ width: "100%", margin: 0 }}>
+              <table className="data-table" style={{ width: "100%", minWidth: "960px", margin: 0 }}>
                 <thead>
                   <tr style={{ background: "#f8fafc" }}>
                     <th style={{ width: "45px", textAlign: "center" }}>No</th>

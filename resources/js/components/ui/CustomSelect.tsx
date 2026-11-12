@@ -35,6 +35,7 @@ export function CustomSelect({
 }: CustomSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [openUpwards, setOpenUpwards] = useState(false);
+  const [alignRight, setAlignRight] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
@@ -59,16 +60,21 @@ export function CustomSelect({
   const handleToggleOpen = () => {
     if (disabled) return;
     if (!isOpen && containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const spaceAbove = rect.top;
+
       if (menuPlacement === "top") {
         setOpenUpwards(true);
       } else if (menuPlacement === "bottom") {
         setOpenUpwards(false);
       } else {
-        const rect = containerRef.current.getBoundingClientRect();
-        const spaceBelow = window.innerHeight - rect.bottom;
-        const spaceAbove = rect.top;
         setOpenUpwards(spaceBelow < 260 && spaceAbove > spaceBelow);
       }
+
+      // Check horizontal room to prevent clipping off the right edge of the screen
+      const spaceRight = window.innerWidth - rect.left;
+      setAlignRight(spaceRight < 340 && rect.right > 240);
     }
     setIsOpen((prev) => !prev);
   };
@@ -137,7 +143,10 @@ export function CustomSelect({
           }
         }}
       >
-        <span className={`custom-select-label ${!selectedOption && !value ? "is-placeholder" : ""}`}>
+        <span
+          className={`custom-select-label ${!selectedOption && !value ? "is-placeholder" : ""}`}
+          title={typeof displayLabel === "string" ? displayLabel : undefined}
+        >
           {displayLabel}
         </span>
         <div className={`custom-select-chevron ${isOpen ? "is-open" : ""}`} aria-hidden="true">
@@ -148,7 +157,9 @@ export function CustomSelect({
       {/* Custom GeniusOne Dropdown List */}
       {isOpen && (
         <div
-          className={`custom-select-dropdown ${openUpwards ? "custom-select-dropdown--top" : ""}`}
+          className={`custom-select-dropdown ${openUpwards ? "custom-select-dropdown--top" : ""} ${
+            alignRight ? "custom-select-dropdown--align-right" : ""
+          }`}
           ref={listRef}
           role="listbox"
         >
@@ -169,7 +180,9 @@ export function CustomSelect({
               >
                 <div className="custom-select-option-content">
                   <div className="custom-select-option-row">
-                    <span className="custom-select-option-text">{opt.label}</span>
+                    <span className="custom-select-option-text" title={opt.label}>
+                      {opt.label}
+                    </span>
                     {opt.badge && <span className="custom-select-option-badge">{opt.badge}</span>}
                   </div>
                   {opt.description && (

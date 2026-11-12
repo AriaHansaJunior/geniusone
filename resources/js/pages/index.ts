@@ -97,5 +97,8 @@ export { TypeOfRequestIndex } from "./Warehouse/Master/TypeOfRequest/TypeOfReque
 export { TypeOfRequestForm } from "./Warehouse/Master/TypeOfRequest/TypeOfRequestForm";
 export { DestinationLocationIndex } from "./Warehouse/Master/DestinationLocation/DestinationLocationIndex";
 export { DestinationLocationForm } from "./Warehouse/Master/DestinationLocation/DestinationLocationForm";
+export { TransferStockReturnIndex } from "./Warehouse/TransferStockReturn/TransferStockReturnIndex";
+export { TransferStockReturnDetailModal } from "./Warehouse/TransferStockReturn/TransferStockReturnDetailModal";
+export { TransferStockReturnForm } from "./Warehouse/TransferStockReturn/TransferStockReturnForm";
 export { UserPermissionAdmin } from "./Admin/UserPermissionAdmin";
 export { AuditLogAdmin } from "./Admin/AuditLogAdmin";
