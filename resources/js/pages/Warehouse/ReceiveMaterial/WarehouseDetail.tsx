@@ -488,7 +488,7 @@ export function WarehouseDetail({
                 <th style={{ minWidth: "115px" }}>Delivery Note (SJ)</th>
                 <th style={{ width: "95px", textAlign: "right" }}>Received Qty</th>
                 <th style={{ width: "110px" }}>Warehouse Loc</th>
-                <th style={{ minWidth: "130px" }}>Description / Purpose</th>
+                <th style={{ minWidth: "130px" }}>Remark</th>
               </tr>
             </thead>
             <tbody>

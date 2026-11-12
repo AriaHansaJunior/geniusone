@@ -291,16 +291,18 @@ export function MasterWarehouseIndex({
                           />
                         )}
                       </td>
-                      <td className="text-center">
-                        <button
-                          type="button"
-                          className="wh-btn-view-coordinate"
-                          onClick={() => onViewCoordinates(wh)}
-                          title={`View coordinates for ${wh.name}`}
-                          aria-label={`View coordinates for ${wh.name}`}
-                        >
-                          <Icon name="list" size={15} />
-                        </button>
+                      <td className="wh-td-option text-center">
+                        <div className="wh-row-actions">
+                          <button
+                            type="button"
+                            className="wh-action-btn wh-btn-view-coordinate"
+                            onClick={() => onViewCoordinates(wh)}
+                            title={`View coordinates for ${wh.name}`}
+                            aria-label={`View coordinates for ${wh.name}`}
+                          >
+                            <Icon name="list" size={14} />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );

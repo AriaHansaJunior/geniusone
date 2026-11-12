@@ -1048,7 +1048,7 @@ export function WarehouseCreate({
                     <th style={{ width: "150px", minWidth: "150px" }}>Delivery Note (SJ)</th>
                     <th style={{ width: "140px", minWidth: "140px", textAlign: "right" }}>Receive Quantity *</th>
                     <th style={{ minWidth: "180px" }}>Warehouse Location</th>
-                    <th style={{ minWidth: "180px" }}>Description</th>
+                    <th style={{ minWidth: "180px" }}>Remark</th>
                     <th style={{ width: "50px", minWidth: "50px", textAlign: "center" }}>Action</th>
                   </tr>
                 </thead>
@@ -1158,12 +1158,12 @@ export function WarehouseCreate({
                           />
                         </td>
 
-                        {/* Description (Remark dari sebelum-sebelumnya) */}
+                        {/* Remark */}
                         <td>
                           <input
                             type="text"
                             className="tx-input-cell"
-                            placeholder="Description / remark..."
+                            placeholder="Remark..."
                             value={it.purpose}
                             onChange={(e) => handleUpdateItemField(it.id, "purpose", e.target.value)}
                           />

@@ -1177,7 +1177,7 @@ export function UserPermissionAdmin({ onNavigateAudit }: UserPermissionAdminProp
               </strong>
             </div>
             <div className="user-admin-toolbar__actions">
-              <Button variant="primary" icon="plus" onClick={handleOpenCreateRole}>
+              <Button variant="primary" onClick={handleOpenCreateRole}>
                 Add New Role
               </Button>
             </div>
@@ -1301,7 +1301,7 @@ export function UserPermissionAdmin({ onNavigateAudit }: UserPermissionAdminProp
           </div>
 
           <div className="user-admin-toolbar__actions">
-            <Button variant="primary" icon="plus" onClick={() => setIsAddUserOpen(true)}>
+            <Button variant="primary" onClick={() => setIsAddUserOpen(true)}>
               Add New User
             </Button>
           </div>

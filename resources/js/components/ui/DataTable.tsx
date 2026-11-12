@@ -178,34 +178,56 @@ export function DataTable({
                             </div>
                           )
                         ) : isPrCol ? (
-                          React.isValidElement(rawVal) ? (
-                            <strong
-                              className="cell-code"
-                              style={{
-                                color: "var(--blue-700, #1d4ed8)",
-                                textDecoration: "underline",
-                                cursor: "pointer",
-                              }}
-                              title="Open Purchase Requisition"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                const targetPr = String(row._rawPr || row.prNumber || "").trim();
-                                if (onSelectPr && targetPr && targetPr !== "—") {
-                                  onSelectPr(targetPr, row);
-                                } else {
-                                  onDetail(row);
-                                }
-                              }}
-                            >
-                              {rawVal}
-                            </strong>
-                          ) : (
-                            <div style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}>
-                              {String(rawVal)
-                                .split(",")
-                                .map((p) => p.trim())
-                                .filter(Boolean)
-                                .map((p, pIdx) => (
+                          (() => {
+                            if (React.isValidElement(rawVal)) {
+                              return (
+                                <div style={{ maxWidth: "175px" }}>
+                                  <strong
+                                    className="cell-code"
+                                    style={{
+                                      color: "var(--blue-700, #1d4ed8)",
+                                      textDecoration: "underline",
+                                      cursor: "pointer",
+                                    }}
+                                    title="Open Purchase Requisition"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      const targetPr = String(row._rawPr || row.prNumber || "").trim();
+                                      if (onSelectPr && targetPr && targetPr !== "—") {
+                                        onSelectPr(targetPr, row);
+                                      } else {
+                                        onDetail(row);
+                                      }
+                                    }}
+                                  >
+                                    {rawVal}
+                                  </strong>
+                                </div>
+                              );
+                            }
+
+                            const rawStr = String(rawVal).trim();
+                            if (!rawStr || rawStr === "—") return "—";
+
+                            // Split by comma, semicolon, newline, or whitespace before PR code
+                            const prList = rawStr
+                              .split(/[,;\n]+|\s+(?=\d{4}\/PR-)/)
+                              .map((p) => p.trim())
+                              .filter(Boolean);
+
+                            if (prList.length === 0) return "—";
+
+                            return (
+                              <div
+                                style={{
+                                  display: "flex",
+                                  flexDirection: "column",
+                                  gap: "3px",
+                                  maxWidth: "175px",
+                                  alignItems: "flex-start",
+                                }}
+                              >
+                                {prList.map((p, pIdx) => (
                                   <strong
                                     key={pIdx}
                                     className="cell-code"
@@ -213,6 +235,9 @@ export function DataTable({
                                       color: "var(--blue-700, #1d4ed8)",
                                       textDecoration: "underline",
                                       cursor: "pointer",
+                                      fontSize: "12px",
+                                      lineHeight: "1.35",
+                                      whiteSpace: "nowrap",
                                     }}
                                     title={`Open Purchase Requisition ${p}`}
                                     onClick={(e) => {
@@ -227,8 +252,9 @@ export function DataTable({
                                     {p}
                                   </strong>
                                 ))}
-                            </div>
-                          )
+                              </div>
+                            );
+                          })()
                         ) : (
                           formatCell(col.key, rawVal)
                         )}

@@ -108,7 +108,6 @@ export function DashboardStockAlert({
           {onAddNewRule && (
             <Button
               variant="primary"
-              icon="plus"
               onClick={onAddNewRule}
             >
               Add New
