@@ -584,7 +584,6 @@ export const poRows: TableRow[] = [
     poNumber: (
       <div>
         <strong className="cell-code">POL-1026-0047</strong>
-        <small className="muted" style={{ display: "block", fontSize: "10px" }}>PO Alias: —</small>
       </div>
     ),
     date: "08-Oct-2026",
@@ -627,7 +626,6 @@ export const poRows: TableRow[] = [
     poNumber: (
       <div>
         <strong className="cell-code">POL-1026-0046</strong>
-        <small className="muted" style={{ display: "block", fontSize: "10px" }}>PO Alias: —</small>
       </div>
     ),
     date: "08-Oct-2026",
@@ -670,7 +668,6 @@ export const poRows: TableRow[] = [
     poNumber: (
       <div>
         <strong className="cell-code">POL-1026-0045</strong>
-        <small className="muted" style={{ display: "block", fontSize: "10px" }}>PO Alias: —</small>
       </div>
     ),
     date: "08-Oct-2026",
@@ -713,7 +710,6 @@ export const poRows: TableRow[] = [
     poNumber: (
       <div>
         <strong className="cell-code">POL-1026-0044</strong>
-        <small className="muted" style={{ display: "block", fontSize: "10px" }}>PO Alias: —</small>
       </div>
     ),
     date: "08-Oct-2026",
@@ -756,7 +752,6 @@ export const poRows: TableRow[] = [
     poNumber: (
       <div>
         <strong className="cell-code">POL-1026-0043</strong>
-        <small className="muted" style={{ display: "block", fontSize: "10px" }}>PO Alias: —</small>
       </div>
     ),
     date: "08-Oct-2026",
@@ -799,7 +794,6 @@ export const poRows: TableRow[] = [
     poNumber: (
       <div>
         <strong className="cell-code">POL-1026-0042</strong>
-        <small className="muted" style={{ display: "block", fontSize: "10px" }}>PO Alias: —</small>
       </div>
     ),
     date: "08-Oct-2026",
@@ -842,7 +836,6 @@ export const poRows: TableRow[] = [
     poNumber: (
       <div>
         <strong className="cell-code">POL-1026-0041</strong>
-        <small className="muted" style={{ display: "block", fontSize: "10px" }}>PO Alias: —</small>
       </div>
     ),
     date: "08-Oct-2026",
@@ -889,7 +882,7 @@ export const poRows: TableRow[] = [
         prNumber: "0135/PR-IMLI/IX/2026",
         item: "Battery Scrap",
         itemCode: "10.100.100.001",
-        itemAlias: "—",
+        itemAlias: "Battery Scrap / Lead Ingot 99.9%",
         quantity: "17,693.01000",
         unit: "KGM",
         price: "13,244.55000",
@@ -924,7 +917,6 @@ export const poRows: TableRow[] = [
     poNumber: (
       <div>
         <strong className="cell-code">POL-1026-0040</strong>
-        <small className="muted" style={{ display: "block", fontSize: "10px" }}>PO Alias: —</small>
       </div>
     ),
     date: "08-Oct-2026",
@@ -967,7 +959,6 @@ export const poRows: TableRow[] = [
     poNumber: (
       <div>
         <strong className="cell-code">POL-1026-0039</strong>
-        <small className="muted" style={{ display: "block", fontSize: "10px" }}>PO Alias: —</small>
       </div>
     ),
     date: "08-Oct-2026",
@@ -1010,7 +1001,6 @@ export const poRows: TableRow[] = [
     poNumber: (
       <div>
         <strong className="cell-code">POL-1026-0038</strong>
-        <small className="muted" style={{ display: "block", fontSize: "10px" }}>PO Alias: —</small>
       </div>
     ),
     date: "08-Oct-2026",
@@ -1053,7 +1043,6 @@ export const poRows: TableRow[] = [
     poNumber: (
       <div>
         <strong className="cell-code">POL-1026-0037</strong>
-        <small className="muted" style={{ display: "block", fontSize: "10px" }}>PO Alias: —</small>
       </div>
     ),
     date: "08-Oct-2026",

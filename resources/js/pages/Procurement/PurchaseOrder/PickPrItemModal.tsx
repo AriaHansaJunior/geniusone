@@ -129,7 +129,12 @@ export function PickPrItemModal({
                 items_id: itemsId,
                 itemCode: it.itemCode || it.code || "-",
                 itemName: it.itemName || it.item || "Material Item",
-                itemAlias: it.itemAlias || it.itemCode || it.code || "—",
+                itemAlias: (() => {
+                  const mAlias = it.itemAlias || it.alias;
+                  const mCode = it.itemCode || it.code || "-";
+                  const mName = it.itemName || it.item || "Material Item";
+                  return mAlias && mAlias !== "—" && mAlias !== "-" && mAlias !== mCode ? mAlias : mName;
+                })(),
                 requestedQty: reqQty,
                 orderedQty: ordQty,
                 remainingQty: remQty,

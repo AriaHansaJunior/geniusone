@@ -221,6 +221,32 @@ class WarehouseApiController extends Controller
                 ], 422);
             }
 
+            // Ensure RN is approved before accepting into warehouse
+            if ($rn->status !== 'Approved') {
+                DB::rollBack();
+                return response()->json([
+                    'status' => 'error',
+                    'message' => "Receive Note '{$rnCode}' has not been approved yet (Current status: {$rn->status}). Only approved Receive Notes can be received into warehouse.",
+                    'errors' => ['rn_number' => ["Receive Note '{$rnCode}' must be Approved before creating a BPB."]],
+                ], 422);
+            }
+
+            // Double BPB Prevention: check if RN has already been processed in an active BPB
+            $existingBpb = BpbReceiveMaterial::where('status', '!=', 'Rejected')
+                ->whereHas('mappings.purchaseOrderReceiveNote', function ($q) use ($rn) {
+                    $q->where('receive_note_id', $rn->id);
+                })
+                ->first();
+
+            if ($existingBpb) {
+                DB::rollBack();
+                return response()->json([
+                    'status' => 'error',
+                    'message' => "Receive Note '{$rnCode}' has already been processed in BPB '{$existingBpb->bpb_number}'. Duplicate material receipt (Double BPB) is not allowed.",
+                    'errors' => ['rn_number' => ["Receive Note '{$rnCode}' has already been processed in BPB '{$existingBpb->bpb_number}'."]],
+                ], 422);
+            }
+
             $rawItems = $request->input('items', []);
             $firstSj = $request->input('sj_number') ?? $request->input('delivery_note');
             if (! $firstSj && is_array($rawItems) && ! empty($rawItems)) {

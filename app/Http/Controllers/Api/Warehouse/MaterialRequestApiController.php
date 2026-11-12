@@ -350,12 +350,38 @@ class MaterialRequestApiController extends Controller
                 ->first();
 
             if ($r) {
-                if ($r->status === 'Draft') {
+                $previousStatus = $r->status;
+                if ($r->status === 'Draft' || $r->status === 'Waiting for Approve 1') {
                     $r->status = 'Approved 1';
-                } elseif ($r->status === 'Approved 1') {
+                } elseif ($r->status === 'Approved 1' || $r->status === 'Waiting for Approve 2') {
                     $r->status = 'Approved 2';
                 }
                 $r->save();
+
+                // If final approval reached, deduct physical inventory stock
+                if (in_array($r->status, ['Approved 2', 'Approved']) && ! in_array($previousStatus, ['Approved 2', 'Approved'])) {
+                    $inventoryService = app(\App\Services\Inventory\InventoryService::class);
+                    $userId = auth()->id() ?? 1;
+                    foreach ($r->items as $rmItem) {
+                        $qty = (float) ($rmItem->request ?? $rmItem->request_qty ?? $rmItem->quantity ?? 0);
+                        if ($qty > 0) {
+                            $targetItem = $rmItem->item ?? Item::find($rmItem->items_id);
+                            if ($targetItem) {
+                                $whId = $r->warehouses_id ?? 1;
+                                $inventoryService->recordStockMovement(
+                                    item: $targetItem,
+                                    warehouseId: $whId,
+                                    movementType: 'OUT',
+                                    quantity: $qty,
+                                    referenceType: 'RM',
+                                    referenceNumber: $r->request_number,
+                                    userId: $userId,
+                                    notes: "Material Issued via RM Approval: {$r->request_number}"
+                                );
+                            }
+                        }
+                    }
+                }
 
                 return response()->json([
                     'status' => 'success',

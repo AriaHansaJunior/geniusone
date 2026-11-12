@@ -1980,6 +1980,14 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
     let savedRnNumber = newRecord.rnNumber;
     let savedId = newRecord.id;
     try {
+      const rawRemark = newRecord.remark && newRecord.remark !== "-"
+        ? newRecord.remark
+        : (newRecord.description && newRecord.description !== "-"
+          ? newRecord.description
+          : ((newRecord as any).notes && (newRecord as any).notes !== "-"
+            ? (newRecord as any).notes
+            : ((newRecord as any).note && (newRecord as any).note !== "-" ? (newRecord as any).note : undefined)));
+
       const res = await createReceiveNote({
         rnNumber: newRecord.rnNumber,
         supplier: newRecord.supplier,
@@ -1991,10 +1999,25 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
         invoice_date: newRecord.invoiceDate && newRecord.invoiceDate !== "-" ? newRecord.invoiceDate : undefined,
         tax_invoice: newRecord.taxInvoiceNumber && newRecord.taxInvoiceNumber !== "-" ? newRecord.taxInvoiceNumber : undefined,
         tax_invoice_date: newRecord.taxInvoiceDate && newRecord.taxInvoiceDate !== "-" ? newRecord.taxInvoiceDate : undefined,
+        vehicle_type: newRecord.vehicleType && newRecord.vehicleType !== "-" ? newRecord.vehicleType : undefined,
         license_plate: newRecord.licensePlate && newRecord.licensePlate !== "-" ? newRecord.licensePlate : undefined,
-        note: newRecord.description && newRecord.description !== "-" ? newRecord.description : undefined,
-        sj_number: (newRecord as any).nomorSuratJalan && (newRecord as any).nomorSuratJalan !== "-" ? (newRecord as any).nomorSuratJalan : newRecord.nomorPackingList,
-        sj_date: (newRecord as any).tanggalSuratJalan && (newRecord as any).tanggalSuratJalan !== "-" ? (newRecord as any).tanggalSuratJalan : newRecord.tanggalPackingList,
+        aju_number: newRecord.ajuNumber && newRecord.ajuNumber !== "-" ? newRecord.ajuNumber : undefined,
+        no_daftar: newRecord.noDaftar && newRecord.noDaftar !== "-" ? newRecord.noDaftar : undefined,
+        tanggal_daftar: newRecord.tanggalDaftar && newRecord.tanggalDaftar !== "-" ? newRecord.tanggalDaftar : undefined,
+        note: rawRemark,
+        notes: rawRemark,
+        description: rawRemark,
+        remark: rawRemark,
+        sj_number: (newRecord as any).sjNumber && (newRecord as any).sjNumber !== "-"
+          ? (newRecord as any).sjNumber
+          : ((newRecord as any).nomorSuratJalan && (newRecord as any).nomorSuratJalan !== "-"
+            ? (newRecord as any).nomorSuratJalan
+            : newRecord.nomorPackingList),
+        sj_date: (newRecord as any).sjDate && (newRecord as any).sjDate !== "-"
+          ? (newRecord as any).sjDate
+          : ((newRecord as any).tanggalSuratJalan && (newRecord as any).tanggalSuratJalan !== "-"
+            ? (newRecord as any).tanggalSuratJalan
+            : newRecord.tanggalPackingList),
         pl_number: newRecord.nomorPackingList && newRecord.nomorPackingList !== "-" ? newRecord.nomorPackingList : undefined,
         pl_date: newRecord.tanggalPackingList && newRecord.tanggalPackingList !== "-" ? newRecord.tanggalPackingList : undefined,
         items: newRecord.items?.map((it) => ({
@@ -2003,6 +2026,8 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
           itemName: it.itemName,
           suratJalanQty: it.suratJalanQty,
           price: (it as any).price ?? it.pricePerUnit ?? 0,
+          remark: it.remark || "-",
+          note: it.remark || "-",
         })),
       });
       if (res?.data?.rn_number) {
@@ -3433,6 +3458,7 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
           <ReceiveNoteForm
             onBack={() => handleNavigateList("receive-note", "/exim/receive-note")}
             onSave={handleSaveReceiveNote}
+            existingReceiveNotes={receiveNoteRecords}
           />
         )}
 

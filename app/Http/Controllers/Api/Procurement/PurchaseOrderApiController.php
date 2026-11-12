@@ -89,8 +89,16 @@ class PurchaseOrderApiController extends Controller
      */
     public function show(Request $request, string $code)
     {
-        $rawCode = str_replace('-', '/', $code);
-        $cleanCode = preg_replace('/[^A-Za-z0-9]/', '', $code);
+        $decodedCode = urldecode($code);
+        $rawCode = str_replace('-', '/', $decodedCode);
+        $cleanCode = preg_replace('/[^A-Za-z0-9]/', '', $decodedCode);
+
+        $numericId = null;
+        if (is_numeric($decodedCode)) {
+            $numericId = (int) $decodedCode;
+        } elseif (preg_match('/^po-(\d+)$/i', $decodedCode, $m)) {
+            $numericId = (int) $m[1];
+        }
 
         $po = PurchaseOrder::with([
             'supplier',
@@ -101,6 +109,8 @@ class PurchaseOrderApiController extends Controller
             'paymentTerm',
             'paymentMethod',
             'deliveryTerm',
+            'items.directItem.unitOfMeasurement',
+            'items.directItem.facility',
             'items.requisitionItem.item.unitOfMeasurement',
             'items.requisitionItem.item.facility',
             'items.requisitionItem.purchaseRequisition',
@@ -108,10 +118,15 @@ class PurchaseOrderApiController extends Controller
             'additionalCosts.type',
             'receiveNotes.receiveNote',
         ])
-            ->where('po_number', $rawCode)
-            ->orWhere('po_number', $code)
-            ->orWhere('id', is_numeric($code) ? (int) $code : null)
-            ->orWhereRaw("REPLACE(REPLACE(po_number, '/', ''), '-', '') = ?", [$cleanCode])
+            ->where(function ($q) use ($decodedCode, $rawCode, $cleanCode, $numericId) {
+                $q->where('po_number', $decodedCode)
+                    ->orWhere('po_number', $rawCode)
+                    ->orWhereRaw("REPLACE(REPLACE(po_number, '/', ''), '-', '') = ?", [$cleanCode]);
+
+                if ($numericId) {
+                    $q->orWhere('id', $numericId);
+                }
+            })
             ->first();
 
         if (! $po) {
@@ -169,31 +184,68 @@ class PurchaseOrderApiController extends Controller
 
         // Line Items
         $lineItems = $po->items->map(function ($it, $itIdx) use ($po, $currencyCode) {
-            $itemObj = $it->item;
+            $itemObj = $it->directItem ?? $it->item ?? $it->requisitionItem?->item;
+            if (! $itemObj && $it->item_alias) {
+                $itemObj = \App\Models\Master\Material\Item::where('code', $it->item_alias)->orWhere('name', $it->item_alias)->first();
+            }
             $unitName = $itemObj?->unitOfMeasurement?->name ?? 'PCS';
             $prNum = $it->requisitionItem?->purchaseRequisition?->pr_number ?? '—';
             $qty = (float) $it->order;
             $price = (float) $it->price;
             $disc = (float) $it->discount;
             $sub = (float) $it->subtotal;
-            $rawFac = $itemObj?->facility?->name ?? ($it->requisitionItem?->item?->facility?->name ?? ($po->facility_status ?? 'FASILITAS'));
+            $rawFac = $itemObj?->facility?->name ?? ($itemObj && $itemObj->facilities_id == 3 ? 'NON FASILITAS' : ($po->facility_status ?? 'FASILITAS'));
             $facilityName = stripos((string) $rawFac, 'non') !== false ? 'NON FASILITAS' : 'FASILITAS';
+
+            // Calculate already received quantity in non-rejected Receive Notes
+            $receivedQty = (float) \App\Models\Warehouse\GateReceiving\PurchaseOrderReceiveNote::where('purchase_order_id', $po->id)
+                ->where(function ($q) use ($it, $itemObj) {
+                    if ($it->id) {
+                        $q->where('po_has_items_id', $it->id);
+                    }
+                    $names = array_filter([$itemObj?->name, $it->item_alias]);
+                    if (! empty($names)) {
+                        $q->orWhereIn('item_name', $names);
+                    }
+                })
+                ->whereHas('receiveNote', function ($rq) {
+                    $rq->where('status', '!=', 'Rejected')
+                        ->whereNull('deleted_at');
+                })
+                ->sum('quantity');
+
+            $remainingQty = max(0.0, $qty - $receivedQty);
+            $isFullyReceived = $qty > 0 && $receivedQty >= $qty;
+            $aliasCandidate = $it->item_alias;
+            if (empty($aliasCandidate) || in_array($aliasCandidate, ['—', '-'], true) || ($itemObj && $aliasCandidate === $itemObj->code)) {
+                $resolvedAlias = $itemObj?->name ?? 'Industrial Material';
+            } else {
+                $resolvedAlias = $aliasCandidate;
+            }
 
             return [
                 'id' => $it->id,
                 'po_has_items_id' => $it->id,
                 'no' => $itIdx + 1,
                 'prNumber' => $prNum,
-                'item' => $itemObj?->name ?? $it->item_alias ?? 'Industrial Material',
-                'itemName' => $itemObj?->name ?? $it->item_alias ?? 'Industrial Material',
+                'item' => $itemObj?->name ?? $resolvedAlias,
+                'itemName' => $itemObj?->name ?? $resolvedAlias,
                 'itemCode' => $itemObj?->code ?? '-',
-                'itemAlias' => $it->item_alias ?? '—',
+                'itemAlias' => $resolvedAlias,
+                'item_alias' => $resolvedAlias,
+                'receivedQty' => $receivedQty,
+                'rnQty' => $receivedQty,
+                'remainingQty' => $remainingQty,
+                'remainQty' => $remainingQty,
+                'isFullyReceived' => $isFullyReceived,
                 'facility' => $facilityName,
                 'facility_status' => $facilityName,
                 'rawQty' => $qty,
                 'orderQty' => $qty,
                 'quantity' => number_format($qty, 4).' '.$unitName,
                 'unit' => $unitName,
+                'rawPrice' => (float) $price,
+                'price_numeric' => (float) $price,
                 'price' => number_format($price, 2),
                 'discount' => number_format($disc, 2),
                 'subtotal' => number_format($sub, 2),
@@ -221,10 +273,13 @@ class PurchaseOrderApiController extends Controller
                 'item' => $costName,
                 'itemCode' => $costCode,
                 'name' => $costName,
+                'costName' => $costName,
+                'amount' => number_format((float) $ac->value, 2),
                 'nominal' => $currencyCode.' '.number_format((float) $ac->value, 2),
                 'value' => (float) $ac->value,
                 'currency' => $currencyCode,
                 'remark' => $ac->note ?? '-',
+                'note' => $ac->note ?? '-',
             ];
         })->toArray();
 
@@ -267,6 +322,30 @@ class PurchaseOrderApiController extends Controller
             }
         }
 
+        $rawPoFac = strtoupper((string) ($po->facility_status ?? ''));
+        $itemFacilities = $po->items->map(function ($it) {
+            $itemObj = $it->directItem ?? $it->item ?? $it->requisitionItem?->item;
+            if (! $itemObj && $it->item_alias) {
+                $itemObj = \App\Models\Master\Material\Item::where('code', $it->item_alias)->orWhere('name', $it->item_alias)->first();
+            }
+            $raw = $itemObj?->facility?->name;
+            if (! $raw && $itemObj && $itemObj->facilities_id == 3) {
+                return 'NON FASILITAS';
+            }
+
+            return $raw ? strtoupper(trim($raw)) : null;
+        })->filter()->values();
+
+        $hasNon = str_contains($rawPoFac, 'NON') || $itemFacilities->contains(fn ($f) => str_contains($f, 'NON'));
+
+        if ($hasNon) {
+            $facilityLabel = 'NON FASILITAS';
+        } elseif ($itemFacilities->isNotEmpty() && $itemFacilities->every(fn ($f) => ! str_contains($f, 'NON') && (str_contains($f, 'FASILITAS') || str_contains($f, 'BERIKAT')))) {
+            $facilityLabel = 'FASILITAS';
+        } else {
+            $facilityLabel = str_contains($rawPoFac, 'NON') ? 'NON FASILITAS' : 'FASILITAS';
+        }
+
         return [
             'id' => $po->id,
             '_id' => "po-{$po->id}",
@@ -300,8 +379,8 @@ class PurchaseOrderApiController extends Controller
             '_rawRate' => number_format((float) $po->rate, 2),
             '_rawPaymentMethod' => $po->paymentMethod?->name ?? 'Cash On Delivery',
             '_rawPaymentTerm' => $po->paymentTerm?->name ?? 'Cash On Delivery',
-            'facility' => stripos((string) ($po->facility_status ?? ''), 'non') !== false ? 'NON FASILITAS' : 'FASILITAS',
-            '_rawFacility' => stripos((string) ($po->facility_status ?? ''), 'non') !== false ? 'NON FASILITAS' : 'FASILITAS',
+            'facility' => $facilityLabel,
+            '_rawFacility' => $facilityLabel,
             '_rawCreatedBy' => "{$creatorName} {$createdTime}",
             '_rawLastUpdated' => "{$creatorName} {$updatedTime}",
             '_rawReleasedBy' => $releasedBy,
@@ -329,8 +408,8 @@ class PurchaseOrderApiController extends Controller
             'poNumber' => $po->po_number,
             'date' => $this->safeFormatDate($po->date, 'd-M-Y', $po->created_at?->format('d-M-Y') ?? '-'),
             'supplier' => $supplierName,
-            'facility' => stripos((string) ($po->facility_status ?? ''), 'non') !== false ? 'NON FASILITAS' : 'FASILITAS',
-            'statusFacility' => stripos((string) ($po->facility_status ?? ''), 'non') !== false ? 'NON FASILITAS' : 'FASILITAS',
+            'facility' => $facilityLabel,
+            'statusFacility' => $facilityLabel,
             'deptCreated' => $po->creator?->department?->name ?? 'Purchasing',
             'totalPrice' => $currencyCode.' '.number_format((float) $po->grand_total, 2),
             'totalQuantity' => number_format($totalOrderQty, 4),
@@ -470,9 +549,17 @@ class PurchaseOrderApiController extends Controller
             $pphId = ! empty($it['pph_id']) && is_numeric($it['pph_id']) && \Illuminate\Support\Facades\DB::table('pph')->where('id', $it['pph_id'])->exists() ? (int) $it['pph_id'] : null;
             $ppnId = ! empty($it['ppn_id']) && is_numeric($it['ppn_id']) && \Illuminate\Support\Facades\DB::table('ppn')->where('id', $it['ppn_id'])->exists() ? (int) $it['ppn_id'] : null;
 
+            $aliasCandidate = $it['item_alias'] ?? $it['itemAlias'] ?? $it['itemName'] ?? $it['item_name'] ?? null;
+            if ($prHasItemId && (empty($aliasCandidate) || in_array($aliasCandidate, ['—', '-'], true))) {
+                $prItem = \App\Models\Procurement\PurchaseRequest\PurchaseRequisitionItem::with('item')->find($prHasItemId);
+                if ($prItem?->item?->name) {
+                    $aliasCandidate = $prItem->item->name;
+                }
+            }
+
             $processedItems[] = [
                 'pr_has_items_id' => $prHasItemId,
-                'item_alias' => $it['item_alias'] ?? $it['itemAlias'] ?? $it['itemName'] ?? $it['item_name'] ?? null,
+                'item_alias' => $aliasCandidate,
                 'price' => $price,
                 'order' => $orderQty,
                 'purchased' => (float) ($it['purchased'] ?? $orderQty),
@@ -490,6 +577,9 @@ class PurchaseOrderApiController extends Controller
         $dueDate = $request->input('due_date') ?? now()->addDays(14)->format('Y-m-d');
         $latestDeliv = $request->input('latest_delivery') ?? now()->addDays(14);
 
+        $rawFacInput = $request->input('facility_status') ?? $request->input('statusFacility') ?? 'FASILITAS';
+        $facilityStatus = stripos((string) $rawFacInput, 'non') !== false ? 'NON FASILITAS' : 'FASILITAS';
+
         $headerData = [
             'po_number' => $poNumber,
             'po_types_id' => $poTypeId,
@@ -504,23 +594,90 @@ class PurchaseOrderApiController extends Controller
             'delivery_terms_id' => $delivTermId,
             'latest_delivery' => $latestDeliv,
             'service_subkon' => $request->boolean('service_subkon', false) ? 1 : 0,
-            'facility_status' => $request->input('facility_status') ?? $request->input('statusFacility') ?? 'FASILITAS',
+            'facility_status' => $facilityStatus,
             'status' => 'Waiting for Approve 1',
             'remark' => $request->input('remark') ?? $request->input('remarkPo') ?? '',
         ];
 
+        $rawAdditionalCosts = $request->input('additional_costs')
+            ?? $request->input('additionalCosts')
+            ?? $request->input('other_costs')
+            ?? $request->input('otherCosts')
+            ?? [];
+
         $po = GeniusOneBackend::po()->createPo(
             $headerData,
             $processedItems,
-            $request->input('additional_costs', []),
+            $rawAdditionalCosts,
             $userId
         );
 
         return response()->json([
             'status' => 'success',
             'message' => 'Purchase Order created successfully',
-            'data' => $po->load(['supplier', 'items.prItem.item', 'additionalCosts']),
+            'data' => $po->load(['supplier', 'items.prItem.item', 'additionalCosts.type']),
         ], 201);
+    }
+
+    /**
+     * Add an additional cost to an existing PO.
+     */
+    public function storeAdditionalCost(Request $request, $id)
+    {
+        $rawCode = str_replace('-', '/', (string) $id);
+        $cleanCode = preg_replace('/[^A-Za-z0-9]/', '', (string) $id);
+
+        $po = PurchaseOrder::where('po_number', $rawCode)
+            ->orWhere('po_number', $id)
+            ->orWhere('id', is_numeric($id) ? (int) $id : null)
+            ->orWhereRaw("REPLACE(REPLACE(po_number, '/', ''), '-', '') = ?", [$cleanCode])
+            ->first();
+
+        if (! $po) {
+            return response()->json(['status' => 'error', 'message' => 'Purchase Order not found: '.$id], 404);
+        }
+
+        $userId = $request->user()?->id ?? 1;
+
+        $costData = [
+            'additional_cost_types_id' => $request->input('additional_cost_types_id') ?? $request->input('costId') ?? $request->input('type_id'),
+            'name' => $request->input('name') ?? $request->input('costName') ?? $request->input('item'),
+            'value' => (float) ($request->input('value') ?? $request->input('amount') ?? $request->input('nominal') ?? 0),
+            'note' => $request->input('note') ?? $request->input('remark'),
+        ];
+
+        $cost = GeniusOneBackend::po()->addAdditionalCost($po, $costData);
+
+        \App\Services\AuditLogger::logWorkflow(
+            documentType: 'PO',
+            documentNumber: $po->po_number,
+            action: 'REVISED',
+            fromStatus: $po->status,
+            toStatus: $po->status,
+            userId: $userId,
+            extra: ['additional_cost_added' => $cost->id, 'amount' => $cost->value]
+        );
+
+        $updatedPo = $po->fresh(['additionalCosts.type', 'items.requisitionItem.item.facility']);
+        $formatted = $this->formatPoRow($updatedPo, 1, true);
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Additional cost added successfully',
+            'data' => $cost->load('type'),
+            'item' => $formatted,
+        ], 201);
+    }
+
+    /**
+     * Remove an additional cost from a PO (Disabled per business rules: additional costs on PO cannot be deleted).
+     */
+    public function destroyAdditionalCost(Request $request, $id, $costId)
+    {
+        return response()->json([
+            'status' => 'error',
+            'message' => 'Additional costs recorded on Purchase Order detail cannot be deleted.',
+        ], 403);
     }
 
     /**

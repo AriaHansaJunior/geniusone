@@ -42,6 +42,10 @@ export interface ReceiveNoteRecord {
   amountFormatted: string;
   description: string;
   warehouseTransaction: string;
+  bpb_number?: string;
+  is_received_in_bpb?: boolean;
+  note?: string;
+  remark?: string;
   // Detail metadata
   currency: string;
   rate: number;

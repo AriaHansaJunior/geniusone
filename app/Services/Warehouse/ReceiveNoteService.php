@@ -51,7 +51,12 @@ class ReceiveNoteService
                 'tax_invoice' => $headerData['tax_invoice'] ?? null,
                 'tax_invoice_date' => $headerData['tax_invoice_date'] ?? null,
                 'license_plate' => $headerData['license_plate'] ?? null,
-                'note' => $headerData['note'] ?? null,
+                'vehicle_type' => $headerData['vehicle_type'] ?? null,
+                'aju_number' => $headerData['aju_number'] ?? null,
+                'no_daftar' => $headerData['no_daftar'] ?? null,
+                'tanggal_daftar' => $headerData['tanggal_daftar'] ?? null,
+                'note' => $headerData['note'] ?? $headerData['remark'] ?? null,
+                'remark' => $headerData['remark'] ?? $headerData['note'] ?? null,
                 'sj_number' => $headerData['sj_number'] ?? null,
                 'sj_date' => $headerData['sj_date'] ?? null,
                 'pl_number' => $headerData['pl_number'] ?? null,
@@ -66,6 +71,7 @@ class ReceiveNoteService
             foreach ($receivedItems as $item) {
                 PurchaseOrderReceiveNote::create([
                     'purchase_order_id' => $item['purchase_order_id'],
+                    'po_has_items_id' => $item['po_has_items_id'] ?? null,
                     'receive_note_id' => $receiveNote->id,
                     'dn_number' => $item['dn_number'] ?? null,
                     'job_number_id' => $item['job_number_id'] ?? $defaultJobId,
@@ -77,6 +83,7 @@ class ReceiveNoteService
                     'discount' => (float) ($item['discount'] ?? 0),
                     'ppn' => (float) ($item['ppn'] ?? 0),
                     'grand_total' => (float) ($item['grand_total'] ?? 0),
+                    'remark' => $item['remark'] ?? $item['note'] ?? null,
                 ]);
             }
 

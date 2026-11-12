@@ -8,6 +8,7 @@ import { ApprovalTimeline } from "../../../components/approval/ApprovalTimeline"
 import { ApprovalStatusBadge } from "../../../components/approval/ApprovalStatusBadge";
 import { getLocalApprovalState } from "../../../services/approvalApi";
 import { normalizeApprovalStatus, type DocumentApprovalState } from "../../../types/approval";
+import { fetchDetail } from "../../../data/api";
 
 interface ReceiveNoteDetailProps {
   code: string;
@@ -43,16 +44,118 @@ export function ReceiveNoteDetail({
     };
   }, []);
 
-  // Find record by code/id/rnNumber
-  const rnData =
-    record ||
+  const [apiData, setApiData] = useState<any>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    if (code) {
+      fetchDetail("rn", code).then((data: any) => {
+        if (isMounted && data) {
+          setApiData(data);
+        }
+      });
+    }
+    return () => {
+      isMounted = false;
+    };
+  }, [code]);
+
+  // Merge API data on top of record and fallback mock
+  const fallbackRecord =
     initialReceiveNoteRecords.find(
       (r) =>
         r.id === code ||
         r.rnNumber === code ||
         (typeof r.rnNumber === "string" && r.rnNumber.replace(/[\/\\]/g, "-") === code)
-    ) ||
-    initialReceiveNoteRecords[0];
+    ) || initialReceiveNoteRecords[0] || {};
+
+  const baseData = {
+    ...fallbackRecord,
+    ...(record || {}),
+    ...(apiData || {}),
+  };
+
+  const rawHeaderRemark =
+    apiData?.note ||
+    apiData?.remark ||
+    apiData?.notes ||
+    apiData?.description ||
+    record?.remark ||
+    record?.note ||
+    record?.notes ||
+    record?.description ||
+    baseData.remark ||
+    baseData.note ||
+    baseData.description ||
+    "-";
+
+  const rnData: ReceiveNoteRecord = {
+    ...baseData,
+    rnNumber: baseData.rnNumber || baseData.rn_number || code || "0001/RN-IMLI/X/2026",
+    arrivalDate: baseData.arrivalDate || baseData.formatted_arrival_date || baseData.arrival_date || "-",
+    supplier: typeof baseData.supplier === "object" ? (baseData.supplier?.name || "—") : (baseData.supplier || "—"),
+    facility: baseData.facility || (baseData.dn_status === 1 ? "FASILITAS" : "NON FASILITAS"),
+    bcCode: baseData.bcCode || baseData.bc_code || "BC 4.0",
+    currency: typeof baseData.currency === "object" ? (baseData.currency?.code || "IDR") : (baseData.currency || "IDR"),
+    rate: Number(baseData.rate || 1.0),
+    invoiceNumber: apiData?.invoiceNumber || apiData?.invoice_number || record?.invoiceNumber || record?.invoice_number || baseData.invoiceNumber || baseData.invoice_number || "-",
+    invoiceDate: apiData?.invoiceDate || apiData?.invoice_date || record?.invoiceDate || record?.invoice_date || baseData.invoiceDate || baseData.invoice_date || "-",
+    taxInvoiceNumber: apiData?.taxInvoiceNumber || apiData?.tax_invoice || record?.taxInvoiceNumber || record?.tax_invoice || baseData.taxInvoiceNumber || baseData.tax_invoice || "-",
+    taxInvoiceDate: apiData?.taxInvoiceDate || apiData?.tax_invoice_date || record?.taxInvoiceDate || record?.tax_invoice_date || baseData.taxInvoiceDate || baseData.tax_invoice_date || "-",
+    licensePlate: apiData?.licensePlate || apiData?.license_plate || record?.licensePlate || record?.license_plate || baseData.licensePlate || baseData.license_plate || "-",
+    vehicleType: apiData?.vehicleType || apiData?.vehicle_type || record?.vehicleType || record?.vehicle_type || baseData.vehicleType || baseData.vehicle_type || "-",
+    ajuNumber: apiData?.ajuNumber || apiData?.aju_number || record?.ajuNumber || record?.aju_number || baseData.ajuNumber || baseData.aju_number || "00004001456220261014004999",
+    noDaftar: apiData?.noDaftar || apiData?.no_daftar || record?.noDaftar || record?.no_daftar || baseData.noDaftar || baseData.no_daftar || "090400",
+    tanggalDaftar: apiData?.tanggalDaftar || apiData?.tanggal_daftar || record?.tanggalDaftar || record?.tanggal_daftar || baseData.tanggalDaftar || baseData.tanggal_daftar || "-",
+    nomorPackingList: apiData?.nomorPackingList || apiData?.pl_number || record?.nomorPackingList || record?.pl_number || baseData.nomorPackingList || baseData.pl_number || baseData.sj_number || "-",
+    tanggalPackingList: apiData?.tanggalPackingList || apiData?.pl_date || record?.tanggalPackingList || record?.pl_date || baseData.tanggalPackingList || baseData.pl_date || baseData.sj_date || "-",
+    description: rawHeaderRemark,
+    note: rawHeaderRemark,
+    remark: rawHeaderRemark,
+    status: baseData.status || "Waiting for Approve 1",
+    createdAt: baseData.createdAt || baseData.created_at || "-",
+    lastUpdatedAt: baseData.lastUpdatedAt || baseData.updated_at || "-",
+    approval1At: baseData.approval1At || baseData.approval_1_at || "-",
+    approval2At: baseData.approval2At || baseData.approval_2_at || "-",
+    items: Array.isArray(apiData?.items && apiData.items.length > 0 ? apiData.items : baseData.items)
+      ? (apiData?.items && apiData.items.length > 0 ? apiData.items : baseData.items).map((it: any, i: number) => {
+        const rawPrice = it.price ?? it.pricePerUnit ?? it.price_numeric ?? 0;
+        const cleanPrice = typeof rawPrice === "number" ? (isNaN(rawPrice) ? 0 : rawPrice) : (parseFloat(String(rawPrice).replace(/[^0-9.-]/g, "")) || 0);
+        const rawQty = Number(it.qty ?? it.gross_quantity ?? it.quantity ?? it.suratJalanQty ?? 0);
+        const cleanQty = isNaN(rawQty) ? 0 : rawQty;
+        const cleanSubtotal = Number(it.priceSubtotal ?? it.grand_total ?? (cleanQty * cleanPrice));
+        return {
+          id: it.id || `item-${i}`,
+          poNumber: it.poNumber || it.po_number || "-",
+          poDate: it.poDate || it.po_date || "-",
+          dnNumber: it.dnNumber || it.dn_number || "-",
+          dnDate: it.dnDate || it.dn_date || "-",
+          jobNumber: it.jobNumber || it.job_number || "-",
+          jobDate: it.jobDate || it.job_date || "-",
+          itemCode: it.itemCode || it.item_code || it.code || "-",
+          itemName: it.itemName || it.item_name || it.item || "-",
+          qty: cleanQty,
+          suratJalanQty: cleanQty,
+          unit: it.unit || "PCE",
+          rafaksi: Number(it.rafaksi || 0),
+          rafaksiPercent: Number(it.rafaksiPercent || 0),
+          pricePerUnit: cleanPrice,
+          priceSubtotal: isNaN(cleanSubtotal) ? cleanQty * cleanPrice : cleanSubtotal,
+          price2PerUnit: cleanPrice,
+          price2Subtotal: isNaN(cleanSubtotal) ? cleanQty * cleanPrice : cleanSubtotal,
+          remark: it.remark && it.remark !== "-" ? it.remark : (it.note && it.note !== "-" ? it.note : "-"),
+        };
+      })
+      : [],
+    totalQty: Number(baseData.totalQty ?? baseData.total_gross_quantity ?? 0),
+    amount: Number(baseData.amount ?? 0),
+    biayaLain: Number(baseData.biayaLain ?? 0),
+    discountPercent: Number(baseData.discountPercent ?? 0),
+    discountAmount: Number(baseData.discountAmount ?? 0),
+    ppnPercent: Number(baseData.ppnPercent ?? 12),
+    ppnAmount: Number(baseData.ppnAmount ?? 0),
+    grandTotal: Number(baseData.grandTotal ?? 0),
+  };
 
   const [approvalState, setApprovalState] = useState<DocumentApprovalState>(() =>
     getLocalApprovalState("receive_note", rnData.rnNumber, normalizeApprovalStatus(rnData.status))
@@ -88,7 +191,7 @@ export function ReceiveNoteDetail({
               <Icon name="lock" size={12} style={{ marginRight: "3px" }} /> Locked
             </span>
           )}
-          {isApproved && onCreateBpb && (
+          {isApproved && !rnData.bpb_number && !rnData.is_received_in_bpb && !(rnData as any).warehouseTransaction && !(rnData as any).bpbNumber && onCreateBpb && (
             <Button
               variant="primary"
               icon="box"
@@ -97,6 +200,15 @@ export function ReceiveNoteDetail({
             >
               Create BPB
             </Button>
+          )}
+          {Boolean(rnData.bpb_number || rnData.is_received_in_bpb || (rnData as any).bpbNumber || ((rnData as any).warehouseTransaction && (rnData as any).warehouseTransaction !== "—" && (rnData as any).warehouseTransaction !== "-")) && (
+            <span
+              className="badge badge--green"
+              style={{ fontSize: "11px", fontWeight: 700, padding: "5px 9px", display: "inline-flex", alignItems: "center", gap: "4px" }}
+              title={`Received into Warehouse BPB ${rnData.bpb_number || (rnData as any).bpbNumber || (rnData as any).warehouseTransaction || ""}`}
+            >
+              <Icon name="check" size={12} /> Received in BPB {rnData.bpb_number || (rnData as any).bpbNumber || (rnData as any).warehouseTransaction ? `(${rnData.bpb_number || (rnData as any).bpbNumber || (rnData as any).warehouseTransaction})` : ""}
+            </span>
           )}
           <Button variant="secondary" icon="print" onClick={() => handlePrint("po")}>
             Print Document
@@ -172,6 +284,15 @@ export function ReceiveNoteDetail({
                 {rnData.rate.toFixed(4)}
               </span>
             </div>
+
+            {Boolean(rnData.bpb_number || (rnData as any).warehouseTransaction) && (
+              <div className="rn-meta-item">
+                <span className="rn-meta-label">Warehouse BPB</span>
+                <span className="rn-meta-value font-mono font-medium text-ink">
+                  {rnData.bpb_number || (rnData as any).warehouseTransaction}
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Column 2 */}
@@ -279,8 +400,39 @@ export function ReceiveNoteDetail({
                   : rnData.approval2At}
               </span>
             </div>
+
+            <div className="rn-meta-item">
+              <span className="rn-meta-label">Notes / Remarks</span>
+              <span className="rn-meta-value font-medium text-ink">
+                {rnData.description && rnData.description !== "-" ? rnData.description : (rnData.note && rnData.note !== "-" ? rnData.note : (rnData.remark || "-"))}
+              </span>
+            </div>
           </div>
         </div>
+
+        {/* Notes & Remarks Callout if present */}
+        {((rnData.description && rnData.description !== "-") || (rnData.note && rnData.note !== "-") || (rnData.remark && rnData.remark !== "-")) && (
+          <div style={{
+            background: "var(--surface-hover, #f8fafc)",
+            border: "1px solid var(--border-color, #e2e8f0)",
+            borderRadius: "6px",
+            padding: "12px 16px",
+            marginBottom: "16px",
+            display: "flex",
+            alignItems: "flex-start",
+            gap: "10px"
+          }}>
+            <Icon name="file" size={16} className="text-secondary" style={{ marginTop: "2px", flexShrink: 0 }} />
+            <div>
+              <div style={{ fontSize: "12px", fontWeight: 600, color: "var(--ink-secondary, #64748b)", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "4px" }}>
+                Notes / Remarks
+              </div>
+              <div style={{ fontSize: "14px", color: "var(--ink, #1e293b)", whiteSpace: "pre-wrap" }}>
+                {rnData.description && rnData.description !== "-" ? rnData.description : (rnData.note && rnData.note !== "-" ? rnData.note : rnData.remark)}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Grouped Detail Item Table */}
         <div className="rn-detail-table-wrapper">

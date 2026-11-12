@@ -4,6 +4,7 @@ namespace App\Models\Warehouse\GateReceiving;
 
 use App\Models\Master\Organization\JobNumber;
 use App\Models\Procurement\PurchaseOrder\PurchaseOrder;
+use App\Models\Procurement\PurchaseOrder\PurchaseOrderItem;
 use App\Models\Warehouse\InboundStorage\PoRnToBpb;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -19,6 +20,7 @@ class PurchaseOrderReceiveNote extends Model
 
     protected $fillable = [
         'purchase_order_id',
+        'po_has_items_id',
         'receive_note_id',
         'dn_number',
         'job_number_id',
@@ -30,11 +32,17 @@ class PurchaseOrderReceiveNote extends Model
         'discount',
         'ppn',
         'grand_total',
+        'remark',
     ];
 
     public function purchaseOrder(): BelongsTo
     {
         return $this->belongsTo(PurchaseOrder::class, 'purchase_order_id');
+    }
+
+    public function poItem(): BelongsTo
+    {
+        return $this->belongsTo(PurchaseOrderItem::class, 'po_has_items_id');
     }
 
     public function receiveNote(): BelongsTo

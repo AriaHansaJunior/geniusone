@@ -106,29 +106,40 @@ class PurchaseOrderService
         }
 
         // BE-01: Resolve Facility Status directly from Master Item
-        $resolvedFacility = $headerData['facility_status'] ?? null;
-        if (empty($resolvedFacility) || $resolvedFacility === 'FASILITAS') {
-            $masterItemFacilities = collect();
-            foreach ($items as $it) {
-                if (! empty($it['items_id'])) {
-                    $mItem = \App\Models\Master\Material\Item::with('facility')->find($it['items_id']);
-                    if ($mItem?->facility) {
-                        $masterItemFacilities->push(strtoupper($mItem->facility->name));
-                    }
-                } elseif (! empty($it['pr_has_items_id'])) {
-                    $pItem = PurchaseRequisitionItem::with('item.facility')->find($it['pr_has_items_id']);
-                    if ($pItem?->item?->facility) {
-                        $masterItemFacilities->push(strtoupper($pItem->item->facility->name));
-                    }
+        $rawFacHeader = strtoupper((string) ($headerData['facility_status'] ?? ''));
+        $masterItemFacilities = collect();
+        foreach ($items as $it) {
+            $mItem = null;
+            if (! empty($it['items_id'])) {
+                $mItem = \App\Models\Master\Material\Item::with('facility')->find($it['items_id']);
+            } elseif (! empty($it['pr_has_items_id'])) {
+                $pItem = PurchaseRequisitionItem::with('item.facility')->find($it['pr_has_items_id']);
+                $mItem = $pItem?->item;
+            }
+            if (! $mItem) {
+                $identifier = $it['item_code'] ?? $it['item_alias'] ?? $it['itemName'] ?? null;
+                if ($identifier) {
+                    $mItem = \App\Models\Master\Material\Item::with('facility')
+                        ->where('code', $identifier)
+                        ->orWhere('name', $identifier)
+                        ->first();
                 }
             }
-
-            if ($masterItemFacilities->isNotEmpty()) {
-                $hasFasilitas = $masterItemFacilities->contains(fn ($f) => str_contains($f, 'FASILITAS') || str_contains($f, 'BERIKAT'));
-                $resolvedFacility = $hasFasilitas ? 'FASILITAS' : 'NON FASILITAS';
-            } else {
-                $resolvedFacility = 'FASILITAS';
+            if ($mItem?->facility) {
+                $masterItemFacilities->push(strtoupper(trim($mItem->facility->name)));
+            } elseif ($mItem && $mItem->facilities_id == 3) {
+                $masterItemFacilities->push('NON FASILITAS');
             }
+        }
+
+        $hasNon = str_contains($rawFacHeader, 'NON') || $masterItemFacilities->contains(fn ($f) => str_contains($f, 'NON'));
+
+        if ($hasNon) {
+            $resolvedFacility = 'NON FASILITAS';
+        } elseif ($masterItemFacilities->isNotEmpty() && $masterItemFacilities->every(fn ($f) => ! str_contains($f, 'NON') && (str_contains($f, 'FASILITAS') || str_contains($f, 'BERIKAT')))) {
+            $resolvedFacility = 'FASILITAS';
+        } else {
+            $resolvedFacility = str_contains($rawFacHeader, 'NON') ? 'NON FASILITAS' : 'FASILITAS';
         }
 
         return DB::transaction(function () use ($headerData, $items, $additionalCosts, $userId, $resolvedFacility) {
@@ -236,13 +247,37 @@ class PurchaseOrderService
                     percentageLme: (float) ($item['percentage_lme'] ?? 0)
                 );
 
-                $prItem = $resolvedPrHasItemId ? \App\Models\Procurement\PurchaseRequest\PurchaseRequisitionItem::find($resolvedPrHasItemId) : null;
+                $prItem = $resolvedPrHasItemId ? \App\Models\Procurement\PurchaseRequest\PurchaseRequisitionItem::with('item')->find($resolvedPrHasItemId) : null;
+
+                // Resolve items_id
+                $resolvedItemId = null;
+                if (! empty($item['items_id']) && DB::table('items')->where('id', $item['items_id'])->exists()) {
+                    $resolvedItemId = (int) $item['items_id'];
+                } elseif ($prItem?->items_id) {
+                    $resolvedItemId = (int) $prItem->items_id;
+                } else {
+                    $identifier = $item['item_code'] ?? $item['item_alias'] ?? $item['itemName'] ?? $item['item'] ?? null;
+                    if ($identifier) {
+                        $resolvedItemId = DB::table('items')
+                            ->where('code', $identifier)
+                            ->orWhere('name', $identifier)
+                            ->value('id');
+                    }
+                }
+
+                $mItem = $resolvedItemId ? \App\Models\Master\Material\Item::find($resolvedItemId) : null;
+                $aliasInput = trim((string) ($item['item_alias'] ?? $item['itemAlias'] ?? ''));
+                if ($aliasInput === '' || in_array($aliasInput, ['—', '-'], true) || ($mItem && $aliasInput === $mItem->code) || ($prItem?->item && $aliasInput === $prItem->item->code)) {
+                    $aliasInput = $mItem?->name ?? $prItem?->item?->name ?? $item['itemName'] ?? $item['item'] ?? 'Industrial Material';
+                }
+
                 $itemRemark = !empty($item['remark']) && $item['remark'] !== '-' ? $item['remark'] : ($item['note'] ?? $prItem?->remark ?? null);
 
                 PurchaseOrderItem::create([
                     'purchase_order_id' => $order->id,
                     'pr_has_items_id' => $resolvedPrHasItemId,
-                    'item_alias' => $item['item_alias'] ?? null,
+                    'items_id' => $resolvedItemId,
+                    'item_alias' => $aliasInput,
                     'price' => $calc['price'],
                     'purchased' => (float) ($item['purchased'] ?? $calc['order']),
                     'order' => $calc['order'],
@@ -267,9 +302,12 @@ class PurchaseOrderService
             }
 
             foreach ($additionalCosts as $cost) {
-                $typeId = $cost['additional_cost_types_id'] ?? null;
-                if (! $typeId && ! empty($cost['name'] ?? $cost['item'] ?? null)) {
-                    $cName = trim($cost['name'] ?? $cost['item']);
+                $rawTypeId = $cost['additional_cost_types_id'] ?? $cost['costId'] ?? $cost['type_id'] ?? null;
+                $typeId = is_numeric($rawTypeId) && DB::table('additional_cost_types')->where('id', (int) $rawTypeId)->exists()
+                    ? (int) $rawTypeId
+                    : null;
+                if (! $typeId && ! empty($cost['name'] ?? $cost['costName'] ?? $cost['item'] ?? null)) {
+                    $cName = trim($cost['name'] ?? $cost['costName'] ?? $cost['item']);
                     // Match by code, exact name, or string containing code/name (e.g. "CRN - Jasa Crane / Lifting")
                     $type = AdditionalCostType::where('name', $cName)
                         ->orWhere('code', $cName)
@@ -278,10 +316,16 @@ class PurchaseOrderService
                         ->first();
 
                     if (! $type) {
-                        $code = strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', $cName), 0, 5));
+                        $baseCode = strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', $cName), 0, 4)) ?: 'COST';
+                        $code = $baseCode;
+                        $suffix = 1;
+                        while (AdditionalCostType::where('code', $code)->exists()) {
+                            $code = substr($baseCode, 0, 3).$suffix;
+                            $suffix++;
+                        }
                         $type = AdditionalCostType::firstOrCreate(
-                            ['code' => $code],
-                            ['name' => $cName, 'status' => 1]
+                            ['name' => substr($cName, 0, 45)],
+                            ['code' => $code, 'status' => 1]
                         );
                     }
                     $typeId = $type?->id;
@@ -292,6 +336,7 @@ class PurchaseOrderService
                         'purchase_order_id' => $order->id,
                         'additional_cost_types_id' => $typeId,
                         'value' => (float) ($cost['value'] ?? $cost['nominal'] ?? $cost['amount'] ?? 0),
+                        'note' => $cost['note'] ?? $cost['remark'] ?? null,
                     ]);
                 }
             }
@@ -408,6 +453,59 @@ class PurchaseOrderService
 
             return (bool) $order->delete();
         });
+    }
+
+    /**
+     * Add an additional cost to an existing PO.
+     */
+    public function addAdditionalCost(PurchaseOrder $order, array $costData): AdditionalCost
+    {
+        $rawTypeId = $costData['additional_cost_types_id'] ?? $costData['costId'] ?? $costData['type_id'] ?? null;
+        $typeId = is_numeric($rawTypeId) && DB::table('additional_cost_types')->where('id', (int) $rawTypeId)->exists()
+            ? (int) $rawTypeId
+            : null;
+        if (! $typeId && ! empty($costData['name'] ?? $costData['costName'] ?? $costData['item'] ?? null)) {
+            $cName = trim($costData['name'] ?? $costData['costName'] ?? $costData['item']);
+            $type = AdditionalCostType::where('name', $cName)
+                ->orWhere('code', $cName)
+                ->orWhereRaw('? LIKE CONCAT(\'%\', name, \'%\')', [$cName])
+                ->orWhereRaw('? LIKE CONCAT(code, \'%\')', [$cName])
+                ->first();
+
+            if (! $type) {
+                $baseCode = strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', $cName), 0, 4)) ?: 'COST';
+                $code = $baseCode;
+                $suffix = 1;
+                while (AdditionalCostType::where('code', $code)->exists()) {
+                    $code = substr($baseCode, 0, 3).$suffix;
+                    $suffix++;
+                }
+                $type = AdditionalCostType::firstOrCreate(
+                    ['name' => substr($cName, 0, 45)],
+                    ['code' => $code, 'status' => 1]
+                );
+            }
+            $typeId = $type?->id;
+        }
+
+        if (! $typeId) {
+            throw new InvalidArgumentException('Valid additional cost type or name is required.');
+        }
+
+        return AdditionalCost::create([
+            'purchase_order_id' => $order->id,
+            'additional_cost_types_id' => $typeId,
+            'value' => (float) ($costData['value'] ?? $costData['nominal'] ?? $costData['amount'] ?? 0),
+            'note' => $costData['note'] ?? $costData['remark'] ?? null,
+        ]);
+    }
+
+    /**
+     * Delete an additional cost from a PO (Disabled per business rules: additional costs on PO cannot be deleted).
+     */
+    public function deleteAdditionalCost(PurchaseOrder $order, int $costId): bool
+    {
+        throw new InvalidArgumentException("Additional costs recorded on Purchase Order '{$order->po_number}' cannot be deleted.");
     }
 
     /**

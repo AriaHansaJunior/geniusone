@@ -29,7 +29,12 @@ class ReceiveNote extends Model
         'tax_invoice',
         'tax_invoice_date',
         'license_plate',
+        'vehicle_type',
+        'aju_number',
+        'no_daftar',
+        'tanggal_daftar',
         'note',
+        'remark',
         'sj_number',
         'sj_date',
         'pl_number',
@@ -95,6 +100,11 @@ class ReceiveNote extends Model
     }
 
     public function purchaseOrders(): HasMany
+    {
+        return $this->hasMany(PurchaseOrderReceiveNote::class, 'receive_note_id');
+    }
+
+    public function items(): HasMany
     {
         return $this->hasMany(PurchaseOrderReceiveNote::class, 'receive_note_id');
     }

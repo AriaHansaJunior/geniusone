@@ -85,9 +85,11 @@ Route::prefix('procurement')->group(function () {
     // Purchase Order (PO)
     Route::get('/po', [PurchaseOrderApiController::class, 'index']);
     Route::post('/po', [PurchaseOrderApiController::class, 'store']);
-    Route::get('/po/{code}', [PurchaseOrderApiController::class, 'show']);
+    Route::get('/po/{code}', [PurchaseOrderApiController::class, 'show'])->where('code', '.*');
     Route::post('/po/{id}/approve', [PurchaseOrderApiController::class, 'approve']);
     Route::post('/po/{id}/reject', [PurchaseOrderApiController::class, 'reject']);
+    Route::post('/po/{id}/additional-costs', [PurchaseOrderApiController::class, 'storeAdditionalCost']);
+    Route::delete('/po/{id}/additional-costs/{costId}', [PurchaseOrderApiController::class, 'destroyAdditionalCost']);
 
     // Procurement Master Data
     Route::prefix('master')->group(function () {
@@ -214,11 +216,11 @@ Route::get('/pr/{code}/attachment', [PurchaseRequisitionApiController::class, 'd
 
 Route::get('/po', [PurchaseOrderApiController::class, 'index']);
 Route::post('/po', [PurchaseOrderApiController::class, 'store']);
-Route::get('/po/{code}', [PurchaseOrderApiController::class, 'show']);
+Route::get('/po/{code}', [PurchaseOrderApiController::class, 'show'])->where('code', '.*');
 
 Route::get('/rn', [ReceiveNoteApiController::class, 'index']);
 Route::post('/rn', [ReceiveNoteApiController::class, 'store']);
-Route::get('/rn/{code}', [ReceiveNoteApiController::class, 'show']);
+Route::get('/rn/{code}', [ReceiveNoteApiController::class, 'show'])->where('code', '.*');
 
 Route::get('/report', [TraceabilityReportApiController::class, 'index']);
 Route::get('/report/{code}', [TraceabilityReportApiController::class, 'show']);
@@ -309,3 +311,9 @@ foreach ($workflowModules as $mod) {
     Route::post("{$mod}/{id}/activity", [ApprovalWorkflowApiController::class, 'recordActivity'])->defaults('module', $mod);
     Route::get("{$mod}/{id}/approval-history", [ApprovalWorkflowApiController::class, 'history'])->defaults('module', $mod);
 }
+
+Route::post('po/{id}/additional-costs', [PurchaseOrderApiController::class, 'storeAdditionalCost'])->where('id', '.*');
+Route::delete('po/{id}/additional-costs/{costId}', [PurchaseOrderApiController::class, 'destroyAdditionalCost'])->where('id', '.*');
+Route::post('procurement/transactions/purchase-order/{id}/additional-costs', [PurchaseOrderApiController::class, 'storeAdditionalCost'])->where('id', '.*');
+Route::delete('procurement/transactions/purchase-order/{id}/additional-costs/{costId}', [PurchaseOrderApiController::class, 'destroyAdditionalCost'])->where('id', '.*');
+Route::get('rn/{code}', [\App\Http\Controllers\Api\Warehouse\ReceiveNoteApiController::class, 'show']);

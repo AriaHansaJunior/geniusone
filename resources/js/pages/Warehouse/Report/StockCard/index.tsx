@@ -122,6 +122,9 @@ export function StockCardIndex() {
       endDate: appliedFilters.endDate,
       itemCode: appliedFilters.itemCode,
     });
+    if (appliedFilters.warehouse && appliedFilters.warehouse !== "All Warehouse") {
+      params.set("warehouseId", appliedFilters.warehouse);
+    }
 
     fetch(`/api/warehouse/reports/stock-card?${params.toString()}`, {
       headers: { Accept: "application/json" },
@@ -144,10 +147,10 @@ export function StockCardIndex() {
             in: m.qty_in > 0 ? Number(m.qty_in) : null,
             out: m.qty_out > 0 ? Number(m.qty_out) : null,
             stock: Number(m.balance) || 0,
-            historyDocIn: m.doc_number || "-",
-            docOutRef: "-",
-            noLot: "LOT-2026-A",
-            jobNumber: "JOB-2026-001",
+            historyDocIn: m.history_doc_in || (m.qty_in > 0 ? m.doc_number : "-"),
+            docOutRef: m.doc_out_ref || (m.qty_out > 0 ? m.doc_number : "-"),
+            noLot: m.no_lot || "-",
+            jobNumber: m.job_number || "-",
             lastUpdate: m.date || appliedFilters.startDate,
           }));
           setLiveRecords(mapped);
