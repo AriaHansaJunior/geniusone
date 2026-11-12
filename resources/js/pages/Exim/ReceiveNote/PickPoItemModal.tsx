@@ -74,7 +74,11 @@ export function PickPoItemModal({
             const poFac = String(po.facility || po.facility_status || po._rawFacility || "FASILITAS");
             rawItems.forEach((it: any, idx: number) => {
               const qty = Number(it.order || it.orderQty || it.rawQty || 1);
-              const price = Number(it.price || it.priceRp || 0);
+              const rawPrice = it.rawPrice ?? it.price_numeric ?? it.price ?? it.priceRp ?? 0;
+              const price =
+                typeof rawPrice === "number"
+                  ? (isNaN(rawPrice) ? 0 : rawPrice)
+                  : (parseFloat(String(rawPrice).replace(/[^0-9.-]/g, "")) || 0);
               const name = it.item || it.itemName || it.item_alias || "Material Item";
               const code = it.itemCode || it.code || it.item_alias || "—";
               const rawItemFac = it.facility || it.facility_status || it._rawFacility || poFac;
@@ -121,7 +125,7 @@ export function PickPoItemModal({
                 id: `po-${po.id || poNum}-item-${it.id || idx}`,
                 jobNumber: it.job_number || "—",
                 poNumber: poNum,
-                poNumberAlias: it.item_alias || "—",
+                poNumberAlias: it.item_alias && it.item_alias !== "—" && it.item_alias !== "-" && it.item_alias !== code ? it.item_alias : name,
                 remark: it.remark || po.remark || "-",
                 itemName: name,
                 itemCode: code,
@@ -139,7 +143,7 @@ export function PickPoItemModal({
           }
         }
       })
-      .catch(() => {});
+      .catch(() => { });
     return () => {
       isMounted = false;
     };

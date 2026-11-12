@@ -341,7 +341,13 @@ export function PurchaseOrderCreate({
         prNumber: prNum,
         pr_has_items_id: it.pr_has_items_id || it.id,
         itemName: safeExtractString(it.item || it.itemName || "Material Item"),
-        itemAlias: safeExtractString(it.itemAlias || it.alias || it.itemName || it.item || it.itemCode || ""),
+        itemAlias: safeExtractString(
+          it.itemAlias && it.itemAlias !== "—" && it.itemAlias !== it.itemCode
+            ? it.itemAlias
+            : it.alias && it.alias !== "—" && it.alias !== it.itemCode
+              ? it.alias
+              : it.itemName || it.item || "Industrial Material"
+        ),
         itemCode: safeExtractString(it.itemCode || it.code || "—"),
         facility: targetFacility,
         price: 0,
@@ -631,7 +637,9 @@ export function PurchaseOrderCreate({
           pr_has_items_id: it.pr_has_items_id,
           itemName: it.itemName,
           itemCode: it.itemCode,
-          itemAlias: it.itemAlias || it.itemCode || it.itemName,
+          itemAlias: (it.itemAlias && it.itemAlias !== "—" && it.itemAlias !== it.itemCode)
+            ? it.itemAlias
+            : (it.itemName || it.item || it.material || it.itemCode),
           facility: fac,
           price: 0,
           unit: it.unit || "PCE",
@@ -819,7 +827,8 @@ export function PurchaseOrderCreate({
         const orderQty = remQty > 0 ? remQty : reqQty;
         const itemName = safeExtractString(first.item || first.itemName || "Material Item");
         const itemCode = safeExtractString(first.itemCode || first.code || "—");
-        const itemAlias = safeExtractString(first.itemAlias || first.alias || first.itemName || first.item || first.itemCode || "");
+        const rawAlias = safeExtractString(first.itemAlias || first.alias || "");
+        const itemAlias = rawAlias && rawAlias !== "—" && rawAlias !== itemCode ? rawAlias : itemName;
         const unit = safeExtractString(first.unit || "PCE");
         const remark = safeExtractString(first.remark || matchedPr._rawRemark || matchedPr.remark || "");
         const prItemId = first.pr_has_items_id || first.id;
@@ -861,7 +870,12 @@ export function PurchaseOrderCreate({
                 pr_has_items_id: extra.pr_has_items_id || extra.id,
                 itemName: safeExtractString(extra.item || extra.itemName || "Material Item"),
                 itemCode: safeExtractString(extra.itemCode || extra.code || "—"),
-                itemAlias: safeExtractString(extra.itemAlias || extra.alias || extra.itemName || extra.item || extra.itemCode || ""),
+                itemAlias: (() => {
+                  const extraRawAlias = safeExtractString(extra.itemAlias || extra.alias || "");
+                  const extraCode = safeExtractString(extra.itemCode || extra.code || "—");
+                  const extraName = safeExtractString(extra.item || extra.itemName || "Material Item");
+                  return extraRawAlias && extraRawAlias !== "—" && extraRawAlias !== extraCode ? extraRawAlias : extraName;
+                })(),
                 facility: targetFacility,
                 price: 0,
                 unit: safeExtractString(extra.unit || "PCE"),
@@ -933,7 +947,12 @@ export function PurchaseOrderCreate({
                   ...r,
                   pr_has_items_id: first.pr_has_items_id || first.id,
                   itemName: safeExtractString(first.item || first.itemName || "Material Item"),
-                  itemAlias: safeExtractString(first.itemAlias || first.alias || first.itemName || first.item || first.itemCode || ""),
+                  itemAlias: (() => {
+                    const rAlias = safeExtractString(first.itemAlias || first.alias || "");
+                    const fCode = safeExtractString(first.itemCode || first.code || "—");
+                    const fName = safeExtractString(first.item || first.itemName || "Material Item");
+                    return rAlias && rAlias !== "—" && rAlias !== fCode ? rAlias : fName;
+                  })(),
                   facility: targetFacility,
                   unit: safeExtractString(first.unit || "PCE"),
                   requestedQty: reqQty,
@@ -1147,7 +1166,9 @@ export function PurchaseOrderCreate({
             prNumber: it.prNumber,
             itemName: it.itemName,
             item_code: it.itemCode,
-            item_alias: it.itemAlias && it.itemAlias !== "—" ? it.itemAlias : (it.itemName || it.itemCode || ""),
+            item_alias: it.itemAlias && it.itemAlias !== "—" && it.itemAlias !== it.itemCode
+              ? it.itemAlias
+              : (it.itemName || it.itemCode || ""),
             price: it.price,
             order: it.orderQty,
             purchased: it.purchasedQty,

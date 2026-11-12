@@ -57,6 +57,19 @@ export function ReceiveNoteForm({ onBack, onSave, existingReceiveNotes = [] }: R
   const [licensePlate, setLicensePlate] = useState("");
   const [notes, setNotes] = useState("");
 
+  // Customs & Registration Information
+  const [ajuNumber, setAjuNumber] = useState("00004001456220261014004999");
+  const [noDaftar, setNoDaftar] = useState("090400");
+  const [tanggalDaftar, setTanggalDaftar] = useState("2026-10-14");
+
+  const parseCleanNumber = (val: any): number => {
+    if (typeof val === "number") return isNaN(val) ? 0 : val;
+    if (!val) return 0;
+    const cleaned = String(val).replace(/[^0-9.-]/g, "");
+    const parsed = parseFloat(cleaned);
+    return isNaN(parsed) ? 0 : parsed;
+  };
+
   // Shipping Document Information
   const [sjNumber, setSjNumber] = useState("");
   const [sjDate, setSjDate] = useState("");
@@ -107,17 +120,18 @@ export function ReceiveNoteForm({ onBack, onSave, existingReceiveNotes = [] }: R
 
   // Calculate totals
   const totalSuratJalanQty = items.reduce(
-    (sum, it) => sum + (it.suratJalanQty ?? it.qty ?? 0),
+    (sum, it) => sum + parseCleanNumber(it.suratJalanQty ?? it.qty ?? 0),
     0
   );
-  const totalSubTotal = items.reduce((sum, it) => sum + it.priceSubtotal, 0);
+  const totalSubTotal = items.reduce((sum, it) => sum + parseCleanNumber(it.priceSubtotal), 0);
 
   // Transfer picked PO items into Add RN table
   const handleAddPickedItems = (pickedItems: PoItemToPick[]) => {
     const newItems: ReceiveNoteItem[] = pickedItems.map((p, idx) => {
       const nextNo = items.length + idx + 1;
-      const initialSjQty = p.remainQty > 0 ? p.remainQty : p.poQty;
-      const subtotal = initialSjQty * p.unitPrice;
+      const initialSjQty = parseCleanNumber(p.remainQty > 0 ? p.remainQty : p.poQty) || 1;
+      const unitPrice = parseCleanNumber(p.unitPrice);
+      const subtotal = initialSjQty * unitPrice;
 
       return {
         id: `rn-item-${Date.now()}-${p.id}`,
@@ -134,14 +148,14 @@ export function ReceiveNoteForm({ onBack, onSave, existingReceiveNotes = [] }: R
         unit: p.unit,
         rafaksi: 0,
         rafaksiPercent: 0,
-        pricePerUnit: p.unitPrice,
+        pricePerUnit: unitPrice,
         priceSubtotal: subtotal,
-        price2PerUnit: p.unitPrice,
+        price2PerUnit: unitPrice,
         price2Subtotal: subtotal,
-        remark: p.remark || "-",
+        remark: p.remark && p.remark !== "-" ? p.remark : "",
         sjNumber: sjNumber || "-",
         sjDate: sjDate || "14-10-2026",
-        poQty: p.poQty,
+        poQty: parseCleanNumber(p.poQty),
         dlvrQty: 0,
         suratJalanQty: initialSjQty,
       };
@@ -196,8 +210,8 @@ export function ReceiveNoteForm({ onBack, onSave, existingReceiveNotes = [] }: R
         if (it.id !== id) return it;
         const updated = { ...it, [field]: val };
         if (field === "suratJalanQty" || field === "pricePerUnit" || field === "qty") {
-          const validQty = Number(updated.suratJalanQty ?? updated.qty) || 0;
-          const validPrice = Number(updated.pricePerUnit) || 0;
+          const validQty = parseCleanNumber(updated.suratJalanQty ?? updated.qty);
+          const validPrice = parseCleanNumber(updated.pricePerUnit);
           updated.priceSubtotal = validQty * validPrice;
           updated.price2Subtotal = validQty * validPrice;
         }
@@ -262,8 +276,8 @@ export function ReceiveNoteForm({ onBack, onSave, existingReceiveNotes = [] }: R
       supplier,
       facility: statusDn ? "FASILITAS" : "NON-FASILITAS",
       bcCode: typeOfDocument,
-      ajuNumber: "00004001456220261014004999",
-      noDaftar: "090400",
+      ajuNumber: ajuNumber || "00004001456220261014004999",
+      noDaftar: noDaftar || "090400",
       amount: totalSubTotal,
       amountFormatted: `IDR ${totalSubTotal.toLocaleString("en-US", {
         minimumFractionDigits: 2,
@@ -282,9 +296,9 @@ export function ReceiveNoteForm({ onBack, onSave, existingReceiveNotes = [] }: R
       taxInvoiceDate: taxInvoiceDate || "-",
       vehicleType: vehicleType || "-",
       licensePlate: licensePlate || "-",
-      tanggalDaftar: formattedArrivalDate,
-      nomorPackingList: plNumber || "-",
-      tanggalPackingList: plDate || "-",
+      tanggalDaftar: tanggalDaftar || formattedArrivalDate,
+      nomorPackingList: plNumber || sjNumber || "-",
+      tanggalPackingList: plDate || sjDate || "-",
       status: "Waiting for Approve 1" as any,
       createdAt: `${formattedArrivalDate} 10:00 by USER`,
       lastUpdatedAt: `${formattedArrivalDate} 10:00 by USER`,
@@ -328,10 +342,10 @@ export function ReceiveNoteForm({ onBack, onSave, existingReceiveNotes = [] }: R
                   ? "#f0fdf4"
                   : "#eff6ff",
             border: `1px solid ${notice.type === "warning"
-                ? "#fde68a"
-                : notice.type === "success"
-                  ? "#bbf7d0"
-                  : "#bfdbfe"
+              ? "#fde68a"
+              : notice.type === "success"
+                ? "#bbf7d0"
+                : "#bfdbfe"
               }`,
             borderRadius: "var(--radius-sm)",
             color:
@@ -598,6 +612,42 @@ export function ReceiveNoteForm({ onBack, onSave, existingReceiveNotes = [] }: R
             </div>
           </div>
 
+          {/* Header Grid: Row 4 (Customs & Registration) */}
+          <div className="tx-header-grid" style={{ marginBottom: "14px" }}>
+            {/* Nomor Aju */}
+            <div className="master-form-group">
+              <label className="master-form-label">Nomor Aju</label>
+              <input
+                type="text"
+                className="master-form-input font-mono"
+                value={ajuNumber}
+                onChange={(e) => setAjuNumber(e.target.value)}
+                placeholder="e.g. 00004001456220261014004999"
+              />
+            </div>
+
+            {/* Nomor Daftar */}
+            <div className="master-form-group">
+              <label className="master-form-label">Nomor Daftar</label>
+              <input
+                type="text"
+                className="master-form-input font-mono"
+                value={noDaftar}
+                onChange={(e) => setNoDaftar(e.target.value)}
+                placeholder="e.g. 090400"
+              />
+            </div>
+
+            {/* Tanggal Daftar */}
+            <div className="master-form-group">
+              <label className="master-form-label">Tanggal Daftar</label>
+              <CustomDatePicker
+                value={tanggalDaftar}
+                onChange={(val) => setTanggalDaftar(val)}
+              />
+            </div>
+          </div>
+
           {/* Options checkboxes and notes */}
           <div
             style={{
@@ -719,7 +769,9 @@ export function ReceiveNoteForm({ onBack, onSave, existingReceiveNotes = [] }: R
                 <tr>
                   <th className="th-right" style={{ width: "75px" }}>PO</th>
                   <th className="th-right" style={{ width: "75px" }}>DLVR</th>
-                  <th className="th-right" style={{ width: "85px" }}>Surat Jalan</th>
+                  <th className="th-right" style={{ width: "95px" }} title="Jumlah yang dimasukkan / diterima">
+                    Received
+                  </th>
                   <th className="th-right" style={{ width: "75px" }}>Rafaksi</th>
                 </tr>
               </thead>
@@ -755,19 +807,17 @@ export function ReceiveNoteForm({ onBack, onSave, existingReceiveNotes = [] }: R
                       <td>{it.sjNumber || sjNumber || "-"}</td>
                       <td>{it.sjDate || sjDate || "-"}</td>
                       <td className="td-right">
-                        {it.poNumber === "—" ? (
-                          <input
-                            type="number"
-                            className="tx-input-cell tx-input-cell--num"
-                            value={it.pricePerUnit}
-                            onChange={(e) => handleUpdateItemField(it.id, "pricePerUnit", parseFloat(e.target.value) || 0)}
-                            style={{ width: "85px", height: "28px" }}
-                          />
-                        ) : (
-                          <span style={{ fontFamily: "monospace" }}>
-                            {it.pricePerUnit.toLocaleString("en-US", { minimumFractionDigits: 2 })}
-                          </span>
-                        )}
+                        <input
+                          type="number"
+                          className="tx-input-cell tx-input-cell--num"
+                          value={parseCleanNumber(it.pricePerUnit)}
+                          onChange={(e) =>
+                            handleUpdateItemField(it.id, "pricePerUnit", parseFloat(e.target.value) || 0)
+                          }
+                          min="0"
+                          step="any"
+                          style={{ width: "95px", height: "28px", textAlign: "right", fontFamily: "monospace" }}
+                        />
                       </td>
                       <td className="td-right" style={{ fontFamily: "monospace", color: "var(--muted)" }}>
                         {(it.poQty ?? it.qty).toLocaleString("en-US", { minimumFractionDigits: 2 })}
@@ -785,16 +835,27 @@ export function ReceiveNoteForm({ onBack, onSave, existingReceiveNotes = [] }: R
                           }
                           min="0"
                           step="any"
-                          style={{ width: "80px", height: "28px" }}
+                          placeholder="0.00"
+                          title="Jumlah yang dimasukkan / diterima"
+                          style={{ width: "85px", height: "28px", textAlign: "right", fontFamily: "monospace" }}
                         />
                       </td>
                       <td className="td-right" style={{ fontFamily: "monospace" }}>
                         {it.rafaksi.toLocaleString("en-US", { minimumFractionDigits: 2 })}
                       </td>
                       <td className="td-right" style={{ fontFamily: "monospace", fontWeight: 700 }}>
-                        {it.priceSubtotal.toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                        {parseCleanNumber(it.priceSubtotal).toLocaleString("en-US", { minimumFractionDigits: 2 })}
                       </td>
-                      <td>{it.remark || "-"}</td>
+                      <td>
+                        <input
+                          type="text"
+                          className="tx-input-cell"
+                          value={it.remark === "-" ? "" : it.remark}
+                          onChange={(e) => handleUpdateItemField(it.id, "remark", e.target.value)}
+                          placeholder="Item remark..."
+                          style={{ height: "28px" }}
+                        />
+                      </td>
                       <td className="td-center">
                         <button
                           type="button"

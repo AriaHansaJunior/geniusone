@@ -60,17 +60,34 @@ export function ReceiveNoteDetail({
     };
   }, [code]);
 
-  // Find record by code/id/rnNumber or API data
-  const baseData =
-    record ||
-    apiData ||
+  // Merge API data on top of record and fallback mock
+  const fallbackRecord =
     initialReceiveNoteRecords.find(
       (r) =>
         r.id === code ||
         r.rnNumber === code ||
         (typeof r.rnNumber === "string" && r.rnNumber.replace(/[\/\\]/g, "-") === code)
-    ) ||
-    initialReceiveNoteRecords[0];
+    ) || initialReceiveNoteRecords[0] || {};
+
+  const baseData = {
+    ...fallbackRecord,
+    ...(record || {}),
+    ...(apiData || {}),
+  };
+
+  const rawHeaderRemark =
+    apiData?.note ||
+    apiData?.remark ||
+    apiData?.notes ||
+    apiData?.description ||
+    record?.remark ||
+    record?.note ||
+    record?.notes ||
+    record?.description ||
+    baseData.remark ||
+    baseData.note ||
+    baseData.description ||
+    "-";
 
   const rnData: ReceiveNoteRecord = {
     ...baseData,
@@ -81,46 +98,55 @@ export function ReceiveNoteDetail({
     bcCode: baseData.bcCode || baseData.bc_code || "BC 4.0",
     currency: typeof baseData.currency === "object" ? (baseData.currency?.code || "IDR") : (baseData.currency || "IDR"),
     rate: Number(baseData.rate || 1.0),
-    invoiceNumber: baseData.invoiceNumber || baseData.invoice_number || "-",
-    invoiceDate: baseData.invoiceDate || baseData.invoice_date || "-",
-    taxInvoiceNumber: baseData.taxInvoiceNumber || baseData.tax_invoice || "-",
-    taxInvoiceDate: baseData.taxInvoiceDate || baseData.tax_invoice_date || "-",
-    licensePlate: baseData.licensePlate || baseData.license_plate || "-",
-    vehicleType: baseData.vehicleType || baseData.vehicle_type || "-",
-    ajuNumber: baseData.ajuNumber || baseData.aju_number || "00004001456220261014004999",
-    noDaftar: baseData.noDaftar || baseData.no_daftar || "090400",
-    tanggalDaftar: baseData.tanggalDaftar || baseData.tanggal_daftar || "-",
-    nomorPackingList: baseData.nomorPackingList || baseData.pl_number || "-",
-    tanggalPackingList: baseData.tanggalPackingList || baseData.pl_date || "-",
-    description: baseData.description || baseData.note || baseData.notes || baseData.remark || "-",
-    note: baseData.note || baseData.notes || baseData.description || baseData.remark || "-",
-    remark: baseData.remark || baseData.note || baseData.description || "-",
+    invoiceNumber: apiData?.invoiceNumber || apiData?.invoice_number || record?.invoiceNumber || record?.invoice_number || baseData.invoiceNumber || baseData.invoice_number || "-",
+    invoiceDate: apiData?.invoiceDate || apiData?.invoice_date || record?.invoiceDate || record?.invoice_date || baseData.invoiceDate || baseData.invoice_date || "-",
+    taxInvoiceNumber: apiData?.taxInvoiceNumber || apiData?.tax_invoice || record?.taxInvoiceNumber || record?.tax_invoice || baseData.taxInvoiceNumber || baseData.tax_invoice || "-",
+    taxInvoiceDate: apiData?.taxInvoiceDate || apiData?.tax_invoice_date || record?.taxInvoiceDate || record?.tax_invoice_date || baseData.taxInvoiceDate || baseData.tax_invoice_date || "-",
+    licensePlate: apiData?.licensePlate || apiData?.license_plate || record?.licensePlate || record?.license_plate || baseData.licensePlate || baseData.license_plate || "-",
+    vehicleType: apiData?.vehicleType || apiData?.vehicle_type || record?.vehicleType || record?.vehicle_type || baseData.vehicleType || baseData.vehicle_type || "-",
+    ajuNumber: apiData?.ajuNumber || apiData?.aju_number || record?.ajuNumber || record?.aju_number || baseData.ajuNumber || baseData.aju_number || "00004001456220261014004999",
+    noDaftar: apiData?.noDaftar || apiData?.no_daftar || record?.noDaftar || record?.no_daftar || baseData.noDaftar || baseData.no_daftar || "090400",
+    tanggalDaftar: apiData?.tanggalDaftar || apiData?.tanggal_daftar || record?.tanggalDaftar || record?.tanggal_daftar || baseData.tanggalDaftar || baseData.tanggal_daftar || "-",
+    nomorPackingList: apiData?.nomorPackingList || apiData?.pl_number || record?.nomorPackingList || record?.pl_number || baseData.nomorPackingList || baseData.pl_number || baseData.sj_number || "-",
+    tanggalPackingList: apiData?.tanggalPackingList || apiData?.pl_date || record?.tanggalPackingList || record?.pl_date || baseData.tanggalPackingList || baseData.pl_date || baseData.sj_date || "-",
+    description: rawHeaderRemark,
+    note: rawHeaderRemark,
+    remark: rawHeaderRemark,
     status: baseData.status || "Waiting for Approve 1",
     createdAt: baseData.createdAt || baseData.created_at || "-",
     lastUpdatedAt: baseData.lastUpdatedAt || baseData.updated_at || "-",
     approval1At: baseData.approval1At || baseData.approval_1_at || "-",
     approval2At: baseData.approval2At || baseData.approval_2_at || "-",
-    items: Array.isArray(baseData.items) ? baseData.items.map((it: any, i: number) => ({
-      id: it.id || `item-${i}`,
-      poNumber: it.poNumber || it.po_number || "-",
-      poDate: it.poDate || it.po_date || "-",
-      dnNumber: it.dnNumber || it.dn_number || "-",
-      dnDate: it.dnDate || it.dn_date || "-",
-      jobNumber: it.jobNumber || it.job_number || "-",
-      jobDate: it.jobDate || it.job_date || "-",
-      itemCode: it.itemCode || it.item_code || it.code || "-",
-      itemName: it.itemName || it.item_name || it.item || "-",
-      qty: Number(it.qty ?? it.gross_quantity ?? it.quantity ?? 0),
-      suratJalanQty: Number(it.suratJalanQty ?? it.gross_quantity ?? it.quantity ?? 0),
-      unit: it.unit || "PCE",
-      rafaksi: Number(it.rafaksi || 0),
-      rafaksiPercent: Number(it.rafaksiPercent || 0),
-      pricePerUnit: Number(it.pricePerUnit ?? it.price ?? 0),
-      priceSubtotal: Number(it.priceSubtotal ?? ((it.qty ?? it.quantity ?? 0) * (it.price ?? 0))),
-      price2PerUnit: Number(it.price2PerUnit ?? it.price ?? 0),
-      price2Subtotal: Number(it.price2Subtotal ?? ((it.qty ?? it.quantity ?? 0) * (it.price ?? 0))),
-      remark: it.remark || it.note || "-",
-    })) : [],
+    items: Array.isArray(apiData?.items && apiData.items.length > 0 ? apiData.items : baseData.items)
+      ? (apiData?.items && apiData.items.length > 0 ? apiData.items : baseData.items).map((it: any, i: number) => {
+        const rawPrice = it.price ?? it.pricePerUnit ?? it.price_numeric ?? 0;
+        const cleanPrice = typeof rawPrice === "number" ? (isNaN(rawPrice) ? 0 : rawPrice) : (parseFloat(String(rawPrice).replace(/[^0-9.-]/g, "")) || 0);
+        const rawQty = Number(it.qty ?? it.gross_quantity ?? it.quantity ?? it.suratJalanQty ?? 0);
+        const cleanQty = isNaN(rawQty) ? 0 : rawQty;
+        const cleanSubtotal = Number(it.priceSubtotal ?? it.grand_total ?? (cleanQty * cleanPrice));
+        return {
+          id: it.id || `item-${i}`,
+          poNumber: it.poNumber || it.po_number || "-",
+          poDate: it.poDate || it.po_date || "-",
+          dnNumber: it.dnNumber || it.dn_number || "-",
+          dnDate: it.dnDate || it.dn_date || "-",
+          jobNumber: it.jobNumber || it.job_number || "-",
+          jobDate: it.jobDate || it.job_date || "-",
+          itemCode: it.itemCode || it.item_code || it.code || "-",
+          itemName: it.itemName || it.item_name || it.item || "-",
+          qty: cleanQty,
+          suratJalanQty: cleanQty,
+          unit: it.unit || "PCE",
+          rafaksi: Number(it.rafaksi || 0),
+          rafaksiPercent: Number(it.rafaksiPercent || 0),
+          pricePerUnit: cleanPrice,
+          priceSubtotal: isNaN(cleanSubtotal) ? cleanQty * cleanPrice : cleanSubtotal,
+          price2PerUnit: cleanPrice,
+          price2Subtotal: isNaN(cleanSubtotal) ? cleanQty * cleanPrice : cleanSubtotal,
+          remark: it.remark && it.remark !== "-" ? it.remark : (it.note && it.note !== "-" ? it.note : "-"),
+        };
+      })
+      : [],
     totalQty: Number(baseData.totalQty ?? baseData.total_gross_quantity ?? 0),
     amount: Number(baseData.amount ?? 0),
     biayaLain: Number(baseData.biayaLain ?? 0),

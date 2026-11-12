@@ -85,7 +85,7 @@ Route::prefix('procurement')->group(function () {
     // Purchase Order (PO)
     Route::get('/po', [PurchaseOrderApiController::class, 'index']);
     Route::post('/po', [PurchaseOrderApiController::class, 'store']);
-    Route::get('/po/{code}', [PurchaseOrderApiController::class, 'show']);
+    Route::get('/po/{code}', [PurchaseOrderApiController::class, 'show'])->where('code', '.*');
     Route::post('/po/{id}/approve', [PurchaseOrderApiController::class, 'approve']);
     Route::post('/po/{id}/reject', [PurchaseOrderApiController::class, 'reject']);
     Route::post('/po/{id}/additional-costs', [PurchaseOrderApiController::class, 'storeAdditionalCost']);
@@ -216,11 +216,11 @@ Route::get('/pr/{code}/attachment', [PurchaseRequisitionApiController::class, 'd
 
 Route::get('/po', [PurchaseOrderApiController::class, 'index']);
 Route::post('/po', [PurchaseOrderApiController::class, 'store']);
-Route::get('/po/{code}', [PurchaseOrderApiController::class, 'show']);
+Route::get('/po/{code}', [PurchaseOrderApiController::class, 'show'])->where('code', '.*');
 
 Route::get('/rn', [ReceiveNoteApiController::class, 'index']);
 Route::post('/rn', [ReceiveNoteApiController::class, 'store']);
-Route::get('/rn/{code}', [ReceiveNoteApiController::class, 'show']);
+Route::get('/rn/{code}', [ReceiveNoteApiController::class, 'show'])->where('code', '.*');
 
 Route::get('/report', [TraceabilityReportApiController::class, 'index']);
 Route::get('/report/{code}', [TraceabilityReportApiController::class, 'show']);

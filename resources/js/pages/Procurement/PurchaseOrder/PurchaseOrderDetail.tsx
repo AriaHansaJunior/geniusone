@@ -293,7 +293,7 @@ export function PurchaseOrderDetail({
             item: row.material || row.itemName || "Industrial Procurement Material",
             itemName: row.material || row.itemName || "Industrial Procurement Material",
             itemCode: "10.100.100.001",
-            itemAlias: "—",
+            itemAlias: row.material || row.itemName || "Industrial Procurement Material",
             quantity: row._totalQty || "1.0000 KGM",
             orderQty: parseFloat(String(row._totalQty || "1").replace(/[^0-9.]/g, "")) || 1,
             unit: String(row._totalQty || "").replace(/[0-9., ]/g, "") || "KGM",
@@ -344,7 +344,7 @@ export function PurchaseOrderDetail({
           setAvailableCostTypes(json.data);
         }
       })
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   const handleSaveAdditionalCost = async () => {
@@ -406,33 +406,6 @@ export function PurchaseOrderDetail({
       setCostError(err.message || "Error saving additional cost");
     } finally {
       setIsSubmittingCost(false);
-    }
-  };
-
-  const handleDeleteAdditionalCost = async (costId: number | string) => {
-    if (!window.confirm("Are you sure you want to delete this additional cost?")) return;
-    try {
-      const poTarget = row.id ? String(row.id) : docToSlug(docNumber);
-      const res = await fetch(`/api/po/${poTarget}/additional-costs/${costId}`, {
-        method: "DELETE",
-        headers: {
-          "Accept": "application/json",
-          "X-Requested-With": "XMLHttpRequest",
-          ...(document.querySelector('meta[name="csrf-token"]')
-            ? { "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]')?.getAttribute("content") || "" }
-            : {}),
-        },
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.message || "Failed to delete cost");
-      }
-      setLocalOtherCosts((prev) => prev.filter((c) => String(c.id) !== String(costId)));
-      fetchDetail("po", code).then((item) => {
-        if (item) setRow(item);
-      });
-    } catch (err: any) {
-      alert(err.message || "Error deleting cost");
     }
   };
 
@@ -824,11 +797,19 @@ export function PurchaseOrderDetail({
                     </td>
                     <td>
                       <span style={{ fontWeight: 600, color: "var(--ink)" }}>
-                        {item.itemAlias && item.itemAlias !== "—"
-                          ? item.itemAlias
-                          : item.item_alias && item.item_alias !== "—"
-                            ? item.item_alias
-                            : item.itemName || item.item || "—"}
+                        {(() => {
+                          const candidate = item.itemAlias || item.item_alias;
+                          if (
+                            candidate &&
+                            candidate !== "—" &&
+                            candidate !== "-" &&
+                            candidate !== item.itemCode &&
+                            candidate !== item.code
+                          ) {
+                            return candidate;
+                          }
+                          return item.itemName || item.item || item.name || "Industrial Material";
+                        })()}
                       </span>
                     </td>
                     <td>
@@ -1052,7 +1033,6 @@ export function PurchaseOrderDetail({
                   <th style={{ minWidth: "160px" }}>Cost Name / Description</th>
                   <th style={{ width: "140px", textAlign: "right" }}>Amount ({currency})</th>
                   <th style={{ minWidth: "160px" }}>Remark / Purpose</th>
-                  <th style={{ width: "60px", textAlign: "center" }}>Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -1067,34 +1047,12 @@ export function PurchaseOrderDetail({
                           {currency} {cVal.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </td>
                         <td>{c.note || c.remark || "—"}</td>
-                        <td style={{ textAlign: "center" }}>
-                          {c.id && (
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteAdditionalCost(c.id)}
-                              title="Delete Additional Cost"
-                              style={{
-                                background: "transparent",
-                                border: "none",
-                                color: "var(--red-600, #dc2626)",
-                                cursor: "pointer",
-                                padding: "4px",
-                                borderRadius: "4px",
-                                display: "inline-flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                              }}
-                            >
-                              <Icon name="trash" size={14} />
-                            </button>
-                          )}
-                        </td>
                       </tr>
                     );
                   })
                 ) : (
                   <tr>
-                    <td colSpan={5} style={{ textAlign: "center", padding: "24px 20px", color: "var(--muted)" }}>
+                    <td colSpan={4} style={{ textAlign: "center", padding: "24px 20px", color: "var(--muted)" }}>
                       No additional logistics or transport costs recorded for this purchase order.
                     </td>
                   </tr>
@@ -1108,7 +1066,7 @@ export function PurchaseOrderDetail({
                   <td style={{ textAlign: "right", padding: "12px 14px", fontFamily: "ui-monospace, monospace" }}>
                     {currency} {totalOtherCosts.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </td>
-                  <td colSpan={2} style={{ padding: "12px 14px", color: "var(--muted)", fontSize: "11px" }}>
+                  <td style={{ padding: "12px 14px", color: "var(--muted)", fontSize: "11px" }}>
                     {totalOtherCosts > 0 ? "Applied to Grand Total" : "No surcharge active"}
                   </td>
                 </tr>

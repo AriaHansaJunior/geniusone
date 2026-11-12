@@ -267,7 +267,7 @@ class PurchaseOrderService
 
                 $mItem = $resolvedItemId ? \App\Models\Master\Material\Item::find($resolvedItemId) : null;
                 $aliasInput = trim((string) ($item['item_alias'] ?? $item['itemAlias'] ?? ''));
-                if ($aliasInput === '' || in_array($aliasInput, ['—', '-'], true)) {
+                if ($aliasInput === '' || in_array($aliasInput, ['—', '-'], true) || ($mItem && $aliasInput === $mItem->code) || ($prItem?->item && $aliasInput === $prItem->item->code)) {
                     $aliasInput = $mItem?->name ?? $prItem?->item?->name ?? $item['itemName'] ?? $item['item'] ?? 'Industrial Material';
                 }
 
@@ -501,13 +501,11 @@ class PurchaseOrderService
     }
 
     /**
-     * Delete an additional cost from a PO.
+     * Delete an additional cost from a PO (Disabled per business rules: additional costs on PO cannot be deleted).
      */
     public function deleteAdditionalCost(PurchaseOrder $order, int $costId): bool
     {
-        return (bool) AdditionalCost::where('purchase_order_id', $order->id)
-            ->where('id', $costId)
-            ->delete();
+        throw new InvalidArgumentException("Additional costs recorded on Purchase Order '{$order->po_number}' cannot be deleted.");
     }
 
     /**

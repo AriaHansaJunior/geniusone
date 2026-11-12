@@ -89,8 +89,16 @@ class PurchaseOrderApiController extends Controller
      */
     public function show(Request $request, string $code)
     {
-        $rawCode = str_replace('-', '/', $code);
-        $cleanCode = preg_replace('/[^A-Za-z0-9]/', '', $code);
+        $decodedCode = urldecode($code);
+        $rawCode = str_replace('-', '/', $decodedCode);
+        $cleanCode = preg_replace('/[^A-Za-z0-9]/', '', $decodedCode);
+
+        $numericId = null;
+        if (is_numeric($decodedCode)) {
+            $numericId = (int) $decodedCode;
+        } elseif (preg_match('/^po-(\d+)$/i', $decodedCode, $m)) {
+            $numericId = (int) $m[1];
+        }
 
         $po = PurchaseOrder::with([
             'supplier',
@@ -101,6 +109,8 @@ class PurchaseOrderApiController extends Controller
             'paymentTerm',
             'paymentMethod',
             'deliveryTerm',
+            'items.directItem.unitOfMeasurement',
+            'items.directItem.facility',
             'items.requisitionItem.item.unitOfMeasurement',
             'items.requisitionItem.item.facility',
             'items.requisitionItem.purchaseRequisition',
@@ -108,10 +118,15 @@ class PurchaseOrderApiController extends Controller
             'additionalCosts.type',
             'receiveNotes.receiveNote',
         ])
-            ->where('po_number', $rawCode)
-            ->orWhere('po_number', $code)
-            ->orWhere('id', is_numeric($code) ? (int) $code : null)
-            ->orWhereRaw("REPLACE(REPLACE(po_number, '/', ''), '-', '') = ?", [$cleanCode])
+            ->where(function ($q) use ($decodedCode, $rawCode, $cleanCode, $numericId) {
+                $q->where('po_number', $decodedCode)
+                    ->orWhere('po_number', $rawCode)
+                    ->orWhereRaw("REPLACE(REPLACE(po_number, '/', ''), '-', '') = ?", [$cleanCode]);
+
+                if ($numericId) {
+                    $q->orWhere('id', $numericId);
+                }
+            })
             ->first();
 
         if (! $po) {
@@ -201,9 +216,12 @@ class PurchaseOrderApiController extends Controller
 
             $remainingQty = max(0.0, $qty - $receivedQty);
             $isFullyReceived = $qty > 0 && $receivedQty >= $qty;
-            $resolvedAlias = ! empty($it->item_alias) && ! in_array($it->item_alias, ['—', '-'], true)
-                ? $it->item_alias
-                : ($itemObj?->name ?? 'Industrial Material');
+            $aliasCandidate = $it->item_alias;
+            if (empty($aliasCandidate) || in_array($aliasCandidate, ['—', '-'], true) || ($itemObj && $aliasCandidate === $itemObj->code)) {
+                $resolvedAlias = $itemObj?->name ?? 'Industrial Material';
+            } else {
+                $resolvedAlias = $aliasCandidate;
+            }
 
             return [
                 'id' => $it->id,
@@ -226,6 +244,8 @@ class PurchaseOrderApiController extends Controller
                 'orderQty' => $qty,
                 'quantity' => number_format($qty, 4).' '.$unitName,
                 'unit' => $unitName,
+                'rawPrice' => (float) $price,
+                'price_numeric' => (float) $price,
                 'price' => number_format($price, 2),
                 'discount' => number_format($disc, 2),
                 'subtotal' => number_format($sub, 2),
@@ -529,9 +549,17 @@ class PurchaseOrderApiController extends Controller
             $pphId = ! empty($it['pph_id']) && is_numeric($it['pph_id']) && \Illuminate\Support\Facades\DB::table('pph')->where('id', $it['pph_id'])->exists() ? (int) $it['pph_id'] : null;
             $ppnId = ! empty($it['ppn_id']) && is_numeric($it['ppn_id']) && \Illuminate\Support\Facades\DB::table('ppn')->where('id', $it['ppn_id'])->exists() ? (int) $it['ppn_id'] : null;
 
+            $aliasCandidate = $it['item_alias'] ?? $it['itemAlias'] ?? $it['itemName'] ?? $it['item_name'] ?? null;
+            if ($prHasItemId && (empty($aliasCandidate) || in_array($aliasCandidate, ['—', '-'], true))) {
+                $prItem = \App\Models\Procurement\PurchaseRequest\PurchaseRequisitionItem::with('item')->find($prHasItemId);
+                if ($prItem?->item?->name) {
+                    $aliasCandidate = $prItem->item->name;
+                }
+            }
+
             $processedItems[] = [
                 'pr_has_items_id' => $prHasItemId,
-                'item_alias' => $it['item_alias'] ?? $it['itemAlias'] ?? $it['itemName'] ?? $it['item_name'] ?? null,
+                'item_alias' => $aliasCandidate,
                 'price' => $price,
                 'order' => $orderQty,
                 'purchased' => (float) ($it['purchased'] ?? $orderQty),
@@ -642,33 +670,14 @@ class PurchaseOrderApiController extends Controller
     }
 
     /**
-     * Remove an additional cost from a PO.
+     * Remove an additional cost from a PO (Disabled per business rules: additional costs on PO cannot be deleted).
      */
     public function destroyAdditionalCost(Request $request, $id, $costId)
     {
-        $rawCode = str_replace('-', '/', (string) $id);
-        $cleanCode = preg_replace('/[^A-Za-z0-9]/', '', (string) $id);
-
-        $po = PurchaseOrder::where('po_number', $rawCode)
-            ->orWhere('po_number', $id)
-            ->orWhere('id', is_numeric($id) ? (int) $id : null)
-            ->orWhereRaw("REPLACE(REPLACE(po_number, '/', ''), '-', '') = ?", [$cleanCode])
-            ->first();
-
-        if (! $po) {
-            return response()->json(['status' => 'error', 'message' => 'Purchase Order not found: '.$id], 404);
-        }
-
-        GeniusOneBackend::po()->deleteAdditionalCost($po, (int) $costId);
-
-        $updatedPo = $po->fresh(['additionalCosts.type', 'items.requisitionItem.item.facility']);
-        $formatted = $this->formatPoRow($updatedPo, 1, true);
-
         return response()->json([
-            'status' => 'success',
-            'message' => 'Additional cost deleted successfully',
-            'item' => $formatted,
-        ]);
+            'status' => 'error',
+            'message' => 'Additional costs recorded on Purchase Order detail cannot be deleted.',
+        ], 403);
     }
 
     /**
