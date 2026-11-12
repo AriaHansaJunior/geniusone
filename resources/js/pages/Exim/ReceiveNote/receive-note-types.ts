@@ -45,7 +45,19 @@ export interface ReceiveNoteRecord {
   bpb_number?: string;
   is_received_in_bpb?: boolean;
   note?: string;
+  notes?: string;
   remark?: string;
+  invoice_number?: string;
+  invoice_date?: string;
+  tax_invoice?: string;
+  tax_invoice_date?: string;
+  license_plate?: string;
+  vehicle_type?: string;
+  aju_number?: string;
+  no_daftar?: string;
+  tanggal_daftar?: string;
+  pl_number?: string;
+  pl_date?: string;
   // Detail metadata
   currency: string;
   rate: number;

@@ -141,8 +141,6 @@ export function ReceiveNoteDetail({
           rafaksiPercent: Number(it.rafaksiPercent || 0),
           pricePerUnit: cleanPrice,
           priceSubtotal: isNaN(cleanSubtotal) ? cleanQty * cleanPrice : cleanSubtotal,
-          price2PerUnit: cleanPrice,
-          price2Subtotal: isNaN(cleanSubtotal) ? cleanQty * cleanPrice : cleanSubtotal,
           remark: it.remark && it.remark !== "-" ? it.remark : (it.note && it.note !== "-" ? it.note : "-"),
         };
       })
@@ -455,14 +453,9 @@ export function ReceiveNoteDetail({
                 <th colSpan={2} className="text-center rn-detail-th-grouped">
                   Price (IDR)
                 </th>
-                <th colSpan={2} className="text-center rn-detail-th-grouped">
-                  Price (IDR)
-                </th>
                 <th rowSpan={2}>Remark</th>
               </tr>
               <tr>
-                <th className="rn-detail-th-sub text-right">@</th>
-                <th className="rn-detail-th-sub text-right">Subtotal</th>
                 <th className="rn-detail-th-sub text-right">@</th>
                 <th className="rn-detail-th-sub text-right">Subtotal</th>
               </tr>
@@ -470,7 +463,7 @@ export function ReceiveNoteDetail({
             <tbody>
               {rnData.items.length === 0 ? (
                 <tr>
-                  <td colSpan={12} className="rn-table-empty">
+                  <td colSpan={10} className="rn-table-empty">
                     No items in this Receive Note.
                   </td>
                 </tr>
@@ -523,7 +516,7 @@ export function ReceiveNoteDetail({
                         {it.rafaksiPercent.toFixed(2)}%
                       </div>
                     </td>
-                    {/* First Price Section */}
+                    {/* Price Section */}
                     <td className="text-right">
                       <div className="font-mono">
                         {it.pricePerUnit.toLocaleString("en-US", {
@@ -536,25 +529,6 @@ export function ReceiveNoteDetail({
                     <td className="text-right">
                       <div className="font-mono font-medium text-ink">
                         {it.priceSubtotal.toLocaleString("en-US", {
-                          minimumFractionDigits: 4,
-                          maximumFractionDigits: 4,
-                        })}
-                      </div>
-                      <div className="text-xs text-muted">IDR</div>
-                    </td>
-                    {/* Second Price Section */}
-                    <td className="text-right">
-                      <div className="font-mono">
-                        {it.price2PerUnit.toLocaleString("en-US", {
-                          minimumFractionDigits: 4,
-                          maximumFractionDigits: 4,
-                        })}
-                      </div>
-                      <div className="text-xs text-muted">IDR</div>
-                    </td>
-                    <td className="text-right">
-                      <div className="font-mono font-medium text-ink">
-                        {it.price2Subtotal.toLocaleString("en-US", {
                           minimumFractionDigits: 4,
                           maximumFractionDigits: 4,
                         })}
@@ -579,25 +553,10 @@ export function ReceiveNoteDetail({
                   })}
                 </td>
                 <td></td>
-                {/* First Section Total */}
+                {/* Price Section Total */}
                 <td className="text-right font-mono font-bold">
                   {rnData.items.length > 0
                     ? rnData.items[0].pricePerUnit.toLocaleString("en-US", {
-                      minimumFractionDigits: 4,
-                    })
-                    : "0.0000"}
-                  <div className="text-xs font-normal text-muted">IDR</div>
-                </td>
-                <td className="text-right font-mono font-bold">
-                  {rnData.amount.toLocaleString("en-US", {
-                    minimumFractionDigits: 4,
-                  })}
-                  <div className="text-xs font-normal text-muted">IDR</div>
-                </td>
-                {/* Second Section Total */}
-                <td className="text-right font-mono font-bold">
-                  {rnData.items.length > 0
-                    ? rnData.items[0].price2PerUnit.toLocaleString("en-US", {
                       minimumFractionDigits: 4,
                     })
                     : "0.0000"}
@@ -614,7 +573,7 @@ export function ReceiveNoteDetail({
 
               {/* Biaya Lain */}
               <tr className="rn-summary-row">
-                <td colSpan={10} className="text-right font-medium text-ink">
+                <td colSpan={8} className="text-right font-medium text-ink">
                   Biaya Lain
                 </td>
                 <td className="text-right font-mono">
@@ -628,7 +587,7 @@ export function ReceiveNoteDetail({
 
               {/* Discount */}
               <tr className="rn-summary-row">
-                <td colSpan={10} className="text-right font-medium text-ink">
+                <td colSpan={8} className="text-right font-medium text-ink">
                   Discount({rnData.discountPercent.toFixed(2)}%)
                 </td>
                 <td className="text-right font-mono">
@@ -642,7 +601,7 @@ export function ReceiveNoteDetail({
 
               {/* PPN */}
               <tr className="rn-summary-row">
-                <td colSpan={10} className="text-right font-medium text-ink">
+                <td colSpan={8} className="text-right font-medium text-ink">
                   PPN({rnData.ppnPercent.toFixed(0)}%)
                 </td>
                 <td className="text-right font-mono">
@@ -656,7 +615,7 @@ export function ReceiveNoteDetail({
 
               {/* Grand Total */}
               <tr className="rn-summary-row rn-summary-row--grand">
-                <td colSpan={10} className="text-right font-bold text-ink">
+                <td colSpan={8} className="text-right font-bold text-ink">
                   Grand Total
                 </td>
                 <td className="text-right font-mono font-bold text-ink">

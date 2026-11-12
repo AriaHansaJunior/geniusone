@@ -2640,6 +2640,12 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
               handleNavigateList("stock-notification-master", "/dashboard/stock-notification-master")
             }
             onNavigatePrCreate={handleNavigatePrCreate}
+            onNavigateDetail={handleNavigateDetail}
+            onNavigateReceiveNoteDetail={handleNavigateReceiveNoteDetail}
+            onNavigateRequestMaterialDetail={handleNavigateRequestMaterialDetail}
+            receiveNoteRecords={receiveNoteRecords}
+            requestMaterialRecords={requestMaterialRecords}
+            onReceiveNotesUpdate={setReceiveNoteRecords}
           />
         )}
 

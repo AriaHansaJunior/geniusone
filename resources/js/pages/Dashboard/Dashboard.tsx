@@ -13,17 +13,26 @@ import {
 } from "./dashboard-rate-data";
 import { DashboardRateChart } from "./DashboardRateChart";
 import { DashboardStockAlert } from "./DashboardStockAlert";
+import { DashboardPendingApprovals } from "./DashboardPendingApprovals";
 import { ErrorBoundary } from "../../components/ui/ErrorBoundary";
 import type {
   ExchangeRateRecord,
   RateSortField,
   SortDirection,
 } from "./dashboard-rate-types";
+import type { ReceiveNoteRecord } from "../Exim/ReceiveNote/receive-note-types";
+import type { RequestMaterialRecord } from "../Warehouse/Request/RequestMaterial/request-material-types";
 
 interface DashboardProps {
   onAddNewBufferRule?: () => void;
   onManageBufferRules?: () => void;
   onNavigatePrCreate?: () => void;
+  onNavigateDetail?: (module: "pr" | "po" | "report" | "warehouse", identifier: string) => void;
+  onNavigateReceiveNoteDetail?: (rnNumber: string) => void;
+  onNavigateRequestMaterialDetail?: (id: string) => void;
+  receiveNoteRecords?: ReceiveNoteRecord[];
+  requestMaterialRecords?: RequestMaterialRecord[];
+  onReceiveNotesUpdate?: React.Dispatch<React.SetStateAction<ReceiveNoteRecord[]>>;
 }
 
 const mapApiExchangeRateRecord = (r: any, idx: number): ExchangeRateRecord => {
@@ -58,6 +67,12 @@ export function Dashboard({
   onAddNewBufferRule,
   onManageBufferRules,
   onNavigatePrCreate,
+  onNavigateDetail,
+  onNavigateReceiveNoteDetail,
+  onNavigateRequestMaterialDetail,
+  receiveNoteRecords,
+  requestMaterialRecords,
+  onReceiveNotesUpdate,
 }: DashboardProps = {}) {
   // Filter form state
   const [startDate, setStartDate] = useState("2026-10-01");
@@ -308,6 +323,16 @@ export function Dashboard({
 
   return (
     <div className="dashboard-view">
+      {/* Pending Approvals Shortcut Widget (Placed at top as requested) */}
+      <DashboardPendingApprovals
+        onNavigateDetail={onNavigateDetail}
+        onNavigateReceiveNoteDetail={onNavigateReceiveNoteDetail}
+        onNavigateRequestMaterialDetail={onNavigateRequestMaterialDetail}
+        receiveNoteRecords={receiveNoteRecords}
+        requestMaterialRecords={requestMaterialRecords}
+        onReceiveNotesUpdate={onReceiveNotesUpdate}
+      />
+
       {/* Stock Buffer Alert & Low Inventory Reminders */}
       <DashboardStockAlert
         onAddNewRule={onAddNewBufferRule}

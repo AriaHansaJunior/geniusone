@@ -629,7 +629,7 @@ export function PurchaseOrderCreate({
           itemCode: it.itemCode,
           itemAlias: (it.itemAlias && it.itemAlias !== "—" && it.itemAlias !== it.itemCode)
             ? it.itemAlias
-            : (it.itemName || it.item || it.material || it.itemCode),
+            : (it.itemName || (it as any).item || (it as any).material || it.itemCode),
           facility: fac,
           price: 0,
           unit: it.unit || "PCE",
@@ -1165,9 +1165,9 @@ export function PurchaseOrderCreate({
           };
         }),
         additional_costs: additionalCosts.map((c) => {
-          const matchedMaster = masterAdditionalCosts.find((m) => m.costName === c.costName || m.costCode === c.costCode);
+          const matchedMaster = masterAdditionalCosts.find((m) => m.costName === c.costName || (m as any).costCode === (c as any).costCode);
           const rawId = matchedMaster?.id;
-          const numericId = rawId && !String(rawId).startsWith("ac-") && !isNaN(Number(rawId)) ? Number(rawId) : null;
+          const numericId = rawId && !String(rawId).startsWith("ac-") && !isNaN(Number(rawId)) ? Number(rawId) : undefined;
           return {
             additional_cost_types_id: numericId,
             name: c.costName,
