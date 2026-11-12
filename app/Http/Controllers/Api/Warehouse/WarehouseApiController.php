@@ -409,6 +409,54 @@ class WarehouseApiController extends Controller
                         'po_has_rn_id' => $poRn->id,
                         'warehouses_id' => $itemWhId,
                     ]);
+
+                    // Allocate and synchronize stock in the user's selected destination warehouse
+                    $targetItem = Item::where('name', $itemName)
+                        ->orWhere('code', $itemName)
+                        ->orWhere('external_code', $itemName)
+                        ->orWhere('name', 'like', "%{$itemName}%")
+                        ->first();
+
+                    if (! $targetItem && ! empty($itemData['code'])) {
+                        $targetItem = Item::where('code', $itemData['code'])
+                            ->orWhere('external_code', $itemData['code'])
+                            ->first();
+                    }
+
+                    if ($targetItem) {
+                        $netQty = max(0.0, $qty - $rafaksi);
+                        $stockRow = DB::table('warehouse_stocks')
+                            ->where('items_id', $targetItem->id)
+                            ->where('warehouses_id', $itemWhId)
+                            ->first();
+
+                        if ($stockRow) {
+                            DB::table('warehouse_stocks')->where('id', $stockRow->id)->update([
+                                'quantity' => DB::raw("quantity + {$netQty}"),
+                                'available_quantity' => DB::raw("available_quantity + {$netQty}"),
+                                'lot_number' => $dnNumber ?: $stockRow->lot_number,
+                                'last_movement_date' => $receiveDate,
+                                'updated_at' => now(),
+                            ]);
+                        } else {
+                            DB::table('warehouse_stocks')->insert([
+                                'items_id' => $targetItem->id,
+                                'warehouses_id' => $itemWhId,
+                                'coordinate_name' => 'A-01-01',
+                                'quantity' => $netQty,
+                                'available_quantity' => $netQty,
+                                'allocated_quantity' => 0,
+                                'lot_number' => $dnNumber ?: 'LOT-'.date('Ymd'),
+                                'location_type' => 'Warehouse',
+                                'last_movement_date' => $receiveDate,
+                                'created_at' => now(),
+                                'updated_at' => now(),
+                            ]);
+                        }
+
+                        $totalStock = DB::table('warehouse_stocks')->where('items_id', $targetItem->id)->sum('quantity');
+                        $targetItem->update(['stock' => $totalStock]);
+                    }
                 }
             } elseif ($rn->purchaseOrders()->count() > 0) {
                 foreach ($rn->purchaseOrders as $poRn) {

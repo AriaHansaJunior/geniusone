@@ -42,7 +42,10 @@ class PurchaseOrderService
         $pr = PurchaseRequisition::with('items.item')->findOrFail($prId);
 
         // BE-05: Strict Downstream Gating (PR must be Approved before PO generation)
-        if (! in_array($pr->status, ['Approved', 'Approved 2'], true)) {
+        $isPrApproved = in_array($pr->status, ['Approved', 'Approved 2', 'Outstanding', 'Ordered', 'Partial Closing'], true)
+            || (method_exists($pr, 'isFullyApproved') && $pr->isFullyApproved());
+
+        if (! $isPrApproved) {
             throw new InvalidArgumentException("Cannot create Purchase Order: Purchase Requisition '{$pr->pr_number}' must be fully Approved first (Current status: {$pr->status}).");
         }
 
@@ -95,9 +98,16 @@ class PurchaseOrderService
         // BE-05: Enforce that any explicitly linked PR items belong to an Approved PR and are NOT Closed
         foreach ($items as $it) {
             if (! empty($it['pr_has_items_id'])) {
-                $prItem = PurchaseRequisitionItem::with('purchaseRequisition', 'item')->find($it['pr_has_items_id']);
-                if ($prItem && ! in_array($prItem->purchaseRequisition?->status, ['Approved', 'Approved 2'], true)) {
-                    throw new InvalidArgumentException("Cannot create Purchase Order: Linked PR '{$prItem->purchaseRequisition?->pr_number}' is not fully Approved.");
+                $prItem = PurchaseRequisitionItem::with('purchaseRequisition.approvals', 'item')->find($it['pr_has_items_id']);
+                if ($prItem && $prItem->purchaseRequisition) {
+                    $linkedPr = $prItem->purchaseRequisition;
+                    $isApproved = in_array($linkedPr->status, ['Approved', 'Approved 2', 'Outstanding', 'Ordered', 'Partial Closing'], true)
+                        || (method_exists($linkedPr, 'isFullyApproved') && $linkedPr->isFullyApproved())
+                        || ($linkedPr->approvals && $linkedPr->approvals->where('approval_ke', '2')->where('status', 1)->isNotEmpty());
+
+                    if (! $isApproved) {
+                        throw new InvalidArgumentException("Cannot create Purchase Order: Linked PR '{$linkedPr->pr_number}' is not fully Approved.");
+                    }
                 }
                 if ($prItem && $prItem->is_closed) {
                     throw new InvalidArgumentException("Cannot create Purchase Order: Linked PR item '{$prItem->item?->name}' has been marked as Closed.");

@@ -123,6 +123,36 @@ class InventoryService
         $delta = strtoupper($movementType) === 'OUT' ? -$quantity : $quantity;
         $reason = $notes ?? "{$referenceType} ({$referenceNumber})";
 
+        if ($warehouseId && \Illuminate\Support\Facades\Schema::hasTable('warehouse_stocks')) {
+            $ws = DB::table('warehouse_stocks')
+                ->where('items_id', $item->id)
+                ->where('warehouses_id', $warehouseId)
+                ->first();
+
+            if ($ws) {
+                $newQty = max(0.0, (float) $ws->quantity + $delta);
+                DB::table('warehouse_stocks')->where('id', $ws->id)->update([
+                    'quantity' => $newQty,
+                    'available_quantity' => max(0.0, $newQty - (float) $ws->allocated_quantity),
+                    'last_movement_date' => now(),
+                    'updated_at' => now(),
+                ]);
+            } elseif ($delta > 0) {
+                DB::table('warehouse_stocks')->insert([
+                    'items_id' => $item->id,
+                    'warehouses_id' => $warehouseId,
+                    'coordinate_name' => 'A-01-01',
+                    'quantity' => $delta,
+                    'available_quantity' => $delta,
+                    'allocated_quantity' => 0,
+                    'location_type' => 'Warehouse',
+                    'last_movement_date' => now(),
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
+        }
+
         return $this->adjustStock(
             itemId: $item->id,
             quantityDelta: $delta,

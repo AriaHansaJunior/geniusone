@@ -172,27 +172,33 @@ export function StockCardIndex() {
   const filteredRecords = useMemo(() => {
     return liveRecords.filter((rec) => {
       // Item code match
-      if (appliedFilters.itemCode && rec.itemCode !== appliedFilters.itemCode) {
+      if (appliedFilters.itemCode && rec.itemCode && rec.itemCode !== appliedFilters.itemCode) {
         return false;
       }
       // Date range match
-      if (appliedFilters.startDate && rec.date < appliedFilters.startDate) {
+      const recDate = (rec.date || "").replace(/\s+/g, "-");
+      const sDate = (appliedFilters.startDate || "").replace(/\s+/g, "-");
+      const eDate = (appliedFilters.endDate || "").replace(/\s+/g, "-");
+
+      if (sDate && recDate && recDate < sDate) {
         return false;
       }
-      if (appliedFilters.endDate && rec.date > appliedFilters.endDate) {
+      if (eDate && recDate && recDate > eDate) {
         return false;
       }
       // Warehouse match
-      if (
-        appliedFilters.warehouse !== "All Warehouse" &&
-        rec.warehouse !== appliedFilters.warehouse
-      ) {
-        return false;
+      if (appliedFilters.warehouse && appliedFilters.warehouse !== "All Warehouse") {
+        const normFilter = appliedFilters.warehouse.toLowerCase().trim();
+        const normRec = (rec.warehouse || "").toLowerCase().trim();
+        if (normFilter !== normRec && !normRec.includes(normFilter) && !normFilter.includes(normRec)) {
+          return false;
+        }
       }
       // Unit match
       if (
         appliedFilters.unit !== "All Units" &&
-        rec.unitCode !== appliedFilters.unit
+        rec.unitCode &&
+        rec.unitCode.toLowerCase() !== appliedFilters.unit.toLowerCase()
       ) {
         return false;
       }
@@ -572,7 +578,7 @@ export function StockCardIndex() {
                         <td style={{ textAlign: "center", color: "var(--muted)", fontWeight: 600 }}>
                           {rowNumber}
                         </td>
-                        <td>{item.date}</td>
+                        <td>{item.date ? item.date.replace(/-/g, " ") : "—"}</td>
                         <td style={{ fontWeight: 600, fontFamily: "ui-monospace, monospace", fontSize: "12px" }}>
                           {item.ref}
                         </td>

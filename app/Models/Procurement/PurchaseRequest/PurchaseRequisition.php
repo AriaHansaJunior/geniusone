@@ -62,6 +62,38 @@ class PurchaseRequisition extends Model
         return $this->hasMany(ApprovalPr::class, 'purchase_requisitions_id');
     }
 
+    public function isFullyApproved(): bool
+    {
+        $rawAttr = $this->attributes['status'] ?? '';
+
+        if ($rawAttr === 'Rejected') {
+            return false;
+        }
+
+        $appr2 = $this->relationLoaded('approvals')
+            ? $this->approvals->where('approval_ke', '2')->first()
+            : $this->approvals()->where('approval_ke', '2')->first();
+
+        if ($appr2 && (int) $appr2->status === 2) {
+            return false;
+        }
+
+        $appr1 = $this->relationLoaded('approvals')
+            ? $this->approvals->where('approval_ke', '1')->first()
+            : $this->approvals()->where('approval_ke', '1')->first();
+
+        if ($appr1 && (int) $appr1->status === 2) {
+            return false;
+        }
+
+        if ($appr2 && (int) $appr2->status === 1) {
+            return true;
+        }
+
+        return in_array($rawAttr, ['Approved', 'Approved 2', 'Ordered', 'Outstanding', 'Partial Closing'], true)
+            || in_array($this->status, ['Approved', 'Approved 2', 'Ordered', 'Outstanding', 'Partial Closing'], true);
+    }
+
     public function getStatusAttribute(): string
     {
         $rawAttr = $this->attributes['status'] ?? '';

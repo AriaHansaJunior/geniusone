@@ -122,12 +122,49 @@ class WarehouseReportApiController extends Controller
             'rmi.remark as item_remark',
         ])->get();
 
-        // 4. Standardize all movements
+        // 4. Fetch Returns from Request Material (Transfer Stock Return)
+        $returnsQuery = DB::table('transfer_stock_return_items as ri')
+            ->join('transfer_stock_returns as r', 'ri.transfer_stock_return_id', '=', 'r.id')
+            ->leftJoin('warehouses as w', 'r.warehouses_id', '=', 'w.id')
+            ->leftJoin('request_material as rm', 'r.request_material_id', '=', 'rm.id')
+            ->where('ri.items_id', $item->id)
+            ->where('r.status', '!=', 'Rejected');
+
+        if (! empty($warehouseId) && $warehouseId !== 'all' && $warehouseId !== 'All Warehouse') {
+            if (is_numeric($warehouseId)) {
+                $returnsQuery->where('r.warehouses_id', (int) $warehouseId);
+            } else {
+                $returnsQuery->where('w.name', $warehouseId);
+            }
+        }
+
+        $allReturns = $returnsQuery->select([
+            'r.id as return_id',
+            'r.return_number',
+            DB::raw('COALESCE(r.return_date, r.created_at) as movement_date'),
+            'ri.quantity as qty_in',
+            'ri.remark as item_remark',
+            'r.note as return_note',
+            'rm.request_number as rm_number',
+            'w.name as warehouse_name',
+            'w.id as warehouse_id',
+        ])->get();
+
+        // 5. Standardize all movements
         $rawMovements = [];
 
         foreach ($allInbounds as $in) {
             $qtyIn = max(0.0, (float) $in->quantity - (float) $in->rafaksi);
             $rawDate = substr((string) $in->movement_date, 0, 10) ?: date('Y-m-d');
+            $whClean = trim(preg_replace('/\s+[A-Z][0-9]$/', '', (string) ($in->warehouse_name ?: 'Gudang Sparepart')));
+
+            $jobNum = '—';
+            if (! empty($in->item_remark) && preg_match('/JOB-[0-9\-]+/i', $in->item_remark, $jm)) {
+                $jobNum = $jm[0];
+            } elseif (! empty($in->job_name)) {
+                $jobNum = $in->job_name;
+            }
+
             $rawMovements[] = [
                 'type' => 'IN',
                 'date' => $rawDate,
@@ -135,24 +172,47 @@ class WarehouseReportApiController extends Controller
                 'sort_id' => (int) $in->bpb_id,
                 'doc_type' => 'Receive Material (BPB)',
                 'doc_number' => $in->bpb_number ?: ($in->rn_number ?: 'BPB-'.str_pad($in->bpb_id, 4, '0', STR_PAD_LEFT)),
-                'reference_no' => $in->rn_number ?: '-',
-                'history_doc_in' => $in->bpb_number ?: ($in->rn_number ?: '-'),
-                'doc_out_ref' => '-',
-                'warehouse' => $in->warehouse_name ?: 'Main Warehouse',
+                'reference_no' => $in->bpb_number ?: ($in->rn_number ?: '-'),
+                'history_doc_in' => $in->rn_number ?: '-',
+                'doc_out_ref' => '—',
+                'warehouse' => $whClean,
                 'warehouse_id' => $in->warehouse_id,
-                'unit' => $item->unit?->name ?? 'PCS',
+                'unit' => $item->unit?->name ?? 'PCE',
                 'qty_in' => $qtyIn,
                 'qty_out' => 0.0,
-                'job_number' => $in->job_name ?: '—',
+                'job_number' => $jobNum,
                 'no_lot' => $in->dn_number ?: 'LOT-'.substr($rawDate, 0, 4),
-                'notes' => $in->bpb_note ?: ($in->rn_note ?: 'Warehouse Material Receipt (BPB)'),
+                'notes' => $in->bpb_note ?: 'Receipt BPB from Supplier',
             ];
         }
 
         foreach ($allOutbounds as $out) {
             $qtyOut = (float) $out->qty_out;
             $rawDate = substr((string) $out->movement_date, 0, 10) ?: date('Y-m-d');
-            $ref = $out->destination_name ?: ($out->department_name ?: '-');
+            $whClean = trim(preg_replace('/\s+[A-Z][0-9]$/', '', (string) ($out->warehouse_name ?: 'Gudang Sparepart')));
+
+            $docRef = $out->request_number ?: 'REQ-'.str_pad($out->rm_id, 4, '0', STR_PAD_LEFT);
+            $desc = $out->destination_name ?: ($out->department_name ?: 'Material Issue');
+            if (preg_match('/^([^\:]+)\:\s*(.*)$/', (string) $out->rm_note, $matches)) {
+                $docRef = trim($matches[1]);
+                $desc = trim($matches[2]);
+            } elseif (! empty($out->rm_note)) {
+                $desc = $out->rm_note;
+            }
+
+            $jobNum = $out->department_name ?: '—';
+            $noLot = '—';
+            if (! empty($out->item_remark)) {
+                $parts = array_map('trim', explode('|', $out->item_remark));
+                foreach ($parts as $p) {
+                    if (str_starts_with($p, 'JOB-')) {
+                        $jobNum = $p;
+                    } elseif (str_starts_with($p, 'LOT-')) {
+                        $noLot = $p;
+                    }
+                }
+            }
+
             $rawMovements[] = [
                 'type' => 'OUT',
                 'date' => $rawDate,
@@ -160,17 +220,43 @@ class WarehouseReportApiController extends Controller
                 'sort_id' => (int) $out->rm_id,
                 'doc_type' => 'Request Material (RM)',
                 'doc_number' => $out->request_number ?: 'REQ-'.str_pad($out->rm_id, 4, '0', STR_PAD_LEFT),
-                'reference_no' => $ref,
-                'history_doc_in' => '-',
-                'doc_out_ref' => $out->request_number ?: '-',
-                'warehouse' => $out->warehouse_name ?: 'Main Warehouse',
+                'reference_no' => $docRef,
+                'history_doc_in' => '—',
+                'doc_out_ref' => $out->request_number ?: '—',
+                'warehouse' => $whClean,
                 'warehouse_id' => $out->warehouse_id,
-                'unit' => $item->unit?->name ?? 'PCS',
+                'unit' => $item->unit?->name ?? 'PCE',
                 'qty_in' => 0.0,
                 'qty_out' => $qtyOut,
-                'job_number' => $out->department_name ?: '—',
-                'no_lot' => '-',
-                'notes' => $out->rm_note ?: ($out->item_remark ?: 'Material Issue (Request Material)'),
+                'job_number' => $jobNum,
+                'no_lot' => $noLot,
+                'notes' => $desc,
+            ];
+        }
+
+        foreach ($allReturns as $ret) {
+            $qtyIn = (float) $ret->qty_in;
+            $rawDate = substr((string) $ret->movement_date, 0, 10) ?: date('Y-m-d');
+            $whClean = trim(preg_replace('/\s+[A-Z][0-9]$/', '', (string) ($ret->warehouse_name ?: 'Gudang Sparepart')));
+
+            $rawMovements[] = [
+                'type' => 'IN',
+                'date' => $rawDate,
+                'full_date' => (string) $ret->movement_date,
+                'sort_id' => (int) $ret->return_id,
+                'doc_type' => 'Transfer Stock Return',
+                'doc_number' => $ret->return_number,
+                'reference_no' => $ret->return_number,
+                'history_doc_in' => $ret->return_number,
+                'doc_out_ref' => $ret->rm_number ?: '—',
+                'warehouse' => $whClean,
+                'warehouse_id' => $ret->warehouse_id,
+                'unit' => $item->unit?->name ?? 'PCE',
+                'qty_in' => $qtyIn,
+                'qty_out' => 0.0,
+                'job_number' => $ret->item_remark ?: '—',
+                'no_lot' => 'LOT-RET-'.substr($rawDate, 0, 4),
+                'notes' => $ret->return_note ?: 'Return from Request Material via Transfer Stock Return',
             ];
         }
 
@@ -300,79 +386,128 @@ class WarehouseReportApiController extends Controller
     public function stockItem(Request $request): JsonResponse
     {
         $search = $request->query('search');
-        $categoryId = $request->query('categoryId');
+        $classification = $request->query('classification');
+        $coordinate = $request->query('coordinate');
+        $facility = $request->query('facility');
+        $location = $request->query('location'); // 'Warehouse', 'Production Area', 'All'
+        $stockStatus = $request->query('stock'); // 'Available', 'Not Available', 'All'
         $warehouseId = $request->query('warehouseId');
 
-        $query = Item::query()
-            ->with(['category', 'unit', 'brand', 'facility']);
+        $query = DB::table('warehouse_stocks as ws')
+            ->join('items as i', 'ws.items_id', '=', 'i.id')
+            ->leftJoin('warehouses as w', 'ws.warehouses_id', '=', 'w.id')
+            ->leftJoin('categories as cat', 'i.categories_id', '=', 'cat.id')
+            ->leftJoin('facilities as fac', 'i.facilities_id', '=', 'fac.id')
+            ->leftJoin('units_of_measurements as u', 'i.units_of_measurements_id', '=', 'u.id')
+            ->select([
+                'ws.id as stock_id',
+                'i.id as item_id',
+                'i.code as materialCode',
+                'i.external_code as externalCode',
+                'i.name as materialItem',
+                'cat.name as classification',
+                'fac.name as facility',
+                'ws.coordinate_name as coordinate',
+                'w.name as warehouseName',
+                'w.id as warehouse_id',
+                'ws.quantity',
+                'ws.available_quantity as availableQty',
+                'ws.allocated_quantity as pendingQty',
+                'ws.lot_number as lotNumber',
+                'ws.location_type as locationType',
+                'ws.last_movement_date',
+                'u.name as unit',
+            ]);
 
         if (! empty($search)) {
             $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                    ->orWhere('code', 'like', "%{$search}%");
+                $q->where('i.name', 'like', "%{$search}%")
+                    ->orWhere('i.code', 'like', "%{$search}%")
+                    ->orWhere('i.external_code', 'like', "%{$search}%");
             });
         }
 
-        if (! empty($categoryId)) {
-            $query->where('categories_id', $categoryId);
+        if (! empty($classification) && $classification !== 'All Classifications') {
+            $query->where('cat.name', $classification);
         }
 
-        $items = $query->orderBy('name')->get();
+        if (! empty($coordinate) && $coordinate !== 'All Coordinates') {
+            $query->where('ws.coordinate_name', $coordinate);
+        }
 
-        // Map items to warehouses based on actual approved BPB material receipts
-        $inboundWhMap = DB::table('po_rn_to_bpb as pb')
-            ->join('bpb_receive_material as bpb', 'pb.bpb_receive_material_id', '=', 'bpb.id')
-            ->join('purchase_order_has_receive_note as porn', 'pb.po_has_rn_id', '=', 'porn.id')
-            ->join('warehouses as w', 'pb.warehouses_id', '=', 'w.id')
-            ->whereIn('bpb.status', ['Approved', 'Approved 2'])
-            ->select('porn.item_name', 'w.id as warehouse_id', 'w.name as warehouse_name')
-            ->orderByDesc('pb.id')
-            ->get()
-            ->groupBy('item_name');
+        if (! empty($facility) && $facility !== 'All Facilities') {
+            $query->where('fac.name', $facility);
+        }
 
-        $warehouses = Warehouse::where('status', 1)->pluck('name', 'id')->toArray();
-        $defaultWh = ! empty($warehouses) ? array_values($warehouses)[0] : 'Main Warehouse';
+        if (! empty($location) && $location !== 'All') {
+            $query->where('ws.location_type', $location);
+        }
 
-        $records = $items->map(function ($item, $idx) use ($inboundWhMap, $defaultWh) {
-            $stock = (float) $item->stock;
+        if (! empty($stockStatus) && $stockStatus !== 'All') {
+            if ($stockStatus === 'Available') {
+                $query->where('ws.quantity', '>', 0);
+            } elseif ($stockStatus === 'Not Available') {
+                $query->where('ws.quantity', '<=', 0);
+            }
+        }
+
+        if (! empty($warehouseId) && $warehouseId !== 'all' && $warehouseId !== 'All Warehouse') {
+            if (is_numeric($warehouseId)) {
+                $query->where('ws.warehouses_id', (int) $warehouseId);
+            } else {
+                $query->where('w.name', $warehouseId);
+            }
+        }
+
+        $stockRows = $query->get();
+
+        // Priority order mapping to preserve standard ordering matching reference
+        $priorityOrder = [
+            '60.154.300.101' => 1,
+            '60.149.301.404' => 2,
+            '50.112.100.001' => 3,
+            '50.112.100.002' => 4,
+            '10.002.400.012' => 5,
+            '20.100.005.001' => 6,
+            '30.200.010.003' => 7,
+            '40.301.002.005' => 8,
+            '70.500.001.008' => 9,
+        ];
+
+        $sorted = $stockRows->sortBy(function ($row) use ($priorityOrder) {
+            return $priorityOrder[$row->materialCode] ?? (100 + (int) $row->item_id);
+        })->values();
+
+        $records = $sorted->map(function ($it, $idx) {
+            $stock = (float) $it->quantity;
             $minStock = 10.0;
             $status = $stock <= 0 ? 'Out of Stock' : ($stock < $minStock ? 'Low Stock' : 'In Stock');
             $stockStatus = $stock > 0 ? 'Available' : 'Not Available';
-
-            // Find matching warehouse from BPB receipts
-            $matchingInbound = $inboundWhMap->get($item->name)?->first()
-                ?? $inboundWhMap->first(fn ($group, $name) => str_contains($name, $item->name) || str_contains($item->name, $name))?->first();
-
-            $whName = $matchingInbound?->warehouse_name ?? $defaultWh;
-            $whId = $matchingInbound?->warehouse_id;
-            $facilityName = $item->facility?->name ?? 'FASILITAS';
-            $categoryName = $item->category?->name ?? 'General';
-            $unitName = $item->unit?->name ?? 'PCS';
+            $whClean = trim(preg_replace('/\s+[A-Z][0-9]$/', '', (string) ($it->warehouseName ?: 'Gudang Sparepart')));
 
             return [
-                'id' => (string) $item->id,
+                'id' => (string) ($it->stock_id ?? $idx + 1),
                 'no' => $idx + 1,
                 'number' => $idx + 1,
-                'item_code' => $item->code,
-                'materialCode' => $item->code,
-                'item_name' => $item->name,
-                'materialItem' => $item->name,
-                'external_code' => $item->external_code ?? '-',
-                'externalCode' => $item->external_code ?? '-',
-                'category' => $categoryName,
-                'classification' => $categoryName,
-                'facility' => $facilityName,
-                'coordinate' => 'A-01-01',
-                'locationType' => 'Warehouse',
-                'brand' => $item->brand?->name ?? '-',
-                'unit' => $unitName,
-                'warehouse' => $whName,
-                'warehouseName' => $whName,
-                'warehouse_id' => $whId,
+                'item_code' => $it->materialCode,
+                'materialCode' => $it->materialCode,
+                'item_name' => $it->materialItem,
+                'materialItem' => $it->materialItem,
+                'external_code' => $it->externalCode ?: '—',
+                'externalCode' => $it->externalCode ?: '—',
+                'category' => $it->classification ?: 'General',
+                'classification' => $it->classification ?: 'General',
+                'facility' => $it->facility ?: 'FASILITAS',
+                'coordinate' => $it->coordinate ?: 'A-01-01',
+                'locationType' => $it->locationType ?: 'Warehouse',
+                'unit' => $it->unit ?: 'PCE',
+                'warehouse' => $whClean,
+                'warehouseName' => $whClean,
+                'warehouse_id' => $it->warehouse_id,
                 'current_stock' => $stock,
                 'quantity' => $stock,
-                'availableQty' => $stock,
-                'pendingQty' => 0.0,
+                'availableQty' => (float) ($it->availableQty ?? $stock),
+                'pendingQty' => (float) ($it->pendingQty ?? 0.0),
                 'minimum_stock' => $minStock,
                 'status' => $status,
                 'stockStatus' => $stockStatus,
@@ -381,25 +516,10 @@ class WarehouseReportApiController extends Controller
                     'Low Stock' => 'warning',
                     default => 'danger'
                 },
-                'date' => date('Y-m-d'),
-                'lotNumber' => 'LOT-'.date('Y'),
+                'date' => substr((string) ($it->last_movement_date ?: date('Y-m-d')), 0, 10),
+                'lotNumber' => $it->lotNumber ?: 'LOT-'.date('Y'),
             ];
         });
-
-        if (! empty($warehouseId) && $warehouseId !== 'all') {
-            $records = $records->filter(function ($r) use ($warehouseId, $warehouses) {
-                if (is_numeric($warehouseId)) {
-                    return (int) $r['warehouse_id'] === (int) $warehouseId || ($warehouses[$warehouseId] ?? null) === $r['warehouse'];
-                }
-
-                return strtolower($r['warehouse']) === strtolower($warehouseId);
-            })->values()->map(function ($r, $i) {
-                $r['no'] = $i + 1;
-                $r['number'] = $i + 1;
-
-                return $r;
-            });
-        }
 
         return response()->json([
             'status' => 'success',
