@@ -101,30 +101,45 @@ export function WarehouseCoordinateIndex({
 
   return (
     <div className="wh-page">
-      {/* Content Card */}
-      <div className="wh-table-card">
-        {/* Top Action Buttons matching Screenshot 2 */}
-        <div className="wh-coordinate-top-actions">
-          <Button
-            variant="primary"
-            onClick={onAddNew}
-            className="wh-btn-add-new"
-          >
-            Add New
+      {/* Page Header */}
+      <div className="page-header" style={{ marginBottom: "16px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "12px" }}>
+        <div>
+          <span className="eyebrow" style={{ textTransform: "uppercase", fontSize: "11px", fontWeight: 700, color: "var(--primary, #0071e3)", letterSpacing: "0.5px" }}>
+            WAREHOUSE MASTER
+          </span>
+          <h1 style={{ margin: "2px 0 0", fontSize: "20px", fontWeight: 800, color: "var(--ink, #0f172a)", letterSpacing: "-0.3px" }}>
+            Warehouse Coordinates <span style={{ fontWeight: 400, color: "var(--muted, #64748b)", fontSize: "16px" }}>— {warehouse?.name || "Warehouse"}</span>
+          </h1>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <Button variant="outline" onClick={onBack}>
+            Back
           </Button>
         </div>
+      </div>
 
+      {/* Content Card */}
+      <div className="wh-table-card">
         {/* Filter and Page-Size Controls Bar */}
-        <div className="wh-controls-bar">
-          <div className="wh-search-box">
+        <div className="wh-controls-bar" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 18px", borderBottom: "1px solid var(--line)", background: "#ffffff", gap: "16px" }}>
+          <div className="wh-search-box" style={{ maxWidth: "320px", width: "100%" }}>
             <SearchField
               value={search}
               onChange={(val) => {
                 setSearch(val);
                 setCurrentPage(1);
               }}
-              placeholder="Search..."
+              placeholder="Search coordinate name..."
             />
+          </div>
+          <div className="wh-header-actions" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <Button
+              variant="primary"
+              onClick={onAddNew}
+              className="wh-btn-add-new"
+            >
+              Add New
+            </Button>
           </div>
         </div>
 
@@ -164,17 +179,19 @@ export function WarehouseCoordinateIndex({
                         {sequentialNumber}
                       </td>
                       <td className="font-medium text-ink">{coord.name}</td>
-                      <td className="text-center">
+                      <td className="wh-td-option text-center">
                         {onDeleteCoordinate && (
-                          <button
-                            type="button"
-                            className="wh-btn-delete-coord"
-                            onClick={() => setCoordToDelete(coord)}
-                            title={`Delete coordinate ${coord.name}`}
-                            aria-label={`Delete coordinate ${coord.name}`}
-                          >
-                            <Icon name="trash" size={14} />
-                          </button>
+                          <div className="wh-row-actions">
+                            <button
+                              type="button"
+                              className="wh-action-btn wh-action-btn--delete"
+                              onClick={() => setCoordToDelete(coord)}
+                              title={`Delete coordinate ${coord.name}`}
+                              aria-label={`Delete coordinate ${coord.name}`}
+                            >
+                              <Icon name="trash" size={13} />
+                            </button>
+                          </div>
                         )}
                       </td>
                     </tr>

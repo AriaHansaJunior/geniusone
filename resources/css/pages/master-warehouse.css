@@ -102,7 +102,7 @@
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
   box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.08), 0 2px 6px -1px rgba(15, 23, 42, 0.04);
-  overflow: visible;
+  overflow: hidden;
   margin-bottom: 16px;
   position: relative;
 }
@@ -128,6 +128,7 @@
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   background: #ffffff;
+  border-bottom: 1px solid var(--line);
 }
 
 .wh-data-table,
@@ -146,17 +147,32 @@
 
 .wh-data-table th,
 .wh-table th {
-  padding: 10px 14px;
-  font-size: 11px;
-  font-weight: 700;
+  padding: 10px 16px;
+  height: 42px;
+  font-size: 10.5px;
+  font-weight: 800;
   color: var(--slate-600);
   text-align: left;
-  letter-spacing: 0.3px;
+  letter-spacing: 0.5px;
   text-transform: uppercase;
   white-space: nowrap;
   user-select: none;
   background: #f8fafc;
   border-bottom: 1px solid var(--line);
+}
+
+.wh-th-no,
+.wh-td-no {
+  width: 60px !important;
+  min-width: 60px !important;
+  text-align: center !important;
+}
+
+.wh-th-option,
+.wh-td-option {
+  width: 90px !important;
+  min-width: 90px !important;
+  text-align: center !important;
 }
 
 .wh-data-table th.sortable-th,
@@ -179,7 +195,8 @@
 
 .wh-data-table td,
 .wh-table td {
-  padding: 10px 14px;
+  padding: 10px 16px;
+  height: 48px;
   border-bottom: 1px solid var(--line);
   color: var(--ink);
   vertical-align: middle;
@@ -238,7 +255,9 @@
   gap: 6px;
 }
 
-.wh-action-btn {
+.wh-action-btn,
+.wh-btn-delete-coord,
+.wh-btn-view-coordinate {
   width: 28px;
   height: 28px;
   border-radius: var(--radius-xs);
@@ -252,13 +271,16 @@
   transition: all 0.15s ease;
 }
 
+.wh-action-btn:hover,
+.wh-btn-view-coordinate:hover,
 .wh-action-btn--edit:hover {
   border-color: var(--blue-600);
   color: var(--blue-600);
   background: var(--blue-50);
 }
 
-.wh-action-btn--delete:hover {
+.wh-action-btn--delete:hover,
+.wh-btn-delete-coord:hover {
   border-color: var(--red-600);
   color: var(--red-600);
   background: var(--red-50);

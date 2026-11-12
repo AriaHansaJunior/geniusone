@@ -1689,7 +1689,6 @@ export function PurchaseOrderCreate({
                 <div style={{ display: "flex", gap: "8px" }}>
                   <Button
                     variant="secondary"
-                    icon="plus"
                     onClick={() => setIsPrPickerOpen(true)}
                     type="button"
                   >

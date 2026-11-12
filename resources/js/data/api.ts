@@ -272,6 +272,7 @@ export async function fetchDetail(
     currency?: string;
     rate?: number;
     arrival_date: string;
+    facility?: string;
     invoice_number?: string;
     invoice_date?: string;
     tax_invoice?: string;
@@ -280,6 +281,8 @@ export async function fetchDetail(
     note?: string;
     sj_number?: string;
     sj_date?: string;
+    pl_number?: string;
+    pl_date?: string;
     items?: Array<any>;
   }): Promise<{ status: string; message?: string; data?: any } | null> {
     return apiPost("/api/warehouse/rn", payload);
