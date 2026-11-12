@@ -250,16 +250,6 @@ export function PurchaseOrderCreate({
     return null;
   };
 
-  // Helper to check intra-form duplicate PR selection across rows
-  const findIntraFormDuplicatePr = (currentRowId: string, prNum: any): number | null => {
-    const prStr = safeExtractString(prNum);
-    if (!prStr || prStr === "—" || prStr === "None") return null;
-    const cleanTarget = prStr.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
-    const otherIdx = items.findIndex(
-      (r) => r.id !== currentRowId && safeExtractString(r.prNumber).replace(/[^a-zA-Z0-9]/g, "").toLowerCase() === cleanTarget
-    );
-    return otherIdx >= 0 ? otherIdx + 1 : null;
-  };
 
   // Populate items from a given PR
   const populateFromPr = (prObj: any) => {
@@ -705,18 +695,12 @@ export function PurchaseOrderCreate({
       return;
     }
 
-    // Check for duplicate PR in existing POs or inside the same form
+    // Check for duplicate PR in existing POs
     const existingPo = findExistingPoForPr(selectedPrNumber);
-    const duplicateRowNo = findIntraFormDuplicatePr(rowId, selectedPrNumber);
     if (existingPo) {
       setNotification({
         type: "warning",
         message: `Warning: PR ${selectedPrNumber} has already been converted into Purchase Order ${existingPo.poNumber}. Please verify to avoid duplicate PO creation (Double PO).`,
-      });
-    } else if (duplicateRowNo) {
-      setNotification({
-        type: "warning",
-        message: `Warning: PR ${selectedPrNumber} is already selected in Line Item ${duplicateRowNo}. Please ensure this is not an unintentional duplicate line.`,
       });
     }
 
@@ -1755,7 +1739,6 @@ export function PurchaseOrderCreate({
                             )}
                             {(() => {
                               const dupPo = findExistingPoForPr(row.prNumber);
-                              const dupRow = findIntraFormDuplicatePr(row.id, row.prNumber);
                               if (dupPo) {
                                 return (
                                   <div
@@ -1774,27 +1757,6 @@ export function PurchaseOrderCreate({
                                     }}
                                   >
                                     <span>⚠️ In PO: <strong>{dupPo.poNumber}</strong></span>
-                                  </div>
-                                );
-                              }
-                              if (dupRow) {
-                                return (
-                                  <div
-                                    style={{
-                                      fontSize: "10.5px",
-                                      color: "#b45309",
-                                      background: "#fef3c7",
-                                      border: "1px solid #fde68a",
-                                      borderRadius: "3px",
-                                      padding: "2px 5px",
-                                      marginTop: "3px",
-                                      lineHeight: 1.2,
-                                      display: "flex",
-                                      alignItems: "center",
-                                      gap: "3px",
-                                    }}
-                                  >
-                                    <span>⚠️ Dup of Line {dupRow}</span>
                                   </div>
                                 );
                               }
