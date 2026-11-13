@@ -16,6 +16,7 @@ class ColourApiController extends Controller
         if ($search = $request->query('search')) {
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('code', 'like', "%{$search}%")
                     ->orWhere('grade', 'like', "%{$search}%");
             });
         }
@@ -37,13 +38,14 @@ class ColourApiController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
+            'code' => 'nullable|string|max:45|unique:colours,code',
             'name' => 'required|string|max:45|unique:colours,name',
             'grade' => 'nullable|string|max:45',
             'status' => 'nullable|integer',
         ]);
 
-        if (empty($validated['grade'])) {
-            $validated['grade'] = 'Grade A';
+        if (! isset($validated['grade'])) {
+            $validated['grade'] = '';
         }
 
         $record = Colour::create($validated);
@@ -66,6 +68,7 @@ class ColourApiController extends Controller
         $record = Colour::findOrFail($id);
 
         $validated = $request->validate([
+            'code' => 'nullable|string|max:45|unique:colours,code,'.$id,
             'name' => 'sometimes|required|string|max:45|unique:colours,name,'.$id,
             'grade' => 'nullable|string|max:45',
             'status' => 'nullable|integer',
@@ -85,5 +88,17 @@ class ColourApiController extends Controller
         $record->delete();
 
         return response()->json(['message' => 'Colour deleted successfully']);
+    }
+
+    public function toggleStatus(int $id): JsonResponse
+    {
+        $record = Colour::findOrFail($id);
+        $record->status = (int) $record->status === 1 ? 0 : 1;
+        $record->save();
+
+        return response()->json([
+            'message' => 'Colour status updated successfully',
+            'data' => $record,
+        ]);
     }
 }

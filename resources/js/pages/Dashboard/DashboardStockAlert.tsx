@@ -1,9 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Icon } from "../../components/ui/Icon";
 import { Button } from "../../components/ui/Button";
 import { Badge } from "../../components/ui/Badge";
 import type { StockNotificationRecord } from "./StockNotificationMaster/stock-notification-types";
-import { initialStockNotificationRecords } from "./StockNotificationMaster/stock-notification-data";
+import { fetchStockNotificationsApi } from "../../data/masterApi";
 
 interface DashboardStockAlertProps {
   onAddNewRule?: () => void;
@@ -16,8 +16,20 @@ export function DashboardStockAlert({
   onManageRules,
   onNavigatePrCreate,
 }: DashboardStockAlertProps) {
-  const [records] = useState<StockNotificationRecord[]>(initialStockNotificationRecords);
+  const [records, setRecords] = useState<StockNotificationRecord[]>([]);
   const [isCollapsed, setIsCollapsed] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+    fetchStockNotificationsApi().then((data) => {
+      if (isMounted && Array.isArray(data)) {
+        setRecords(data);
+      }
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   // Filter triggered items (active rules where current stock <= buffer quantity)
   const triggeredItems = records.filter(

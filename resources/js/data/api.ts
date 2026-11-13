@@ -1,4 +1,3 @@
-import { pageConfigs, prRows, poRows, reportRows, warehouseRows, findRowBySlug } from "./mockData";
 import type { TableRow } from "../types";
 
 export interface ListResponse {
@@ -6,174 +5,186 @@ export interface ListResponse {
   rows: TableRow[];
 }
 
+/* -------------------------------------------------------------------------- */
+/*  Authenticated HTTP client                                                  */
+/* -------------------------------------------------------------------------- */
+
+export class ApiError extends Error {
+  status: number;
+  errors?: Record<string, string[]>;
+  constructor(message: string, status: number, errors?: Record<string, string[]>) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+    this.errors = errors;
+  }
+}
+
+export function getAuthToken(): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    return sessionStorage.getItem("geniusone_token") || localStorage.getItem("geniusone_token");
+  } catch {
+    return null;
+  }
+}
+
+export function getCsrfToken(): string | null {
+  if (typeof document === "undefined") return null;
+  const meta = document.querySelector('meta[name="csrf-token"]');
+  return meta ? meta.getAttribute("content") : null;
+}
+
+export function buildAuthHeaders(extra: Record<string, string> = {}): Record<string, string> {
+  const headers: Record<string, string> = { Accept: "application/json", ...extra };
+  const token = getAuthToken();
+  if (token) headers.Authorization = `Bearer ${token}`;
+  const csrf = getCsrfToken();
+  if (csrf) headers["X-CSRF-TOKEN"] = csrf;
+  return headers;
+}
+
 /**
- * Fetch list records and KPI cards for a specific module from the Laravel backend.
- * Falls back to local mock data gracefully if network fails.
+ * Low-level fetch wrapper: attaches Bearer token, CSRF token and session cookies,
+ * and broadcasts `geniusone_unauthorized` when the server rejects the session.
+ */
+export async function apiFetch(input: string, init: RequestInit = {}): Promise<Response> {
+  const isFormData = typeof FormData !== "undefined" && init.body instanceof FormData;
+  const extra: Record<string, string> = {};
+  if (init.body !== undefined && !isFormData) extra["Content-Type"] = "application/json";
+  const headers = { ...buildAuthHeaders(extra), ...((init.headers as Record<string, string>) || {}) };
+  const res = await fetch(input, { credentials: "include", ...init, headers });
+  if (res.status === 401 && typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent("geniusone_unauthorized"));
+  }
+  return res;
+}
+
+async function parseError(res: Response): Promise<ApiError> {
+  const body = await res.json().catch(() => ({} as any));
+  const firstValidation =
+    body && body.errors && typeof body.errors === "object"
+      ? (Object.values(body.errors)[0] as string[] | undefined)?.[0]
+      : undefined;
+  return new ApiError(body.message || body.error || firstValidation || `HTTP ${res.status}`, res.status, body.errors);
+}
+
+function buildUrl(endpoint: string, params?: Record<string, string | number | undefined | null>): string {
+  const url = new URL(endpoint, window.location.origin);
+  if (params) {
+    Object.entries(params).forEach(([k, v]) => {
+      if (v !== undefined && v !== null && v !== "") url.searchParams.set(k, String(v));
+    });
+  }
+  return url.toString();
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Transaction list / detail                                                  */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Fetch list records for a transactional module from the database.
+ * Returns an empty result (never mock data) when the request fails.
  */
 export async function fetchList(
   module: "pr" | "po" | "report" | "warehouse",
   searchOrParams: string | { search?: string; perPage?: number } = ""
 ): Promise<ListResponse> {
-  const fallback = pageConfigs[module];
+  const params: Record<string, string | number | undefined> = {};
+  if (typeof searchOrParams === "string") {
+    if (searchOrParams.trim()) params.search = searchOrParams.trim();
+  } else if (searchOrParams && typeof searchOrParams === "object") {
+    if (searchOrParams.search && String(searchOrParams.search).trim()) params.search = String(searchOrParams.search).trim();
+    if (searchOrParams.perPage) params.per_page = searchOrParams.perPage;
+  }
 
   try {
-    const url = new URL(`/api/${module}`, window.location.origin);
-      if (typeof searchOrParams === "string") {
-        if (searchOrParams.trim()) {
-          url.searchParams.set("search", searchOrParams.trim());
-        }
-      } else if (searchOrParams && typeof searchOrParams === "object") {
-        if (searchOrParams.search && String(searchOrParams.search).trim()) {
-          url.searchParams.set("search", String(searchOrParams.search).trim());
-        }
-        if (searchOrParams.perPage) {
-          url.searchParams.set("per_page", String(searchOrParams.perPage));
-        }
-      }
-
-      const response = await fetch(url.toString(), {
-        headers: {
-          Accept: "application/json",
-        },
-      });
-
-      if (!response.ok) {
-        console.warn(`[GeniusOne API] ${module} list HTTP ${response.status}, using fallback.`);
-        return fallback;
-      }
-
-      const data = await response.json();
-      if (data && data.status === "success" && Array.isArray(data.rows) && data.rows.length > 0) {
-        return {
-          stats: data.stats || fallback.stats,
-          rows: data.rows,
-        };
-      }
-    } catch (error) {
-      console.warn(`[GeniusOne API] Error fetching ${module}:`, error);
+    const res = await apiFetch(buildUrl(`/api/${module}`, params));
+    if (!res.ok) {
+      console.warn(`[GeniusOne API] ${module} list HTTP ${res.status}`);
+      return { stats: [], rows: [] };
     }
-
-    return fallback;
+    const data = await res.json();
+    return {
+      stats: Array.isArray(data?.stats) ? data.stats : [],
+      rows: Array.isArray(data?.rows) ? data.rows : [],
+    };
+  } catch (error) {
+    console.warn(`[GeniusOne API] Error fetching ${module}:`, error);
+    return { stats: [], rows: [] };
   }
+}
 
 /**
- * Fetch single document detail from the backend.
- * Falls back to local row finder if network fails or 404.
+ * Fetch a single document detail from the database. Returns null when not found.
  */
 export async function fetchDetail(
-    module: "pr" | "po" | "report" | "warehouse" | "rn",
-    code: string
-  ): Promise<TableRow | null> {
-    try {
-      const encoded = encodeURIComponent(code);
-      const response = await fetch(`/api/${module}/${encoded}`, {
-        headers: {
-          Accept: "application/json",
-        },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        if (data && data.status === "success" && data.item) {
-          return data.item;
-        }
-      }
-    } catch (error) {
-      console.warn(`[GeniusOne API] Error fetching ${module} detail for ${code}:`, error);
-    }
-
-    // Graceful Fallback
-    if (module === "rn") return null;
-    const list =
-      module === "pr"
-        ? prRows
-        : module === "po"
-          ? poRows
-          : module === "report"
-            ? reportRows
-            : warehouseRows;
-
-    return findRowBySlug(list, code) || null;
+  module: "pr" | "po" | "report" | "warehouse" | "rn",
+  code: string
+): Promise<TableRow | null> {
+  try {
+    const res = await apiFetch(`/api/${module}/${encodeURIComponent(code)}`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data && data.status === "success" && data.item ? data.item : null;
+  } catch (error) {
+    console.warn(`[GeniusOne API] Error fetching ${module} detail for ${code}:`, error);
+    return null;
   }
+}
 
-  /**
-   * Generic JSON API request helpers
-   */
-  export async function apiGet<T = any>(endpoint: string, params?: Record<string, string | number>): Promise<T | null> {
-    try {
-      const url = new URL(endpoint, window.location.origin);
-      if (params) {
-        Object.entries(params).forEach(([k, v]) => {
-          if (v !== undefined && v !== null && v !== "") {
-            url.searchParams.set(k, String(v));
-          }
-        });
-      }
-      const res = await fetch(url.toString(), {
-        headers: { Accept: "application/json" },
-      });
-      if (!res.ok) return null;
-      return await res.json();
-    } catch (e) {
-      console.warn(`[GeniusOne API GET] ${endpoint} failed:`, e);
+/* -------------------------------------------------------------------------- */
+/*  Generic JSON helpers                                                       */
+/* -------------------------------------------------------------------------- */
+
+/** GET returns null on failure so read-only screens can render an empty state. */
+export async function apiGet<T = any>(
+  endpoint: string,
+  params?: Record<string, string | number | undefined | null>
+): Promise<T | null> {
+  try {
+    const res = await apiFetch(buildUrl(endpoint, params));
+    if (!res.ok) {
+      console.warn(`[GeniusOne API GET] ${endpoint} HTTP ${res.status}`);
       return null;
     }
+    return await res.json();
+  } catch (e) {
+    console.warn(`[GeniusOne API GET] ${endpoint} failed:`, e);
+    return null;
   }
+}
 
-  export async function apiPost<T = any>(endpoint: string, data: any): Promise<T | null> {
-    try {
-      const res = await fetch(endpoint, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-        body: JSON.stringify(data),
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.message || err.error || `HTTP ${res.status}`);
-      }
-      return await res.json();
-    } catch (e) {
-      console.warn(`[GeniusOne API POST] ${endpoint} failed:`, e);
-      throw e;
-    }
-  }
+async function sendJson<T>(method: string, endpoint: string, data?: any): Promise<T> {
+  const isFormData = typeof FormData !== "undefined" && data instanceof FormData;
+  const res = await apiFetch(endpoint, {
+    method,
+    body: data === undefined ? undefined : isFormData ? data : JSON.stringify(data),
+  });
+  if (!res.ok) throw await parseError(res);
+  if (res.status === 204) return {} as T;
+  return (await res.json().catch(() => ({}))) as T;
+}
 
-  export async function apiPut<T = any>(endpoint: string, data: any): Promise<T | null> {
-    try {
-      const res = await fetch(endpoint, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-        body: JSON.stringify(data),
-      });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.message || err.error || `HTTP ${res.status}`);
-      }
-      return await res.json();
-    } catch (e) {
-      console.warn(`[GeniusOne API PUT] ${endpoint} failed:`, e);
-      throw e;
-    }
-  }
+/** POST / PUT / PATCH throw an ApiError carrying the server message on failure. */
+export function apiPost<T = any>(endpoint: string, data: any = {}): Promise<T> {
+  return sendJson<T>("POST", endpoint, data);
+}
 
-  export async function apiDelete(endpoint: string): Promise<boolean> {
-    try {
-      const res = await fetch(endpoint, {
-        method: "DELETE",
-        headers: { Accept: "application/json" },
-      });
-      return res.ok;
-    } catch (e) {
-      console.warn(`[GeniusOne API DELETE] ${endpoint} failed:`, e);
-      return false;
-    }
-  }
+export function apiPut<T = any>(endpoint: string, data: any = {}): Promise<T> {
+  return sendJson<T>("PUT", endpoint, data);
+}
+
+export function apiPatch<T = any>(endpoint: string, data: any = {}): Promise<T> {
+  return sendJson<T>("PATCH", endpoint, data);
+}
+
+/** DELETE throws an ApiError carrying the server message on failure. */
+export async function apiDelete(endpoint: string): Promise<boolean> {
+  await sendJson("DELETE", endpoint);
+  return true;
+}
 
   /**
    * Create a new Warehouse Material Receipt (BPB).

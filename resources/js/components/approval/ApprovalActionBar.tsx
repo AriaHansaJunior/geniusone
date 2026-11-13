@@ -89,9 +89,9 @@ export function ApprovalActionBar({
         documentId,
         documentNumber,
         tier,
-        userId: currentUser.id,
-        userName: currentUser.name,
-        userRole: currentUser.role,
+        userId: currentUser?.id,
+        userName: currentUser?.name,
+        userRole: currentUser?.role,
       });
 
       if (res.success) {
@@ -122,9 +122,9 @@ export function ApprovalActionBar({
         documentId,
         documentNumber,
         tier: rejectTier,
-        userId: currentUser.id,
-        userName: currentUser.name,
-        userRole: currentUser.role,
+        userId: currentUser?.id,
+        userName: currentUser?.name,
+        userRole: currentUser?.role,
         reason,
       });
 
@@ -157,9 +157,9 @@ export function ApprovalActionBar({
         documentId,
         documentNumber,
         tier: unapproveTier,
-        userId: currentUser.id,
-        userName: currentUser.name,
-        userRole: currentUser.role,
+        userId: currentUser?.id,
+        userName: currentUser?.name,
+        userRole: currentUser?.role,
         reason,
       });
 
@@ -191,8 +191,8 @@ export function ApprovalActionBar({
         module,
         documentId,
         documentNumber,
-        userId: currentUser.id,
-        userName: currentUser.name,
+        userId: currentUser?.id,
+        userName: currentUser?.name,
       });
 
       if (res.success) {

@@ -20,7 +20,7 @@ class PurchaseOrderViewModel
 
     public function toArray(): array
     {
-        $currencyCode = $this->po->currency?->name ?? 'IDR';
+        $currencyCode = $this->po->currency?->code ?? $this->po->currency?->name ?? 'IDR';
 
         return [
             'id' => $this->po->id,
@@ -44,21 +44,31 @@ class PurchaseOrderViewModel
             'payment_term' => $this->po->paymentTerm?->name ?? '-',
             'delivery_term' => $this->po->deliveryTerm?->name ?? '-',
             'items' => $this->po->items->map(function ($item) use ($currencyCode) {
+                $itemObj = $item->directItem ?? $item->item ?? $item->requisitionItem?->item;
+                $ppnRate = (float) ($item->ppn?->value ?? $this->po->ppn_rate ?? 11.0);
+                $itemPpn = ($this->po->isKawasanBerikat() || $item->ditangguhkan_kawasan_berikat)
+                    ? 0.0
+                    : round(((float) $item->dpp * $ppnRate) / 100, 2);
+                $resolvedAlias = ! empty($item->item_alias) && ! in_array($item->item_alias, ['-', '—'], true) && $item->item_alias !== ($itemObj?->code ?? '')
+                    ? $item->item_alias
+                    : ($itemObj?->name ?? '—');
+
                 return [
                     'id' => $item->id,
-                    'item_id' => $item->items_id,
-                    'code' => $item->item?->code ?? '-',
-                    'name' => $item->item?->name ?? '-',
-                    'item_alias' => ! empty($item->item_alias) && ! in_array($item->item_alias, ['-', '—'], true) && $item->item_alias !== ($item->item?->code ?? '') ? $item->item_alias : ($item->item?->name ?? '-'),
-                    'itemAlias' => ! empty($item->item_alias) && ! in_array($item->item_alias, ['-', '—'], true) && $item->item_alias !== ($item->item?->code ?? '') ? $item->item_alias : ($item->item?->name ?? '-'),
-                    'unit' => $item->item?->unitOfMeasurement?->name ?? 'PCS',
-                    'quantity' => (float) $item->quantity,
+                    'item_id' => $item->items_id ?? $itemObj?->id,
+                    'code' => $itemObj?->code ?? '-',
+                    'name' => $itemObj?->name ?? '—',
+                    'item_alias' => $resolvedAlias,
+                    'itemAlias' => $resolvedAlias,
+                    'unit' => $itemObj?->unitOfMeasurement?->name ?? '',
+                    'quantity' => (float) ($item->order ?? 0),
                     'price' => (float) $item->price,
                     'formatted_price' => $currencyCode.' '.number_format((float) $item->price, 2),
                     'total' => (float) $item->subtotal,
                     'formatted_total' => $currencyCode.' '.number_format((float) $item->subtotal, 2),
                     'discount' => (float) $item->discount,
-                    'ppn' => (float) $item->ppn,
+                    'ppn' => $itemPpn,
+                    'pph' => (float) $item->subtotal_pph,
                     'grand_total' => (float) $item->grand_total,
                     'formatted_grand_total' => $currencyCode.' '.number_format((float) $item->grand_total, 2),
                 ];

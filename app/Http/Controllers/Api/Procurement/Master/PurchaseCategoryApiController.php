@@ -82,4 +82,16 @@ class PurchaseCategoryApiController extends Controller
 
         return response()->json(['message' => 'Purchase category deleted successfully']);
     }
+
+    public function toggleStatus(int $id): JsonResponse
+    {
+        $record = PoType::findOrFail($id);
+        $record->status = (int) $record->status === 1 ? 0 : 1;
+        $record->save();
+
+        return response()->json([
+            'message' => 'Purchase category status updated successfully',
+            'data' => $record,
+        ]);
+    }
 }

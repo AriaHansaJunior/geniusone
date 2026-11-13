@@ -2,9 +2,13 @@
 
 namespace App\Models\Master\Material;
 
+use App\Models\Master\Customs\CustomsReport;
 use App\Models\Master\Customs\Facility;
+use App\Models\Master\Customs\HsCode;
 use App\Models\Master\Organization\JobNumber;
+use App\Models\Master\Partner\Origin;
 use App\Models\System\Auth\User;
+use App\Models\Warehouse\Inventory\WarehouseStock;
 use App\Traits\LogsActivity;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -98,5 +102,55 @@ class Item extends Model
     public function jobNumber(): BelongsTo
     {
         return $this->belongsTo(JobNumber::class, 'job_number_id');
+    }
+
+    public function origin(): BelongsTo
+    {
+        return $this->belongsTo(Origin::class, 'origins_id');
+    }
+
+    public function itemType(): BelongsTo
+    {
+        return $this->belongsTo(ItemType::class, 'item_types_id');
+    }
+
+    public function colour(): BelongsTo
+    {
+        return $this->belongsTo(Colour::class, 'colours_id');
+    }
+
+    public function style(): BelongsTo
+    {
+        return $this->belongsTo(Style::class, 'styles_id');
+    }
+
+    public function customsReport(): BelongsTo
+    {
+        return $this->belongsTo(CustomsReport::class, 'customs_reports_id');
+    }
+
+    public function groupScrapItem(): BelongsTo
+    {
+        return $this->belongsTo(GroupScrapItem::class, 'group_scrap_items_id');
+    }
+
+    public function specification(): BelongsTo
+    {
+        return $this->belongsTo(Specification::class, 'specifications_id');
+    }
+
+    public function hsCode(): BelongsTo
+    {
+        return $this->belongsTo(HsCode::class, 'hs_code_id');
+    }
+
+    public function updatedByUser(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'updated_by');
+    }
+
+    public function warehouseStocks(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(WarehouseStock::class, 'items_id');
     }
 }

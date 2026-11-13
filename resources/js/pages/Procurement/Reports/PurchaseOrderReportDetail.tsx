@@ -3,7 +3,7 @@ import { Icon } from "../../../components/ui/Icon";
 import { Button } from "../../../components/ui/Button";
 import { Badge } from "../../../components/ui/Badge";
 import { Material } from "../../../components/common/CommonCells";
-import { reportRows, findRowBySlug, docToSlug } from "../../../data/mockData";
+import { docToSlug } from "../../../utils/docSlug";
 import { fetchDetail } from "../../../data/api";
 import type { TableRow } from "../../../types";
 
@@ -18,9 +18,7 @@ export function PurchaseOrderReportDetail({
   onBack,
   onNavigateDetail,
 }: PurchaseOrderReportDetailProps) {
-  const [row, setRow] = useState<TableRow>(() => {
-    return findRowBySlug(reportRows, code) || reportRows[0];
-  });
+  const [row, setRow] = useState<TableRow>({} as TableRow);
 
   useEffect(() => {
     let isMounted = true;
@@ -34,30 +32,30 @@ export function PurchaseOrderReportDetail({
     };
   }, [code]);
 
-  const prNumber = String(row._rawPr || "0008/PR-IMLI/X/2026");
-  const poNumber = String(row._rawPo || "POL-1026-0045");
-  const bpbNumber = String(row._rawBpbNumber || "0138/WHIN-IMLI/G/X/2026");
-  const supplier = String(row._rawSupplier || "[ASSL.0002] PT. Astra Otoparts, Tbk");
-  const dept = String(row._rawDeptRequest || "PPIC");
-  const section = String(row._rawSection || "Section 2");
-  const statusPr = String(row._rawStatusPr || "Complete");
-  const statusPo = String(row._rawStatusPo || "Approved 2");
-  const facility = String(row._rawFacility || "Facility");
-  const currency = String(row._rawCurrency || "IDR");
-  const subTotal = String(row._rawSubTotal || "260,112,910.68");
-  const price = String(row._rawPrice || "13,244.55");
-  const ppn = String(row._rawTotalPpn || "25,776,955.08");
-  const pph = String(row._rawTotalPph || "0.00");
-  const qtyPr = String(row._rawQtyPr || "25.00");
-  const qtyPo = String(row._rawQtyPo || "25.00");
-  const qtyBpb = String(row._rawQtyBpb || "25.00");
-  const outstandingPp = String(row._rawOutstandingPp || "0.00");
-  const bcType = String(row._rawBc || "BC 4.0");
-  const ajuNumber = String(row._rawAju || "00004001456220261008004282");
-  const dnNumber = String(row._rawSj || "SRA/H2/2610/00262");
-  const description = String(row._rawDescription || "LABEL TIMAH KOSONGAN (60.145.000.601)");
-  const materialName = String(row._rawMaterialName || "LABEL TIMAH KOSONGAN");
-  const materialCode = String(row._rawMaterialCode || "60.145.000.601");
+  const prNumber = String(row._rawPr || "—");
+  const poNumber = String(row._rawPo || "—");
+  const bpbNumber = String(row._rawBpbNumber || "—");
+  const supplier = String(row._rawSupplier || "—");
+  const dept = String(row._rawDeptRequest || "—");
+  const section = String(row._rawSection || "—");
+  const statusPr = String(row._rawStatusPr || "—");
+  const statusPo = String(row._rawStatusPo || "—");
+  const facility = String(row._rawFacility || "—");
+  const currency = String(row._rawCurrency || "—");
+  const subTotal = String(row._rawSubTotal || "—");
+  const price = String(row._rawPrice || "—");
+  const ppn = String(row._rawTotalPpn || "—");
+  const pph = String(row._rawTotalPph || "—");
+  const qtyPr = String(row._rawQtyPr || "—");
+  const qtyPo = String(row._rawQtyPo || "—");
+  const qtyBpb = String(row._rawQtyBpb || "—");
+  const outstandingPp = String(row._rawOutstandingPp || "—");
+  const bcType = String(row._rawBc || "—");
+  const ajuNumber = String(row._rawAju || "—");
+  const dnNumber = String(row._rawSj || "—");
+  const description = String(row._rawDescription || "—");
+  const materialName = String(row._rawMaterialName || "—");
+  const materialCode = String(row._rawMaterialCode || "—");
 
   return (
     <div className="full-page-detail">

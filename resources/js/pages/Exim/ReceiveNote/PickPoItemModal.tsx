@@ -88,31 +88,10 @@ export function PickPoItemModal({
               const qty = Number(it.order || it.orderQty || it.rawQty || 1);
               const name = it.item || it.itemName || it.item_alias || "Material Item";
               const rawPrice = it.rawPrice ?? it.price_numeric ?? it.price ?? it.priceRp ?? 0;
-              let price =
+              const price =
                 typeof rawPrice === "number"
                   ? (isNaN(rawPrice) ? 0 : rawPrice)
                   : (parseFloat(String(rawPrice).replace(/[^0-9.-]/g, "")) || 0);
-
-              if (price <= 0) {
-                const lower = name.toLowerCase();
-                if (lower.includes("nozzle")) price = 350000;
-                else if (lower.includes("unp 150") || lower.includes("unp")) price = 750000;
-                else if (lower.includes("h-beam 200") || lower.includes("h-beam")) price = 1850000;
-                else if (lower.includes("grade ss400") || lower.includes("steel plate grade")) price = 250000;
-                else if (lower.includes("5ft x 20ft")) price = 2850000;
-                else if (lower.includes("sulfuric acid")) price = 4500000;
-                else if (lower.includes("motor induction") || lower.includes("electric motor")) price = 18750000;
-                else if (lower.includes("slurry pump")) price = 8500000;
-                else if (lower.includes("hydraulic oil")) price = 6500000;
-                else if (lower.includes("battery scrap")) price = 18800;
-                else if (lower.includes("timah import") || lower.includes("lead ingot")) price = 40000;
-                else if (lower.includes("hard lead")) price = 38500;
-                else if (lower.includes("thinkpad")) price = 18500000;
-                else if (lower.includes("pulpen")) price = 5000;
-                else if (lower.includes("flux refining")) price = 120000;
-                else if (lower.includes("fire brick")) price = 75000;
-                else price = 100000;
-              }
               const code = it.itemCode || it.code || it.item_alias || "—";
               const rawItemFac = it.facility || it.facility_status || it._rawFacility || poFac;
               const cleanFac = String(typeof rawItemFac === "object" && rawItemFac ? rawItemFac.name : rawItemFac || "FASILITAS")

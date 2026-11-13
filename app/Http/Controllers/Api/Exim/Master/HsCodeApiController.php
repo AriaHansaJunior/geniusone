@@ -36,6 +36,17 @@ class HsCodeApiController extends Controller
         ]);
     }
 
+    public function rateTypes(): JsonResponse
+    {
+        return response()->json([
+            'status' => 'success',
+            'data' => [
+                'bm' => TypeRateBm::query()->orderBy('id')->get(),
+                'cukai' => TypeRateCukai::query()->orderBy('id')->get(),
+            ],
+        ]);
+    }
+
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
@@ -51,12 +62,18 @@ class HsCodeApiController extends Controller
         ]);
 
         if (empty($validated['types_rates_bm_id'])) {
-            $bm = TypeRateBm::firstOrCreate(['name' => 'ADVOLORUM']);
+            $bm = TypeRateBm::query()->orderBy('id')->first();
+            if (! $bm) {
+                return response()->json(['message' => 'Reference table types_rates_bm has no records. Run database seeders first.'], 422);
+            }
             $validated['types_rates_bm_id'] = $bm->id;
         }
 
         if (empty($validated['types_rates_cukai_id'])) {
-            $cukai = TypeRateCukai::firstOrCreate(['name' => 'ADVOLORUM']);
+            $cukai = TypeRateCukai::query()->orderBy('id')->first();
+            if (! $cukai) {
+                return response()->json(['message' => 'Reference table types_rates_cukai has no records. Run database seeders first.'], 422);
+            }
             $validated['types_rates_cukai_id'] = $cukai->id;
         }
 

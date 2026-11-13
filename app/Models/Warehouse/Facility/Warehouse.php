@@ -2,6 +2,8 @@
 
 namespace App\Models\Warehouse\Facility;
 
+use App\Models\System\Auth\User;
+use App\Models\Warehouse\InboundStorage\PoRnToBpb;
 use App\Traits\LogsActivity;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -16,11 +18,24 @@ class Warehouse extends Model
     protected $table = 'warehouses';
 
     protected $fillable = [
+        'code',
         'name',
         'warehouse_types_id',
         'description',
         'status',
+        'created_by',
+        'updated_by',
     ];
+
+    public function createdByUser(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function updatedByUser(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'updated_by');
+    }
 
     public function type(): BelongsTo
     {

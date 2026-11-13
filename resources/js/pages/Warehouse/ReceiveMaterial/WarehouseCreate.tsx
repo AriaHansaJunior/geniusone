@@ -4,10 +4,6 @@ import { Button } from "../../../components/ui/Button";
 import { ConfirmDialog } from "../../../components/ui/ConfirmDialog";
 import { CustomDatePicker } from "../../../components/ui/CustomDatePicker";
 import { CustomSelect } from "../../../components/ui/CustomSelect";
-import { initialSupplierRecords } from "../../Procurement/PurchaseMaster/Supplier/supplier-types";
-import { initialWarehouseMasterRecords } from "../MasterWarehouse/warehouse-master-data";
-import { initialItemRecords } from "../../Exim/Master/Item/item-data";
-import { poRows, warehouseRows } from "../../../data/mockData";
 import { fetchList, fetchDetail, createWarehouseBpb } from "../../../data/api";
 import { getLocalApprovalState } from "../../../services/approvalApi";
 import {
@@ -143,7 +139,7 @@ export function WarehouseCreate({
     }
 
     // 2. Check existingBpbs list (excluding Rejected BPBs)
-    const pool = existingBpbs.length > 0 ? existingBpbs : (warehouseRows || []);
+    const pool = existingBpbs;
     for (const bpb of pool) {
       const bpbStatus = String(bpb.status || bpb._rawStatus || bpb._rawApproval || "").toLowerCase();
       if (bpbStatus === "rejected") continue;
@@ -465,7 +461,7 @@ export function WarehouseCreate({
     // 1. Fetch PO list (request up to 100 POs so all approved POs are included)
     fetchList("po", { perPage: 100 }).then((res) => {
       if (!isMounted) return;
-      const rawList = res.rows && res.rows.length > 0 ? res.rows : poRows;
+      const rawList = res.rows || [];
 
       // Filter to POs that have passed 2-stage approval (or match initialPoNumber)
       const cleanTarget = (initialPoNumber || "").replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
@@ -541,7 +537,7 @@ export function WarehouseCreate({
     fetchList("warehouse", { perPage: 100 })
       .then((res) => {
         if (!isMounted) return;
-        const bpbs = res.rows && res.rows.length > 0 ? res.rows : warehouseRows;
+        const bpbs = res.rows || [];
         setExistingBpbs(bpbs);
       })
       .catch(() => { });
@@ -710,14 +706,6 @@ export function WarehouseCreate({
           if (foundApiItem) {
             updated.code = foundApiItem.code || foundApiItem.itemCode || updated.code;
             if (foundApiItem.unit?.code) updated.unit = foundApiItem.unit.code;
-          } else {
-            const foundMockItem = initialItemRecords.find(
-              (m) => m.itemName === value
-            );
-            if (foundMockItem) {
-              updated.code = foundMockItem.itemCode || updated.code;
-              updated.unit = foundMockItem.smallestUnitCode || updated.unit;
-            }
           }
         }
 
@@ -876,12 +864,9 @@ export function WarehouseCreate({
 
   // Available Warehouse Locations
   const warehouseOptions = useMemo(() => {
-    const locs = new Set<string>(["Gudang Sparepart", "Gudang Utama", "Gudang Bahan Baku", "Gudang B3"]);
+    const locs = new Set<string>();
     warehouses.forEach((w) => {
       if (w.name) locs.add(w.name);
-    });
-    initialWarehouseMasterRecords.forEach((w: any) => {
-      if (w.warehouseName || w.name) locs.add(w.warehouseName || w.name);
     });
     return Array.from(locs);
   }, [warehouses]);

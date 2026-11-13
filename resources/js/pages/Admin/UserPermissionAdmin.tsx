@@ -26,13 +26,16 @@ import {
   createDefaultPermissionMap,
   createEmptyModulePermissions,
   createFullModulePermissions,
-  getStoredRoles,
-  INITIAL_ROLES,
   resolveRoleDefinition,
-  saveStoredRoles,
   hasCustomPermissionOverrides,
   getCustomOverridesSummary,
 } from "../../types/permissions";
+import {
+  fetchRolesApi,
+  createRoleApi,
+  updateRoleApi,
+  deleteRoleApi,
+} from "../../services/userPermissionApi";
 import { ALL_SIDEBAR_MENU_ITEMS, type SidebarMenuItemDescriptor } from "../../config/navigation";
 
 interface UserPermissionAdminProps {
@@ -40,14 +43,28 @@ interface UserPermissionAdminProps {
 }
 
 export function UserPermissionAdmin({ onNavigateAudit }: UserPermissionAdminProps = {}) {
-  const { currentUser, isSuperAdmin, refreshUsers } = useAuthPermission();
+  const { currentUser, isSuperAdmin, refreshUsers, roles: contextRoles, refreshRoles } = useAuthPermission();
 
   // UI-03: Active Admin Sub-View ("users" vs "roles") & Role Definitions State
   const [activeAdminView, setActiveAdminView] = useState<"users" | "roles">("users");
-  const [roles, setRoles] = useState<RoleDefinition[]>(() => getStoredRoles());
+  const [roles, setRoles] = useState<RoleDefinition[]>(() => contextRoles || []);
   const [editingRole, setEditingRole] = useState<RoleDefinition | null>(null);
   const [isCreatingRole, setIsCreatingRole] = useState(false);
   const [activeRoleModalTab, setActiveRoleModalTab] = useState<"sidebar" | "actions">("sidebar");
+
+  useEffect(() => {
+    if (Array.isArray(contextRoles) && contextRoles.length > 0) {
+      setRoles(contextRoles);
+    }
+  }, [contextRoles]);
+
+  useEffect(() => {
+    fetchRolesApi().then((dbRoles) => {
+      if (Array.isArray(dbRoles)) {
+        setRoles(dbRoles);
+      }
+    });
+  }, []);
 
   const [users, setUsers] = useState<UserAccount[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -89,14 +106,8 @@ export function UserPermissionAdmin({ onNavigateAudit }: UserPermissionAdminProp
   const [editUserError, setEditUserError] = useState<string | null>(null);
   const [isSubmittingEditUser, setIsSubmittingEditUser] = useState(false);
 
-  // Enterprise Departments List
-  const [departmentsList, setDepartmentsList] = useState<{ id: number; name: string }[]>([
-    { id: 1, name: "Produksi & Operasional" },
-    { id: 2, name: "Produksi & Smelting" },
-    { id: 3, name: "Maintenance & Engineering" },
-    { id: 4, name: "HSE & K3" },
-    { id: 5, name: "PPIC & Logistik" },
-  ]);
+  // Enterprise Departments List (loaded from database)
+  const [departmentsList, setDepartmentsList] = useState<{ id: number; name: string }[]>([]);
 
   // Edit Permissions & Sidebar Modal
   const [editingUser, setEditingUser] = useState<UserAccount | null>(null);
@@ -855,8 +866,7 @@ export function UserPermissionAdmin({ onNavigateAudit }: UserPermissionAdminProp
     setActiveRoleModalTab("sidebar");
     const cloned = JSON.parse(JSON.stringify(role));
     if (!Array.isArray(cloned.sidebarPermissions)) {
-      const init = INITIAL_ROLES.find((ir) => ir.code === role.code);
-      cloned.sidebarPermissions = init?.sidebarPermissions || [];
+      cloned.sidebarPermissions = [];
     }
     setEditingRole(cloned);
   };
@@ -1034,62 +1044,58 @@ export function UserPermissionAdmin({ onNavigateAudit }: UserPermissionAdminProp
       sidebarPermissions: editingRole.sidebarPermissions || [],
     };
 
-    const nextRoles = isCreatingRole
-      ? [...roles, finalRole]
-      : roles.map((r) => (r.id === finalRole.id ? finalRole : r));
-
-    setRoles(nextRoles);
-    saveStoredRoles(nextRoles);
-
-    // Propagate updated role sidebar & permissions to users assigned to this role who don't have custom overrides
-    setUsers((prevUsers) =>
-      prevUsers.map((u) => {
-        if (u.role === finalRole.code && !hasCustomPermissionOverrides(u, nextRoles)) {
-          return {
-            ...u,
-            sidebar_permissions: finalRole.sidebarPermissions || null,
-          };
-        }
-        return u;
-      })
-    );
-
-    // Persist to backend API if applicable
-    const token = sessionStorage.getItem("geniusone_token") || localStorage.getItem("geniusone_token");
     try {
-      const isExistingDbRole = Number.isInteger(Number(finalRole.id)) && Number(finalRole.id) > 0;
-      if (isExistingDbRole) {
-        await fetch(`/api/admin/roles/${finalRole.id}`, {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Accept: "application/json",
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
-          credentials: "include",
-          body: JSON.stringify({
-            name: finalRole.code,
-            label: finalRole.name,
-            description: finalRole.description,
-            sidebar_permissions: finalRole.sidebarPermissions,
-            permissions: convertPermissionMapToStrings(finalRole.permissions),
-          }),
-        });
-      }
-    } catch {
-      // Local storage is already updated
-    }
+      const isExistingDbRole = !isCreatingRole && Number.isInteger(Number(finalRole.id)) && Number(finalRole.id) > 0;
+      const savedRole = isExistingDbRole
+        ? await updateRoleApi(finalRole.id, finalRole)
+        : await createRoleApi(finalRole);
 
-    setEditingRole(null);
-    showFeedback("success", `Role '${finalRole.name}' and its sidebar & approval permissions have been saved.`);
+      if (!savedRole) {
+        showFeedback("error", "Failed to save role definition.");
+        return;
+      }
+
+      const nextRoles = isCreatingRole
+        ? [...roles, savedRole]
+        : roles.map((r) => (r.id === finalRole.id || r.code === finalRole.code ? savedRole : r));
+
+      setRoles(nextRoles);
+      refreshRoles();
+
+      setUsers((prevUsers) =>
+        prevUsers.map((u) => {
+          if (u.role === savedRole.code && !hasCustomPermissionOverrides(u, nextRoles)) {
+            return {
+              ...u,
+              sidebar_permissions: savedRole.sidebarPermissions || null,
+            };
+          }
+          return u;
+        })
+      );
+
+      setEditingRole(null);
+      showFeedback("success", `Role '${savedRole.name}' and its sidebar & approval permissions have been saved.`);
+    } catch (err) {
+      showFeedback("error", err instanceof Error ? err.message : "Failed to save role definition.");
+    }
   };
 
-  const handleDeleteRoleDefinition = (role: RoleDefinition) => {
+  const handleDeleteRoleDefinition = async (role: RoleDefinition) => {
     if (role.code === "superadmin") return;
-    const nextRoles = roles.filter((r) => r.id !== role.id);
-    setRoles(nextRoles);
-    saveStoredRoles(nextRoles);
-    showFeedback("success", `Role '${role.name}' removed.`);
+    try {
+      const ok = await deleteRoleApi(role.id);
+      if (!ok) {
+        showFeedback("error", "Failed to delete role.");
+        return;
+      }
+      const nextRoles = roles.filter((r) => r.id !== role.id);
+      setRoles(nextRoles);
+      refreshRoles();
+      showFeedback("success", `Role '${role.name}' removed.`);
+    } catch (err) {
+      showFeedback("error", err instanceof Error ? err.message : "Failed to delete role.");
+    }
   };
 
   // Hierarchical sidebar items for display in Tab 1: Section -> Group -> Items[]

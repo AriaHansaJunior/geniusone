@@ -81,6 +81,18 @@ class DepartmentApiController extends Controller
         return response()->json(['message' => 'Department deleted successfully']);
     }
 
+    public function toggleStatus(int $id): JsonResponse
+    {
+        $record = Department::findOrFail($id);
+        $record->status = (int) $record->status === 1 ? 0 : 1;
+        $record->save();
+
+        return response()->json([
+            'message' => 'Department status updated successfully',
+            'data' => $record->load('unit'),
+        ]);
+    }
+
     /**
      * List sections under departments.
      */
@@ -95,5 +107,57 @@ class DepartmentApiController extends Controller
         $records = $query->latest('id')->get();
 
         return response()->json(['data' => $records]);
+    }
+
+    public function storeSection(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:45|unique:sections,name',
+            'status' => 'nullable|integer',
+        ]);
+
+        $record = Section::create($validated);
+
+        return response()->json([
+            'message' => 'Section created successfully',
+            'data' => $record,
+        ], 201);
+    }
+
+    public function updateSection(Request $request, int $id): JsonResponse
+    {
+        $record = Section::findOrFail($id);
+
+        $validated = $request->validate([
+            'name' => 'sometimes|required|string|max:45|unique:sections,name,'.$id,
+            'status' => 'nullable|integer',
+        ]);
+
+        $record->update($validated);
+
+        return response()->json([
+            'message' => 'Section updated successfully',
+            'data' => $record,
+        ]);
+    }
+
+    public function toggleSectionStatus(int $id): JsonResponse
+    {
+        $record = Section::findOrFail($id);
+        $record->status = (int) $record->status === 1 ? 0 : 1;
+        $record->save();
+
+        return response()->json([
+            'message' => 'Section status updated successfully',
+            'data' => $record,
+        ]);
+    }
+
+    public function destroySection(int $id): JsonResponse
+    {
+        $record = Section::findOrFail($id);
+        $record->delete();
+
+        return response()->json(['message' => 'Section deleted successfully']);
     }
 }

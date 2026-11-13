@@ -34,7 +34,7 @@ class PurchaseRequisitionViewModel
             ],
             'creator' => [
                 'id' => $this->pr->creator_id,
-                'name' => $this->pr->creator?->name ?? 'System',
+                'name' => $this->pr->creatorUser?->name ?? $this->pr->creator?->name ?? '—',
                 'username' => $this->pr->creator?->username ?? '',
             ],
             'items' => $this->pr->items->map(function ($item) {
@@ -43,7 +43,7 @@ class PurchaseRequisitionViewModel
                     'item_id' => $item->items_id,
                     'code' => $item->item?->code ?? '-',
                     'name' => $item->item?->name ?? '-',
-                    'unit' => $item->item?->unitOfMeasurement?->name ?? 'PCS',
+                    'unit' => $item->item?->unitOfMeasurement?->name ?? '',
                     'quantity' => (float) $item->quantity,
                     'note' => $item->notes,
                 ];

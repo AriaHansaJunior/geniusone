@@ -32,6 +32,9 @@ class ReceiveNoteReturn extends Model
         'vehicle_type',
         'license_plate',
         'notes',
+        'rejection_note',
+        'currency',
+        'exchange_rate',
         'approval_status',
         'created_by',
         'updated_by',
@@ -41,6 +44,7 @@ class ReceiveNoteReturn extends Model
         'rn_date' => 'datetime',
         'do_date' => 'datetime',
         'amount' => 'float',
+        'exchange_rate' => 'float',
     ];
 
     public function items(): HasMany

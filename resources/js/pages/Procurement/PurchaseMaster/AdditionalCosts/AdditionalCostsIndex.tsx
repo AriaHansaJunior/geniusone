@@ -5,7 +5,6 @@ import { Pagination } from "../../../../components/ui/Pagination";
 import { Icon } from "../../../../components/ui/Icon";
 import { StatusToggle } from "../../../../components/ui/StatusToggle";
 import {
-  initialAdditionalCostRecords,
   type AdditionalCostRecord,
 } from "./additional-costs-types";
 
@@ -19,7 +18,7 @@ type SortField = "costCode" | "costName";
 type SortDirection = "asc" | "desc";
 
 export function AdditionalCostsIndex({
-  records = initialAdditionalCostRecords,
+  records = [],
   onAddNew,
   onToggleHide,
 }: AdditionalCostsIndexProps) {

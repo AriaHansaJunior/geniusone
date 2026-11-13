@@ -14,6 +14,7 @@ class Colour extends Model
     protected $table = 'colours';
 
     protected $fillable = [
+        'code',
         'grade',
         'name',
         'status',

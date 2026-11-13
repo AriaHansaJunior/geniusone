@@ -106,4 +106,54 @@ class DocumentNumberGenerator
 
         return "{$sequence}/WHIN-IMLI/G/{$roman}/{$year}";
     }
+
+    /**
+     * Generate Transfer Stock Return Number:
+     * Format: {SEQ}/TSR-IMLI/{ROMAN_MONTH}/{YEAR}
+     */
+    public static function generateTransferReturnNumber(?Carbon $date = null): string
+    {
+        $date = $date ?? Carbon::now();
+        $year = $date->year;
+        $month = $date->month;
+        $roman = self::getRomanMonth($month);
+
+        $count = DB::table('transfer_stock_returns')
+            ->whereYear('created_at', $year)
+            ->whereMonth('created_at', $month)
+            ->count();
+
+        do {
+            $count++;
+            $sequence = str_pad($count, 4, '0', STR_PAD_LEFT);
+            $candidate = "{$sequence}/TSR-IMLI/{$roman}/{$year}";
+        } while (DB::table('transfer_stock_returns')->where('return_number', $candidate)->exists());
+
+        return $candidate;
+    }
+
+    /**
+     * Generate Receive Note Return Number:
+     * Format: {SEQ}/RNR-IMLI/{ROMAN_MONTH}/{YEAR}
+     */
+    public static function generateReceiveNoteReturnNumber(?Carbon $date = null): string
+    {
+        $date = $date ?? Carbon::now();
+        $year = $date->year;
+        $month = $date->month;
+        $roman = self::getRomanMonth($month);
+
+        $count = DB::table('receive_note_returns')
+            ->whereYear('created_at', $year)
+            ->whereMonth('created_at', $month)
+            ->count();
+
+        do {
+            $count++;
+            $sequence = str_pad($count, 4, '0', STR_PAD_LEFT);
+            $candidate = "{$sequence}/RNR-IMLI/{$roman}/{$year}";
+        } while (DB::table('receive_note_returns')->where('rn_number', $candidate)->exists());
+
+        return $candidate;
+    }
 }

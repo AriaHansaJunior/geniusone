@@ -40,7 +40,7 @@ export function ReceiveNoteReturnDetail({
   }, []);
 
   // Find record by code/id/rnNumber
-  const rnrData =
+  const rnrData: ReceiveNoteReturnRecord =
     record ||
     initialReceiveNoteReturnRecords.find(
       (r) =>
@@ -48,7 +48,42 @@ export function ReceiveNoteReturnDetail({
         r.rnNumber === code ||
         (typeof r.rnNumber === "string" && r.rnNumber.replace(/[\/\\]/g, "-") === code)
     ) ||
-    initialReceiveNoteReturnRecords[0];
+    initialReceiveNoteReturnRecords[0] || {
+      id: code,
+      no: 1,
+      rnNumber: code,
+      rnDate: "-",
+      deliveryOrder: null,
+      doDate: null,
+      customer: "-",
+      facility: "FASILITAS",
+      bcCode: "BC 4.0",
+      ajuNumber: "-",
+      noDaftar: null,
+      amount: 0,
+      amountFormatted: "IDR 0.00",
+      description: "-",
+      warehouseTransaction: null,
+      warehouseReceiveDate: null,
+      approvalStatus: "Waiting for Approve 1",
+      userCreated: "-",
+      createdAtTimestamp: "-",
+      arrivalDate: "-",
+      typeOfReturn: "Sales Delivery",
+      salesDeliveryNumber: "-",
+      salesDeliveryLine: "-",
+      vehicleType: "-",
+      licensePlate: "-",
+      createdAt: "-",
+      lastUpdatedAt: "-",
+      releasedAt: "-",
+      approvedAt: "-",
+      items: [],
+      totalSubtotal: 0,
+      totalAdditionalCost: 0,
+      grandTotal: 0,
+      notes: "-",
+    };
 
   const [approvalState, setApprovalState] = useState<DocumentApprovalState>(() =>
     getLocalApprovalState("receive_note", rnrData.rnNumber, normalizeApprovalStatus(rnrData.approvalStatus))

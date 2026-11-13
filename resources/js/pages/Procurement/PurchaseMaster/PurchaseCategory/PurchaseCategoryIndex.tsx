@@ -5,7 +5,6 @@ import { Pagination } from "../../../../components/ui/Pagination";
 import { Icon } from "../../../../components/ui/Icon";
 import { StatusToggle } from "../../../../components/ui/StatusToggle";
 import {
-  initialPurchaseCategoryRecords,
   type PurchaseCategoryRecord,
 } from "./purchase-category-types";
 
@@ -19,7 +18,7 @@ type SortField = "categoryCode" | "categoryName";
 type SortDirection = "asc" | "desc";
 
 export function PurchaseCategoryIndex({
-  records = initialPurchaseCategoryRecords,
+  records = [],
   onAddNew,
   onToggleHide,
 }: PurchaseCategoryIndexProps) {

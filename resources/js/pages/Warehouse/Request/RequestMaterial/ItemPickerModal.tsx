@@ -1,9 +1,9 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { Icon } from "../../../../components/ui/Icon";
 import { Button } from "../../../../components/ui/Button";
 import { SearchField } from "../../../../components/ui/SearchField";
 import { Pagination } from "../../../../components/ui/Pagination";
-import { initialItemRecords } from "../../../Exim/Master/Item/item-data";
+import { fetchMasterItems } from "../../../../data/masterApi";
 import type { ItemRecord } from "../../../Exim/Master/Item/item-types";
 
 interface ItemPickerModalProps {
@@ -17,18 +17,34 @@ export function ItemPickerModal({ isOpen, onClose, onSelectItems }: ItemPickerMo
   const [pageSize, setPageSize] = useState<number>(10);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [itemsList, setItemsList] = useState<ItemRecord[]>([]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    let isMounted = true;
+    fetchMasterItems()
+      .then((res) => {
+        if (isMounted && Array.isArray(res)) {
+          setItemsList(res);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      isMounted = false;
+    };
+  }, [isOpen]);
 
   // Filter items by search
   const filteredItems = useMemo(() => {
-    if (!search.trim()) return initialItemRecords;
+    if (!search.trim()) return itemsList;
     const query = search.toLowerCase().trim();
-    return initialItemRecords.filter(
+    return itemsList.filter(
       (item) =>
         item.itemCode.toLowerCase().includes(query) ||
         item.itemName.toLowerCase().includes(query) ||
         item.classification.toLowerCase().includes(query)
     );
-  }, [search]);
+  }, [search, itemsList]);
 
   const totalRecords = filteredItems.length;
   const totalPages = Math.max(1, Math.ceil(totalRecords / pageSize));
@@ -82,7 +98,7 @@ export function ItemPickerModal({ isOpen, onClose, onSelectItems }: ItemPickerMo
   };
 
   const handleConfirm = () => {
-    const selected = initialItemRecords.filter((i) => selectedIds.has(i.id));
+    const selected = itemsList.filter((i) => selectedIds.has(i.id));
     onSelectItems(selected);
     setSelectedIds(new Set());
     onClose();

@@ -41,9 +41,19 @@ class ReceiveNote extends Model
         'pl_date',
         'dn_status',
         'service_subkon',
+        'facility',
+        'bc_code',
+        'biaya_lain',
+        'discount_percent',
         'status',
         'rejection_note',
+        'creator_id',
         'updated_by',
+    ];
+
+    protected $casts = [
+        'biaya_lain' => 'float',
+        'discount_percent' => 'float',
     ];
 
     public function getStatusAttribute(): string
@@ -97,6 +107,11 @@ class ReceiveNote extends Model
     public function updatedByUser(): BelongsTo
     {
         return $this->belongsTo(User::class, 'updated_by');
+    }
+
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'creator_id');
     }
 
     public function purchaseOrders(): HasMany

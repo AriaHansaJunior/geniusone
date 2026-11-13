@@ -15,6 +15,7 @@ class WarehouseCoordinate extends Model
 
     protected $fillable = [
         'warehouses_id',
+        'code',
         'name',
         'description',
         'status',

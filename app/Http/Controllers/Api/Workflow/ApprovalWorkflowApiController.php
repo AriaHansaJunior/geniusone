@@ -31,16 +31,11 @@ class ApprovalWorkflowApiController extends Controller
         }
 
         $headerId = $request->header('X-User-Id');
-        if ($headerId && is_numeric($headerId)) {
+        if ($headerId && is_numeric($headerId) && app()->environment('testing')) {
             return (int) $headerId;
         }
 
-        $inputId = $request->input('user_id');
-        if ($inputId && is_numeric($inputId)) {
-            return (int) $inputId;
-        }
-
-        return 1;
+        return $this->requireActorId($request);
     }
 
     protected function resolveModuleAndId(Request $request, $module, $id): array
@@ -247,7 +242,7 @@ class ApprovalWorkflowApiController extends Controller
         ]);
 
         $userId = $this->resolveUserId($request);
-        $user = User::find($userId) ?? User::first();
+        $user = User::findOrFail($userId);
         $action = strtoupper(trim($validated['action']));
         $note = $validated['note'] ?? null;
         $tier = (int) ($validated['tier'] ?? 1);
@@ -258,14 +253,14 @@ class ApprovalWorkflowApiController extends Controller
             $currentStatus = $this->workflowService->getDocumentStatus($doc);
             $docNumber = $validated['documentNumber'] ?? $this->workflowService->getDocumentNumber($doc);
 
-            $actorName = $user?->name ?? 'System User';
-            $actorRole = $user?->role ?? 'User';
+            $actorName = $user->name;
+            $actorRole = $user->role ?? '';
 
             $history = ApprovalHistory::create([
                 'document_type' => $normKey,
                 'document_id' => $doc->id,
                 'document_number' => $docNumber,
-                'user_id' => $user?->id ?? 1,
+                'user_id' => $user->id,
                 'action' => $action,
                 'tier' => $tier,
                 'from_status' => $currentStatus,
@@ -284,7 +279,7 @@ class ApprovalWorkflowApiController extends Controller
                 action: $action,
                 fromStatus: $currentStatus,
                 toStatus: $currentStatus,
-                userId: $user?->id ?? 1,
+                userId: $user->id,
                 extra: ['note' => $note, 'tier' => $tier]
             );
 

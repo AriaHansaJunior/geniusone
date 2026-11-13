@@ -10,6 +10,7 @@ use App\Services\AuditLogger;
 use App\Services\DocumentNumber\DocumentNumberGenerator;
 use App\Services\Inventory\InventoryService;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 
@@ -25,16 +26,17 @@ class BpbWarehouseService
     /**
      * Create a new BPB (Bukti Penerimaan Barang) and allocate incoming stock to warehouses.
      *
-     * @param  array  $headerData  ['receive_date', 'note', 'bpb_number']
-     * @param  array  $mappings  Array of ['po_has_rn_id', 'warehouses_id', 'item_id' => optional]
+     * @param  array  $headerData  ['receive_date', 'note', 'bpb_number', 'source_type', 'bpb_type']
+     * @param  array  $mappings  Array of ['po_has_rn_id', 'warehouses_id', 'warehouse_coordinates_id' => optional, 'item_id' => optional]
      * @param  bool  $autoUpdateStock  Whether to automatically increment physical item stock (default false for BE-05 workflow)
      */
     public function createBpb(
         array $headerData,
         array $mappings,
-        int $userId = 1,
+        ?int $userId = null,
         bool $autoUpdateStock = false
     ): BpbReceiveMaterial {
+        $actorId = $userId ?? Auth::id();
         if (empty($mappings)) {
             throw new InvalidArgumentException('A BPB must contain at least one warehouse item allocation.');
         }
@@ -50,16 +52,18 @@ class BpbWarehouseService
             }
         }
 
-        return DB::transaction(function () use ($headerData, $mappings, $userId, $autoUpdateStock) {
+        return DB::transaction(function () use ($headerData, $mappings, $actorId, $autoUpdateStock) {
             $bpbNumber = $headerData['bpb_number'] ?? DocumentNumberGenerator::generateBpbNumber();
 
             $bpb = BpbReceiveMaterial::create([
                 'bpb_number' => $bpbNumber,
+                'source_type' => $headerData['source_type'] ?? 'RN',
+                'bpb_type' => $headerData['bpb_type'] ?? 'Warehouse',
                 'status' => $headerData['status'] ?? 'Waiting for Approve 1',
                 'note' => $headerData['note'] ?? null,
                 'receive_date' => $headerData['receive_date'] ?? now(),
-                'creator_id' => $userId,
-                'updated_by' => $userId,
+                'creator_id' => $actorId,
+                'updated_by' => $actorId,
             ]);
 
             foreach ($mappings as $map) {
@@ -69,10 +73,11 @@ class BpbWarehouseService
 
                 $poRnId = $map['po_has_rn_id'] ?? null;
 
-                $mappingRecord = PoRnToBpb::create([
+                PoRnToBpb::create([
                     'po_has_rn_id' => $poRnId,
                     'bpb_receive_material_id' => $bpb->id,
                     'warehouses_id' => $map['warehouses_id'],
+                    'warehouse_coordinates_id' => $map['warehouse_coordinates_id'] ?? null,
                 ]);
 
                 // Update physical stock if enabled
@@ -81,7 +86,6 @@ class BpbWarehouseService
                     if ($poRn) {
                         $netQuantity = (float) $poRn->quantity - (float) $poRn->rafaksi;
 
-                        // Resolve Item model: by explicit item_id or by matching name/job
                         $itemId = $map['item_id'] ?? null;
                         if (! $itemId && ! empty($poRn->item_name)) {
                             $foundItem = Item::where('name', $poRn->item_name)->first();
@@ -93,7 +97,7 @@ class BpbWarehouseService
                                 itemId: $itemId,
                                 quantity: $netQuantity,
                                 referenceDoc: $bpbNumber,
-                                userId: $userId,
+                                userId: $actorId,
                                 warehouseId: $map['warehouses_id']
                             );
                         }
@@ -107,13 +111,14 @@ class BpbWarehouseService
                 modelId: $bpb->id,
                 before: null,
                 after: $bpb->toArray(),
-                userId: $userId,
+                userId: $actorId,
                 notes: "Created BPB {$bpbNumber} with ".count($mappings).' warehouse allocations'
             );
 
             return $bpb->load([
                 'creator',
                 'mappings.warehouse',
+                'mappings.coordinate',
                 'mappings.purchaseOrderReceiveNote.receiveNote',
                 'mappings.purchaseOrderReceiveNote.purchaseOrder',
             ]);
@@ -176,10 +181,15 @@ class BpbWarehouseService
     /**
      * Soft delete BPB document with audit tracking.
      */
-    public function deleteBpb(int $id, int $userId = 1): bool
+    public function deleteBpb(int $id, ?int $userId = null): bool
     {
-        return DB::transaction(function () use ($id, $userId) {
+        $actorId = $userId ?? Auth::id();
+
+        return DB::transaction(function () use ($id, $actorId) {
             $bpb = BpbReceiveMaterial::findOrFail($id);
+            if (in_array($bpb->status, ['Approved', 'Approved 2'], true)) {
+                throw new InvalidArgumentException("BPB '{$bpb->bpb_number}' is already Approved and cannot be deleted.");
+            }
 
             // Cascade soft-delete mapping records
             $bpb->mappings()->delete();
@@ -191,7 +201,7 @@ class BpbWarehouseService
                 modelId: $id,
                 before: $bpb->toArray(),
                 after: null,
-                userId: $userId,
+                userId: $actorId,
                 notes: "Deleted BPB document {$bpb->bpb_number}"
             );
 

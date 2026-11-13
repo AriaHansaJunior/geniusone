@@ -88,7 +88,7 @@ class GeniusOneBackend
                 return GeniusOneBackend::pr()->createPr($headerData, $itemsData, $userId);
             }
 
-            public function createPo(array $headerData, array $items, array $additionalCosts = [], int $userId = 1)
+            public function createPo(array $headerData, array $items, array $additionalCosts, int $userId)
             {
                 return GeniusOneBackend::po()->createPo($headerData, $items, $additionalCosts, $userId);
             }
@@ -130,7 +130,7 @@ class GeniusOneBackend
     {
         return new class
         {
-            public function createReceiveNote(array $headerData, array $receivedItems, int $userId = 1): ReceiveNote
+            public function createReceiveNote(array $headerData, array $receivedItems, int $userId): ReceiveNote
             {
                 return GeniusOneBackend::receiveNote()->createReceiveNote($headerData, $receivedItems, $userId);
             }
@@ -230,7 +230,7 @@ class GeniusOneBackend
                 try {
                     \App\Models\System\Audit\Log::create([
                         'tipe' => strtoupper($action).'_'.strtoupper($modelName),
-                        'users_id' => $userId ?? Auth::id() ?? 1,
+                        'users_id' => $userId ?? Auth::id(),
                         'before' => $before ? json_encode($before) : ($notes ?? ''),
                         'after' => $after ? json_encode($after) : ($notes ?? ''),
                     ]);

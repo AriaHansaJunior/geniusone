@@ -5,7 +5,7 @@ import { SearchField } from "../../../components/ui/SearchField";
 import { DataTable } from "../../../components/ui/DataTable";
 import { CustomDatePicker } from "../../../components/ui/CustomDatePicker";
 import { FilterPanel } from "../../../components/common/FilterPanel";
-import { pageConfigs } from "../../../data/mockData";
+import { listColumns } from "../../../config/listColumns";
 import { fetchList } from "../../../data/api";
 import { isPrItemClosed } from "../../../services/approvalApi";
 import type { TableRow } from "../../../types";
@@ -79,9 +79,9 @@ function parseRowDate(dateStr?: string): Date | null {
 }
 
 export function PurchaseRequisition({ onDetail, onCreate }: PurchaseRequisitionProps) {
-  const config = pageConfigs.pr;
-  const [, setStats] = useState(config.stats);
-  const [rows, setRows] = useState(config.rows);
+  const columns = listColumns.pr;
+  const [, setStats] = useState<[string, string, string][]>([]);
+  const [rows, setRows] = useState<TableRow[]>([]);
 
   // Active filters and search states
   const [filterInputs, setFilterInputs] = useState<PRFilters>(initialFilters);
@@ -95,7 +95,7 @@ export function PurchaseRequisition({ onDetail, onCreate }: PurchaseRequisitionP
   useEffect(() => {
     let isMounted = true;
     fetchList("pr").then((res) => {
-      if (isMounted && res.rows && res.rows.length > 0) {
+      if (isMounted) {
         setStats(res.stats);
         setRows(res.rows);
       }
@@ -519,7 +519,7 @@ export function PurchaseRequisition({ onDetail, onCreate }: PurchaseRequisitionP
         </div>
 
         <DataTable
-          columns={config.columns}
+          columns={columns}
           rows={filtered}
           onDetail={onDetail}
         />

@@ -1,10 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Icon } from "../../../components/ui/Icon";
 import { Button } from "../../../components/ui/Button";
 import { CustomDatePicker } from "../../../components/ui/CustomDatePicker";
 import { CustomSelect } from "../../../components/ui/CustomSelect";
 import { PickSalesDeliveryItemModal } from "./PickSalesDeliveryItemModal";
-import { initialAdditionalCostRecords } from "../../Procurement/PurchaseMaster/AdditionalCosts/additional-costs-types";
+import { fetchMasterAdditionalCosts } from "../../../data/masterApi";
+import type { AdditionalCostRecord } from "../../Procurement/PurchaseMaster/AdditionalCosts/additional-costs-types";
 import {
   customerList,
   docTypesList,
@@ -49,6 +50,21 @@ export function ReceiveNoteReturnForm({
   // Additional Costs State (preserved across tab switching)
   const [additionalCostRemark, setAdditionalCostRemark] = useState("");
   const [additionalCostAmount, setAdditionalCostAmount] = useState<number>(0);
+  const [additionalCostsList, setAdditionalCostsList] = useState<AdditionalCostRecord[]>([]);
+
+  useEffect(() => {
+    let isMounted = true;
+    fetchMasterAdditionalCosts()
+      .then((res) => {
+        if (isMounted && Array.isArray(res)) {
+          setAdditionalCostsList(res);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   // Item Detail table state
   const [items, setItems] = useState<ReceiveNoteReturnItem[]>([]);
@@ -586,7 +602,7 @@ export function ReceiveNoteReturnForm({
                     placeholder="Select Additional Cost..."
                     options={[
                       { value: "", label: "Select Additional Cost..." },
-                      ...initialAdditionalCostRecords
+                      ...additionalCostsList
                         .filter((ac) => !ac.hidden)
                         .map((ac) => ({
                           value: ac.costName,

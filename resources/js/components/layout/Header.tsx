@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Icon } from "../ui/Icon";
 import { useAuthPermission } from "../../context/AuthPermissionContext";
+import { fetchSystemContextApi } from "../../data/masterApi";
 
 interface HeaderProps {
   collapsed?: boolean;
@@ -10,6 +11,7 @@ interface HeaderProps {
   onNavigateAudit?: () => void;
   onLogoutRequest?: () => void;
   onToggleMobileSidebar?: () => void;
+  companyName?: string;
 }
 
 export function Header({
@@ -20,10 +22,29 @@ export function Header({
   onNavigateAudit,
   onLogoutRequest,
   onToggleMobileSidebar,
+  companyName: propCompanyName,
 }: HeaderProps) {
   const { currentUser, isSuperAdmin } = useAuthPermission();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [companyName, setCompanyName] = useState<string>(propCompanyName || "");
   const userMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (propCompanyName) {
+      setCompanyName(propCompanyName);
+      return;
+    }
+    let active = true;
+    fetchSystemContextApi()
+      .then((ctx) => {
+        const name = ctx?.settings?.company_name || ctx?.settings?.company_short_name;
+        if (active && name) setCompanyName(String(name));
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [propCompanyName]);
 
   const initials = currentUser?.name
     ? currentUser.name
@@ -179,7 +200,7 @@ export function Header({
       </div>
 
       <div className="topbar__context">
-        <span>PT GENIUS ONE</span>
+        <span>{companyName || "GENIUSONE"}</span>
       </div>
 
       <div className="topbar__actions">
@@ -201,8 +222,8 @@ export function Header({
         >
           <span>{initials}</span>
           <div>
-            <strong>{currentUser.name}</strong>
-            <small>{currentUser.role}</small>
+            <strong>{currentUser?.name || "—"}</strong>
+            <small>{currentUser?.role || "—"}</small>
           </div>
           <Icon
             name="chevronDown"
@@ -221,9 +242,9 @@ export function Header({
               <div className="user-dropdown__header">
                 <div className="user-dropdown__avatar">{initials}</div>
                 <div className="user-dropdown__info">
-                  <strong>{currentUser.name}</strong>
-                  <span className="user-dropdown__role">{currentUser.role}</span>
-                  <span className="user-dropdown__email">{currentUser.email}</span>
+                  <strong>{currentUser?.name || "—"}</strong>
+                  <span className="user-dropdown__role">{currentUser?.role || "—"}</span>
+                  <span className="user-dropdown__email">{currentUser?.email || "—"}</span>
                 </div>
               </div>
 

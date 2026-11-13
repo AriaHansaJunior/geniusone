@@ -4,7 +4,7 @@ import { Sidebar } from "./Sidebar";
 import { Footer } from "./Footer";
 import { Button } from "../ui/Button";
 import { Icon } from "../ui/Icon";
-import { pageMeta } from "../../data/mockData";
+import { pageMeta } from "../../config/pageMeta";
 import type { PageKey } from "../../types";
 
 interface AppLayoutProps {

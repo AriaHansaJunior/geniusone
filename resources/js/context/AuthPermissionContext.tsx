@@ -1,60 +1,43 @@
 /**
- * GENIUSONE UI 2.0 — Real Auth & Permission Context
- * Directly integrated with Laravel session and database authentication.
+ * GENIUSONE UI 2.0 — Auth & Granular Permission Context
+ * Provides real session authentication, user identity, and permission checking across the app.
+ * No guest superadmin fallbacks or hardcoded role allowlists exist here.
  */
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
+import { apiFetch } from "../data/api";
+import { fetchRolesApi, fetchUsersApi } from "../services/userPermissionApi";
 import {
-  resolveRoleDefinition,
   type ApprovalModule,
   type PermissionAction,
+  type RoleDefinition,
   type UserAccount,
+  resolveRoleDefinition,
 } from "../types/permissions";
 
 interface AuthPermissionContextValue {
-  currentUser: UserAccount;
-  allUsers: UserAccount[];
+  currentUser: UserAccount | null;
+  users: UserAccount[];
+  roles: RoleDefinition[];
   isAuthenticated: boolean;
+  authReady: boolean;
   isSuperAdmin: boolean;
-  can: (module: ApprovalModule | string, action: PermissionAction | string) => boolean;
+  can: (module: ApprovalModule, action: PermissionAction) => boolean;
   canAccessSidebarItem: (itemId: string) => boolean;
-  loginUser: (user: UserAccount, token?: string) => void;
+  loginUser: (token: string, user: UserAccount) => void;
   logoutUser: () => Promise<void>;
-  switchUser: (userId: string) => void;
   refreshUsers: () => void;
+  refreshRoles: () => Promise<RoleDefinition[]>;
 }
 
-const DEFAULT_GUEST: UserAccount = {
-  id: 1,
-  name: "Super Administrator",
-  username: "superadmin",
-  email: "superadmin@geniusone.internal",
-  role: "superadmin",
-  role_label: "Super Administrator",
-  department: "Executive & Systems",
-  status: "active",
-  isSuperAdmin: true,
-  is_super_admin: true,
-  permissions: ["*"],
-};
+const AuthPermissionContext = createContext<AuthPermissionContextValue | undefined>(undefined);
 
 function getStoredUser(): UserAccount | null {
   if (typeof window === "undefined") return null;
   try {
     const raw = sessionStorage.getItem("geniusone_user") || localStorage.getItem("geniusone_user");
     if (raw) {
-      const parsed = JSON.parse(raw);
-      if (parsed && (parsed.id || parsed.username)) {
-        return {
-          ...parsed,
-          isSuperAdmin: Boolean(
-            parsed.isSuperAdmin ||
-            parsed.is_super_admin ||
-            parsed.role === "superadmin" ||
-            parsed.role === "SuperAdmin"
-          ),
-        };
-      }
+      return JSON.parse(raw);
     }
   } catch {
     // ignore
@@ -62,291 +45,278 @@ function getStoredUser(): UserAccount | null {
   return null;
 }
 
-const AuthPermissionContext = createContext<AuthPermissionContextValue | null>(null);
+function getStoredToken(): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    return sessionStorage.getItem("geniusone_token") || localStorage.getItem("geniusone_token");
+  } catch {
+    return null;
+  }
+}
+
+function clearAuthStorage(): void {
+  if (typeof window === "undefined") return;
+  try {
+    sessionStorage.removeItem("geniusone_token");
+    sessionStorage.removeItem("geniusone_user");
+    localStorage.removeItem("geniusone_token");
+    localStorage.removeItem("geniusone_user");
+  } catch {
+    // ignore
+  }
+}
 
 export function AuthPermissionProvider({ children }: { children: React.ReactNode }) {
-  const [currentUser, setCurrentUserState] = useState<UserAccount>(() => {
-    return getStoredUser() || DEFAULT_GUEST;
-  });
-  const [allUsers, setAllUsers] = useState<UserAccount[]>([]);
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
-    return Boolean(getStoredUser());
-  });
+  const [currentUser, setCurrentUserState] = useState<UserAccount | null>(() => getStoredUser());
+  const [token, setToken] = useState<string | null>(() => getStoredToken());
+  const [users, setUsers] = useState<UserAccount[]>([]);
+  const [roles, setRoles] = useState<RoleDefinition[]>([]);
+  const [authReady, setAuthReady] = useState<boolean>(false);
 
-  const fetchCurrentUser = useCallback(async () => {
-    if (typeof window === "undefined") return;
-    const token = sessionStorage.getItem("geniusone_token") || localStorage.getItem("geniusone_token");
+  const isAuthenticated = Boolean(token && currentUser);
+
+  const isSuperAdmin = Boolean(
+    currentUser &&
+      (currentUser.isSuperAdmin ||
+        currentUser.is_super_admin ||
+        String(currentUser.role || "").toLowerCase() === "superadmin")
+  );
+
+  const refreshRoles = useCallback(async (): Promise<RoleDefinition[]> => {
     try {
-      const res = await fetch("/api/auth/me", {
-        headers: {
-          Accept: "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        credentials: "include",
-      });
-      if (res.ok) {
-        const json = await res.json();
+      const list = await fetchRolesApi();
+      setRoles(list);
+      return list;
+    } catch {
+      return [];
+    }
+  }, []);
+
+  const refreshUsers = useCallback(() => {
+    if (!getStoredToken()) return;
+    fetchUsersApi()
+      .then((list) => setUsers(list))
+      .catch(() => {});
+    refreshRoles();
+  }, [refreshRoles]);
+
+  // Verify token against backend /api/auth/me on mount
+  useEffect(() => {
+    let active = true;
+    const storedToken = getStoredToken();
+    if (!storedToken) {
+      setCurrentUserState(null);
+      setToken(null);
+      setAuthReady(true);
+      return;
+    }
+
+    apiFetch("/api/auth/me")
+      .then((res) => {
+        if (!res.ok) throw new Error("Unauthenticated");
+        return res.json();
+      })
+      .then((json) => {
+        if (!active) return;
         if (json?.status === "success" && json.data) {
           const u: UserAccount = {
-            ...json.data,
-            isSuperAdmin: Boolean(json.data.is_super_admin || json.data.role === "superadmin"),
+            id: json.data.id,
+            name: json.data.name,
+            username: json.data.username,
+            email: json.data.email,
+            role: json.data.role,
+            role_label: json.data.role_label,
+            department: json.data.department_name || "-",
+            department_id: json.data.department_id,
+            departments_id: json.data.department_id,
+            job_title: json.data.job_title,
+            employee_id: json.data.employee_id,
+            preferred_language: json.data.preferred_language,
+            photo: json.data.photo || null,
+            isSuperAdmin: Boolean(json.data.is_super_admin),
+            is_super_admin: Boolean(json.data.is_super_admin),
+            permissions: json.data.permissions || [],
+            sidebar_permissions: json.data.sidebar_permissions || null,
           };
           setCurrentUserState(u);
-          setIsAuthenticated(true);
-          sessionStorage.setItem("geniusone_user", JSON.stringify(u));
-          localStorage.setItem("geniusone_user", JSON.stringify(u));
-        }
-      } else if (res.status === 401) {
-        const stored = getStoredUser();
-        if (!stored) {
-          setIsAuthenticated(false);
-        }
-      }
-    } catch {
-      // offline fallback
-    }
-  }, []);
-
-  const fetchUsers = useCallback(async () => {
-    const token = sessionStorage.getItem("geniusone_token") || localStorage.getItem("geniusone_token");
-    try {
-      const res = await fetch("/api/auth/users", {
-        headers: {
-          Accept: "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        credentials: "include",
-      });
-      if (res.ok) {
-        const json = await res.json();
-        if (json?.status === "success" && Array.isArray(json.data)) {
-          setAllUsers(json.data);
-        }
-      }
-    } catch {
-      // ignore
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchCurrentUser();
-  }, [fetchCurrentUser]);
-
-  const loginUser = useCallback((user: UserAccount, token?: string) => {
-    const formattedUser: UserAccount = {
-      ...user,
-      isSuperAdmin: Boolean(
-        user.is_super_admin ||
-        user.isSuperAdmin ||
-        user.role === "superadmin" ||
-        user.role === "SuperAdmin"
-      ),
-    };
-    setCurrentUserState(formattedUser);
-    setIsAuthenticated(true);
-    if (typeof window !== "undefined") {
-      sessionStorage.setItem("geniusone_user", JSON.stringify(formattedUser));
-      localStorage.setItem("geniusone_user", JSON.stringify(formattedUser));
-      if (token) {
-        sessionStorage.setItem("geniusone_token", token);
-        localStorage.setItem("geniusone_token", token);
-      }
-    }
-  }, []);
-
-  const logoutUser = useCallback(async () => {
-    const token = sessionStorage.getItem("geniusone_token") || localStorage.getItem("geniusone_token");
-    try {
-      await fetch("/api/auth/logout", {
-        method: "POST",
-        headers: {
-          Accept: "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        credentials: "include",
-      });
-    } catch {
-      // ignore
-    }
-    if (typeof window !== "undefined") {
-      sessionStorage.removeItem("geniusone_user");
-      localStorage.removeItem("geniusone_user");
-      sessionStorage.removeItem("geniusone_token");
-      localStorage.removeItem("geniusone_token");
-      sessionStorage.removeItem("geniusone_sidebar_sections");
-      sessionStorage.removeItem("geniusone_sidebar_groups");
-    }
-    setIsAuthenticated(false);
-    setCurrentUserState(DEFAULT_GUEST);
-  }, []);
-
-  const switchUser = useCallback((userId: string) => {
-    const found = allUsers.find((u) => String(u.id) === String(userId));
-    if (found) {
-      loginUser(found);
-    }
-  }, [allUsers, loginUser]);
-
-  const can = useCallback(
-    (module: ApprovalModule | string, action: PermissionAction | string): boolean => {
-      if (!currentUser) return false;
-      // SuperAdmin has master access
-      if (currentUser.isSuperAdmin || currentUser.is_super_admin || currentUser.role === "superadmin") {
-        return true;
-      }
-
-      // Check assigned Role definition permissions (UI-03: users inherit permissions from their assigned Role)
-      const roleDef = resolveRoleDefinition(currentUser.role);
-      if (roleDef) {
-        if (
-          (module === "master_item" || module === "item") &&
-          roleDef.canManageMasterItem &&
-          (action === "create" || action === "view" || action === "update")
-        ) {
-          return true;
-        }
-        const targetMod = module === "item" ? "master_item" : module === "bpb" ? "receive_note" : module;
-        const roleModPerms = (roleDef.permissions as any)?.[targetMod];
-        if (roleModPerms) {
-          if (action === "approve") {
-            if (roleModPerms.approve_1 || roleModPerms.approve_2) return true;
-          } else if (action === "unapprove") {
-            if (roleModPerms.unapprove_1 || roleModPerms.unapprove_2) return true;
-          } else if (roleModPerms[action]) {
-            return true;
+          try {
+            sessionStorage.setItem("geniusone_user", JSON.stringify(u));
+            localStorage.setItem("geniusone_user", JSON.stringify(u));
+          } catch {
+            // ignore
+          }
+          refreshRoles();
+          if (u.isSuperAdmin) {
+            fetchUsersApi()
+              .then((list) => {
+                if (active) setUsers(list);
+              })
+              .catch(() => {});
           }
         }
-      }
+      })
+      .catch(() => {
+        if (!active) return;
+        clearAuthStorage();
+        setToken(null);
+        setCurrentUserState(null);
+      })
+      .finally(() => {
+        if (active) setAuthReady(true);
+      });
 
-      // If permissions is an array of strings from Laravel (e.g. ['pr.view', 'po.create', ...])
+    return () => {
+      active = false;
+    };
+  }, [refreshRoles]);
+
+  // Listen for 401 unauthorized events from apiFetch
+  useEffect(() => {
+    const handleUnauthorized = () => {
+      clearAuthStorage();
+      setToken(null);
+      setCurrentUserState(null);
+    };
+    if (typeof window !== "undefined") {
+      window.addEventListener("geniusone_unauthorized", handleUnauthorized);
+      return () => window.removeEventListener("geniusone_unauthorized", handleUnauthorized);
+    }
+  }, []);
+
+  const loginUser = useCallback(
+    (newToken: string, user: UserAccount) => {
+      try {
+        sessionStorage.setItem("geniusone_token", newToken);
+        sessionStorage.setItem("geniusone_user", JSON.stringify(user));
+        localStorage.setItem("geniusone_token", newToken);
+        localStorage.setItem("geniusone_user", JSON.stringify(user));
+      } catch {
+        // ignore
+      }
+      setToken(newToken);
+      setCurrentUserState(user);
+      setAuthReady(true);
+      refreshRoles();
+      if (user.isSuperAdmin || user.is_super_admin || String(user.role || "").toLowerCase() === "superadmin") {
+        fetchUsersApi()
+          .then((list) => setUsers(list))
+          .catch(() => {});
+      }
+    },
+    [refreshRoles]
+  );
+
+  const logoutUser = useCallback(async () => {
+    try {
+      await apiFetch("/api/auth/logout", { method: "POST" });
+    } catch {
+      // ignore network error on logout
+    }
+    clearAuthStorage();
+    setToken(null);
+    setCurrentUserState(null);
+    setUsers([]);
+  }, []);
+
+  const can = useCallback(
+    (module: ApprovalModule, action: PermissionAction): boolean => {
+      if (!currentUser) return false;
+      if (isSuperAdmin) return true;
+
+      // 1. Check user-level permission array from backend (`user->getAllPermissions()`)
       if (Array.isArray(currentUser.permissions)) {
         if (currentUser.permissions.includes("*")) return true;
 
-        const modPrefixMap: Record<string, string> = {
+        const prefixMap: Record<ApprovalModule, string> = {
           master_item: "master_item",
-          item: "master_item",
           purchase_requisition: "pr",
           purchase_order: "po",
           receive_note: "rn",
-          bpb: "bpb",
+          bpb: "rn",
           request_material: "rm",
         };
-        const prefix = modPrefixMap[module] || module;
+        const prefix = prefixMap[module] || module;
 
         if (
           currentUser.permissions.includes(`${prefix}.${action}`) ||
           currentUser.permissions.includes(`${prefix}.*`) ||
           currentUser.permissions.includes(`${module}.${action}`) ||
           currentUser.permissions.includes(`${module}.*`) ||
-          ((module === "master_item" || module === "item") &&
+          (module === "master_item" &&
             (currentUser.permissions.includes(`item.${action}`) ||
-              currentUser.permissions.includes("item.*") ||
-              currentUser.permissions.includes(`master_item.${action}`) ||
-              currentUser.permissions.includes("master_item.*"))) ||
-          ((module === "bpb" || module === "receive_note") &&
+              currentUser.permissions.includes("item.*"))) ||
+          ((module === "receive_note" || module === "bpb") &&
             (currentUser.permissions.includes(`rn.${action}`) ||
-              currentUser.permissions.includes("rn.*") ||
               currentUser.permissions.includes(`bpb.${action}`) ||
-              currentUser.permissions.includes("bpb.*") ||
               currentUser.permissions.includes(`receive_note.${action}`)))
         ) {
           return true;
         }
       }
 
-      // If permissions is an object map
-      if (typeof currentUser.permissions === "object" && !Array.isArray(currentUser.permissions)) {
+      // 2. Check structured permission map if present
+      if (currentUser.permissions && typeof currentUser.permissions === "object" && !Array.isArray(currentUser.permissions)) {
         const modPerms =
           (currentUser.permissions as any)[module] ||
           (module === "bpb" ? (currentUser.permissions as any)["receive_note"] : undefined);
-        if (modPerms && modPerms[action] !== undefined) {
-          return Boolean(modPerms[action]);
+        if (modPerms && typeof modPerms[action] === "boolean") {
+          return modPerms[action];
         }
       }
 
-      // Default Admin role has full crud & approvals
-      if (currentUser.role === "admin") {
-        return true;
+      // 3. Check database role definition loaded from /api/admin/roles
+      const roleDef = resolveRoleDefinition(currentUser.role, roles);
+      if (roleDef) {
+        const targetMod = module === "bpb" ? "receive_note" : module;
+        if (roleDef.permissions[targetMod]?.[action]) {
+          return true;
+        }
       }
 
       return false;
     },
-    [currentUser]
+    [currentUser, isSuperAdmin, roles]
   );
 
   const canAccessSidebarItem = useCallback(
     (itemId: string): boolean => {
       if (!currentUser) return false;
-      if (
-        currentUser.isSuperAdmin ||
-        currentUser.is_super_admin ||
-        currentUser.role === "superadmin" ||
-        currentUser.role === "SuperAdmin"
-      ) {
-        return true;
-      }
+      if (isSuperAdmin) return true;
 
-      // If sidebar_permissions array is explicitly set by SuperAdmin
-      if (Array.isArray(currentUser.sidebar_permissions)) {
+      // 1. User-level / backend-resolved sidebar_permissions
+      if (Array.isArray(currentUser.sidebar_permissions) && currentUser.sidebar_permissions.length > 0) {
         if (currentUser.sidebar_permissions.includes("*")) return true;
         return currentUser.sidebar_permissions.includes(itemId);
       }
 
-      // Default fallback by role if no custom sidebar override set
-      if (currentUser.role === "admin") return true;
-
-      const role = (currentUser.role || "").toLowerCase();
-      if (itemId === "dashboard" || itemId === "stock-notification-master") return true;
-
-      if (role === "procurement") {
-        return [
-          "supplier", "payment-term", "purchase-category", "delivery-terms",
-          "additional-costs", "pph", "rafaksi-type", "job-number", "item",
-          "pr", "po", "report", "pr-report", "po-report"
-        ].includes(itemId);
+      // 2. Database RoleDefinition loaded from /api/admin/roles
+      const roleDef = resolveRoleDefinition(currentUser.role, roles);
+      if (roleDef && Array.isArray(roleDef.sidebarPermissions) && roleDef.sidebarPermissions.length > 0) {
+        if (roleDef.sidebarPermissions.includes("*")) return true;
+        return roleDef.sidebarPermissions.includes(itemId);
       }
 
-      if (role === "warehouse") {
-        return [
-          "warehouse-master", "wh-type-of-request", "wh-destination-location",
-          "wh-adj-prod", "wh-adj-bc", "wh-opname-material", "wh-adj-stock",
-          "transfer-stock-return", "transfer-stock-result", "receive-material-non-fasilitas",
-          "warehouse", "purchase-return", "sales-return", "wh-out-do", "wh-out-issue",
-          "wh-out-disposal", "wh-req-weight-note", "wh-req-material",
-          "wh-rep-stock-item", "wh-rep-stock-card", "receive-note", "receive-note-return", "document-history"
-        ].includes(itemId);
-      }
-
-      if (role.includes("approver")) {
-        return ["pr", "po", "report", "warehouse", "receive-note"].includes(itemId);
-      }
-
-      if (role === "viewer") {
-        return ["report", "pr-report", "po-report", "wh-rep-stock-item"].includes(itemId);
-      }
-
-      return true;
+      // Always allow dashboard when authenticated if no explicit sidebar restriction array is populated yet
+      return itemId === "dashboard";
     },
-    [currentUser]
+    [currentUser, isSuperAdmin, roles]
   );
 
   return (
     <AuthPermissionContext.Provider
       value={{
         currentUser,
-        allUsers,
+        users,
+        roles,
         isAuthenticated,
-        isSuperAdmin: Boolean(
-          currentUser?.isSuperAdmin ||
-          currentUser?.is_super_admin ||
-          currentUser?.role === "superadmin"
-        ),
+        authReady,
+        isSuperAdmin,
         can,
         canAccessSidebarItem,
         loginUser,
         logoutUser,
-        switchUser,
-        refreshUsers: fetchUsers,
+        refreshUsers,
+        refreshRoles,
       }}
     >
       {children}

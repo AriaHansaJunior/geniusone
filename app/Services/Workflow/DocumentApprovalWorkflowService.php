@@ -63,7 +63,7 @@ class DocumentApprovalWorkflowService
                 'rn', 'receive-note', 'receive_note' => ReceiveNote::find((int) $id) ?? BpbReceiveMaterial::findOrFail((int) $id),
                 'bpb', 'bpb-receive-material', 'bpb_receive_material', 'warehouse' => BpbReceiveMaterial::find((int) $id) ?? ReceiveNote::findOrFail((int) $id),
                 'rm', 'request-material', 'request_material', 'request-materials', 'request_materials' => RequestMaterial::findOrFail((int) $id),
-                'return', 'receive-note-return', 'receive_note_return' => ReceiveNoteReturn::findOrFail((int) $id),
+                'return', 'returns', 'receive-note-return', 'receive_note_return' => ReceiveNoteReturn::findOrFail((int) $id),
                 default => throw new InvalidArgumentException("Unknown document module '{$module}'. Only operational transactions support approval."),
             };
         }
@@ -78,7 +78,7 @@ class DocumentApprovalWorkflowService
             'bpb', 'bpb-receive-material', 'bpb_receive_material', 'warehouse' => BpbReceiveMaterial::whereRaw("REPLACE(REPLACE(bpb_number, '/', ''), '-', '') = ?", [$clean])->first()
                 ?? ReceiveNote::whereRaw("REPLACE(REPLACE(rn_number, '/', ''), '-', '') = ?", [$clean])->firstOrFail(),
             'rm', 'request-material', 'request_material', 'request-materials', 'request_materials' => RequestMaterial::whereRaw("REPLACE(REPLACE(request_number, '/', ''), '-', '') = ?", [$clean])->firstOrFail(),
-            'return', 'receive-note-return', 'receive_note_return' => ReceiveNoteReturn::whereRaw("REPLACE(REPLACE(rn_number, '/', ''), '-', '') = ?", [$clean])->firstOrFail(),
+            'return', 'returns', 'receive-note-return', 'receive_note_return' => ReceiveNoteReturn::whereRaw("REPLACE(REPLACE(rn_number, '/', ''), '-', '') = ?", [$clean])->firstOrFail(),
             default => throw new InvalidArgumentException("Unknown document module '{$module}'. Only operational transactions support approval."),
         };
     }
@@ -96,7 +96,7 @@ class DocumentApprovalWorkflowService
             'rn', 'receive-note', 'receive_note' => 'RN',
             'bpb', 'bpb-receive-material', 'bpb_receive_material', 'warehouse' => 'BPB',
             'rm', 'request-material', 'request_material', 'request-materials', 'request_materials' => 'RM',
-            'return', 'receive-note-return', 'receive_note_return' => 'RETURN',
+            'return', 'returns', 'receive-note-return', 'receive_note_return' => 'RETURN',
             default => strtoupper($module),
         };
     }
@@ -138,7 +138,7 @@ class DocumentApprovalWorkflowService
 
             // Gating Rule: Tier 1 approval requires Waiting 1 or Draft
             if ($tier === 1) {
-                if (in_array($currentStatus, [self::STATUS_WAITING_2, self::STATUS_APPROVED, 'Approved 1', 'Approved 2'])) {
+                if (in_array($currentStatus, [self::STATUS_WAITING_2, 'Approved 1'], true) || $this->isApprovedStatus($currentStatus)) {
                     throw new InvalidArgumentException("Document has already passed Stage 1 approval (Current status: {$currentStatus}).");
                 }
             }
@@ -242,12 +242,12 @@ class DocumentApprovalWorkflowService
                 $newStatus = self::STATUS_WAITING_1;
 
                 // Revert inventory if BPB was Approved
-                if ($normKey === 'BPB' && in_array($currentStatus, [self::STATUS_APPROVED, 'Approved 2'])) {
+                if ($normKey === 'BPB' && $this->isApprovedStatus($currentStatus)) {
                     $this->rollbackBpbStockFromInventory($doc, $user->id);
                 }
 
                 // Revert inventory if RM was Approved
-                if ($normKey === 'RM' && in_array($currentStatus, [self::STATUS_APPROVED, 'Approved 2'])) {
+                if ($normKey === 'RM' && $this->isApprovedStatus($currentStatus)) {
                     $this->rollbackRmStockToInventory($doc, $user->id);
                 }
 
@@ -255,7 +255,7 @@ class DocumentApprovalWorkflowService
                 $this->resetModuleApprovalRecord($normKey, $doc->id, 2);
             } else {
                 // UnApprove 2 cancels only Stage 2, rolling back to Waiting 2
-                if (! in_array($currentStatus, [self::STATUS_APPROVED, 'Approved 2'])) {
+                if (! $this->isApprovedStatus($currentStatus)) {
                     throw new InvalidArgumentException("Cannot UnApprove Stage 2 because document is not in Approved status (Current status: {$currentStatus}).");
                 }
 
@@ -343,7 +343,7 @@ class DocumentApprovalWorkflowService
             }
             $currentStatus = $this->getDocumentStatus($doc);
 
-            if (in_array($currentStatus, [self::STATUS_APPROVED, 'Approved 2'])) {
+            if ($this->isApprovedStatus($currentStatus)) {
                 throw new InvalidArgumentException('Cannot reject document that has already been fully Approved. Use UnApprove first.');
             }
 
@@ -489,9 +489,23 @@ class DocumentApprovalWorkflowService
      */
     public function isLocked(Model $doc): bool
     {
-        $status = $this->getDocumentStatus($doc);
+        return $this->isApprovedStatus($this->getDocumentStatus($doc));
+    }
 
-        return in_array($status, [self::STATUS_APPROVED, 'Approved', 'Approved 2'], true);
+    /**
+     * Stage-2 approved states (including PR dynamic fulfillment states).
+     */
+    public function isApprovedStatus(string $status): bool
+    {
+        return in_array($status, [
+            self::STATUS_APPROVED,
+            'Approved',
+            'Approved 2',
+            'Outstanding',
+            'Ordered',
+            'Partial Closing',
+            'Closing',
+        ], true);
     }
 
     // =========================================================================
@@ -559,8 +573,8 @@ class DocumentApprovalWorkflowService
                 ['users_id' => $userId, 'status' => $status, 'note' => $note]
             ),
             'RM' => ApprovalRm::updateOrCreate(
-                ['request_material_id' => $docId, 'approval_ke' => (string) $tier],
-                ['users_id' => $userId, 'status' => $status, 'note' => $note]
+                ['request_material_id' => $docId, 'users_id' => $userId],
+                ['approval_ke' => (string) $tier, 'status' => $status, 'note' => $note]
             ),
             'RETURN' => ApprovalRnReturn::updateOrCreate(
                 ['receive_note_return_id' => $docId, 'approval_ke' => (string) $tier],
@@ -627,7 +641,9 @@ class DocumentApprovalWorkflowService
      */
     public function postBpbStockToInventory(BpbReceiveMaterial $bpb, int $userId): void
     {
-        $mappings = PoRnToBpb::with(['poReceiveNote.purchaseOrder.items.requisitionItem.item', 'warehouse'])->where('bpb_receive_material_id', $bpb->id)->get();
+        $mappings = PoRnToBpb::with(['poReceiveNote.purchaseOrder.items.requisitionItem.item', 'warehouse', 'coordinate'])
+            ->where('bpb_receive_material_id', $bpb->id)
+            ->get();
 
         foreach ($mappings as $map) {
             $poRn = $map->poReceiveNote;
@@ -641,40 +657,24 @@ class DocumentApprovalWorkflowService
             }
 
             $poItems = $poRn->purchaseOrder?->items ?? collect();
-            $poItemDirect = $poRn->po_has_items_id ? \App\Models\Procurement\PurchaseOrder\PurchaseOrderItem::with('requisitionItem.item')->find($poRn->po_has_items_id) : null;
+            $poItemDirect = $poRn->po_has_items_id ? \App\Models\Procurement\PurchaseOrder\PurchaseOrderItem::with(['requisitionItem.item', 'directItem'])->find($poRn->po_has_items_id) : null;
             $matchedPoItem = $poItemDirect ?? $poItems->first(function ($it) use ($poRn) {
                 return $it->requisitionItem?->item?->name === $poRn->item_name
+                    || $it->directItem?->name === $poRn->item_name
                     || $it->item_alias === $poRn->item_name;
             });
 
             $cleanName = trim((string) $poRn->item_name);
-            $item = $matchedPoItem?->requisitionItem?->item
+            $item = $matchedPoItem?->item
                 ?? Item::where('name', $cleanName)->first()
                 ?? Item::where('code', $cleanName)->first()
                 ?? Item::whereRaw('LOWER(name) = ?', [strtolower($cleanName)])->first()
                 ?? Item::where('name', 'like', "%{$cleanName}%")->first()
-                ?? Item::whereRaw('? LIKE CONCAT("%", name, "%")', [$cleanName])->first()
-                ?? $poRn->purchaseOrder?->items?->first()?->requisitionItem?->item;
-
-            if (! $item && ! empty($cleanName)) {
-                $codeSuffix = strtoupper(substr(preg_replace('/[^A-Za-z0-9]/', '', $cleanName), 0, 8)) ?: 'ITEM';
-                $item = Item::create([
-                    'name' => $cleanName,
-                    'code' => 'MAT-'.$codeSuffix,
-                    'status' => 1,
-                    'stock' => 0,
-                    'categories_id' => 1,
-                    'classifications_id' => 1,
-                    'facilities_id' => 1,
-                    'item_types_id' => 1,
-                    'units_of_measurements_id' => 1,
-                    'updated_by' => $userId,
-                ]);
-            }
+                ?? $poRn->purchaseOrder?->items?->first()?->item;
 
             if ($item) {
-                $warehouseId = $map->warehouses_id ?: (Warehouse::first()?->id ?? 1);
-                $whName = $map->warehouse?->name ?? "Warehouse #{$warehouseId}";
+                $warehouseId = $map->warehouses_id ?: Warehouse::query()->value('id');
+                $whName = $map->warehouse?->name ?? ($warehouseId ? "Warehouse #{$warehouseId}" : 'Unassigned');
                 $this->inventoryService->recordStockMovement(
                     item: $item,
                     warehouseId: $warehouseId,
@@ -683,8 +683,18 @@ class DocumentApprovalWorkflowService
                     referenceType: 'BPB',
                     referenceNumber: $bpb->bpb_number,
                     userId: $userId,
-                    notes: "Physical Goods Received via BPB Approval into {$whName}: {$bpb->bpb_number}"
+                    notes: "Physical Goods Received via BPB Approval into {$whName}: {$bpb->bpb_number}",
+                    coordinateId: $map->warehouse_coordinates_id,
+                    coordinateName: $map->coordinate?->name
                 );
+
+                if (! empty($poRn->dn_number)) {
+                    DB::table('warehouse_stocks')
+                        ->where('items_id', $item->id)
+                        ->where('warehouses_id', $warehouseId)
+                        ->when($map->warehouse_coordinates_id, fn ($q) => $q->where('warehouse_coordinates_id', $map->warehouse_coordinates_id))
+                        ->update(['lot_number' => $poRn->dn_number]);
+                }
             }
         }
     }
@@ -694,7 +704,9 @@ class DocumentApprovalWorkflowService
      */
     public function rollbackBpbStockFromInventory(BpbReceiveMaterial $bpb, int $userId): void
     {
-        $mappings = PoRnToBpb::with(['poReceiveNote.purchaseOrder.items.requisitionItem.item', 'warehouse'])->where('bpb_receive_material_id', $bpb->id)->get();
+        $mappings = PoRnToBpb::with(['poReceiveNote.purchaseOrder.items.requisitionItem.item', 'warehouse', 'coordinate'])
+            ->where('bpb_receive_material_id', $bpb->id)
+            ->get();
 
         foreach ($mappings as $map) {
             $poRn = $map->poReceiveNote;
@@ -708,24 +720,24 @@ class DocumentApprovalWorkflowService
             }
 
             $poItems = $poRn->purchaseOrder?->items ?? collect();
-            $poItemDirect = $poRn->po_has_items_id ? \App\Models\Procurement\PurchaseOrder\PurchaseOrderItem::with('requisitionItem.item')->find($poRn->po_has_items_id) : null;
+            $poItemDirect = $poRn->po_has_items_id ? \App\Models\Procurement\PurchaseOrder\PurchaseOrderItem::with(['requisitionItem.item', 'directItem'])->find($poRn->po_has_items_id) : null;
             $matchedPoItem = $poItemDirect ?? $poItems->first(function ($it) use ($poRn) {
                 return $it->requisitionItem?->item?->name === $poRn->item_name
+                    || $it->directItem?->name === $poRn->item_name
                     || $it->item_alias === $poRn->item_name;
             });
 
             $cleanName = trim((string) $poRn->item_name);
-            $item = $matchedPoItem?->requisitionItem?->item
+            $item = $matchedPoItem?->item
                 ?? Item::where('name', $cleanName)->first()
                 ?? Item::where('code', $cleanName)->first()
                 ?? Item::whereRaw('LOWER(name) = ?', [strtolower($cleanName)])->first()
                 ?? Item::where('name', 'like', "%{$cleanName}%")->first()
-                ?? Item::whereRaw('? LIKE CONCAT("%", name, "%")', [$cleanName])->first()
-                ?? $poRn->purchaseOrder?->items?->first()?->requisitionItem?->item;
+                ?? $poRn->purchaseOrder?->items?->first()?->item;
 
             if ($item) {
-                $warehouseId = $map->warehouses_id ?: (Warehouse::first()?->id ?? 1);
-                $whName = $map->warehouse?->name ?? "Warehouse #{$warehouseId}";
+                $warehouseId = $map->warehouses_id ?: Warehouse::query()->value('id');
+                $whName = $map->warehouse?->name ?? ($warehouseId ? "Warehouse #{$warehouseId}" : 'Unassigned');
                 $this->inventoryService->recordStockMovement(
                     item: $item,
                     warehouseId: $warehouseId,
@@ -734,7 +746,9 @@ class DocumentApprovalWorkflowService
                     referenceType: 'BPB_REVERSAL',
                     referenceNumber: $bpb->bpb_number,
                     userId: $userId,
-                    notes: "Stock Reversal due to BPB Unapproval from {$whName}: {$bpb->bpb_number}"
+                    notes: "Stock Reversal due to BPB Unapproval from {$whName}: {$bpb->bpb_number}",
+                    coordinateId: $map->warehouse_coordinates_id,
+                    coordinateName: $map->coordinate?->name
                 );
             }
         }
@@ -755,7 +769,7 @@ class DocumentApprovalWorkflowService
 
             $targetItem = $rmItem->item ?? Item::find($rmItem->items_id);
             if ($targetItem) {
-                $warehouseId = $rm->warehouses_id ?? 1;
+                $warehouseId = $rm->warehouses_id ?: Warehouse::query()->value('id');
                 $this->inventoryService->recordStockMovement(
                     item: $targetItem,
                     warehouseId: $warehouseId,
@@ -785,7 +799,7 @@ class DocumentApprovalWorkflowService
 
             $targetItem = $rmItem->item ?? Item::find($rmItem->items_id);
             if ($targetItem) {
-                $warehouseId = $rm->warehouses_id ?? 1;
+                $warehouseId = $rm->warehouses_id ?: Warehouse::query()->value('id');
                 $this->inventoryService->recordStockMovement(
                     item: $targetItem,
                     warehouseId: $warehouseId,

@@ -3,16 +3,18 @@
 namespace App\Http\Controllers\Api\Procurement\Master;
 
 use App\Http\Controllers\Controller;
+use App\Models\Master\Finance\Currency;
+use App\Models\Master\Finance\PaymentMethod;
+use App\Models\Master\Finance\PaymentTerm;
+use App\Models\Master\Finance\RafaksiType;
 use App\Models\Master\Partner\Country;
+use App\Models\Master\Partner\Port;
 use App\Models\Master\Partner\Supplier;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class SupplierApiController extends Controller
 {
-    /**
-     * Display a listing of suppliers.
-     */
     public function index(Request $request): JsonResponse
     {
         $query = Supplier::with([
@@ -21,6 +23,7 @@ class SupplierApiController extends Controller
             'paymentMethod',
             'currency',
             'port',
+            'rafaksiType',
             'createdByUser',
         ]);
 
@@ -47,40 +50,14 @@ class SupplierApiController extends Controller
         ]);
     }
 
-    /**
-     * Store a newly created supplier.
-     */
     public function store(Request $request): JsonResponse
     {
-        // Normalize camelCase fields from frontend
-        if ($request->has('supplierName') && ! $request->has('name')) {
-            $request->merge(['name' => $request->input('supplierName')]);
-        }
-        if ($request->has('supplierCode') && ! $request->has('code')) {
-            $request->merge(['code' => $request->input('supplierCode')]);
-        }
-        if ($request->has('contactPerson') && ! $request->has('contact_person')) {
-            $request->merge(['contact_person' => $request->input('contactPerson')]);
-        }
-        if ($request->has('telephoneNumber') && ! $request->has('telephone_number')) {
-            $request->merge(['telephone_number' => $request->input('telephoneNumber')]);
-        }
-        if ($request->has('wechatId') && ! $request->has('wechat_id')) {
-            $request->merge(['wechat_id' => $request->input('wechatId')]);
-        }
-        if ($request->has('country') && ! $request->has('countries_id')) {
-            $countryVal = $request->input('country');
-            if (is_numeric($countryVal)) {
-                $request->merge(['countries_id' => (int) $countryVal]);
-            } elseif (! empty($countryVal)) {
-                $country = Country::firstOrCreate(['name' => trim($countryVal)]);
-                $request->merge(['countries_id' => $country->id]);
-            }
-        }
+        $actorId = $this->requireActorId($request);
+        $this->normalizeSupplierInputs($request);
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'code' => 'nullable|string|max:100',
+            'code' => 'nullable|string|max:100|unique:supliers,code',
             'address' => 'nullable|string|max:500',
             'contact_person' => 'nullable|string|max:100',
             'city' => 'nullable|string|max:100',
@@ -98,27 +75,45 @@ class SupplierApiController extends Controller
             'nitku' => 'nullable|string|max:45',
             'whatsapp' => 'nullable|string|max:45',
             'wechat_id' => 'nullable|string|max:45',
+            'status' => 'nullable|integer',
         ]);
 
-        // Auto-generate code if empty
+        $fkDefaults = [
+            'countries_id' => Country::class,
+            'payment_terms_id' => PaymentTerm::class,
+            'payment_methods_id' => PaymentMethod::class,
+            'rafaksi_types_id' => RafaksiType::class,
+            'currencies_id' => Currency::class,
+            'ports_id' => Port::class,
+        ];
+
+        foreach ($fkDefaults as $field => $modelClass) {
+            if (empty($validated[$field])) {
+                $defaultId = $modelClass::query()->orderBy('id')->value('id');
+                if (! $defaultId) {
+                    return response()->json([
+                        'message' => "Reference master for {$field} is empty. Seed master tables first.",
+                    ], 422);
+                }
+                $validated[$field] = $defaultId;
+            }
+        }
+
         if (empty($validated['code'])) {
             $nextId = (Supplier::max('id') ?? 0) + 1;
             $validated['code'] = 'SUP.'.str_pad((string) $nextId, 4, '0', STR_PAD_LEFT);
         }
 
-        $validated['created_by'] = $request->user()?->id ?? 1;
+        $validated['created_by'] = $actorId;
 
         $supplier = Supplier::create($validated);
 
         return response()->json([
             'message' => 'Supplier created successfully',
-            'data' => $supplier->load(['country', 'paymentTerm', 'paymentMethod', 'currency', 'port']),
+            'data' => $supplier->load(['country', 'paymentTerm', 'paymentMethod', 'currency', 'port', 'rafaksiType', 'createdByUser']),
         ], 201);
     }
 
-    /**
-     * Display the specified supplier.
-     */
     public function show(int $id): JsonResponse
     {
         $supplier = Supplier::with([
@@ -127,22 +122,22 @@ class SupplierApiController extends Controller
             'paymentMethod',
             'currency',
             'port',
+            'rafaksiType',
             'createdByUser',
         ])->findOrFail($id);
 
         return response()->json(['data' => $supplier]);
     }
 
-    /**
-     * Update the specified supplier.
-     */
     public function update(Request $request, int $id): JsonResponse
     {
+        $this->requireActorId($request);
         $supplier = Supplier::findOrFail($id);
+        $this->normalizeSupplierInputs($request);
 
         $validated = $request->validate([
             'name' => 'sometimes|required|string|max:255',
-            'code' => 'nullable|string|max:100',
+            'code' => 'nullable|string|max:100|unique:supliers,code,'.$id,
             'address' => 'nullable|string|max:500',
             'contact_person' => 'nullable|string|max:100',
             'city' => 'nullable|string|max:100',
@@ -160,24 +155,90 @@ class SupplierApiController extends Controller
             'nitku' => 'nullable|string|max:45',
             'whatsapp' => 'nullable|string|max:45',
             'wechat_id' => 'nullable|string|max:45',
+            'status' => 'nullable|integer',
         ]);
 
         $supplier->update($validated);
 
         return response()->json([
             'message' => 'Supplier updated successfully',
-            'data' => $supplier->load(['country', 'paymentTerm', 'paymentMethod', 'currency', 'port']),
+            'data' => $supplier->load(['country', 'paymentTerm', 'paymentMethod', 'currency', 'port', 'rafaksiType', 'createdByUser']),
         ]);
     }
 
-    /**
-     * Remove the specified supplier.
-     */
+    public function toggleStatus(Request $request, int $id): JsonResponse
+    {
+        $this->requireActorId($request);
+        $supplier = Supplier::findOrFail($id);
+        $supplier->status = (int) $supplier->status === 1 ? 0 : 1;
+        $supplier->save();
+
+        return response()->json([
+            'message' => 'Supplier status updated successfully',
+            'data' => $supplier->load(['country', 'paymentTerm', 'paymentMethod', 'currency', 'port', 'rafaksiType', 'createdByUser']),
+        ]);
+    }
+
     public function destroy(int $id): JsonResponse
     {
         $supplier = Supplier::findOrFail($id);
         $supplier->delete();
 
         return response()->json(['message' => 'Supplier deleted successfully']);
+    }
+
+    private function normalizeSupplierInputs(Request $request): void
+    {
+        $aliases = [
+            'supplierName' => 'name',
+            'supplierCode' => 'code',
+            'contactPerson' => 'contact_person',
+            'telephoneNumber' => 'telephone_number',
+            'wechatId' => 'wechat_id',
+        ];
+        foreach ($aliases as $from => $to) {
+            if ($request->has($from) && ! $request->has($to)) {
+                $request->merge([$to => $request->input($from)]);
+            }
+        }
+
+        $lookups = [
+            ['keys' => ['country'], 'fk' => 'countries_id', 'model' => Country::class, 'cols' => ['name', 'code']],
+            ['keys' => ['payment_term', 'paymentTerm'], 'fk' => 'payment_terms_id', 'model' => PaymentTerm::class, 'cols' => ['name']],
+            ['keys' => ['payment_method', 'paymentMethod'], 'fk' => 'payment_methods_id', 'model' => PaymentMethod::class, 'cols' => ['name']],
+            ['keys' => ['rafaksi_type', 'rafaksiType'], 'fk' => 'rafaksi_types_id', 'model' => RafaksiType::class, 'cols' => ['name', 'code']],
+            ['keys' => ['currency'], 'fk' => 'currencies_id', 'model' => Currency::class, 'cols' => ['name']],
+            ['keys' => ['port'], 'fk' => 'ports_id', 'model' => Port::class, 'cols' => ['name']],
+        ];
+
+        foreach ($lookups as $lookup) {
+            if ($request->filled($lookup['fk'])) {
+                continue;
+            }
+            foreach ($lookup['keys'] as $key) {
+                if (! $request->filled($key)) {
+                    continue;
+                }
+                $val = trim((string) $request->input($key));
+                if (is_numeric($val)) {
+                    $request->merge([$lookup['fk'] => (int) $val]);
+                } else {
+                    $model = $lookup['model'];
+                    $lower = strtolower($val);
+                    $found = $model::query()->where(function ($q) use ($lookup, $lower) {
+                        foreach ($lookup['cols'] as $col) {
+                            $q->orWhereRaw("LOWER({$col}) = ?", [$lower]);
+                        }
+                    })->first();
+                    if (! $found) {
+                        abort(response()->json([
+                            'message' => "Referenced master '{$val}' was not found for {$lookup['fk']}.",
+                        ], 422));
+                    }
+                    $request->merge([$lookup['fk'] => $found->id]);
+                }
+                break;
+            }
+        }
     }
 }

@@ -7,7 +7,6 @@ import { StatusToggle } from "../../../../components/ui/StatusToggle";
 import { ConfirmDialog } from "../../../../components/ui/ConfirmDialog";
 import { RafaksiTypeForm } from "./RafaksiTypeForm";
 import {
-  initialRafaksiTypeRecords,
   type RafaksiTypeRecord,
   type RafaksiTypeSortField,
   type SortDirection,
@@ -23,7 +22,7 @@ interface RafaksiTypeIndexProps {
 }
 
 export function RafaksiTypeIndex({
-  records = initialRafaksiTypeRecords,
+  records = [],
   onAddNew,
   onEdit,
   onDelete,

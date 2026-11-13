@@ -49,12 +49,18 @@ class ClassificationApiController extends Controller
         ]);
 
         if (empty($validated['reporting_types_id'])) {
-            $repType = ReportingType::firstOrCreate(['name' => 'General Reporting']);
+            $repType = ReportingType::orderBy('id')->first();
+            if (! $repType) {
+                return response()->json(['message' => 'Reference table reporting_types is empty. Run database seeders first.'], 422);
+            }
             $validated['reporting_types_id'] = $repType->id;
         }
 
         if (empty($validated['accounts_id'])) {
-            $account = Account::firstOrCreate(['code' => '1000'], ['name' => 'General Account']);
+            $account = Account::orderBy('id')->first();
+            if (! $account) {
+                return response()->json(['message' => 'Reference table accounts is empty. Run database seeders first.'], 422);
+            }
             $validated['accounts_id'] = $account->id;
         }
 
@@ -100,5 +106,17 @@ class ClassificationApiController extends Controller
         $record->delete();
 
         return response()->json(['message' => 'Classification deleted successfully']);
+    }
+
+    public function toggleStatus(int $id): JsonResponse
+    {
+        $record = Classification::findOrFail($id);
+        $record->status = (int) $record->status === 1 ? 0 : 1;
+        $record->save();
+
+        return response()->json([
+            'message' => 'Classification status updated successfully',
+            'data' => $record->load(['reportingType', 'account']),
+        ]);
     }
 }

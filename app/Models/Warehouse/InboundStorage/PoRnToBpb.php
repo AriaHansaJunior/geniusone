@@ -3,6 +3,7 @@
 namespace App\Models\Warehouse\InboundStorage;
 
 use App\Models\Warehouse\Facility\Warehouse;
+use App\Models\Warehouse\Facility\WarehouseCoordinate;
 use App\Models\Warehouse\GateReceiving\PurchaseOrderReceiveNote;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -19,6 +20,7 @@ class PoRnToBpb extends Model
         'po_has_rn_id',
         'bpb_receive_material_id',
         'warehouses_id',
+        'warehouse_coordinates_id',
     ];
 
     public function bpbReceiveMaterial(): BelongsTo
@@ -29,6 +31,11 @@ class PoRnToBpb extends Model
     public function warehouse(): BelongsTo
     {
         return $this->belongsTo(Warehouse::class, 'warehouses_id');
+    }
+
+    public function coordinate(): BelongsTo
+    {
+        return $this->belongsTo(WarehouseCoordinate::class, 'warehouse_coordinates_id');
     }
 
     public function purchaseOrderReceiveNote(): BelongsTo

@@ -6,11 +6,8 @@ import { SearchField } from "../../components/ui/SearchField";
 import { Pagination } from "../../components/ui/Pagination";
 import { CustomDatePicker } from "../../components/ui/CustomDatePicker";
 import { CustomSelect } from "../../components/ui/CustomSelect";
-import {
-  currenciesList,
-  rateTypesList,
-  initialExchangeRateRecords,
-} from "./dashboard-rate-data";
+import { apiFetch } from "../../data/api";
+import { fetchMasterCurrencies } from "../../data/masterApi";
 import { DashboardRateChart } from "./DashboardRateChart";
 import { DashboardStockAlert } from "./DashboardStockAlert";
 import { DashboardPendingApprovals } from "./DashboardPendingApprovals";
@@ -163,7 +160,7 @@ export function Dashboard({
       message: "Checking live forex feed status from central bank servers...",
     });
 
-    fetch(`/api/dashboard/exchange-rates?startDate=${appliedFilters.startDate}&endDate=${appliedFilters.endDate}`)
+    apiFetch(`/api/dashboard/exchange-rates?startDate=${appliedFilters.startDate}&endDate=${appliedFilters.endDate}`)
       .then((r) => r.json())
       .then((json) => {
         if (json?.status === "success" && Array.isArray(json.data)) {
@@ -188,7 +185,30 @@ export function Dashboard({
       });
   }, [appliedFilters]);
 
-  const [rateRecords, setRateRecords] = useState<ExchangeRateRecord[]>(initialExchangeRateRecords);
+  const [rateRecords, setRateRecords] = useState<ExchangeRateRecord[]>([]);
+  const [currenciesList, setCurrenciesList] = useState<string[]>(["All Currencies"]);
+  const rateTypesList = useMemo(
+    () => [
+      "All Rate Types",
+      "Pajak (KMK)",
+      "Bank Indonesia (BI)",
+      "Commercial Bank (Counter)",
+    ],
+    []
+  );
+
+  React.useEffect(() => {
+    let isMounted = true;
+    fetchMasterCurrencies().then((currs) => {
+      if (isMounted && Array.isArray(currs) && currs.length > 0) {
+        const codes = Array.from(new Set(currs.map((c) => c.currencyCode).filter(Boolean)));
+        setCurrenciesList(["All Currencies", ...codes]);
+      }
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   React.useEffect(() => {
     let isMounted = true;
@@ -199,25 +219,24 @@ export function Dashboard({
       rateType: appliedFilters.rateType,
     });
 
-    fetch(`/api/dashboard/exchange-rates?${params.toString()}`, {
-      headers: { Accept: "application/json" },
-    })
+    apiFetch(`/api/dashboard/exchange-rates?${params.toString()}`)
       .then((res) => res.json())
       .then((json) => {
         if (!isMounted) return;
         if (json?.status === "success" && Array.isArray(json.data)) {
-          if (json.data.length > 0) {
-            const mapped: ExchangeRateRecord[] = json.data.map((r: any, idx: number) =>
-              mapApiExchangeRateRecord(r, idx)
-            );
-            setRateRecords(mapped);
-          } else {
-            setRateRecords([]);
-          }
+          const mapped: ExchangeRateRecord[] = json.data.map((r: any, idx: number) =>
+            mapApiExchangeRateRecord(r, idx)
+          );
+          setRateRecords(mapped);
+          setCurrenciesList((prev) => {
+            if (prev.length > 1) return prev;
+            const codes = Array.from(new Set(mapped.map((m) => m.currencyCode).filter(Boolean)));
+            return ["All Currencies", ...codes];
+          });
         }
       })
       .catch((err) => {
-        console.warn("[GeniusOne Exchange Rate] Network error, using baseline:", err);
+        console.warn("[GeniusOne Exchange Rate] Network error:", err);
       });
 
     return () => {

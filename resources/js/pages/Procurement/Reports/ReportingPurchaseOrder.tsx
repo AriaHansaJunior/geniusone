@@ -1,13 +1,13 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { Icon } from "../../../components/ui/Icon";
 import { Badge } from "../../../components/ui/Badge";
 import { Pagination } from "../../../components/ui/Pagination";
 import { CustomSelect } from "../../../components/ui/CustomSelect";
 import { CustomDatePicker } from "../../../components/ui/CustomDatePicker";
 import {
-  initialPoReportRecords,
-  poReportSuppliersList,
-} from "./po-report-data";
+  fetchPoReportApi,
+  fetchMasterSuppliers,
+} from "../../../data/masterApi";
 import type {
   PoReportRecord,
   PoReceivingStatus,
@@ -87,11 +87,29 @@ export function ReportingPurchaseOrder({
   // ---------------------------------------------------------------------------
   // Row Expansion State for Nested PO Details
   // ---------------------------------------------------------------------------
-  const [expandedRowIds, setExpandedRowIds] = useState<Record<string, boolean>>({
-    // Expand first two rows initially to match reference interactive showcase
-    "po-rep-1": true,
-    "po-rep-2": true,
-  });
+  const [records, setRecords] = useState<PoReportRecord[]>([]);
+  const [poReportSuppliersList, setPoReportSuppliersList] = useState<string[]>(["Choose Supplier"]);
+  const [expandedRowIds, setExpandedRowIds] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    let isMounted = true;
+    fetchPoReportApi()
+      .then((rows) => {
+        if (isMounted && Array.isArray(rows)) setRecords(rows);
+      })
+      .catch(() => {});
+    fetchMasterSuppliers()
+      .then((rows) => {
+        if (isMounted && Array.isArray(rows)) {
+          const names = Array.from(new Set(rows.map((s) => s.supplierName).filter(Boolean)));
+          setPoReportSuppliersList(["Choose Supplier", ...names]);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const toggleRowDetail = useCallback((id: string) => {
     setExpandedRowIds((prev) => ({
@@ -131,7 +149,7 @@ export function ReportingPurchaseOrder({
     const isoStart = fromDisplayDate(startDate);
     const isoEnd = fromDisplayDate(endDate);
 
-    const filtered = initialPoReportRecords.filter((record) => {
+    const filtered = records.filter((record) => {
       // Search matching across PO number, supplier, description, facility, creator, and line items
       if (q) {
         const matchesPo = record.poNumber.toLowerCase().includes(q);

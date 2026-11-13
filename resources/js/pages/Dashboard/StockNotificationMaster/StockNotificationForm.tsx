@@ -1,7 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "../../../components/ui/Button";
 import { Icon } from "../../../components/ui/Icon";
 import { CustomSelect } from "../../../components/ui/CustomSelect";
+import { fetchMasterItems } from "../../../data/masterApi";
 import type { StockNotificationRecord } from "./stock-notification-types";
 
 interface StockNotificationFormProps {
@@ -10,23 +11,35 @@ interface StockNotificationFormProps {
   onSave: (record: StockNotificationRecord, isEdit: boolean) => void;
 }
 
-const predefinedItems = [
-  { code: "80.100.001.001", name: "Laptop ThinkPad T14 Gen 4 Core i7 16GB", category: "IT EQUIPMENT", unit: "PCE", stock: 1 },
-  { code: "10.002.400.020", name: "Pulpen Gel Ballpoint 0.5 Black Standard", category: "GENERAL ATK", unit: "PCE", stock: 8 },
-  { code: "60.154.300.101", name: 'Nozzle Jet Spray Spiral SUS 316 size ½" (Male thread)', category: "MESIN & SPARE PART", unit: "PCE", stock: 45 },
-  { code: "30.200.010.003", name: "Flux Refining Powder Smelting Grade", category: "BAHAN PENOLONG", unit: "SAK", stock: 12 },
-  { code: "10.002.400.012", name: "Kertas HVS A4 80gr PaperOne", category: "GENERAL ATK", unit: "RIM", stock: 35 },
-  { code: "60.149.301.404", name: "Mur Baut M 10 x 40 + ring pir", category: "MESIN & SPARE PART", unit: "PCE", stock: 150 },
-  { code: "50.112.100.001", name: "Tembaga Batangan Murni 99.9% Grade A", category: "FINISH GOOD", unit: "KGS", stock: 750 },
-  { code: "40.301.002.005", name: "Solar Industri B35 Pertamina", category: "BAHAN PENOLONG", unit: "LTR", stock: 4800 },
-];
-
 export function StockNotificationForm({
   initialRecord,
   onBack,
   onSave,
 }: StockNotificationFormProps) {
   const isEdit = !!initialRecord;
+  const [predefinedItems, setPredefinedItems] = useState<
+    Array<{ code: string; name: string; category: string; unit: string; stock: number }>
+  >([]);
+
+  useEffect(() => {
+    let isMounted = true;
+    fetchMasterItems().then((items) => {
+      if (isMounted && Array.isArray(items)) {
+        setPredefinedItems(
+          items.map((it) => ({
+            code: it.itemCode,
+            name: it.itemName,
+            category: it.category && it.category !== "-" ? it.category : (it.classification || ""),
+            unit: it.smallestUnitCode || "",
+            stock: Number(it.stock ?? 0),
+          }))
+        );
+      }
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const [itemCode, setItemCode] = useState(initialRecord?.itemCode || "");
   const [itemName, setItemName] = useState(initialRecord?.itemName || "");

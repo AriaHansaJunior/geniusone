@@ -4,10 +4,12 @@ namespace App\Http\Controllers\Api\Warehouse;
 
 use App\Http\Controllers\Controller;
 use App\Models\Master\Material\Item;
-use App\Models\Master\Partner\Supplier;
 use App\Models\Master\Organization\JobNumber;
+use App\Models\Master\Partner\Supplier;
 use App\Models\Procurement\PurchaseOrder\PurchaseOrder;
+use App\Models\Procurement\PurchaseOrder\PurchaseOrderItem;
 use App\Models\Warehouse\Facility\Warehouse;
+use App\Models\Warehouse\Facility\WarehouseCoordinate;
 use App\Models\Warehouse\GateReceiving\PurchaseOrderReceiveNote;
 use App\Models\Warehouse\GateReceiving\ReceiveNote;
 use App\Models\Warehouse\InboundStorage\BpbReceiveMaterial;
@@ -15,6 +17,7 @@ use App\Services\GeniusOneBackend;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use InvalidArgumentException;
 
 class WarehouseApiController extends Controller
 {
@@ -27,10 +30,14 @@ class WarehouseApiController extends Controller
             'creator',
             'approvals.user',
             'mappings.warehouse',
+            'mappings.coordinate',
             'mappings.purchaseOrderReceiveNote.purchaseOrder.supplier',
+            'mappings.purchaseOrderReceiveNote.purchaseOrder.valuta',
             'mappings.purchaseOrderReceiveNote.purchaseOrder.items.requisitionItem.purchaseRequisition',
             'mappings.purchaseOrderReceiveNote.purchaseOrder.items.requisitionItem.item.unitOfMeasurement',
+            'mappings.purchaseOrderReceiveNote.purchaseOrder.items.directItem.unitOfMeasurement',
             'mappings.purchaseOrderReceiveNote.receiveNote.supplier',
+            'mappings.purchaseOrderReceiveNote.receiveNote.currency',
             'mappings.purchaseOrderReceiveNote.jobNumber',
         ]);
 
@@ -65,7 +72,7 @@ class WarehouseApiController extends Controller
             ['Receive documents', (string) $totalCount, 'Warehouse inbound receipts'],
             ['Approval status', "{$readyCount} Pending", 'Awaiting verification'],
             ['Total received items', number_format($totalQty, 2), 'Across all BPB receipts'],
-            ['Registered suppliers', (string) max(1, $suppliersCount), 'Supplying incoming materials'],
+            ['Registered suppliers', (string) $suppliersCount, 'Supplying incoming materials'],
         ];
 
         // Format rows for Frontend Table
@@ -87,6 +94,151 @@ class WarehouseApiController extends Controller
         ]);
     }
 
+    public function availableSources()
+    {
+        // 1. Approved Receive Notes not yet processed into an active BPB
+        $processedRnIds = DB::table('po_rn_to_bpb as pb')
+            ->join('bpb_receive_material as bpb', 'pb.bpb_receive_material_id', '=', 'bpb.id')
+            ->join('purchase_order_has_receive_note as porn', 'pb.po_has_rn_id', '=', 'porn.id')
+            ->where('bpb.status', '!=', 'Rejected')
+            ->whereNull('bpb.deleted_at')
+            ->whereNull('pb.deleted_at')
+            ->whereNotNull('porn.receive_note_id')
+            ->pluck('porn.receive_note_id')
+            ->unique()
+            ->toArray();
+
+        $rns = ReceiveNote::with([
+            'supplier',
+            'currency',
+            'purchaseOrders.purchaseOrder.valuta',
+            'purchaseOrders.poItem.requisitionItem.item.unitOfMeasurement',
+            'purchaseOrders.poItem.directItem.unitOfMeasurement',
+            'purchaseOrders.jobNumber',
+        ])
+            ->where('status', 'Approved')
+            ->whereNotIn('id', $processedRnIds)
+            ->orderByDesc('id')
+            ->get()
+            ->map(function (ReceiveNote $rn) {
+                $items = $rn->purchaseOrders->map(function (PurchaseOrderReceiveNote $line) use ($rn) {
+                    $masterItem = $line->poItem?->item
+                        ?? Item::with('unitOfMeasurement')->where('name', $line->item_name)->first();
+
+                    return [
+                        'po_has_rn_id' => $line->id,
+                        'po_has_items_id' => $line->po_has_items_id,
+                        'purchase_order_id' => $line->purchase_order_id,
+                        'po_number' => $line->purchaseOrder?->po_number,
+                        'rn_number' => $rn->rn_number,
+                        'dn_number' => $line->dn_number ?? $rn->sj_number,
+                        'item_id' => $masterItem?->id,
+                        'item_code' => $masterItem?->code,
+                        'item_name' => $line->item_name ?: $masterItem?->name,
+                        'unit' => $masterItem?->unitOfMeasurement?->code ?? $masterItem?->unitOfMeasurement?->name,
+                        'quantity' => (float) $line->quantity,
+                        'rafaksi' => (float) $line->rafaksi,
+                        'remaining_qty' => max(0.0, (float) $line->quantity - (float) $line->rafaksi),
+                        'price' => (float) ($line->price ?: ($line->poItem?->price ?? 0)),
+                        'job_number_id' => $line->job_number_id,
+                        'job_number' => $line->jobNumber?->code,
+                    ];
+                })->values();
+
+                return [
+                    'source_type' => 'RN',
+                    'id' => $rn->id,
+                    'document_number' => $rn->rn_number,
+                    'date' => $rn->arrival_date ? date('Y-m-d', strtotime($rn->arrival_date)) : null,
+                    'supplier_id' => $rn->supliers_id,
+                    'supplier_name' => $rn->supplier?->name,
+                    'sj_number' => $rn->sj_number,
+                    'license_plate' => $rn->license_plate,
+                    'facility' => $rn->facility ?: ((int) $rn->dn_status === 1 ? 'FASILITAS' : 'NON FASILITAS'),
+                    'bc_code' => $rn->bc_code,
+                    'currency' => $rn->currency?->code ?? $rn->currency?->name,
+                    'items' => $items,
+                ];
+            })
+            ->values();
+
+        // 2. Approved Non-Kawasan Berikat POs with remaining receivable quantity
+        $receivedByPoItem = DB::table('purchase_order_has_receive_note as porn')
+            ->join('po_rn_to_bpb as pb', 'pb.po_has_rn_id', '=', 'porn.id')
+            ->join('bpb_receive_material as bpb', 'pb.bpb_receive_material_id', '=', 'bpb.id')
+            ->where('bpb.status', '!=', 'Rejected')
+            ->whereNull('porn.deleted_at')
+            ->whereNull('pb.deleted_at')
+            ->whereNull('bpb.deleted_at')
+            ->selectRaw('porn.po_has_items_id, SUM(GREATEST(0, porn.quantity - COALESCE(porn.rafaksi, 0))) as received_qty')
+            ->groupBy('porn.po_has_items_id')
+            ->pluck('received_qty', 'po_has_items_id');
+
+        $pos = PurchaseOrder::with([
+            'supplier',
+            'valuta',
+            'items.requisitionItem.item.unitOfMeasurement',
+            'items.requisitionItem.jobNumber',
+            'items.directItem.unitOfMeasurement',
+        ])
+            ->whereIn('status', ['Approved', 'Approved 2'])
+            ->orderByDesc('id')
+            ->get()
+            ->filter(fn (PurchaseOrder $po) => ! $po->isKawasanBerikat())
+            ->map(function (PurchaseOrder $po) use ($receivedByPoItem) {
+                $items = [];
+                foreach ($po->items as $poItem) {
+                    $ordered = (float) $poItem->order;
+                    $alreadyReceived = (float) ($receivedByPoItem[$poItem->id] ?? 0);
+                    $remaining = max(0.0, $ordered - $alreadyReceived);
+                    if ($remaining <= 0) {
+                        continue;
+                    }
+
+                    $masterItem = $poItem->item;
+                    $items[] = [
+                        'po_has_items_id' => $poItem->id,
+                        'purchase_order_id' => $po->id,
+                        'po_number' => $po->po_number,
+                        'item_id' => $masterItem?->id ?? $poItem->items_id,
+                        'item_code' => $masterItem?->code,
+                        'item_name' => $poItem->item_alias ?: $masterItem?->name,
+                        'unit' => $masterItem?->unitOfMeasurement?->code ?? $masterItem?->unitOfMeasurement?->name,
+                        'ordered_qty' => $ordered,
+                        'received_qty' => $alreadyReceived,
+                        'remaining_qty' => $remaining,
+                        'price' => (float) $poItem->price,
+                        'job_number_id' => $poItem->prItem?->job_number_id,
+                        'job_number' => $poItem->prItem?->jobNumber?->code ?? $poItem->prItem?->job_number,
+                    ];
+                }
+
+                if (empty($items)) {
+                    return null;
+                }
+
+                return [
+                    'source_type' => 'PO',
+                    'id' => $po->id,
+                    'document_number' => $po->po_number,
+                    'date' => $po->date ? date('Y-m-d', strtotime($po->date)) : null,
+                    'supplier_id' => $po->supliers_id,
+                    'supplier_name' => $po->supplier?->name,
+                    'facility' => $po->facility_status ?: 'NON FASILITAS',
+                    'currency' => $po->valuta?->name,
+                    'items' => $items,
+                ];
+            })
+            ->filter()
+            ->values();
+
+        return response()->json([
+            'status' => 'success',
+            'rn_sources' => $rns,
+            'po_sources' => $pos,
+        ]);
+    }
+
     /**
      * Show single Warehouse BPB detail.
      */
@@ -99,10 +251,14 @@ class WarehouseApiController extends Controller
             'creator',
             'approvals.user',
             'mappings.warehouse',
+            'mappings.coordinate',
             'mappings.purchaseOrderReceiveNote.purchaseOrder.supplier',
+            'mappings.purchaseOrderReceiveNote.purchaseOrder.valuta',
             'mappings.purchaseOrderReceiveNote.purchaseOrder.items.requisitionItem.purchaseRequisition',
             'mappings.purchaseOrderReceiveNote.purchaseOrder.items.requisitionItem.item.unitOfMeasurement',
+            'mappings.purchaseOrderReceiveNote.purchaseOrder.items.directItem.unitOfMeasurement',
             'mappings.purchaseOrderReceiveNote.receiveNote.supplier',
+            'mappings.purchaseOrderReceiveNote.receiveNote.currency',
             'mappings.purchaseOrderReceiveNote.jobNumber',
         ])
             ->where('bpb_number', $rawCode)
@@ -163,7 +319,7 @@ class WarehouseApiController extends Controller
                 }
             }
 
-            $creatorId = auth()->id() ?? 1;
+            $creatorId = $this->requireActorId($request);
 
             // Resolve Supplier
             $supInput = $request->input('supliers_id') ?? $request->input('supplier_id') ?? $request->input('supplier');
@@ -190,10 +346,6 @@ class WarehouseApiController extends Controller
                 if ($headerPo && ! $supplierId) {
                     $supplierId = $headerPo->supliers_id;
                 }
-            }
-
-            if (! $supplierId) {
-                $supplierId = Supplier::first()?->id ?? 1;
             }
 
             $rawItems = $request->input('items', []);
@@ -441,23 +593,27 @@ class WarehouseApiController extends Controller
                 $noteText = $rawItems[0]['purpose'] ?? $rawItems[0]['remark'] ?? null;
             }
 
+            $bpbType = $request->input('bpb_type') ?? $request->input('bpbType') ?? ($sourceType === 'PO' ? 'Direct PO' : 'Warehouse');
+
             $bpb = BpbReceiveMaterial::create([
                 'bpb_number' => $bpbNumber,
                 'source_type' => $sourceType,
+                'bpb_type' => $bpbType,
                 'status' => 'Waiting for Approve 1',
-                'note' => $noteText ?: ($sourceType === 'PO' ? 'Direct physical receipt from Non-Kawasan Berikat PO' : 'Inbound physical receipt from logistics'),
+                'note' => $noteText ?: null,
                 'receive_date' => $receiveDate,
                 'creator_id' => $creatorId,
                 'updated_by' => $creatorId,
             ]);
 
-            $defaultWarehouseId = (int) ($request->input('warehouse_id') ?: (Warehouse::first()?->id ?? 1));
-            $defaultJobId = JobNumber::first()?->id ?? 1;
-            $defaultPoId = $headerPo?->id ?? (PurchaseOrder::orderBy('id', 'desc')->first()?->id ?? 1);
+            $headerWarehouseId = $this->resolveWarehouseId(
+                $request->input('warehouse_id') ?? $request->input('warehouse') ?? $request->input('location')
+            );
+            $fallbackJobId = JobNumber::query()->value('id');
+            $defaultPoId = $headerPo?->id;
 
             if (is_array($rawItems) && count($rawItems) > 0) {
                 foreach ($rawItems as $itemData) {
-                    // Resolve PO for item line
                     $itemPoId = $defaultPoId;
                     $itemPoCode = $itemData['poNumber'] ?? $itemData['po_number'] ?? null;
                     if (! empty($itemPoCode) && $itemPoCode !== '—' && $itemPoCode !== '-') {
@@ -470,41 +626,43 @@ class WarehouseApiController extends Controller
                         }
                     }
 
-                    // Resolve Warehouse for item line
-                    $itemWhId = $defaultWarehouseId;
-                    if (! empty($itemData['warehouse_id']) && is_numeric($itemData['warehouse_id'])) {
-                        $itemWhId = (int) $itemData['warehouse_id'];
-                    } elseif (! empty($itemData['location']) || ! empty($itemData['warehouse'])) {
-                        $locName = trim((string) ($itemData['location'] ?? $itemData['warehouse']));
-                        $matchedWh = Warehouse::where('name', $locName)
-                            ->orWhere('name', 'like', "%{$locName}%")
-                            ->first();
-                        if ($matchedWh) {
-                            $itemWhId = $matchedWh->id;
-                        }
+                    $itemWhId = $this->resolveWarehouseId(
+                        $itemData['warehouse_id'] ?? $itemData['warehouse'] ?? $itemData['location'] ?? null
+                    ) ?? $headerWarehouseId;
+
+                    if (! $itemWhId) {
+                        throw new InvalidArgumentException('Each BPB item line must specify a valid destination Warehouse.');
                     }
 
-                    // Resolve JobNumber for item line
-                    $itemJobId = $defaultJobId;
-                    $jobCode = $itemData['jobNumber'] ?? $itemData['job_number'] ?? null;
-                    if (! empty($jobCode) && $jobCode !== '—' && $jobCode !== '-') {
-                        $matchedJob = JobNumber::where('code', $jobCode)
-                            ->orWhere('name', 'like', "%{$jobCode}%")
-                            ->first();
-                        if ($matchedJob) {
-                            $itemJobId = $matchedJob->id;
+                    $itemCoordinate = $this->resolveWarehouseCoordinate(
+                        $itemWhId,
+                        $itemData['warehouse_coordinates_id'] ?? $itemData['coordinate_id'] ?? $request->input('warehouse_coordinates_id'),
+                        $itemData['coordinate'] ?? $itemData['coordinate_name'] ?? $request->input('coordinate')
+                    );
+
+                    $resolvedPoHasItemId = ! empty($itemData['po_has_items_id']) && is_numeric($itemData['po_has_items_id'])
+                        ? (int) $itemData['po_has_items_id']
+                        : null;
+                    $poItem = $resolvedPoHasItemId ? PurchaseOrderItem::with(['prItem', 'directItem'])->find($resolvedPoHasItemId) : null;
+
+                    $itemJobId = null;
+                    if (! empty($itemData['job_number_id']) && is_numeric($itemData['job_number_id'])) {
+                        $itemJobId = (int) $itemData['job_number_id'];
+                    } elseif (! empty($itemData['jobNumber']) || ! empty($itemData['job_number'])) {
+                        $jobCode = $itemData['jobNumber'] ?? $itemData['job_number'];
+                        if ($jobCode !== '—' && $jobCode !== '-') {
+                            $itemJobId = JobNumber::where('code', $jobCode)->orWhere('name', 'like', "%{$jobCode}%")->value('id');
                         }
                     }
+                    $itemJobId = $itemJobId ?? $poItem?->prItem?->job_number_id ?? $fallbackJobId;
 
-                    $itemName = trim((string) ($itemData['name'] ?? $itemData['itemName'] ?? $itemData['item_name'] ?? 'Material Item'));
-                    $qty = (float) ($itemData['receiveQty'] ?? $itemData['quantity'] ?? $itemData['qty'] ?? 1);
+                    $itemName = trim((string) ($itemData['name'] ?? $itemData['itemName'] ?? $itemData['item_name'] ?? $poItem?->item_alias ?? $poItem?->item?->name ?? ''));
+                    $qty = (float) ($itemData['receiveQty'] ?? $itemData['quantity'] ?? $itemData['qty'] ?? 0);
+                    if ($qty <= 0) {
+                        throw new InvalidArgumentException('Receive quantity must be greater than zero.');
+                    }
                     $rafaksi = (float) ($itemData['rafaksi'] ?? 0);
-                    $dnNumber = $itemData['deliveryNote'] ?? $itemData['dn_number'] ?? $itemData['sjNumber'] ?? $firstSj ?? 'SJ-'.date('Ymd');
-
-                    $resolvedPoHasItemId = null;
-                    if (! empty($itemData['po_has_items_id']) && is_numeric($itemData['po_has_items_id'])) {
-                        $resolvedPoHasItemId = (int) $itemData['po_has_items_id'];
-                    }
+                    $dnNumber = $itemData['deliveryNote'] ?? $itemData['dn_number'] ?? $itemData['sjNumber'] ?? $firstSj;
 
                     $poRn = null;
                     if ($rn) {
@@ -513,7 +671,7 @@ class WarehouseApiController extends Controller
                                 ->where('receive_note_id', $rn->id)
                                 ->first();
                         }
-                        if (! $poRn) {
+                        if (! $poRn && $itemName !== '') {
                             $poRn = PurchaseOrderReceiveNote::where('receive_note_id', $rn->id)
                                 ->where('item_name', $itemName)
                                 ->first();
@@ -527,130 +685,93 @@ class WarehouseApiController extends Controller
                             'dn_number' => $dnNumber,
                         ]);
                     } else {
+                        if (! $itemPoId) {
+                            throw new InvalidArgumentException('Purchase Order reference is required for direct BPB item lines.');
+                        }
+                        if (! $itemJobId) {
+                            throw new InvalidArgumentException('A valid Job Number is required before creating BPB item lines.');
+                        }
+                        $linePrice = (float) ($itemData['price'] ?? ($poItem?->price ?? 0));
                         $poRn = PurchaseOrderReceiveNote::create([
                             'purchase_order_id' => $itemPoId,
                             'po_has_items_id' => $resolvedPoHasItemId,
                             'receive_note_id' => $rn?->id,
                             'dn_number' => $dnNumber,
                             'job_number_id' => $itemJobId,
-                            'item_name' => $itemName,
+                            'item_name' => $itemName ?: $poItem?->item?->name,
                             'quantity' => $qty,
                             'rafaksi' => $rafaksi,
-                            'price' => (float) ($itemData['price'] ?? 0),
+                            'price' => $linePrice,
                             'additional_price' => 0,
                             'discount' => 0,
                             'ppn' => 0,
-                            'grand_total' => 0,
+                            'grand_total' => max(0.0, ($qty - $rafaksi) * $linePrice),
                         ]);
                     }
 
                     $bpb->mappings()->create([
                         'po_has_rn_id' => $poRn->id,
                         'warehouses_id' => $itemWhId,
+                        'warehouse_coordinates_id' => $itemCoordinate?->id,
                     ]);
-
-                    // Allocate and synchronize stock in the user's selected destination warehouse
-                    $targetItem = Item::where('name', $itemName)
-                        ->orWhere('code', $itemName)
-                        ->orWhere('external_code', $itemName)
-                        ->orWhere('name', 'like', "%{$itemName}%")
-                        ->first();
-
-                    if (! $targetItem && ! empty($itemData['code'])) {
-                        $targetItem = Item::where('code', $itemData['code'])
-                            ->orWhere('external_code', $itemData['code'])
-                            ->first();
-                    }
-
-                    if ($targetItem) {
-                        $netQty = max(0.0, $qty - $rafaksi);
-                        $stockRow = DB::table('warehouse_stocks')
-                            ->where('items_id', $targetItem->id)
-                            ->where('warehouses_id', $itemWhId)
-                            ->first();
-
-                        if ($stockRow) {
-                            DB::table('warehouse_stocks')->where('id', $stockRow->id)->update([
-                                'quantity' => DB::raw("quantity + {$netQty}"),
-                                'available_quantity' => DB::raw("available_quantity + {$netQty}"),
-                                'lot_number' => $dnNumber ?: $stockRow->lot_number,
-                                'last_movement_date' => $receiveDate,
-                                'updated_at' => now(),
-                            ]);
-                        } else {
-                            DB::table('warehouse_stocks')->insert([
-                                'items_id' => $targetItem->id,
-                                'warehouses_id' => $itemWhId,
-                                'coordinate_name' => 'A-01-01',
-                                'quantity' => $netQty,
-                                'available_quantity' => $netQty,
-                                'allocated_quantity' => 0,
-                                'lot_number' => $dnNumber ?: 'LOT-'.date('Ymd'),
-                                'location_type' => 'Warehouse',
-                                'last_movement_date' => $receiveDate,
-                                'created_at' => now(),
-                                'updated_at' => now(),
-                            ]);
-                        }
-
-                        $totalStock = DB::table('warehouse_stocks')->where('items_id', $targetItem->id)->sum('quantity');
-                        $targetItem->update(['stock' => $totalStock]);
-                    }
                 }
             } elseif ($rn && $rn->purchaseOrders()->count() > 0) {
+                if (! $headerWarehouseId) {
+                    throw new InvalidArgumentException('Destination Warehouse is required when creating BPB from Receive Note.');
+                }
+                $headerCoordinate = $this->resolveWarehouseCoordinate(
+                    $headerWarehouseId,
+                    $request->input('warehouse_coordinates_id'),
+                    $request->input('coordinate')
+                );
                 foreach ($rn->purchaseOrders as $poRn) {
                     $bpb->mappings()->create([
                         'po_has_rn_id' => $poRn->id,
-                        'warehouses_id' => $defaultWarehouseId,
+                        'warehouses_id' => $headerWarehouseId,
+                        'warehouse_coordinates_id' => $headerCoordinate?->id,
                     ]);
                 }
-            } else {
-                // Fallback if no items array and RN had no items: populate from headerPo items or default
-                if ($headerPo && $headerPo->items()->count() > 0) {
-                    foreach ($headerPo->items as $poItem) {
-                        $itName = $poItem->requisitionItem?->item?->name ?? $poItem->item_alias ?? 'Material Item';
-                        $poRn = PurchaseOrderReceiveNote::create([
-                            'purchase_order_id' => $headerPo->id,
-                            'po_has_items_id' => $poItem->id,
-                            'receive_note_id' => $rn?->id,
-                            'dn_number' => $firstSj ?: 'SJ-'.date('Ymd'),
-                            'job_number_id' => $poItem->requisitionItem?->job_number_id ?? $defaultJobId,
-                            'item_name' => $itName,
-                            'quantity' => (float) ($poItem->order ?? 1),
-                            'rafaksi' => 0,
-                            'price' => (float) ($poItem->price ?? 0),
-                            'additional_price' => 0,
-                            'discount' => 0,
-                            'ppn' => 0,
-                            'grand_total' => 0,
-                        ]);
-
-                        $bpb->mappings()->create([
-                            'po_has_rn_id' => $poRn->id,
-                            'warehouses_id' => $defaultWarehouseId,
-                        ]);
+            } elseif ($headerPo && $headerPo->items()->count() > 0) {
+                if (! $headerWarehouseId) {
+                    throw new InvalidArgumentException('Destination Warehouse is required when creating direct BPB from Purchase Order.');
+                }
+                $headerCoordinate = $this->resolveWarehouseCoordinate(
+                    $headerWarehouseId,
+                    $request->input('warehouse_coordinates_id'),
+                    $request->input('coordinate')
+                );
+                foreach ($headerPo->items as $poItem) {
+                    $jobId = $poItem->requisitionItem?->job_number_id ?? $fallbackJobId;
+                    if (! $jobId) {
+                        throw new InvalidArgumentException('A valid Job Number is required before creating BPB item lines.');
                     }
-                } else {
+                    $itName = $poItem->requisitionItem?->item?->name ?? $poItem->directItem?->name ?? $poItem->item_alias;
+                    $qty = (float) ($poItem->order ?? 0);
+                    $price = (float) ($poItem->price ?? 0);
                     $poRn = PurchaseOrderReceiveNote::create([
-                        'purchase_order_id' => $defaultPoId,
+                        'purchase_order_id' => $headerPo->id,
+                        'po_has_items_id' => $poItem->id,
                         'receive_note_id' => $rn?->id,
-                        'dn_number' => $firstSj ?: 'SJ-'.date('Ymd'),
-                        'job_number_id' => $defaultJobId,
-                        'item_name' => 'General Inbound Material',
-                        'quantity' => 1.0,
+                        'dn_number' => $firstSj,
+                        'job_number_id' => $jobId,
+                        'item_name' => $itName,
+                        'quantity' => $qty,
                         'rafaksi' => 0,
-                        'price' => 0,
+                        'price' => $price,
                         'additional_price' => 0,
                         'discount' => 0,
                         'ppn' => 0,
-                        'grand_total' => 0,
+                        'grand_total' => $qty * $price,
                     ]);
 
                     $bpb->mappings()->create([
                         'po_has_rn_id' => $poRn->id,
-                        'warehouses_id' => $defaultWarehouseId,
+                        'warehouses_id' => $headerWarehouseId,
+                        'warehouse_coordinates_id' => $headerCoordinate?->id,
                     ]);
                 }
+            } else {
+                throw new InvalidArgumentException('At least one material item from an Approved RN or Approved Non-Kawasan Berikat PO is required.');
             }
 
             // Create initial approval tier
@@ -666,7 +787,8 @@ class WarehouseApiController extends Controller
                 modelName: 'BpbReceiveMaterial',
                 modelId: $bpb->id,
                 after: $bpb->toArray(),
-                notes: "Created Warehouse Receive Material {$bpbNumber}"
+                notes: "Created Warehouse Receive Material {$bpbNumber}",
+                userId: $creatorId
             );
 
             DB::commit();
@@ -675,10 +797,14 @@ class WarehouseApiController extends Controller
                 'creator',
                 'approvals.user',
                 'mappings.warehouse',
+                'mappings.coordinate',
                 'mappings.purchaseOrderReceiveNote.purchaseOrder.supplier',
+                'mappings.purchaseOrderReceiveNote.purchaseOrder.valuta',
                 'mappings.purchaseOrderReceiveNote.purchaseOrder.items.requisitionItem.purchaseRequisition',
                 'mappings.purchaseOrderReceiveNote.purchaseOrder.items.requisitionItem.item.unitOfMeasurement',
+                'mappings.purchaseOrderReceiveNote.purchaseOrder.items.directItem.unitOfMeasurement',
                 'mappings.purchaseOrderReceiveNote.receiveNote.supplier',
+                'mappings.purchaseOrderReceiveNote.receiveNote.currency',
                 'mappings.purchaseOrderReceiveNote.jobNumber',
             ]);
 
@@ -702,6 +828,180 @@ class WarehouseApiController extends Controller
     }
 
     /**
+     * Update an existing unapproved BPB Receive Material.
+     */
+    public function update(Request $request, int $id)
+    {
+        $actorId = $this->requireActorId($request);
+
+        $bpb = BpbReceiveMaterial::with(['mappings.purchaseOrderReceiveNote', 'approvals'])->findOrFail($id);
+        if (in_array($bpb->status, ['Approved', 'Approved 2'], true)) {
+            return response()->json([
+                'status' => 'error',
+                'message' => "BPB '{$bpb->bpb_number}' is already Approved and cannot be modified.",
+            ], 422);
+        }
+
+        try {
+            DB::transaction(function () use ($request, $bpb, $actorId) {
+                $updates = ['updated_by' => $actorId];
+
+                if ($request->filled('receive_date') || $request->filled('receiveDate')) {
+                    $rawDate = $request->input('receive_date') ?? $request->input('receiveDate');
+                    $updates['receive_date'] = preg_match('/^\d{2}-\d{2}-\d{4}$/', (string) $rawDate)
+                        ? Carbon::createFromFormat('d-m-Y', $rawDate)
+                        : Carbon::parse($rawDate);
+                }
+
+                if ($request->has('note') || $request->has('remark')) {
+                    $updates['note'] = $request->input('note') ?? $request->input('remark');
+                }
+
+                if ($request->filled('bpb_type') || $request->filled('bpbType')) {
+                    $updates['bpb_type'] = $request->input('bpb_type') ?? $request->input('bpbType');
+                }
+
+                $bpb->update($updates);
+
+                $rawItems = $request->input('items');
+                if (is_array($rawItems)) {
+                    foreach ($rawItems as $itemData) {
+                        $mappingId = $itemData['mapping_id'] ?? $itemData['id'] ?? null;
+                        $poRnId = $itemData['po_has_rn_id'] ?? null;
+                        $mapping = $mappingId
+                            ? $bpb->mappings()->where('id', $mappingId)->first()
+                            : ($poRnId ? $bpb->mappings()->where('po_has_rn_id', $poRnId)->first() : null);
+
+                        if (! $mapping) {
+                            continue;
+                        }
+
+                        $whId = $this->resolveWarehouseId(
+                            $itemData['warehouse_id'] ?? $itemData['warehouse'] ?? $itemData['location'] ?? $mapping->warehouses_id
+                        ) ?? $mapping->warehouses_id;
+
+                        $coord = $this->resolveWarehouseCoordinate(
+                            $whId,
+                            $itemData['warehouse_coordinates_id'] ?? $itemData['coordinate_id'] ?? null,
+                            $itemData['coordinate'] ?? $itemData['coordinate_name'] ?? null
+                        );
+
+                        $mapping->update([
+                            'warehouses_id' => $whId,
+                            'warehouse_coordinates_id' => $coord?->id ?? $mapping->warehouse_coordinates_id,
+                        ]);
+
+                        if ($mapping->purchaseOrderReceiveNote) {
+                            $qty = $itemData['receiveQty'] ?? $itemData['quantity'] ?? null;
+                            $raf = $itemData['rafaksi'] ?? null;
+                            $dn = $itemData['deliveryNote'] ?? $itemData['dn_number'] ?? null;
+
+                            $poRnUpdates = [];
+                            if ($qty !== null) {
+                                $poRnUpdates['quantity'] = (float) $qty;
+                            }
+                            if ($raf !== null) {
+                                $poRnUpdates['rafaksi'] = (float) $raf;
+                            }
+                            if ($dn !== null) {
+                                $poRnUpdates['dn_number'] = $dn;
+                            }
+                            if (! empty($poRnUpdates)) {
+                                $mapping->purchaseOrderReceiveNote->update($poRnUpdates);
+                            }
+                        }
+                    }
+                }
+            });
+
+            $fresh = $bpb->fresh([
+                'creator',
+                'approvals.user',
+                'mappings.warehouse',
+                'mappings.coordinate',
+                'mappings.purchaseOrderReceiveNote.purchaseOrder.supplier',
+                'mappings.purchaseOrderReceiveNote.purchaseOrder.valuta',
+                'mappings.purchaseOrderReceiveNote.purchaseOrder.items.requisitionItem.purchaseRequisition',
+                'mappings.purchaseOrderReceiveNote.purchaseOrder.items.requisitionItem.item.unitOfMeasurement',
+                'mappings.purchaseOrderReceiveNote.purchaseOrder.items.directItem.unitOfMeasurement',
+                'mappings.purchaseOrderReceiveNote.receiveNote.supplier',
+                'mappings.purchaseOrderReceiveNote.receiveNote.currency',
+                'mappings.purchaseOrderReceiveNote.jobNumber',
+            ]);
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'BPB updated successfully.',
+                'data' => $this->formatWarehouseRow($fresh),
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json(['status' => 'error', 'message' => $e->getMessage()], 422);
+        }
+    }
+
+    /**
+     * Soft-delete an unapproved BPB Receive Material.
+     */
+    public function destroy(Request $request, int $id)
+    {
+        $actorId = $this->requireActorId($request);
+
+        try {
+            GeniusOneBackend::bpb()->deleteBpb($id, $actorId);
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'BPB deleted successfully.',
+            ]);
+        } catch (InvalidArgumentException $e) {
+            return response()->json(['status' => 'error', 'message' => $e->getMessage()], 422);
+        }
+    }
+
+    private function resolveWarehouseId(mixed $warehouseInput): ?int
+    {
+        if (is_numeric($warehouseInput) && Warehouse::where('id', (int) $warehouseInput)->exists()) {
+            return (int) $warehouseInput;
+        }
+
+        if (! empty($warehouseInput)) {
+            $name = trim((string) $warehouseInput);
+            $matched = Warehouse::where('name', $name)
+                ->orWhere('name', 'like', "%{$name}%")
+                ->first();
+            if ($matched) {
+                return (int) $matched->id;
+            }
+        }
+
+        return null;
+    }
+
+    private function resolveWarehouseCoordinate(int $warehouseId, mixed $coordId = null, mixed $coordName = null): ?WarehouseCoordinate
+    {
+        if (is_numeric($coordId)) {
+            $found = WarehouseCoordinate::where('warehouses_id', $warehouseId)->where('id', (int) $coordId)->first();
+            if ($found) {
+                return $found;
+            }
+        }
+
+        if (! empty($coordName)) {
+            $name = trim((string) $coordName);
+            $found = WarehouseCoordinate::where('warehouses_id', $warehouseId)
+                ->where(function ($q) use ($name) {
+                    $q->where('name', $name)->orWhere('code', $name);
+                })
+                ->first();
+            if ($found) {
+                return $found;
+            }
+        }
+
+        return WarehouseCoordinate::where('warehouses_id', $warehouseId)->orderBy('id')->first();
+    }
+
+    /**
      * Format a BpbReceiveMaterial into TableRow structure.
      */
     public function formatWarehouseRow(BpbReceiveMaterial $bpb, int $indexNo = 1): array
@@ -713,7 +1013,7 @@ class WarehouseApiController extends Controller
         $supplier = $rn?->supplier ?? $po?->supplier;
 
         $sourceType = strtoupper((string) ($bpb->source_type ?? ($rn ? 'RN' : 'PO')));
-        $supplierName = $supplier ? $supplier->name : '—';
+        $supplierName = $supplier?->name ?? '—';
         $rnNumber = $rn?->rn_number ?? ($sourceType === 'PO' ? 'Direct PO' : '—');
         $rnDate = $this->safeFormatDate($rn?->arrival_date ?? $rn?->created_at, 'd-m-Y', $this->safeFormatDate($bpb->receive_date, 'd-m-Y', '—'));
         $poNumber = $po?->po_number ?? '—';
@@ -730,17 +1030,17 @@ class WarehouseApiController extends Controller
             return (float) (($prn?->quantity ?? 0) - ($prn?->rafaksi ?? 0));
         });
 
-        $totalItem = max(1, $bpb->mappings->count());
-        $materialName = $poRn?->item_name ?? 'Material Item';
+        $totalItem = $bpb->mappings->count();
+        $materialName = $poRn?->item_name ?? '—';
 
-        // Try to resolve item code & unit from Master Item or PO item
-        $matchedMasterItem = Item::with('unitOfMeasurement')->where('name', $materialName)->first()
-            ?? $firstPoItem?->requisitionItem?->item;
+        $matchedMasterItem = ($materialName !== '—' ? Item::with('unitOfMeasurement')->where('name', $materialName)->first() : null)
+            ?? $firstPoItem?->item;
         $itemCode = $matchedMasterItem?->code ?? '—';
-        $defaultUnit = $matchedMasterItem?->unitOfMeasurement?->code ?? $matchedMasterItem?->unitOfMeasurement?->name ?? 'PCE';
+        $defaultUnit = $matchedMasterItem?->unitOfMeasurement?->code ?? $matchedMasterItem?->unitOfMeasurement?->name ?? '—';
 
-        $warehouseName = $firstMapping?->warehouse?->name ?? 'Gudang Sparepart';
-        $creatorName = $bpb->creator?->name ?? 'System';
+        $warehouseName = $firstMapping?->warehouse?->name ?? '—';
+        $coordinateName = $firstMapping?->coordinate?->name ?? '—';
+        $creatorName = $bpb->creator?->name ?? '—';
         $createdTime = $bpb->created_at ? $bpb->created_at->format('d-m-Y H:i') : '—';
         $receiveDateStr = $this->safeFormatDate($bpb->receive_date, 'd-m-Y', '—');
 
@@ -748,32 +1048,37 @@ class WarehouseApiController extends Controller
 
         $sjNumber = $poRn?->dn_number ?: ($rn?->sj_number ?: '—');
         $plateNo = $rn?->license_plate ?: '—';
-        $noPen = $rn?->pl_number ?: '—';
-        $ajuNumber = ($rn?->note && strlen($rn->note) >= 10 && is_numeric(substr($rn->note, 0, 6)))
-            ? $rn->note
-            : '—';
-        $bcType = $rn ? 'BC 4.0' : 'Non-BC (Direct PO)';
-        $bpbType = $sourceType === 'PO' ? 'Direct PO' : 'Warehouse';
+        $noPen = $rn?->no_daftar ?: ($rn?->pl_number ?: '—');
+        $ajuNumber = $rn?->aju_number ?: ($rn?->note ?: '—');
+        $bcType = $rn ? ($rn->bc_code ?: '—') : 'Non-BC (Direct PO)';
+        $bpbType = $bpb->bpb_type ?: ($sourceType === 'PO' ? 'Direct PO' : 'Warehouse');
 
-        // Line Items
         $lineItems = $bpb->mappings->values()->map(function ($map, $mIdx) use ($bpb, $poNumber, $poDate, $prNumber, $prDate, $sjNumber, $defaultUnit) {
             $prn = $map->purchaseOrderReceiveNote;
             $itemPo = $prn?->purchaseOrder;
             $itemFirstPoLine = $itemPo?->items?->first();
             $itemPr = $itemFirstPoLine?->requisitionItem?->purchaseRequisition;
 
-            $itName = $prn?->item_name ?? 'Mur Baut M 10 x 40 + ring pir';
-            $itMaster = Item::with('unitOfMeasurement')->where('name', $itName)->first()
-                ?? $itemFirstPoLine?->requisitionItem?->item;
-            $itCode = $itMaster?->code ?? '60.149.301.404';
-            $itUnit = $itMaster?->unitOfMeasurement?->code ?? $defaultUnit;
+            $itName = $prn?->item_name ?? '—';
+            $itMaster = ($itName !== '—' ? Item::with('unitOfMeasurement')->where('name', $itName)->first() : null)
+                ?? $itemFirstPoLine?->item;
+            $itCode = $itMaster?->code ?? '—';
+            $itUnit = $itMaster?->unitOfMeasurement?->code ?? $itMaster?->unitOfMeasurement?->name ?? $defaultUnit;
 
-            $qty = (float) ($prn?->quantity ?? 25.0);
+            $qty = (float) ($prn?->quantity ?? 0.0);
             $raf = (float) ($prn?->rafaksi ?? 0.0);
-            $net = max(0, $qty - $raf);
+            $net = max(0.0, $qty - $raf);
+            $lineWarehouse = $map->warehouse?->name ?? '—';
+            $lineCoordinate = $map->coordinate?->name ?? '—';
+            $unitSuffix = $itUnit !== '—' ? ' '.$itUnit : '';
 
             return [
                 'no' => $mIdx + 1,
+                'mapping_id' => $map->id,
+                'po_has_rn_id' => $prn?->id,
+                'warehouse_id' => $map->warehouses_id,
+                'warehouse_coordinates_id' => $map->warehouse_coordinates_id,
+                'coordinate' => $lineCoordinate,
                 'poNumber' => $itemPo?->po_number ?? $poNumber,
                 'poDate' => $this->safeFormatDate($itemPo?->date, 'd-m-Y', $poDate),
                 'prNumber' => $itemPr?->pr_number ?? $prNumber,
@@ -787,23 +1092,27 @@ class WarehouseApiController extends Controller
                 'code' => $itCode,
                 'itemCode' => $itCode,
                 'itemAlias' => $itCode,
-                'quantity' => number_format($net, 2).' '.$itUnit,
+                'quantity' => number_format($net, 2).$unitSuffix,
                 'rawQty' => $net,
-                'grossQty' => number_format($qty, 2).' '.$itUnit,
-                'rafaksi' => number_format($raf, 2).' '.$itUnit,
+                'grossQty' => number_format($qty, 2).$unitSuffix,
+                'rafaksi' => number_format($raf, 2).$unitSuffix,
                 'unit' => $itUnit,
-                'remark' => $bpb->note ?? 'Operational Receipt',
-                'purpose' => $bpb->note ?? 'Operational Receipt',
-                'warehouse' => $map->warehouse?->name ?? 'Gudang Sparepart',
-                'location' => $map->warehouse?->name ?? 'Gudang Sparepart',
-                'warehouseLocation' => $map->warehouse?->name ?? 'Gudang Sparepart',
+                'remark' => $prn?->remark ?? $bpb->note ?? '—',
+                'purpose' => $prn?->remark ?? $bpb->note ?? '—',
+                'warehouse' => $lineWarehouse,
+                'location' => $lineWarehouse,
+                'warehouseLocation' => $lineWarehouse,
                 'deliveryNote' => $prn?->dn_number ?: $sjNumber,
                 'receiveQty' => $net,
             ];
         })->toArray();
 
-        $poFacility = $po?->facility_status ?? ($firstPoItem?->item?->facility?->name ?? 'FASILITAS');
-        $bpbFacility = stripos((string) $poFacility, 'non') !== false ? 'NON FASILITAS' : 'FASILITAS';
+        $poFacility = $po?->facility_status ?? ($rn?->facility ?? $firstPoItem?->item?->facility?->name ?? '');
+        $bpbFacility = $poFacility !== ''
+            ? (stripos((string) $poFacility, 'non') !== false ? 'NON FASILITAS' : 'FASILITAS')
+            : '—';
+        $currencyCode = $po?->valuta?->name ?? $rn?->currency?->code ?? $rn?->currency?->name ?? '—';
+        $totalSuffix = $defaultUnit !== '—' ? ' '.$defaultUnit : '';
 
         return [
             'id' => $bpb->id,
@@ -822,7 +1131,7 @@ class WarehouseApiController extends Controller
             '_rawDueDate' => '—',
             'supplier' => $supplierName,
             '_rawSupplier' => $supplierName,
-            '_rawTotal' => number_format($totalQty, 2).' '.$defaultUnit,
+            '_rawTotal' => number_format($totalQty, 2).$totalSuffix,
             '_rawPr' => $prNumber,
             '_rawPrDate' => $prDate,
             'poNumber' => $poNumber,
@@ -842,10 +1151,10 @@ class WarehouseApiController extends Controller
             '_rawBc' => $bcType,
             'docType' => $bcType,
             '_rawDocType' => $bcType,
-            '_rawInvoiceNumber' => $rn?->invoice_number ?? '-',
-            '_rawInvoiceDate' => $this->safeFormatDate($rn?->invoice_date, 'd-m-Y', '-'),
-            '_rawTaxInvoice' => $rn?->tax_invoice ?? '-',
-            '_rawCurrency' => 'IDR',
+            '_rawInvoiceNumber' => $rn?->invoice_number ?? '—',
+            '_rawInvoiceDate' => $this->safeFormatDate($rn?->invoice_date, 'd-m-Y', '—'),
+            '_rawTaxInvoice' => $rn?->tax_invoice ?? '—',
+            '_rawCurrency' => $currencyCode,
             '_rawFacility' => $bpbFacility,
             'facility' => $bpbFacility,
             'statusFacility' => $bpbFacility,
@@ -854,6 +1163,7 @@ class WarehouseApiController extends Controller
             'sourceType' => $sourceType,
             'source_type' => $sourceType,
             '_rawWarehouseLocation' => $warehouseName,
+            'coordinate' => $coordinateName,
             'material' => $materialName,
             '_rawMaterialName' => $materialName,
             'itemCode' => $itemCode,
@@ -862,21 +1172,21 @@ class WarehouseApiController extends Controller
             '_rawTotalItem' => (string) $totalItem,
             'totalQuantity' => number_format($totalQty, 2),
             '_rawTotalQty' => number_format($totalQty, 2),
-            '_totalQty' => number_format($totalQty, 2).' '.$defaultUnit,
+            '_totalQty' => number_format($totalQty, 2).$totalSuffix,
             'created' => "{$creatorName} ({$createdTime})",
             'createdBy' => $creatorName,
             '_rawCreatedBy' => $creatorName,
             '_rawCreatedAt' => $createdTime,
             'lastUpdated' => $createdTime,
             '_rawLastUpdated' => "{$creatorName} {$createdTime}",
-            '_rawRemark' => $bpb->note ?? 'Penerimaan Material Produksi Gudang',
+            '_rawRemark' => $bpb->note ?? '—',
             'items' => $lineItems,
             '_items' => $lineItems,
             'approvals' => $bpb->approvals->map(fn ($a) => [
                 'tier' => (int) $a->approval_ke,
                 'status' => $a->status === 1 ? 'Approved' : ($a->status === 2 ? 'Rejected' : 'Pending'),
-                'user' => $a->user?->name ?? 'System',
-                'date' => $a->updated_at?->format('d-m-Y H:i') ?? '-',
+                'user' => $a->user?->name ?? '—',
+                'date' => $a->updated_at?->format('d-m-Y H:i') ?? '—',
                 'note' => $a->note,
             ])->toArray(),
             'actions' => '',

@@ -43,7 +43,7 @@ export function DocumentHistoryDetail({
   }, []);
 
   // Find record by code/id/invoiceNumber
-  const dhData =
+  const dhData: DocumentHistoryRecord =
     record ||
     initialDocumentHistoryRecords.find(
       (r) =>
@@ -51,7 +51,30 @@ export function DocumentHistoryDetail({
         r.invoiceNumber === code ||
         (typeof r.invoiceNumber === "string" && r.invoiceNumber.replace(/[\/\\]/g, "-") === code)
     ) ||
-    initialDocumentHistoryRecords[0];
+    initialDocumentHistoryRecords[0] || {
+      id: code,
+      no: 1,
+      invoiceNumber: code,
+      mutationType: "Sales",
+      invoiceDate: "-",
+      customerSupplier: "-",
+      customsDocument: "-",
+      amount: 0,
+      amountFormatted: "IDR 0.00",
+      lastUpdatedUser: "-",
+      lastUpdatedTimestamp: "-",
+      transactionNumber: code,
+      invoiceAlias: code,
+      customer: "-",
+      destination: "-",
+      blNumber: "-",
+      currency: "IDR",
+      createdAt: "-",
+      lastUpdatedAt: "-",
+      items: [],
+      totalUnitPrice: 0,
+      totalSubtotal: 0,
+    };
 
   // Toggle independent row history
   const handleToggleHistory = (itemId: string) => {

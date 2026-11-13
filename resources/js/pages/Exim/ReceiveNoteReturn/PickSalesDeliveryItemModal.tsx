@@ -1,9 +1,10 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { Icon } from "../../../components/ui/Icon";
 import { Button } from "../../../components/ui/Button";
 import { SearchField } from "../../../components/ui/SearchField";
 import { Pagination } from "../../../components/ui/Pagination";
 import { availableSalesReturnItemsToPick } from "./receive-note-return-data";
+import { fetchMasterReceiveNotes } from "../../../data/masterApi";
 import type { SalesReturnItemToPick } from "./receive-note-return-types";
 
 interface PickSalesDeliveryItemModalProps {
@@ -23,10 +24,49 @@ export function PickSalesDeliveryItemModal({
   const [pageSize, setPageSize] = useState<number>(10);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [itemsToPick, setItemsToPick] = useState<SalesReturnItemToPick[]>(availableSalesReturnItemsToPick);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    let isMounted = true;
+    fetchMasterReceiveNotes()
+      .then((rns: any) => {
+        if (!isMounted || !Array.isArray(rns)) return;
+        const mapped: SalesReturnItemToPick[] = [];
+        rns.forEach((rn: any) => {
+          const rnNum = rn.rnNumber || rn.rn_number || "-";
+          const arrDate = rn.arrivalDate || rn.arrival_date || "-";
+          const plNum = rn.nomorPackingList || rn.pl_number || rnNum;
+          (rn.items || []).forEach((it: any, idx: number) => {
+            mapped.push({
+              id: `rn-pick-${rn.id || idx}-${it.id || idx}`,
+              doNumber: it.dnNumber && it.dnNumber !== "-" ? it.dnNumber : rnNum,
+              doDate: it.dnDate && it.dnDate !== "-" ? it.dnDate : arrDate,
+              sjNumber: plNum && plNum !== "-" ? plNum : rnNum,
+              itemCode: it.itemCode || it.item_code || "-",
+              itemName: it.itemName || it.item_name || "-",
+              unit: it.unit || "PCE",
+              price: Number(it.pricePerUnit ?? it.price ?? 0),
+              deliveryQty: Number(it.qty ?? it.quantity ?? 0),
+              availableReturnQty: Number(it.qty ?? it.quantity ?? 0),
+              packageQty: 1,
+              packageType: "Standard",
+            });
+          });
+        });
+        if (mapped.length > 0) {
+          setItemsToPick(mapped);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      isMounted = false;
+    };
+  }, [isOpen]);
 
   // Filter items based on search and exclude already selected keys
   const filteredItems = useMemo(() => {
-    return availableSalesReturnItemsToPick.filter((item) => {
+    return itemsToPick.filter((item) => {
       const uniqueKey = `${item.doNumber}-${item.itemCode}`;
       if (alreadySelectedKeys.includes(uniqueKey)) {
         return false;
@@ -98,7 +138,7 @@ export function PickSalesDeliveryItemModal({
   };
 
   const handleConfirmAdd = () => {
-    const chosen = availableSalesReturnItemsToPick.filter((item) =>
+    const chosen = itemsToPick.filter((item) =>
       selectedIds.has(item.id)
     );
     if (chosen.length > 0) {

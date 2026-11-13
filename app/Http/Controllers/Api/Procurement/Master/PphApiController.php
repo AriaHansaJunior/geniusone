@@ -32,6 +32,14 @@ class PphApiController extends Controller
         ]);
     }
 
+    public function pphTypes(): JsonResponse
+    {
+        return response()->json([
+            'status' => 'success',
+            'data' => PphType::query()->orderBy('id')->get(),
+        ]);
+    }
+
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
@@ -40,15 +48,31 @@ class PphApiController extends Controller
             'deduction' => 'nullable|in:yes,no,-',
             'status' => 'nullable|string|max:45',
             'pph_type_id' => 'nullable|exists:pph_type,id',
+            'pph_type_name' => 'nullable|string|max:100',
         ]);
 
         if (empty($validated['pph_type_id'])) {
-            $defaultType = PphType::firstOrCreate(['nama' => 'PPH Umum']);
-            $validated['pph_type_id'] = $defaultType->id;
+            $type = ! empty($validated['pph_type_name'])
+                ? PphType::whereRaw('LOWER(nama) = ?', [strtolower(trim($validated['pph_type_name']))])->first()
+                : PphType::query()->orderBy('id')->first();
+
+            if (! $type) {
+                return response()->json([
+                    'message' => 'A valid PPh type from pph_type is required.',
+                ], 422);
+            }
+
+            $validated['pph_type_id'] = $type->id;
         }
 
-        if (($validated['deduction'] ?? '') === '-') {
+        unset($validated['pph_type_name']);
+
+        if (empty($validated['deduction']) || $validated['deduction'] === '-') {
             $validated['deduction'] = 'no';
+        }
+
+        if (empty($validated['status'])) {
+            $validated['status'] = 'active';
         }
 
         $record = Pph::create($validated);
@@ -96,5 +120,18 @@ class PphApiController extends Controller
         $record->delete();
 
         return response()->json(['message' => 'PPh tax rate deleted successfully']);
+    }
+
+    public function toggleStatus(int $id): JsonResponse
+    {
+        $record = Pph::findOrFail($id);
+        $isActive = strtolower((string) $record->status) === 'active' || (string) $record->status === '1';
+        $record->status = $isActive ? 'inactive' : 'active';
+        $record->save();
+
+        return response()->json([
+            'message' => 'PPh status updated successfully',
+            'data' => $record->load('type'),
+        ]);
     }
 }

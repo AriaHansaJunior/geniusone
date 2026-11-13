@@ -2,7 +2,22 @@
 
 namespace Tests\Feature;
 
+use App\Models\Common\ExchangeRate;
+use App\Models\Master\Customs\Facility;
+use App\Models\Master\Finance\Account;
+use App\Models\Master\Finance\Currency;
+use App\Models\Master\Finance\Valuta;
+use App\Models\Master\Material\Classification;
+use App\Models\Master\Material\Item;
+use App\Models\Master\Material\ItemType;
 use App\Models\Master\Material\Style;
+use App\Models\Master\Material\UnitOfMeasurement;
+use App\Models\Master\Organization\Department;
+use App\Models\Master\Organization\ReportingType;
+use App\Models\Warehouse\Facility\Warehouse;
+use App\Models\Warehouse\Facility\WarehouseType;
+use App\Models\Warehouse\Inventory\WarehouseStock;
+use App\Models\Warehouse\RequestMaterial\TypeOfRequest;
 use App\Models\System\Auth\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
@@ -12,12 +27,14 @@ class NewModulesBackendTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected User $user;
+
     protected function setUp(): void
     {
         parent::setUp();
 
         // Seed a test user
-        User::create([
+        $this->user = User::create([
             'username' => 'test.user',
             'name' => 'Test User',
             'email' => 'test@geniusone.com',
@@ -63,11 +80,14 @@ class NewModulesBackendTest extends TestCase
      */
     public function test_user_profile_endpoints(): void
     {
-        $showRes = $this->getJson('/api/user/profile');
+        $unauthRes = $this->getJson('/api/user/profile');
+        $unauthRes->assertStatus(401);
+
+        $showRes = $this->actingAs($this->user, 'web')->getJson('/api/user/profile');
         $showRes->assertStatus(200);
         $showRes->assertJsonPath('data.username', 'test.user');
 
-        $updateRes = $this->postJson('/api/user/profile', [
+        $updateRes = $this->actingAs($this->user, 'web')->postJson('/api/user/profile', [
             'name' => 'Updated User Name',
             'email' => 'updated@geniusone.com',
         ]);
@@ -118,16 +138,54 @@ class NewModulesBackendTest extends TestCase
      */
     public function test_request_material_endpoints(): void
     {
+        $dept = Department::firstOrCreate(['name' => 'Cutting Department'], ['status' => 1]);
+        $type = TypeOfRequest::firstOrCreate(['name' => 'Production Issue'], ['status' => 1]);
+        $uom = UnitOfMeasurement::firstOrCreate(['name' => 'KG'], ['status' => 1]);
+        $facility = Facility::firstOrCreate(['name' => 'FASILITAS'], ['status' => 1]);
+        $repType = ReportingType::firstOrCreate(['name' => 'General Report']);
+        $account = Account::firstOrCreate(['code' => '115.01'], ['name' => 'General Inventory Account']);
+        $classification = Classification::firstOrCreate(
+            ['code' => 'CLS-RM-TEST'],
+            ['name' => 'Test RM Class', 'reporting_types_id' => $repType->id, 'accounts_id' => $account->id]
+        );
+        $itemType = ItemType::firstOrCreate(['name' => 'Raw Material']);
+        $whType = WarehouseType::firstOrCreate(['name' => 'Main Warehouse'], ['status' => 1]);
+        $wh = Warehouse::create([
+            'name' => 'Gudang Test',
+            'code' => 'WH-TEST',
+            'warehouse_types_id' => $whType->id,
+            'status' => 1,
+        ]);
+        $item = Item::create([
+            'code' => '60.154.300.999',
+            'name' => 'Test Fabric Item',
+            'classifications_id' => $classification->id,
+            'facilities_id' => $facility->id,
+            'units_of_measurements_id' => $uom->id,
+            'item_types_id' => $itemType->id,
+            'stock' => 100,
+            'status' => 1,
+        ]);
+        WarehouseStock::create([
+            'items_id' => $item->id,
+            'warehouses_id' => $wh->id,
+            'quantity' => 100,
+            'allocated_quantity' => 0,
+            'available_quantity' => 100,
+            'location_type' => 'Warehouse',
+        ]);
+
         // 1. Index
-        $indexRes = $this->getJson('/api/warehouse/request-materials');
+        $indexRes = $this->actingAs($this->user, 'web')->getJson('/api/warehouse/request-materials');
         $indexRes->assertStatus(200);
         $indexRes->assertJsonStructure(['status', 'data', 'meta']);
 
         // 2. Store new request
-        $storeRes = $this->postJson('/api/warehouse/request-materials', [
+        $storeRes = $this->actingAs($this->user, 'web')->postJson('/api/warehouse/request-materials', [
             'requestDate' => '2026-10-20',
-            'department' => 'Cutting Department',
-            'typeOfRequest' => 'Production Issue',
+            'departments_id' => $dept->id,
+            'warehouses_id' => $wh->id,
+            'type_of_request_id' => $type->id,
             'customer' => 'PT Test Apparel',
             'items' => [
                 [
@@ -143,14 +201,18 @@ class NewModulesBackendTest extends TestCase
         $this->assertNotEmpty($createdId);
 
         // 3. Show
-        $showRes = $this->getJson("/api/warehouse/request-materials/{$createdId}");
+        $showRes = $this->actingAs($this->user, 'web')->getJson("/api/warehouse/request-materials/{$createdId}");
         $showRes->assertStatus(200);
         $showRes->assertJsonPath('data.department', 'Cutting Department');
 
-        // 4. Approve
-        $approveRes = $this->postJson("/api/warehouse/request-materials/{$createdId}/approve");
+        // 4. Approve (Stage 1 -> Waiting for Approve 2, Stage 2 -> Approved)
+        $approveRes = $this->actingAs($this->user, 'web')->postJson("/api/warehouse/request-materials/{$createdId}/approve");
         $approveRes->assertStatus(200);
-        $approveRes->assertJsonPath('data.approval', 'Approved 1');
+        $approveRes->assertJsonPath('data.approval', 'Waiting for Approve 2');
+
+        $approve2Res = $this->actingAs($this->user, 'web')->postJson("/api/warehouse/request-materials/{$createdId}/approve", ['tier' => 2]);
+        $approve2Res->assertStatus(200);
+        $approve2Res->assertJsonPath('data.approval', 'Approved');
     }
 
     /**
@@ -158,6 +220,19 @@ class NewModulesBackendTest extends TestCase
      */
     public function test_dashboard_exchange_rates(): void
     {
+        $valuta = Valuta::firstOrCreate(['code' => 'USD'], ['name' => 'US Dollar']);
+        $currency = Currency::firstOrCreate(['name' => 'USD'], ['symbol' => '$', 'status' => 1]);
+        ExchangeRate::create([
+            'currencies_id' => $currency->id,
+            'rate_date' => now()->toDateString(),
+            'rate_type' => 'KURS TENGAH BI',
+            'buy_rate' => 15700,
+            'sell_rate' => 15900,
+            'middle_rate' => 15800,
+            'source' => 'Bank Indonesia',
+            'created_by' => $this->user->id,
+        ]);
+
         $ratesRes = $this->getJson('/api/dashboard/exchange-rates');
         $ratesRes->assertStatus(200);
         $ratesRes->assertJsonStructure(['status', 'data', 'meta']);

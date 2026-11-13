@@ -6,8 +6,6 @@ import { ConfirmDialog } from "../../../components/ui/ConfirmDialog";
 import { CustomDatePicker } from "../../../components/ui/CustomDatePicker";
 import { CustomSelect } from "../../../components/ui/CustomSelect";
 import { ItemPickerModal } from "../../Exim/Master/Item/ItemPickerModal";
-import { initialItemRecords } from "../../Exim/Master/Item/item-data";
-import { initialJobNumberRecords } from "../PurchaseMaster/JobNumber/job-number-types";
 import type { ItemRecord } from "../../Exim/Master/Item/item-types";
 
 export interface PRItemRow {
@@ -37,7 +35,7 @@ export function PurchaseRequisitionCreate({
   availableJobNumbers,
   availableItems,
 }: PurchaseRequisitionCreateProps) {
-  const masterItems = availableItems && availableItems.length > 0 ? availableItems : initialItemRecords;
+  const masterItems = availableItems && availableItems.length > 0 ? availableItems : [];
   const today = new Date().toISOString().slice(0, 10);
   const defaultDue = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
 
@@ -109,7 +107,7 @@ export function PurchaseRequisitionCreate({
   // Available job numbers list
   const jobOptions = availableJobNumbers && availableJobNumbers.length > 0
     ? availableJobNumbers
-    : initialJobNumberRecords.map((j) => j.jobNumber);
+    : [];
 
   // Download Excel Template for PR Items
   const handleDownloadExcelTemplate = () => {
@@ -566,22 +564,7 @@ export function PurchaseRequisitionCreate({
                   placeholder="Select Data . . ."
                   options={[
                     { value: "", label: "Select Data . . ." },
-                    ...Array.from(
-                      new Set([
-                        ...dbDepartments,
-                        "REVERB",
-                        "SMELTING",
-                        "REFINING",
-                        "MAINTENANCE",
-                        "LOGISTICS",
-                        "LABORATORY",
-                        "PROCUREMENT",
-                        "HSE",
-                        "TEKNIK",
-                        "PPIC",
-                        "HRD",
-                      ])
-                    ).map((d) => ({ value: d, label: d })),
+                    ...Array.from(new Set(dbDepartments)).map((d) => ({ value: d, label: d })),
                   ]}
                 />
                 {formErrors.deptRequest && <span className="master-form-error">{formErrors.deptRequest}</span>}
@@ -602,17 +585,7 @@ export function PurchaseRequisitionCreate({
                   placeholder="Select Data . . ."
                   options={[
                     { value: "", label: "Select Data . . ." },
-                    ...Array.from(
-                      new Set([
-                        ...dbSections,
-                        "Section 01",
-                        "Section 02",
-                        "Furnace A",
-                        "Furnace B",
-                        "General Maintenance",
-                        "Utility",
-                      ])
-                    ).map((s) => ({ value: s, label: s })),
+                    ...Array.from(new Set(dbSections)).map((s) => ({ value: s, label: s })),
                   ]}
                 />
                 {formErrors.section && <span className="master-form-error">{formErrors.section}</span>}

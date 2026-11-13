@@ -4,7 +4,7 @@ import { Button } from "../../../components/ui/Button";
 import { SearchField } from "../../../components/ui/SearchField";
 import { DataTable } from "../../../components/ui/DataTable";
 import { FilterPanel } from "../../../components/common/FilterPanel";
-import { pageConfigs } from "../../../data/mockData";
+import { listColumns } from "../../../config/listColumns";
 import { fetchList } from "../../../data/api";
 import type { TableRow } from "../../../types";
 
@@ -15,8 +15,8 @@ interface WarehouseProps {
 
 export function Warehouse({ onDetail, onCreate }: WarehouseProps) {
   const [search, setSearch] = useState("");
-  const config = pageConfigs.warehouse;
-  const [rows, setRows] = useState(config.rows);
+  const columns = listColumns.warehouse;
+  const [rows, setRows] = useState<TableRow[]>([]);
   const [whFilters, setWhFilters] = useState<Record<string, any>>({
     dateRange: "all",
     docType: "all",
@@ -27,7 +27,7 @@ export function Warehouse({ onDetail, onCreate }: WarehouseProps) {
   useEffect(() => {
     let isMounted = true;
     fetchList("warehouse").then((res) => {
-      if (isMounted && res.rows && res.rows.length > 0) {
+      if (isMounted) {
         setRows(res.rows);
       }
     });
@@ -167,7 +167,7 @@ export function Warehouse({ onDetail, onCreate }: WarehouseProps) {
         </div>
 
         <DataTable
-          columns={config.columns}
+          columns={columns}
           rows={filtered}
           onDetail={onDetail}
         />

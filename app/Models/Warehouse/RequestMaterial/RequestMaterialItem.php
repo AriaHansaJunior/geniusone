@@ -2,6 +2,7 @@
 
 namespace App\Models\Warehouse\RequestMaterial;
 
+use App\Models\Concerns\HasCompositePrimaryKey;
 use App\Models\Master\Material\Item;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -10,7 +11,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class RequestMaterialItem extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasCompositePrimaryKey, HasFactory, SoftDeletes;
 
     protected $table = 'request_material_item';
 

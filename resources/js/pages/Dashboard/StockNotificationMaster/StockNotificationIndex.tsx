@@ -6,7 +6,6 @@ import { Pagination } from "../../../components/ui/Pagination";
 import { Badge } from "../../../components/ui/Badge";
 import { Icon } from "../../../components/ui/Icon";
 import { ConfirmDialog } from "../../../components/ui/ConfirmDialog";
-import { initialStockNotificationRecords } from "./stock-notification-data";
 import type { StockNotificationRecord, StockNotificationSortField } from "./stock-notification-types";
 
 interface StockNotificationIndexProps {
@@ -19,7 +18,7 @@ interface StockNotificationIndexProps {
 type SortDirection = "none" | "asc" | "desc";
 
 export function StockNotificationIndex({
-  records = initialStockNotificationRecords,
+  records = [],
   onAddNew,
   onEdit,
   onDelete,

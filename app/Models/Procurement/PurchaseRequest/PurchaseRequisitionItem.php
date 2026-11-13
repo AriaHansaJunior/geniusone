@@ -3,6 +3,7 @@
 namespace App\Models\Procurement\PurchaseRequest;
 
 use App\Models\Master\Material\Item;
+use App\Models\Master\Organization\JobNumber;
 use App\Models\System\Auth\User;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -18,6 +19,8 @@ class PurchaseRequisitionItem extends Model
     protected $fillable = [
         'purchase_requisitions_id',
         'items_id',
+        'job_number_id',
+        'job_number',
         'quantity',
         'remark',
         'due_date',
@@ -40,6 +43,11 @@ class PurchaseRequisitionItem extends Model
     public function item(): BelongsTo
     {
         return $this->belongsTo(Item::class, 'items_id');
+    }
+
+    public function jobNumberModel(): BelongsTo
+    {
+        return $this->belongsTo(JobNumber::class, 'job_number_id');
     }
 
     public function closedByUser(): BelongsTo

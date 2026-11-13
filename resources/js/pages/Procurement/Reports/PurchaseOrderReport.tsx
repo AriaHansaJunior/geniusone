@@ -5,7 +5,7 @@ import { SummaryCard } from "../../../components/ui/SummaryCard";
 import { SearchField } from "../../../components/ui/SearchField";
 import { DataTable } from "../../../components/ui/DataTable";
 import { FilterPanel } from "../../../components/common/FilterPanel";
-import { pageConfigs } from "../../../data/mockData";
+import { listColumns } from "../../../config/listColumns";
 import { fetchList } from "../../../data/api";
 import type { TableRow } from "../../../types";
 
@@ -21,9 +21,9 @@ export function PurchaseOrderReport({
   onSelectPr,
 }: PurchaseOrderReportProps) {
   const [search, setSearch] = useState("");
-  const config = pageConfigs.report;
-  const [stats, setStats] = useState(config.stats);
-  const [rows, setRows] = useState(config.rows);
+  const columns = listColumns.report;
+  const [stats, setStats] = useState<[string, string, string][]>([]);
+  const [rows, setRows] = useState<TableRow[]>([]);
   const [reportFilters, setReportFilters] = useState<Record<string, any>>({
     poDateRange: "all",
     prDateRange: "all",
@@ -39,7 +39,7 @@ export function PurchaseOrderReport({
   useEffect(() => {
     let isMounted = true;
     fetchList("report").then((res) => {
-      if (isMounted && res.rows && res.rows.length > 0) {
+      if (isMounted) {
         setStats(res.stats);
         setRows(res.rows);
       }
@@ -166,7 +166,6 @@ export function PurchaseOrderReport({
         <div className="panel__heading">
           <div>
             <strong>Filter documents</strong>
-            <span>Refine the records shown in the table</span>
           </div>
           <Button variant="danger" size="sm" onClick={handleResetFilters}>
             Reset Filters
@@ -193,7 +192,6 @@ export function PurchaseOrderReport({
         <div className="panel__heading table-panel__heading">
           <div>
             <strong>PR–PO reporting records</strong>
-            <span>{filtered.length} records shown</span>
           </div>
           <div className="button-row">
             <Button variant="excel" onClick={handleExportXLSX}>
@@ -203,7 +201,7 @@ export function PurchaseOrderReport({
         </div>
 
         <DataTable
-          columns={config.columns}
+          columns={columns}
           rows={filtered}
           onDetail={onDetail}
           onSelectPo={(po) => (onSelectPo ? onSelectPo(po) : undefined)}

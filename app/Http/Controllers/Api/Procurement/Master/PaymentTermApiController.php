@@ -77,4 +77,16 @@ class PaymentTermApiController extends Controller
 
         return response()->json(['message' => 'Payment term deleted successfully']);
     }
+
+    public function toggleStatus(int $id): JsonResponse
+    {
+        $record = PaymentTerm::findOrFail($id);
+        $record->status = (int) $record->status === 1 ? 0 : 1;
+        $record->save();
+
+        return response()->json([
+            'message' => 'Payment term status updated successfully',
+            'data' => $record,
+        ]);
+    }
 }

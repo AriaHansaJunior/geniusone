@@ -30,6 +30,8 @@ class PurchaseOrder extends Model
         'due_date',
         'valutas_id',
         'rate',
+        'ppn_rate',
+        'discount_overall_percent',
         'supliers_id',
         'address',
         'payment_terms_id',
@@ -48,6 +50,8 @@ class PurchaseOrder extends Model
 
     protected $casts = [
         'is_kawasan_berikat' => 'boolean',
+        'ppn_rate' => 'float',
+        'discount_overall_percent' => 'float',
     ];
 
     public function isKawasanBerikat(): bool
@@ -146,32 +150,50 @@ class PurchaseOrder extends Model
 
     public function getDiscountAttribute(): float
     {
-        return (float) $this->items->sum('discount');
+        $itemDiscount = (float) $this->items->sum('discount');
+        $overallPct = max(0.0, (float) ($this->discount_overall_percent ?? 0));
+        if ($overallPct <= 0) {
+            return round($itemDiscount, 2);
+        }
+
+        $baseDpp = $this->computeItemsBaseDpp();
+        $overallDiscount = round(($baseDpp * $overallPct) / 100, 2);
+
+        return round($itemDiscount + $overallDiscount, 2);
     }
 
     public function getDppAttribute(): float
     {
-        return (float) $this->items->sum(function ($it) {
-            $dpp = (float) $it->dpp;
-            if ($dpp <= 0 && (float) $it->price > 0) {
-                $sub = (float) $it->subtotal > 0 ? (float) $it->subtotal : round((float) $it->price * ((float) $it->order > 0 ? (float) $it->order : 1.0), 2);
-                $disc = (float) $it->discount_val;
-                return max(0.0, round($sub - $disc, 2));
-            }
-            return $dpp;
-        });
+        $baseDpp = $this->computeItemsBaseDpp();
+        $overallPct = max(0.0, (float) ($this->discount_overall_percent ?? 0));
+        if ($overallPct <= 0) {
+            return round($baseDpp, 2);
+        }
+
+        $overallDiscount = round(($baseDpp * $overallPct) / 100, 2);
+
+        return max(0.0, round($baseDpp - $overallDiscount, 2));
     }
 
     public function getPpnAttribute(): float
     {
-        return (float) $this->items->sum(function ($it) {
-            if ($it->ditangguhkan_kawasan_berikat || $this->isKawasanBerikat()) {
+        if ($this->isKawasanBerikat()) {
+            return 0.0;
+        }
+
+        $overallFactor = max(0.0, 1.0 - (max(0.0, (float) ($this->discount_overall_percent ?? 0)) / 100));
+
+        return round((float) $this->items->sum(function ($it) use ($overallFactor) {
+            if ($it->ditangguhkan_kawasan_berikat) {
                 return 0.0;
             }
-            $rate = $it->ppn?->value ?? 11.0;
-            $dpp = (float) $it->dpp > 0 ? (float) $it->dpp : round((float) $it->price * ((float) $it->order > 0 ? (float) $it->order : 1.0), 2);
-            return round(($dpp * $rate) / 100, 2);
-        });
+            $rate = (float) ($it->ppn?->value ?? $this->ppn_rate ?? 11.0);
+            $dpp = (float) $it->dpp > 0
+                ? (float) $it->dpp
+                : max(0.0, round(((float) $it->price * ((float) $it->order > 0 ? (float) $it->order : 1.0)) - (float) $it->discount, 2));
+
+            return round(($dpp * $overallFactor * $rate) / 100, 2);
+        }), 2);
     }
 
     public function getPphAttribute(): float
@@ -188,10 +210,31 @@ class PurchaseOrder extends Model
     {
         $dpp = $this->getDppAttribute();
         $ppn = $this->getPpnAttribute();
-        $pph = $this->getPphAttribute();
+        $pphDeduction = (float) $this->items->sum(function ($it) {
+            if ($it->pph && $it->pph->deduction === false) {
+                return 0.0;
+            }
+
+            return (float) $it->subtotal_pph;
+        });
         $additional = $this->getAdditionalCostsTotalAttribute();
 
-        return round($dpp + $ppn + $additional - $pph, 2);
+        return round($dpp + $ppn + $additional - $pphDeduction, 2);
+    }
+
+    private function computeItemsBaseDpp(): float
+    {
+        return (float) $this->items->sum(function ($it) {
+            $dpp = (float) $it->dpp;
+            if ($dpp <= 0 && (float) $it->price > 0) {
+                $sub = (float) $it->subtotal > 0 ? (float) $it->subtotal : round((float) $it->price * ((float) $it->order > 0 ? (float) $it->order : 1.0), 2);
+                $disc = (float) $it->discount > 0 ? (float) $it->discount : (float) $it->discount_val;
+
+                return max(0.0, round($sub - $disc, 2));
+            }
+
+            return $dpp;
+        });
     }
 
     public function getStatusAttribute(): string

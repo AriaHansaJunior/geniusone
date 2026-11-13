@@ -5,7 +5,6 @@ import { Pagination } from "./Pagination";
 import type { Column, TableRow } from "../../types";
 
 import { ApprovalStatusBadge } from "../approval/ApprovalStatusBadge";
-import { getLocalApprovalState } from "../../services/approvalApi";
 
 function formatCell(key: string, value: any) {
   if (React.isValidElement(value)) return value;
@@ -23,6 +22,7 @@ function formatCell(key: string, value: any) {
 
   if (key === "statusFacility" || key === "facility") {
     const str = String(value || "").trim();
+    if (!str || str === "-" || str === "—") return "—";
     const isNon = /non/i.test(str);
     const label = isNon ? "NON FASILITAS" : "FASILITAS";
     return <Badge tone={isNon ? "gray" : "purple"}>{label}</Badge>;
@@ -257,45 +257,7 @@ export function DataTable({
                             );
                           })()
                         ) : (
-                          (() => {
-                            if (
-                              col.key === "status" ||
-                              col.key === "statusPr" ||
-                              col.key === "statusPo" ||
-                              col.key === "statusApprove" ||
-                              col.key === "approval"
-                            ) {
-                              const docNum = String(
-                                row._rawNumber ||
-                                row._rawPo ||
-                                row._rawPr ||
-                                row._rawRn ||
-                                row.poNumber ||
-                                row.prNumber ||
-                                row.rnNumber ||
-                                row.requestCode ||
-                                ""
-                              ).trim();
-                              const modType =
-                                row._rawPo || row.poNumber
-                                  ? "purchase_order"
-                                  : row._rawPr || row.prNumber
-                                  ? "purchase_requisition"
-                                  : row._rawRn || row.rnNumber
-                                  ? "receive_note"
-                                  : row.requestCode
-                                  ? "request_material"
-                                  : null;
-
-                              if (docNum && modType) {
-                                const local = getLocalApprovalState(modType as any, docNum);
-                                if (local && local.history && local.history.length > 0) {
-                                  return <ApprovalStatusBadge status={local.status} />;
-                                }
-                              }
-                            }
-                            return formatCell(col.key, rawVal);
-                          })()
+                          formatCell(col.key, rawVal)
                         )}
                       </td>
                     );

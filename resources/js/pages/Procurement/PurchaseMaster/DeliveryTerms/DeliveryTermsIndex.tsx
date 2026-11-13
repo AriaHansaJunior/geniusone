@@ -5,7 +5,6 @@ import { Pagination } from "../../../../components/ui/Pagination";
 import { Icon } from "../../../../components/ui/Icon";
 import { StatusToggle } from "../../../../components/ui/StatusToggle";
 import {
-  initialDeliveryTermRecords,
   type DeliveryTermRecord,
 } from "./delivery-terms-types";
 
@@ -18,7 +17,7 @@ interface DeliveryTermsIndexProps {
 type SortDirection = "none" | "asc" | "desc";
 
 export function DeliveryTermsIndex({
-  records = initialDeliveryTermRecords,
+  records = [],
   onAddNew,
   onToggleHide,
 }: DeliveryTermsIndexProps) {

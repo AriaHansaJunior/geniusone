@@ -77,7 +77,7 @@ export const navigationConfig: NavSection[] = [
         id: "procurement-reports",
         label: "Reports",
         items: [
-          { id: "report", label: "Report PR-PO", path: "/procurement/reports/report-pr-po", badge: "1,284" },
+          { id: "report", label: "Report PR-PO", path: "/procurement/reports/report-pr-po" },
           { id: "pr-report", label: "Purchase Requisition Report", path: "/procurement/reports/purchase-requisition-report" },
           { id: "po-report", label: "Purchase Order Report", path: "/procurement/reports/purchase-order-report" },
         ],

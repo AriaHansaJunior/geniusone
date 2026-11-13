@@ -84,4 +84,16 @@ class CategoryApiController extends Controller
 
         return response()->json(['message' => 'Category deleted successfully']);
     }
+
+    public function toggleStatus(int $id): JsonResponse
+    {
+        $record = Category::findOrFail($id);
+        $record->status = (int) $record->status === 1 ? 0 : 1;
+        $record->save();
+
+        return response()->json([
+            'message' => 'Category status updated successfully',
+            'data' => $record,
+        ]);
+    }
 }

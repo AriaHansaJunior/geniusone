@@ -43,6 +43,10 @@ class StyleApiController extends Controller
             'status' => 'nullable|string|max:45',
         ]);
 
+        if (empty($validated['status'])) {
+            $validated['status'] = 'active';
+        }
+
         $record = Style::create($validated);
 
         return response()->json([
@@ -83,5 +87,18 @@ class StyleApiController extends Controller
         $record->delete();
 
         return response()->json(['message' => 'Style deleted successfully']);
+    }
+
+    public function toggleStatus(int $id): JsonResponse
+    {
+        $record = Style::findOrFail($id);
+        $isActive = strtolower((string) $record->status) === 'active' || (string) $record->status === '1';
+        $record->status = $isActive ? 'inactive' : 'active';
+        $record->save();
+
+        return response()->json([
+            'message' => 'Style status updated successfully',
+            'data' => $record,
+        ]);
     }
 }

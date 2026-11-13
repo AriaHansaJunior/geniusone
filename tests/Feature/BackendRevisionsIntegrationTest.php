@@ -289,7 +289,8 @@ class BackendRevisionsIntegrationTest extends TestCase
 
         $appr2Resp->assertStatus(200);
         $pr->refresh();
-        $this->assertEquals('Approved', $pr->status);
+        $this->assertEquals('Approved', $pr->getRawOriginal('status'));
+        $this->assertEquals('Outstanding', $pr->status);
 
         // 3. UnApprove Stage 2
         $unappr2Resp = $this->actingAs($this->approver2, 'web')

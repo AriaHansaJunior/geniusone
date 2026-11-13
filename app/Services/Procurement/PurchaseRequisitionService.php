@@ -4,7 +4,7 @@ namespace App\Services\Procurement;
 
 use App\Models\Procurement\PurchaseRequest\PurchaseRequisition;
 use App\Models\Procurement\PurchaseRequest\PurchaseRequisitionItem;
-use App\Models\Section;
+use App\Models\Master\Organization\Section;
 use App\Services\DocumentNumber\DocumentNumberGenerator;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
@@ -31,10 +31,16 @@ class PurchaseRequisitionService
             $prNumber = $headerData['pr_number'] ?? DocumentNumberGenerator::generatePrNumber();
 
             $deptId = $headerData['departments_id'] ?? $headerData['department_id'] ?? null;
+            if (! $deptId) {
+                throw new InvalidArgumentException('Department is required to create a Purchase Requisition.');
+            }
             $secId = $headerData['sections_id'] ?? $headerData['section_id'] ?? null;
             if (! $secId) {
-                $firstSec = Section::first();
-                $secId = $firstSec ? $firstSec->id : Section::create(['name' => 'General'])->id;
+                $firstSec = Section::where('departments_id', $deptId)->first() ?? Section::first();
+                if (! $firstSec) {
+                    throw new InvalidArgumentException('Section master data is missing. Cannot create Purchase Requisition.');
+                }
+                $secId = $firstSec->id;
             }
             $dueDate = $headerData['due_date'] ?? now()->addDays(7)->format('Y-m-d');
             $date = $headerData['date'] ?? $headerData['date_pr'] ?? now()->format('d-M-Y');
@@ -55,6 +61,8 @@ class PurchaseRequisitionService
                 PurchaseRequisitionItem::create([
                     'purchase_requisitions_id' => $requisition->id,
                     'items_id' => $item['items_id'],
+                    'job_number_id' => $item['job_number_id'] ?? $headerData['job_number_id'] ?? null,
+                    'job_number' => $item['job_number'] ?? $headerData['job_number'] ?? null,
                     'quantity' => (string) ($item['quantity'] ?? '1'),
                     'remark' => $item['remark'] ?? null,
                     'due_date' => $item['due_date'] ?? $requisition->due_date,
@@ -62,7 +70,7 @@ class PurchaseRequisitionService
                 ]);
             }
 
-            return $requisition->load(['department', 'section', 'creatorUser', 'items.item']);
+            return $requisition->load(['department', 'section', 'creatorUser', 'items.item', 'items.jobNumberModel']);
         });
     }
 
@@ -82,6 +90,7 @@ class PurchaseRequisitionService
             'creatorUser',
             'updatedByUser',
             'items.item.unitOfMeasurement',
+            'items.jobNumberModel',
             'approvals.user',
         ])
             ->where('pr_number', $code)
@@ -101,8 +110,8 @@ class PurchaseRequisitionService
             $requisition = PurchaseRequisition::findOrFail($id);
 
             // Cannot update if already fully approved or complete without revision
-            if (in_array($requisition->status, ['Approved 2', 'Complete']) && ! isset($headerData['revision'])) {
-                throw new InvalidArgumentException('Cannot modify fully approved/completed PR without revision.');
+            if (in_array($requisition->status, ['Approved', 'Approved 2', 'Ordered', 'Closing', 'Complete'], true) && ! isset($headerData['revision'])) {
+                throw new InvalidArgumentException('Cannot modify approved/ordered/completed PR without revision.');
             }
 
             if ($userId) {
@@ -119,10 +128,12 @@ class PurchaseRequisitionService
                     PurchaseRequisitionItem::create([
                         'purchase_requisitions_id' => $requisition->id,
                         'items_id' => $item['items_id'],
+                        'job_number_id' => $item['job_number_id'] ?? $headerData['job_number_id'] ?? null,
+                        'job_number' => $item['job_number'] ?? $headerData['job_number'] ?? null,
                         'quantity' => (string) ($item['quantity'] ?? '1'),
                         'remark' => $item['remark'] ?? null,
                         'due_date' => $item['due_date'] ?? $requisition->due_date,
-                        'note' => $item['note'] ?? null,
+                        'note' => $item['note'] ?? $item['notes'] ?? null,
                     ]);
                 }
             }
@@ -141,6 +152,7 @@ class PurchaseRequisitionService
             'section',
             'creatorUser',
             'items.item',
+            'items.jobNumberModel',
         ]);
 
         // Search by PR number or remark
@@ -207,8 +219,8 @@ class PurchaseRequisitionService
      */
     public function assertNotLocked(PurchaseRequisition $pr): void
     {
-        if (in_array($pr->status, ['Approved', 'Approved 2'], true)) {
-            throw new InvalidArgumentException("Purchase Requisition '{$pr->pr_number}' is fully Approved and locked from modifications.");
+        if (in_array($pr->status, ['Approved', 'Approved 2', 'Ordered', 'Closing', 'Complete'], true)) {
+            throw new InvalidArgumentException("Purchase Requisition '{$pr->pr_number}' is approved/ordered/completed and locked from modifications.");
         }
     }
 }

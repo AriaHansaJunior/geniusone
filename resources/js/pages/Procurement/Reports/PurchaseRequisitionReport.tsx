@@ -1,14 +1,14 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { Icon } from "../../../components/ui/Icon";
 import { Badge } from "../../../components/ui/Badge";
 import { Pagination } from "../../../components/ui/Pagination";
 import { CustomSelect } from "../../../components/ui/CustomSelect";
 import { CustomDatePicker } from "../../../components/ui/CustomDatePicker";
 import {
-  initialPrReportRecords,
-  departmentsList,
-  sectionsList,
-} from "./pr-report-data";
+  fetchPrReportApi,
+  fetchMasterDepartments,
+  fetchMasterSectionsApi,
+} from "../../../data/masterApi";
 import type {
   PrReportRecord,
   PrReportStatus,
@@ -93,11 +93,38 @@ export function PurchaseRequisitionReport({
   // ---------------------------------------------------------------------------
   // Row Expansion State for Nested PO Details
   // ---------------------------------------------------------------------------
-  const [expandedRowIds, setExpandedRowIds] = useState<Record<string, boolean>>({
-    // Expand first two rows initially to match the reference screenshot demo
-    "pr-rep-1": true,
-    "pr-rep-2": true,
-  });
+  const [records, setRecords] = useState<PrReportRecord[]>([]);
+  const [departmentsList, setDepartmentsList] = useState<string[]>(["All Departemen"]);
+  const [sectionsList, setSectionsList] = useState<string[]>(["All Section"]);
+  const [expandedRowIds, setExpandedRowIds] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    let isMounted = true;
+    fetchPrReportApi()
+      .then((rows) => {
+        if (isMounted && Array.isArray(rows)) setRecords(rows);
+      })
+      .catch(() => {});
+    fetchMasterDepartments()
+      .then((rows) => {
+        if (isMounted && Array.isArray(rows)) {
+          const names = Array.from(new Set(rows.map((d) => d.sectionName || d.unit).filter(Boolean)));
+          setDepartmentsList(["All Departemen", ...names]);
+        }
+      })
+      .catch(() => {});
+    fetchMasterSectionsApi()
+      .then((rows: any[]) => {
+        if (isMounted && Array.isArray(rows)) {
+          const names = Array.from(new Set(rows.map((s: any) => s.name || s.section_name).filter(Boolean)));
+          setSectionsList(["All Section", ...names]);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const toggleRowDetail = useCallback((id: string) => {
     setExpandedRowIds((prev) => ({
@@ -137,7 +164,7 @@ export function PurchaseRequisitionReport({
     const isoStart = fromDisplayDate(startDate);
     const isoEnd = fromDisplayDate(endDate);
 
-    const filtered = initialPrReportRecords.filter((record) => {
+    const filtered = records.filter((record) => {
       // Search matching across PR number, items, type, supplier, and code
       if (q) {
         const matchesPr = record.prNumber.toLowerCase().includes(q);

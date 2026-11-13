@@ -86,61 +86,44 @@ import {
   UserPermissionAdmin,
   AuditLogAdmin,
 } from "../pages";
-import { initialRequestMaterialRecords } from "../pages/Warehouse/Request/RequestMaterial/request-material-data";
 import type { RequestMaterialRecord } from "../pages/Warehouse/Request/RequestMaterial/request-material-types";
-import { initialStockNotificationRecords } from "../pages/Dashboard/StockNotificationMaster/stock-notification-data";
 import type { StockNotificationRecord } from "../pages/Dashboard/StockNotificationMaster/stock-notification-types";
-import { initialTypeOfRequestRecords } from "../pages/Warehouse/Master/TypeOfRequest/type-of-request-data";
 import type { TypeOfRequestRecord } from "../pages/Warehouse/Master/TypeOfRequest/type-of-request-types";
-import { initialDestinationLocationRecords } from "../pages/Warehouse/Master/DestinationLocation/destination-location-data";
 import type { DestinationLocationRecord } from "../pages/Warehouse/Master/DestinationLocation/destination-location-types";
 import { ConfirmDialog } from "./ui/ConfirmDialog";
-import { pageMeta, docToSlug } from "../data/mockData";
+import { pageMeta } from "../config/pageMeta";
+import { docToSlug } from "../utils/docSlug";
 import { navigationConfig } from "../config/navigation";
-import { initialPphRecords, type PphRecord } from "../pages/Procurement/PurchaseMaster/Pph/pph-types";
-import { initialSupplierRecords, type SupplierRecord } from "../pages/Procurement/PurchaseMaster/Supplier/supplier-types";
-import { initialPaymentTermRecords, type PaymentTermRecord } from "../pages/Procurement/PurchaseMaster/PaymentTerm/payment-term-types";
-import { initialPurchaseCategoryRecords, type PurchaseCategoryRecord } from "../pages/Procurement/PurchaseMaster/PurchaseCategory/purchase-category-types";
-import { initialDeliveryTermRecords, type DeliveryTermRecord } from "../pages/Procurement/PurchaseMaster/DeliveryTerms/delivery-terms-types";
-import { initialAdditionalCostRecords, type AdditionalCostRecord } from "../pages/Procurement/PurchaseMaster/AdditionalCosts/additional-costs-types";
-import { initialUnitRecords } from "../pages/Exim/Master/Unit/unit-data";
+import { useAuthPermission } from "../context/AuthPermissionContext";
+import type { PphRecord } from "../pages/Procurement/PurchaseMaster/Pph/pph-types";
+import type { SupplierRecord } from "../pages/Procurement/PurchaseMaster/Supplier/supplier-types";
+import type { PaymentTermRecord } from "../pages/Procurement/PurchaseMaster/PaymentTerm/payment-term-types";
+import type { PurchaseCategoryRecord } from "../pages/Procurement/PurchaseMaster/PurchaseCategory/purchase-category-types";
+import type { DeliveryTermRecord } from "../pages/Procurement/PurchaseMaster/DeliveryTerms/delivery-terms-types";
+import type { AdditionalCostRecord } from "../pages/Procurement/PurchaseMaster/AdditionalCosts/additional-costs-types";
 import type { UnitRecord } from "../pages/Exim/Master/Unit/unit-types";
-import { initialClassificationRecords } from "../pages/Exim/Master/Classification/classification-data";
 import type { ClassificationRecord } from "../pages/Exim/Master/Classification/classification-types";
-import { initialDepartmentRecords } from "../pages/Exim/Master/Department/department-data";
 import type { DepartmentRecord } from "../pages/Exim/Master/Department/department-types";
-import { initialBrandRecords } from "../pages/Exim/Master/Brand/brand-data";
 import type { BrandRecord } from "../pages/Exim/Master/Brand/brand-types";
-import { initialFacilityRecords } from "../pages/Exim/Master/Facility/facility-data";
 import type { FacilityRecord } from "../pages/Exim/Master/Facility/facility-types";
-import { initialHsRecords } from "../pages/Exim/Master/Hs/hs-data";
 import type { HsRecord } from "../pages/Exim/Master/Hs/hs-types";
-import { initialCategoryRecords } from "../pages/Exim/Master/Category/category-data";
 import type { CategoryRecord } from "../pages/Exim/Master/Category/category-types";
-import { initialStyleRecords } from "../pages/Exim/Master/Style/style-data";
 import type { StyleRecord } from "../pages/Exim/Master/Style/style-types";
-import { initialColorRecords } from "../pages/Exim/Master/Color/color-data";
 import type { ColorRecord } from "../pages/Exim/Master/Color/color-types";
-import { initialReceiveNoteRecords } from "../pages/Exim/ReceiveNote/receive-note-data";
 import type { ReceiveNoteRecord } from "../pages/Exim/ReceiveNote/receive-note-types";
-import { initialReceiveNoteReturnRecords } from "../pages/Exim/ReceiveNoteReturn/receive-note-return-data";
 import type { ReceiveNoteReturnRecord } from "../pages/Exim/ReceiveNoteReturn/receive-note-return-types";
-import { initialDocumentHistoryRecords } from "../pages/Exim/DocumentHistory/document-history-data";
 import type { DocumentHistoryRecord } from "../pages/Exim/DocumentHistory/document-history-types";
-import { initialWarehouseMasterRecords } from "../pages/Warehouse/MasterWarehouse/warehouse-master-data";
 import type {
   WarehouseMasterRecord,
   WarehouseCoordinateRecord,
 } from "../pages/Warehouse/MasterWarehouse/warehouse-master-types";
-import { initialItemRecords } from "../pages/Exim/Master/Item/item-data";
 import type { ItemRecord } from "../pages/Exim/Master/Item/item-types";
 import type { SupplierFormData } from "../pages/Procurement/PurchaseMaster/Supplier/supplier-types";
-import { initialCountryRecords, type CountryRecord } from "../pages/Exim/Master/Country/country-types";
-import { initialAccountRecords, type AccountRecord } from "../pages/Exim/Master/Account/account-types";
-import { initialJobNumberRecords, type JobNumberRecord } from "../pages/Procurement/PurchaseMaster/JobNumber/job-number-types";
-import { initialRafaksiTypeRecords, type RafaksiTypeRecord } from "../pages/Procurement/PurchaseMaster/RafaksiType/rafaksi-type-types";
-import { initialCurrencyRecords, type CurrencyRecord } from "../pages/Exim/Master/Currency/currency-types";
-import { initialUnitReferenceRecords } from "../pages/Exim/Master/UnitReference/unit-reference-data";
+import type { CountryRecord } from "../pages/Exim/Master/Country/country-types";
+import type { AccountRecord } from "../pages/Exim/Master/Account/account-types";
+import type { JobNumberRecord } from "../pages/Procurement/PurchaseMaster/JobNumber/job-number-types";
+import type { RafaksiTypeRecord } from "../pages/Procurement/PurchaseMaster/RafaksiType/rafaksi-type-types";
+import type { CurrencyRecord } from "../pages/Exim/Master/Currency/currency-types";
 import type { UnitReferenceRecord } from "../pages/Exim/Master/UnitReference/unit-reference-types";
 import type { PageKey, ViewState, TableRow } from "../types";
 import {
@@ -166,24 +149,30 @@ import {
   deleteUnitApi,
   fetchMasterBrands,
   saveBrandApi,
+  toggleBrandStatusApi,
   deleteBrandApi,
   fetchMasterClassifications,
   saveClassificationApi,
+  toggleClassificationStatusApi,
   deleteClassificationApi,
   fetchMasterDepartments,
   saveDepartmentApi,
+  toggleDepartmentStatusApi,
   deleteDepartmentApi,
   fetchMasterFacilities,
   saveFacilityApi,
+  toggleFacilityStatusApi,
   deleteFacilityApi,
   fetchMasterHsCodes,
   saveHsApi,
   deleteHsApi,
   fetchMasterCategories,
   saveCategoryApi,
+  toggleCategoryStatusApi,
   deleteCategoryApi,
   fetchMasterStyles,
   saveStyleApi,
+  toggleStyleStatusApi,
   deleteStyleApi,
   fetchMasterColours,
   saveColorApi,
@@ -216,6 +205,15 @@ import {
   fetchMasterUnitReferences,
   fetchRequestMaterials,
   saveRequestMaterialApi,
+  fetchStockNotificationsApi,
+  saveStockNotificationApi,
+  deleteStockNotificationApi,
+  fetchWarehouseTypesOfRequestApi,
+  saveWarehouseTypeOfRequestApi,
+  deleteWarehouseTypeOfRequestApi,
+  fetchDestinationLocationsApi,
+  saveDestinationLocationApi,
+  deleteDestinationLocationApi,
 } from "../data/masterApi";
 import { createReceiveNote } from "../data/api";
 
@@ -761,6 +759,7 @@ function resolveViewStateFromPath(pathname: string, defaultPage: PageKey = "dash
 }
 
 export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
+  const { isAuthenticated, authReady, logoutUser } = useAuthPermission();
   const [viewState, setViewState] = useState<ViewState>(() => {
     if (typeof window !== "undefined") {
       return resolveViewStateFromPath(window.location.pathname, (initialPage as PageKey) || "dashboard");
@@ -788,23 +787,23 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
     if (initialPage === "style-import") return { type: "style-import" };
     if (initialPage === "colour-create" || initialPage === "color-create") return { type: "colour-create" };
     if (initialPage === "receive-note-create") return { type: "receive-note-create" };
-    if (initialPage === "receive-note-detail") return { type: "receive-note-detail", code: initialCode || "0273-RN-IMLI-X-2026" };
+    if (initialPage === "receive-note-detail") return { type: "receive-note-detail", code: initialCode || "" };
     if (initialPage === "receive-note-return-create") return { type: "receive-note-return-create" };
-    if (initialPage === "receive-note-return-detail") return { type: "receive-note-return-detail", code: initialCode || "0029-RN-IMLI-IV-2025" };
-    if (initialPage === "document-history-detail") return { type: "document-history-detail", code: initialCode || "IMLI-677-FUCL.00001-26" };
+    if (initialPage === "receive-note-return-detail") return { type: "receive-note-return-detail", code: initialCode || "" };
+    if (initialPage === "document-history-detail") return { type: "document-history-detail", code: initialCode || "" };
     if (initialPage === "warehouse-master-create") return { type: "warehouse-master-create" };
-    if (initialPage === "warehouse-coordinate") return { type: "warehouse-coordinate", warehouseId: initialCode || "wh-1" };
-    if (initialPage === "warehouse-coordinate-create") return { type: "warehouse-coordinate-create", warehouseId: initialCode || "wh-1" };
+    if (initialPage === "warehouse-coordinate") return { type: "warehouse-coordinate", warehouseId: initialCode || "" };
+    if (initialPage === "warehouse-coordinate-create") return { type: "warehouse-coordinate-create", warehouseId: initialCode || "" };
     if (initialPage === "item-create") return { type: "item-create" };
     if (initialPage === "item-qr") return { type: "item-qr" };
-    if (initialPage === "pr-detail") return { type: "pr-detail", code: initialCode || "0026-PR-IMLI-X-2026" };
+    if (initialPage === "pr-detail") return { type: "pr-detail", code: initialCode || "" };
     if (initialPage === "pr-create") return { type: "pr-create" };
-    if (initialPage === "po-detail") return { type: "po-detail", code: initialCode || "POL-1026-0040" };
+    if (initialPage === "po-detail") return { type: "po-detail", code: initialCode || "" };
     if (initialPage === "po-create") return { type: "po-create" };
-    if (initialPage === "report-detail") return { type: "report-detail", code: initialCode || "POL-1026-0040" };
-    if (initialPage === "warehouse-detail") return { type: "warehouse-detail", code: initialCode || "0138-WHIN-IMLI-G-X-2026" };
+    if (initialPage === "report-detail") return { type: "report-detail", code: initialCode || "" };
+    if (initialPage === "warehouse-detail") return { type: "warehouse-detail", code: initialCode || "" };
     if (initialPage === "wh-req-material-create") return { type: "wh-req-material-create" };
-    if (initialPage === "wh-req-material-detail") return { type: "wh-req-material-detail", id: initialCode || "REQ-WH-2026-001" };
+    if (initialPage === "wh-req-material-detail") return { type: "wh-req-material-detail", id: initialCode || "" };
     if (initialPage === "stock-notification-create") return { type: "stock-notification-create" };
     if (initialPage === "wh-type-of-request-create") return { type: "wh-type-of-request-create" };
     if (initialPage === "wh-destination-location-create") return { type: "wh-destination-location-create" };
@@ -986,48 +985,48 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
     []
   );
 
-  // In-memory Master datasets state to support runtime additions and hide toggles
-  const [pphRecords, setPphRecords] = useState<PphRecord[]>(initialPphRecords);
-  const [supplierRecords, setSupplierRecords] = useState<SupplierRecord[]>(initialSupplierRecords);
-  const [paymentTermRecords, setPaymentTermRecords] = useState<PaymentTermRecord[]>(initialPaymentTermRecords);
-  const [purchaseCategoryRecords, setPurchaseCategoryRecords] = useState<PurchaseCategoryRecord[]>(initialPurchaseCategoryRecords);
-  const [deliveryTermRecords, setDeliveryTermRecords] = useState<DeliveryTermRecord[]>(initialDeliveryTermRecords);
-  const [additionalCostRecords, setAdditionalCostRecords] = useState<AdditionalCostRecord[]>(initialAdditionalCostRecords);
-  const [unitRecords, setUnitRecords] = useState<UnitRecord[]>(initialUnitRecords);
+  // Master & transaction datasets state synchronized from backend database
+  const [pphRecords, setPphRecords] = useState<PphRecord[]>([]);
+  const [supplierRecords, setSupplierRecords] = useState<SupplierRecord[]>([]);
+  const [paymentTermRecords, setPaymentTermRecords] = useState<PaymentTermRecord[]>([]);
+  const [purchaseCategoryRecords, setPurchaseCategoryRecords] = useState<PurchaseCategoryRecord[]>([]);
+  const [deliveryTermRecords, setDeliveryTermRecords] = useState<DeliveryTermRecord[]>([]);
+  const [additionalCostRecords, setAdditionalCostRecords] = useState<AdditionalCostRecord[]>([]);
+  const [unitRecords, setUnitRecords] = useState<UnitRecord[]>([]);
   const [editingUnit, setEditingUnit] = useState<UnitRecord | null>(null);
-  const [classificationRecords, setClassificationRecords] = useState<ClassificationRecord[]>(initialClassificationRecords);
+  const [classificationRecords, setClassificationRecords] = useState<ClassificationRecord[]>([]);
   const [editingClassification, setEditingClassification] = useState<ClassificationRecord | null>(null);
-  const [departmentRecords, setDepartmentRecords] = useState<DepartmentRecord[]>(initialDepartmentRecords);
+  const [departmentRecords, setDepartmentRecords] = useState<DepartmentRecord[]>([]);
   const [editingDepartment, setEditingDepartment] = useState<DepartmentRecord | null>(null);
-  const [brandRecords, setBrandRecords] = useState<BrandRecord[]>(initialBrandRecords);
+  const [brandRecords, setBrandRecords] = useState<BrandRecord[]>([]);
   const [editingBrand, setEditingBrand] = useState<BrandRecord | null>(null);
-  const [facilityRecords, setFacilityRecords] = useState<FacilityRecord[]>(initialFacilityRecords);
+  const [facilityRecords, setFacilityRecords] = useState<FacilityRecord[]>([]);
   const [editingFacility, setEditingFacility] = useState<FacilityRecord | null>(null);
-  const [hsRecords, setHsRecords] = useState<HsRecord[]>(initialHsRecords);
+  const [hsRecords, setHsRecords] = useState<HsRecord[]>([]);
   const [editingHs, setEditingHs] = useState<HsRecord | null>(null);
-  const [categoryRecords, setCategoryRecords] = useState<CategoryRecord[]>(initialCategoryRecords);
+  const [categoryRecords, setCategoryRecords] = useState<CategoryRecord[]>([]);
   const [editingCategory, setEditingCategory] = useState<CategoryRecord | null>(null);
-  const [styleRecords, setStyleRecords] = useState<StyleRecord[]>(initialStyleRecords);
+  const [styleRecords, setStyleRecords] = useState<StyleRecord[]>([]);
   const [editingStyle, setEditingStyle] = useState<StyleRecord | null>(null);
-  const [colorRecords, setColorRecords] = useState<ColorRecord[]>(initialColorRecords);
-  const [receiveNoteRecords, setReceiveNoteRecords] = useState<ReceiveNoteRecord[]>(initialReceiveNoteRecords);
-  const [receiveNoteReturnRecords, setReceiveNoteReturnRecords] = useState<ReceiveNoteReturnRecord[]>(initialReceiveNoteReturnRecords);
-  const [documentHistoryRecords, setDocumentHistoryRecords] = useState<DocumentHistoryRecord[]>(initialDocumentHistoryRecords);
-  const [warehouseMasterRecords, setWarehouseMasterRecords] = useState<WarehouseMasterRecord[]>(initialWarehouseMasterRecords);
-  const [itemRecords, setItemRecords] = useState<ItemRecord[]>(initialItemRecords);
+  const [colorRecords, setColorRecords] = useState<ColorRecord[]>([]);
+  const [receiveNoteRecords, setReceiveNoteRecords] = useState<ReceiveNoteRecord[]>([]);
+  const [receiveNoteReturnRecords, setReceiveNoteReturnRecords] = useState<ReceiveNoteReturnRecord[]>([]);
+  const [documentHistoryRecords, setDocumentHistoryRecords] = useState<DocumentHistoryRecord[]>([]);
+  const [warehouseMasterRecords, setWarehouseMasterRecords] = useState<WarehouseMasterRecord[]>([]);
+  const [itemRecords, setItemRecords] = useState<ItemRecord[]>([]);
   const [editingItem, setEditingItem] = useState<ItemRecord | null>(null);
-  const [countryRecords, setCountryRecords] = useState<CountryRecord[]>(initialCountryRecords);
-  const [accountRecords, setAccountRecords] = useState<AccountRecord[]>(initialAccountRecords);
-  const [jobNumberRecords, setJobNumberRecords] = useState<JobNumberRecord[]>(initialJobNumberRecords);
-  const [rafaksiTypeRecords, setRafaksiTypeRecords] = useState<RafaksiTypeRecord[]>(initialRafaksiTypeRecords);
-  const [currencyRecords, setCurrencyRecords] = useState<CurrencyRecord[]>(initialCurrencyRecords);
-  const [unitReferenceRecords, setUnitReferenceRecords] = useState<UnitReferenceRecord[]>(initialUnitReferenceRecords);
-  const [requestMaterialRecords, setRequestMaterialRecords] = useState<RequestMaterialRecord[]>(initialRequestMaterialRecords);
-  const [stockNotificationRecords, setStockNotificationRecords] = useState<StockNotificationRecord[]>(initialStockNotificationRecords);
+  const [countryRecords, setCountryRecords] = useState<CountryRecord[]>([]);
+  const [accountRecords, setAccountRecords] = useState<AccountRecord[]>([]);
+  const [jobNumberRecords, setJobNumberRecords] = useState<JobNumberRecord[]>([]);
+  const [rafaksiTypeRecords, setRafaksiTypeRecords] = useState<RafaksiTypeRecord[]>([]);
+  const [currencyRecords, setCurrencyRecords] = useState<CurrencyRecord[]>([]);
+  const [unitReferenceRecords, setUnitReferenceRecords] = useState<UnitReferenceRecord[]>([]);
+  const [requestMaterialRecords, setRequestMaterialRecords] = useState<RequestMaterialRecord[]>([]);
+  const [stockNotificationRecords, setStockNotificationRecords] = useState<StockNotificationRecord[]>([]);
   const [editingStockNotification, setEditingStockNotification] = useState<StockNotificationRecord | null>(null);
-  const [typeOfRequestRecords, setTypeOfRequestRecords] = useState<TypeOfRequestRecord[]>(initialTypeOfRequestRecords);
+  const [typeOfRequestRecords, setTypeOfRequestRecords] = useState<TypeOfRequestRecord[]>([]);
   const [editingTypeOfRequest, setEditingTypeOfRequest] = useState<TypeOfRequestRecord | null>(null);
-  const [destinationLocationRecords, setDestinationLocationRecords] = useState<DestinationLocationRecord[]>(initialDestinationLocationRecords);
+  const [destinationLocationRecords, setDestinationLocationRecords] = useState<DestinationLocationRecord[]>([]);
   const [editingDestinationLocation, setEditingDestinationLocation] = useState<DestinationLocationRecord | null>(null);
 
   const loadedPagesRef = useRef<Set<string>>(new Set());
@@ -1042,7 +1041,7 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
       if (loadedPagesRef.current.has(key)) return;
       loadedPagesRef.current.add(key);
       fetcher().then((data) => {
-        if (isMounted && data && data.length > 0) {
+        if (isMounted && Array.isArray(data)) {
           setter(data);
         }
       });
@@ -1060,7 +1059,7 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
     if (page === "delivery-terms" || type === "delivery-terms-create") {
       loadOnce("delivery-terms", fetchMasterDeliveryTerms, setDeliveryTermRecords);
     }
-    if (page === "additional-costs" || type === "additional-costs-create") {
+    if (page === "additional-costs" || type === "additional-costs-create" || type === "po-create") {
       loadOnce("additional-costs", fetchMasterAdditionalCosts, setAdditionalCostRecords);
     }
     if (page === "pph" || type === "pph-create") {
@@ -1096,7 +1095,7 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
     if (page === "colour" || type === "colour-create") {
       loadOnce("colours", fetchMasterColours, setColorRecords);
     }
-    if (page === "item" || type === "item-create" || type === "item-edit") {
+    if (page === "item" || type === "item-create" || type === "item-edit" || type === "item-qr" || type === "pr-create" || type === "po-create") {
       loadOnce("items", fetchMasterItems, setItemRecords);
     }
     if (
@@ -1122,21 +1121,54 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
     if (page === "job-number" || type === "pr-create") {
       loadOnce("job-numbers", fetchMasterJobNumbers, setJobNumberRecords);
     }
-    if (page === "receive-note" || type === "receive-note-detail") {
+    if (page === "receive-note" || type === "receive-note-detail" || type === "receive-note-create" || type === "dashboard") {
       fetchMasterReceiveNotes().then((data) => {
-        if (isMounted && data && data.length > 0) {
+        if (isMounted && Array.isArray(data)) {
           setReceiveNoteRecords(data);
         }
       });
     }
-    if (page === "receive-note-return" || type === "receive-note-return-detail") {
-      loadOnce("receive-note-returns", fetchMasterReceiveNoteReturns, setReceiveNoteReturnRecords);
+    if (page === "receive-note-return" || type === "receive-note-return-detail" || type === "receive-note-return-create") {
+      fetchMasterReceiveNoteReturns().then((data) => {
+        if (isMounted && Array.isArray(data)) {
+          setReceiveNoteReturnRecords(data);
+        }
+      });
     }
     if (page === "document-history" || type === "document-history-detail") {
-      loadOnce("document-histories", fetchMasterDocumentHistories, setDocumentHistoryRecords);
+      fetchMasterDocumentHistories().then((data) => {
+        if (isMounted && Array.isArray(data)) {
+          setDocumentHistoryRecords(data);
+        }
+      });
     }
-    if (page === "wh-req-material" || type === "wh-req-material-detail" || type === "wh-req-material-create") {
-      loadOnce("request-materials", fetchRequestMaterials, setRequestMaterialRecords);
+    if (page === "wh-req-material" || type === "wh-req-material-detail" || type === "wh-req-material-create" || type === "dashboard") {
+      fetchRequestMaterials().then((data) => {
+        if (isMounted && Array.isArray(data)) {
+          setRequestMaterialRecords(data);
+        }
+      });
+    }
+    if (page === "stock-notification-master" || type === "stock-notification-create" || type === "stock-notification-edit") {
+      fetchStockNotificationsApi().then((data) => {
+        if (isMounted && Array.isArray(data)) {
+          setStockNotificationRecords(data);
+        }
+      });
+    }
+    if (page === "wh-type-of-request" || type === "wh-type-of-request-create" || type === "wh-type-of-request-edit" || type === "wh-req-material-create") {
+      fetchWarehouseTypesOfRequestApi().then((data) => {
+        if (isMounted && Array.isArray(data)) {
+          setTypeOfRequestRecords(data);
+        }
+      });
+    }
+    if (page === "wh-destination-location" || type === "wh-destination-location-create" || type === "wh-destination-location-edit" || type === "wh-req-material-create") {
+      fetchDestinationLocationsApi().then((data) => {
+        if (isMounted && Array.isArray(data)) {
+          setDestinationLocationRecords(data);
+        }
+      });
     }
 
     return () => {
@@ -1281,14 +1313,12 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
         const saved = await savePphApi(newRec);
         if (saved) {
           setPphRecords((prev) => [saved, ...prev]);
-        } else {
-          setPphRecords((prev) => [newRec, ...prev]);
         }
+        handleNavigateList("pph", "/procurement/purchase-master/pph");
       } catch (err) {
-        console.warn("Failed to persist pph to backend:", err);
-        setPphRecords((prev) => [newRec, ...prev]);
+        console.error("Failed to persist PPH to backend:", err);
+        alert(err instanceof Error ? err.message : "Failed to save PPH record.");
       }
-      handleNavigateList("pph", "/procurement/purchase-master/pph");
     },
     [handleNavigateList]
   );
@@ -1329,14 +1359,22 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
     }
   }, []);
 
-  const handleSaveRequestMaterial = useCallback((newRecord: RequestMaterialRecord) => {
-    saveRequestMaterialApi(newRecord).catch(console.warn);
-    setRequestMaterialRecords((prev) => [newRecord, ...prev]);
-    const nextState: ViewState = { type: "list", page: "wh-req-material" };
-    setViewState(nextState);
-    if (typeof window !== "undefined") {
-      window.scrollTo(0, 0);
-      window.history.pushState(nextState, "", "/warehouse/request/request-material");
+  const handleSaveRequestMaterial = useCallback(async (newRecord: RequestMaterialRecord) => {
+    try {
+      await saveRequestMaterialApi(newRecord);
+      const updated = await fetchRequestMaterials();
+      if (Array.isArray(updated)) {
+        setRequestMaterialRecords(updated);
+      }
+      const nextState: ViewState = { type: "list", page: "wh-req-material" };
+      setViewState(nextState);
+      if (typeof window !== "undefined") {
+        window.scrollTo(0, 0);
+        window.history.pushState(nextState, "", "/warehouse/request/request-material");
+      }
+    } catch (err) {
+      console.error("Failed to save Request Material:", err);
+      alert(err instanceof Error ? err.message : "Failed to save Request Material.");
     }
   }, []);
 
@@ -1581,22 +1619,19 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
     async (record: UnitRecord, isEdit: boolean) => {
       try {
         const saved = await saveUnitApi(record, isEdit);
-        const toSave = saved || record;
-        if (isEdit) {
-          setUnitRecords((prev) => prev.map((u) => (u.id === toSave.id ? toSave : u)));
-        } else {
-          setUnitRecords((prev) => [toSave, ...prev]);
+        if (saved) {
+          if (isEdit) {
+            setUnitRecords((prev) => prev.map((u) => (u.id === saved.id ? saved : u)));
+          } else {
+            setUnitRecords((prev) => [saved, ...prev]);
+          }
         }
+        setEditingUnit(null);
+        handleNavigateList("unit", "/exim/master/unit");
       } catch (err) {
-        console.warn("Unit API sync failed:", err);
-        if (isEdit) {
-          setUnitRecords((prev) => prev.map((u) => (u.id === record.id ? record : u)));
-        } else {
-          setUnitRecords((prev) => [record, ...prev]);
-        }
+        console.error("Unit API sync failed:", err);
+        alert(err instanceof Error ? err.message : "Failed to save Unit.");
       }
-      setEditingUnit(null);
-      handleNavigateList("unit", "/exim/master/unit");
     },
     [handleNavigateList]
   );
@@ -1604,10 +1639,11 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
   const handleDeleteUnit = useCallback(async (id: string) => {
     try {
       await deleteUnitApi(id);
+      setUnitRecords((prev) => prev.filter((u) => u.id !== id));
     } catch (err) {
-      console.warn("Unit API delete failed:", err);
+      console.error("Unit API delete failed:", err);
+      alert(err instanceof Error ? err.message : "Failed to delete Unit.");
     }
-    setUnitRecords((prev) => prev.filter((u) => u.id !== id));
   }, []);
 
   const handleNavigateClassificationEdit = useCallback((cls: ClassificationRecord) => {
@@ -1625,22 +1661,19 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
     async (record: ClassificationRecord, isEdit: boolean) => {
       try {
         const saved = await saveClassificationApi(record, isEdit);
-        const toSave = saved || record;
-        if (isEdit) {
-          setClassificationRecords((prev) => prev.map((c) => (c.id === toSave.id ? toSave : c)));
-        } else {
-          setClassificationRecords((prev) => [toSave, ...prev]);
+        if (saved) {
+          if (isEdit) {
+            setClassificationRecords((prev) => prev.map((c) => (c.id === saved.id ? saved : c)));
+          } else {
+            setClassificationRecords((prev) => [saved, ...prev]);
+          }
         }
+        setEditingClassification(null);
+        handleNavigateList("classification", "/exim/master/classification");
       } catch (err) {
-        console.warn("Classification API sync failed:", err);
-        if (isEdit) {
-          setClassificationRecords((prev) => prev.map((c) => (c.id === record.id ? record : c)));
-        } else {
-          setClassificationRecords((prev) => [record, ...prev]);
-        }
+        console.error("Classification API sync failed:", err);
+        alert(err instanceof Error ? err.message : "Failed to save Classification.");
       }
-      setEditingClassification(null);
-      handleNavigateList("classification", "/exim/master/classification");
     },
     [handleNavigateList]
   );
@@ -1648,16 +1681,21 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
   const handleDeleteClassification = useCallback(async (id: string) => {
     try {
       await deleteClassificationApi(id);
+      setClassificationRecords((prev) => prev.filter((c) => c.id !== id));
     } catch (err) {
-      console.warn("Classification delete failed:", err);
+      console.error("Classification delete failed:", err);
+      alert(err instanceof Error ? err.message : "Failed to delete Classification.");
     }
-    setClassificationRecords((prev) => prev.filter((c) => c.id !== id));
   }, []);
 
   const handleToggleClassificationStatus = useCallback((id: string) => {
-    setClassificationRecords((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, status: !c.status } : c))
-    );
+    setClassificationRecords((prev) => {
+      const target = prev.find((c) => c.id === id);
+      if (target) {
+        toggleClassificationStatusApi(id, !target.status).catch(console.error);
+      }
+      return prev.map((c) => (c.id === id ? { ...c, status: !c.status } : c));
+    });
   }, []);
 
   const handleNavigateDepartmentEdit = useCallback((dept: DepartmentRecord) => {
@@ -1675,22 +1713,19 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
     async (record: DepartmentRecord, isEdit: boolean) => {
       try {
         const saved = await saveDepartmentApi(record, isEdit);
-        const toSave = saved || record;
-        if (isEdit) {
-          setDepartmentRecords((prev) => prev.map((d) => (d.id === toSave.id ? toSave : d)));
-        } else {
-          setDepartmentRecords((prev) => [toSave, ...prev]);
+        if (saved) {
+          if (isEdit) {
+            setDepartmentRecords((prev) => prev.map((d) => (d.id === saved.id ? saved : d)));
+          } else {
+            setDepartmentRecords((prev) => [saved, ...prev]);
+          }
         }
+        setEditingDepartment(null);
+        handleNavigateList("department", "/exim/master/department");
       } catch (err) {
-        console.warn("Department API sync failed:", err);
-        if (isEdit) {
-          setDepartmentRecords((prev) => prev.map((d) => (d.id === record.id ? record : d)));
-        } else {
-          setDepartmentRecords((prev) => [record, ...prev]);
-        }
+        console.error("Department API sync failed:", err);
+        alert(err instanceof Error ? err.message : "Failed to save Department.");
       }
-      setEditingDepartment(null);
-      handleNavigateList("department", "/exim/master/department");
     },
     [handleNavigateList]
   );
@@ -1698,16 +1733,21 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
   const handleDeleteDepartment = useCallback(async (id: string) => {
     try {
       await deleteDepartmentApi(id);
+      setDepartmentRecords((prev) => prev.filter((d) => d.id !== id));
     } catch (err) {
-      console.warn("Department delete failed:", err);
+      console.error("Department delete failed:", err);
+      alert(err instanceof Error ? err.message : "Failed to delete Department.");
     }
-    setDepartmentRecords((prev) => prev.filter((d) => d.id !== id));
   }, []);
 
   const handleToggleDepartmentStatus = useCallback((id: string) => {
-    setDepartmentRecords((prev) =>
-      prev.map((d) => (d.id === id ? { ...d, status: !d.status } : d))
-    );
+    setDepartmentRecords((prev) => {
+      const target = prev.find((d) => d.id === id);
+      if (target) {
+        toggleDepartmentStatusApi(id, !target.status).catch(console.error);
+      }
+      return prev.map((d) => (d.id === id ? { ...d, status: !d.status } : d));
+    });
   }, []);
 
   const handleNavigateBrandEdit = useCallback((brand: BrandRecord) => {
@@ -1725,22 +1765,19 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
     async (record: BrandRecord, isEdit: boolean) => {
       try {
         const saved = await saveBrandApi(record, isEdit);
-        const toSave = saved || record;
-        if (isEdit) {
-          setBrandRecords((prev) => prev.map((b) => (b.id === toSave.id ? toSave : b)));
-        } else {
-          setBrandRecords((prev) => [toSave, ...prev]);
+        if (saved) {
+          if (isEdit) {
+            setBrandRecords((prev) => prev.map((b) => (b.id === saved.id ? saved : b)));
+          } else {
+            setBrandRecords((prev) => [saved, ...prev]);
+          }
         }
+        setEditingBrand(null);
+        handleNavigateList("brand", "/exim/master/brand");
       } catch (err) {
-        console.warn("Brand API sync failed:", err);
-        if (isEdit) {
-          setBrandRecords((prev) => prev.map((b) => (b.id === record.id ? record : b)));
-        } else {
-          setBrandRecords((prev) => [record, ...prev]);
-        }
+        console.error("Brand API sync failed:", err);
+        alert(err instanceof Error ? err.message : "Failed to save Brand.");
       }
-      setEditingBrand(null);
-      handleNavigateList("brand", "/exim/master/brand");
     },
     [handleNavigateList]
   );
@@ -1748,16 +1785,21 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
   const handleDeleteBrand = useCallback(async (id: string) => {
     try {
       await deleteBrandApi(id);
+      setBrandRecords((prev) => prev.filter((b) => b.id !== id));
     } catch (err) {
-      console.warn("Brand delete failed:", err);
+      console.error("Brand delete failed:", err);
+      alert(err instanceof Error ? err.message : "Failed to delete Brand.");
     }
-    setBrandRecords((prev) => prev.filter((b) => b.id !== id));
   }, []);
 
   const handleToggleBrandStatus = useCallback((id: string) => {
-    setBrandRecords((prev) =>
-      prev.map((b) => (b.id === id ? { ...b, status: !b.status } : b))
-    );
+    setBrandRecords((prev) => {
+      const target = prev.find((b) => b.id === id);
+      if (target) {
+        toggleBrandStatusApi(id, !target.status).catch(console.error);
+      }
+      return prev.map((b) => (b.id === id ? { ...b, status: !b.status } : b));
+    });
   }, []);
 
   const handleNavigateFacilityEdit = useCallback((facility: FacilityRecord) => {
@@ -1775,22 +1817,19 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
     async (record: FacilityRecord, isEdit: boolean) => {
       try {
         const saved = await saveFacilityApi(record, isEdit);
-        const toSave = saved || record;
-        if (isEdit) {
-          setFacilityRecords((prev) => prev.map((f) => (f.id === toSave.id ? toSave : f)));
-        } else {
-          setFacilityRecords((prev) => [toSave, ...prev]);
+        if (saved) {
+          if (isEdit) {
+            setFacilityRecords((prev) => prev.map((f) => (f.id === saved.id ? saved : f)));
+          } else {
+            setFacilityRecords((prev) => [saved, ...prev]);
+          }
         }
+        setEditingFacility(null);
+        handleNavigateList("facility", "/exim/master/facility");
       } catch (err) {
-        console.warn("Facility API sync failed:", err);
-        if (isEdit) {
-          setFacilityRecords((prev) => prev.map((f) => (f.id === record.id ? record : f)));
-        } else {
-          setFacilityRecords((prev) => [record, ...prev]);
-        }
+        console.error("Facility API sync failed:", err);
+        alert(err instanceof Error ? err.message : "Failed to save Facility.");
       }
-      setEditingFacility(null);
-      handleNavigateList("facility", "/exim/master/facility");
     },
     [handleNavigateList]
   );
@@ -1798,16 +1837,21 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
   const handleDeleteFacility = useCallback(async (id: string) => {
     try {
       await deleteFacilityApi(id);
+      setFacilityRecords((prev) => prev.filter((f) => f.id !== id));
     } catch (err) {
-      console.warn("Facility delete failed:", err);
+      console.error("Facility delete failed:", err);
+      alert(err instanceof Error ? err.message : "Failed to delete Facility.");
     }
-    setFacilityRecords((prev) => prev.filter((f) => f.id !== id));
   }, []);
 
   const handleToggleFacilityStatus = useCallback((id: string) => {
-    setFacilityRecords((prev) =>
-      prev.map((f) => (f.id === id ? { ...f, status: !f.status } : f))
-    );
+    setFacilityRecords((prev) => {
+      const target = prev.find((f) => f.id === id);
+      if (target) {
+        toggleFacilityStatusApi(id, !target.status).catch(console.error);
+      }
+      return prev.map((f) => (f.id === id ? { ...f, status: !f.status } : f));
+    });
   }, []);
 
   const handleNavigateHsEdit = useCallback((hs: HsRecord) => {
@@ -1825,22 +1869,19 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
     async (record: HsRecord, isEdit: boolean) => {
       try {
         const saved = await saveHsApi(record, isEdit);
-        const toSave = saved || record;
-        if (isEdit) {
-          setHsRecords((prev) => prev.map((h) => (h.id === toSave.id ? toSave : h)));
-        } else {
-          setHsRecords((prev) => [toSave, ...prev]);
+        if (saved) {
+          if (isEdit) {
+            setHsRecords((prev) => prev.map((h) => (h.id === saved.id ? saved : h)));
+          } else {
+            setHsRecords((prev) => [saved, ...prev]);
+          }
         }
+        setEditingHs(null);
+        handleNavigateList("hs", "/exim/master/hs");
       } catch (err) {
-        console.warn("HS API sync failed:", err);
-        if (isEdit) {
-          setHsRecords((prev) => prev.map((h) => (h.id === record.id ? record : h)));
-        } else {
-          setHsRecords((prev) => [record, ...prev]);
-        }
+        console.error("HS API sync failed:", err);
+        alert(err instanceof Error ? err.message : "Failed to save HS Code.");
       }
-      setEditingHs(null);
-      handleNavigateList("hs", "/exim/master/hs");
     },
     [handleNavigateList]
   );
@@ -1848,10 +1889,11 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
   const handleDeleteHs = useCallback(async (id: string) => {
     try {
       await deleteHsApi(id);
+      setHsRecords((prev) => prev.filter((h) => h.id !== id));
     } catch (err) {
-      console.warn("HS delete failed:", err);
+      console.error("HS delete failed:", err);
+      alert(err instanceof Error ? err.message : "Failed to delete HS Code.");
     }
-    setHsRecords((prev) => prev.filter((h) => h.id !== id));
   }, []);
 
   const handleNavigateCategoryEdit = useCallback((category: CategoryRecord) => {
@@ -1869,22 +1911,19 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
     async (record: CategoryRecord, isEdit: boolean) => {
       try {
         const saved = await saveCategoryApi(record, isEdit);
-        const toSave = saved || record;
-        if (isEdit) {
-          setCategoryRecords((prev) => prev.map((c) => (c.id === toSave.id ? toSave : c)));
-        } else {
-          setCategoryRecords((prev) => [toSave, ...prev]);
+        if (saved) {
+          if (isEdit) {
+            setCategoryRecords((prev) => prev.map((c) => (c.id === saved.id ? saved : c)));
+          } else {
+            setCategoryRecords((prev) => [saved, ...prev]);
+          }
         }
+        setEditingCategory(null);
+        handleNavigateList("category", "/exim/master/category");
       } catch (err) {
-        console.warn("Category API sync failed:", err);
-        if (isEdit) {
-          setCategoryRecords((prev) => prev.map((c) => (c.id === record.id ? record : c)));
-        } else {
-          setCategoryRecords((prev) => [record, ...prev]);
-        }
+        console.error("Category API sync failed:", err);
+        alert(err instanceof Error ? err.message : "Failed to save Category.");
       }
-      setEditingCategory(null);
-      handleNavigateList("category", "/exim/master/category");
     },
     [handleNavigateList]
   );
@@ -1892,16 +1931,21 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
   const handleDeleteCategory = useCallback(async (id: string) => {
     try {
       await deleteCategoryApi(id);
+      setCategoryRecords((prev) => prev.filter((c) => c.id !== id));
     } catch (err) {
-      console.warn("Category delete failed:", err);
+      console.error("Category delete failed:", err);
+      alert(err instanceof Error ? err.message : "Failed to delete Category.");
     }
-    setCategoryRecords((prev) => prev.filter((c) => c.id !== id));
   }, []);
 
   const handleToggleCategoryStatus = useCallback((id: string) => {
-    setCategoryRecords((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, status: !c.status } : c))
-    );
+    setCategoryRecords((prev) => {
+      const target = prev.find((c) => c.id === id);
+      if (target) {
+        toggleCategoryStatusApi(id, !target.status).catch(console.error);
+      }
+      return prev.map((c) => (c.id === id ? { ...c, status: !c.status } : c));
+    });
   }, []);
 
   const handleNavigateStyleEdit = useCallback((style: StyleRecord) => {
@@ -1929,22 +1973,19 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
     async (record: StyleRecord, isEdit: boolean) => {
       try {
         const saved = await saveStyleApi(record, isEdit);
-        const toSave = saved || record;
-        if (isEdit) {
-          setStyleRecords((prev) => prev.map((s) => (s.id === toSave.id ? toSave : s)));
-        } else {
-          setStyleRecords((prev) => [toSave, ...prev]);
+        if (saved) {
+          if (isEdit) {
+            setStyleRecords((prev) => prev.map((s) => (s.id === saved.id ? saved : s)));
+          } else {
+            setStyleRecords((prev) => [saved, ...prev]);
+          }
         }
+        setEditingStyle(null);
+        handleNavigateList("style", "/exim/master/style");
       } catch (err) {
-        console.warn("Style API sync failed:", err);
-        if (isEdit) {
-          setStyleRecords((prev) => prev.map((s) => (s.id === record.id ? record : s)));
-        } else {
-          setStyleRecords((prev) => [record, ...prev]);
-        }
+        console.error("Style API sync failed:", err);
+        alert(err instanceof Error ? err.message : "Failed to save Style.");
       }
-      setEditingStyle(null);
-      handleNavigateList("style", "/exim/master/style");
     },
     [handleNavigateList]
   );
@@ -1952,29 +1993,35 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
   const handleDeleteStyle = useCallback(async (id: string) => {
     try {
       await deleteStyleApi(id);
+      setStyleRecords((prev) => prev.filter((s) => s.id !== id));
     } catch (err) {
-      console.warn("Style delete failed:", err);
+      console.error("Style delete failed:", err);
+      alert(err instanceof Error ? err.message : "Failed to delete Style.");
     }
-    setStyleRecords((prev) => prev.filter((s) => s.id !== id));
   }, []);
 
   const handleToggleStyleStatus = useCallback((id: string) => {
-    setStyleRecords((prev) =>
-      prev.map((s) => (s.id === id ? { ...s, status: !s.status } : s))
-    );
+    setStyleRecords((prev) => {
+      const target = prev.find((s) => s.id === id);
+      if (target) {
+        toggleStyleStatusApi(id, !target.status).catch(console.error);
+      }
+      return prev.map((s) => (s.id === id ? { ...s, status: !s.status } : s));
+    });
   }, []);
 
   const handleSaveColor = useCallback(
     async (record: ColorRecord) => {
       try {
         const saved = await saveColorApi(record);
-        const toSave = saved || record;
-        setColorRecords((prev) => [toSave, ...prev]);
+        if (saved) {
+          setColorRecords((prev) => [saved, ...prev]);
+        }
+        handleNavigateList("colour", "/exim/master/colour");
       } catch (err) {
-        console.warn("Color API sync failed:", err);
-        setColorRecords((prev) => [record, ...prev]);
+        console.error("Color API sync failed:", err);
+        alert(err instanceof Error ? err.message : "Failed to save Colour.");
       }
-      handleNavigateList("colour", "/exim/master/colour");
     },
     [handleNavigateList]
   );
@@ -1991,8 +2038,6 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
   }, []);
 
   const handleSaveReceiveNote = useCallback(async (newRecord: ReceiveNoteRecord) => {
-    let savedRnNumber = newRecord.rnNumber;
-    let savedId = newRecord.id;
     try {
       const rawRemark = newRecord.remark && newRecord.remark !== "-"
         ? newRecord.remark
@@ -2002,7 +2047,7 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
             ? (newRecord as any).notes
             : ((newRecord as any).note && (newRecord as any).note !== "-" ? (newRecord as any).note : undefined)));
 
-      const res = await createReceiveNote({
+      await createReceiveNote({
         rnNumber: newRecord.rnNumber,
         supplier: newRecord.supplier,
         currency: newRecord.currency,
@@ -2044,26 +2089,21 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
           note: it.remark || "-",
         })),
       });
-      if (res?.data?.rn_number) {
-        savedRnNumber = res.data.rn_number;
+
+      const refreshed = await fetchMasterReceiveNotes();
+      if (Array.isArray(refreshed)) {
+        setReceiveNoteRecords(refreshed);
       }
-      if (res?.data?.id) {
-        savedId = String(res.data.id);
+      const nextState: ViewState = { type: "list", page: "receive-note" };
+      setViewState(nextState);
+
+      if (typeof window !== "undefined") {
+        window.scrollTo(0, 0);
+        window.history.pushState(nextState, "", "/exim/receive-note");
       }
     } catch (err) {
-      console.warn("Failed to persist Receive Note to backend:", err);
-    }
-
-    setReceiveNoteRecords((prev) => [
-      { ...newRecord, id: savedId, rnNumber: savedRnNumber, status: "Waiting for Approve 1", no: 1 },
-      ...prev.map((r) => ({ ...r, no: r.no + 1 })),
-    ]);
-    const nextState: ViewState = { type: "list", page: "receive-note" };
-    setViewState(nextState);
-
-    if (typeof window !== "undefined") {
-      window.scrollTo(0, 0);
-      window.history.pushState(nextState, "", "/exim/receive-note");
+      console.error("Failed to persist Receive Note to backend:", err);
+      alert(err instanceof Error ? err.message : "Failed to save Receive Note.");
     }
   }, []);
 
@@ -2268,24 +2308,22 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
     async (newRecord: WarehouseMasterRecord) => {
       try {
         const saved = await saveWarehouseMasterApi(newRecord);
-        const toSave = saved || newRecord;
-        setWarehouseMasterRecords((prev) => [
-          { ...toSave, no: 1 },
-          ...prev.map((w) => ({ ...w, no: w.no + 1 })),
-        ]);
-      } catch (err) {
-        console.warn("Warehouse Master API sync failed:", err);
-        setWarehouseMasterRecords((prev) => [
-          { ...newRecord, no: 1 },
-          ...prev.map((w) => ({ ...w, no: w.no + 1 })),
-        ]);
-      }
-      const nextState: ViewState = { type: "list", page: "warehouse-master" };
-      setViewState(nextState);
+        if (saved) {
+          setWarehouseMasterRecords((prev) => [
+            { ...saved, no: 1 },
+            ...prev.map((w) => ({ ...w, no: w.no + 1 })),
+          ]);
+        }
+        const nextState: ViewState = { type: "list", page: "warehouse-master" };
+        setViewState(nextState);
 
-      if (typeof window !== "undefined") {
-        window.scrollTo(0, 0);
-        window.history.pushState(nextState, "", "/warehouse/master/warehouse");
+        if (typeof window !== "undefined") {
+          window.scrollTo(0, 0);
+          window.history.pushState(nextState, "", "/warehouse/master/warehouse");
+        }
+      } catch (err) {
+        console.error("Warehouse Master API sync failed:", err);
+        alert(err instanceof Error ? err.message : "Failed to save Warehouse.");
       }
     },
     []
@@ -2293,40 +2331,39 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
 
   const handleSaveWarehouseCoordinate = useCallback(
     async (newCoordinate: WarehouseCoordinateRecord) => {
-      let createdCoord = newCoordinate;
       try {
         const saved = await saveWarehouseCoordinateApi(newCoordinate);
-        if (saved) createdCoord = saved;
-      } catch (err) {
-        console.warn("Warehouse coordinate API sync failed:", err);
-      }
-
-      setWarehouseMasterRecords((prev) =>
-        prev.map((w) => {
-          if (w.id === newCoordinate.warehouseId) {
-            const currentCoords = w.coordinates || [];
-            return {
-              ...w,
-              coordinates: [...currentCoords, createdCoord],
-            };
-          }
-          return w;
-        })
-      );
-
-      const nextState: ViewState = {
-        type: "warehouse-coordinate",
-        warehouseId: newCoordinate.warehouseId,
-      };
-      setViewState(nextState);
-
-      if (typeof window !== "undefined") {
-        window.scrollTo(0, 0);
-        window.history.pushState(
-          nextState,
-          "",
-          `/warehouse/master/warehouse/${newCoordinate.warehouseId}/coordinate`
+        const createdCoord = saved || newCoordinate;
+        setWarehouseMasterRecords((prev) =>
+          prev.map((w) => {
+            if (w.id === newCoordinate.warehouseId) {
+              const currentCoords = w.coordinates || [];
+              return {
+                ...w,
+                coordinates: [...currentCoords, createdCoord],
+              };
+            }
+            return w;
+          })
         );
+
+        const nextState: ViewState = {
+          type: "warehouse-coordinate",
+          warehouseId: newCoordinate.warehouseId,
+        };
+        setViewState(nextState);
+
+        if (typeof window !== "undefined") {
+          window.scrollTo(0, 0);
+          window.history.pushState(
+            nextState,
+            "",
+            `/warehouse/master/warehouse/${newCoordinate.warehouseId}/coordinate`
+          );
+        }
+      } catch (err) {
+        console.error("Warehouse coordinate API sync failed:", err);
+        alert(err instanceof Error ? err.message : "Failed to save Warehouse Coordinate.");
       }
     },
     []
@@ -2336,43 +2373,47 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
     async (warehouseId: string, coordinateId: string) => {
       try {
         await deleteWarehouseCoordinateApi(coordinateId);
+        setWarehouseMasterRecords((prev) =>
+          prev.map((w) => {
+            if (w.id === warehouseId) {
+              return {
+                ...w,
+                coordinates: (w.coordinates || []).filter((c) => c.id !== coordinateId),
+              };
+            }
+            return w;
+          })
+        );
       } catch (err) {
-        console.warn("Warehouse coordinate delete failed:", err);
+        console.error("Warehouse coordinate delete failed:", err);
+        alert(err instanceof Error ? err.message : "Failed to delete Warehouse Coordinate.");
       }
-      setWarehouseMasterRecords((prev) =>
-        prev.map((w) => {
-          if (w.id === warehouseId) {
-            return {
-              ...w,
-              coordinates: (w.coordinates || []).filter((c) => c.id !== coordinateId),
-            };
-          }
-          return w;
-        })
-      );
     },
     []
   );
 
   const handleSaveReceiveNoteReturn = useCallback(async (newRecord: ReceiveNoteReturnRecord) => {
-    let toSave = newRecord;
     try {
       const saved = await saveReceiveNoteReturnApi(newRecord);
-      if (saved) toSave = saved;
+      const refreshed = await fetchMasterReceiveNoteReturns();
+      if (Array.isArray(refreshed)) {
+        setReceiveNoteReturnRecords(refreshed);
+      } else if (saved) {
+        setReceiveNoteReturnRecords((prev) => [
+          { ...saved, no: 1 },
+          ...prev.map((r) => ({ ...r, no: r.no + 1 })),
+        ]);
+      }
+      const nextState: ViewState = { type: "list", page: "receive-note-return" };
+      setViewState(nextState);
+
+      if (typeof window !== "undefined") {
+        window.scrollTo(0, 0);
+        window.history.pushState(nextState, "", "/exim/receive-note-return");
+      }
     } catch (err) {
-      console.warn("Failed to persist Receive Note Return to backend:", err);
-    }
-
-    setReceiveNoteReturnRecords((prev) => [
-      { ...toSave, no: 1 },
-      ...prev.map((r) => ({ ...r, no: r.no + 1 })),
-    ]);
-    const nextState: ViewState = { type: "list", page: "receive-note-return" };
-    setViewState(nextState);
-
-    if (typeof window !== "undefined") {
-      window.scrollTo(0, 0);
-      window.history.pushState(nextState, "", "/exim/receive-note-return");
+      console.error("Failed to persist Receive Note Return to backend:", err);
+      alert(err instanceof Error ? err.message : "Failed to save Receive Note Return.");
     }
   }, []);
 
@@ -2401,22 +2442,19 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
     async (record: ItemRecord, isEdit: boolean) => {
       try {
         const saved = await saveItemApi(record, isEdit);
-        const toSave = saved || record;
-        if (isEdit) {
-          setItemRecords((prev) => prev.map((i) => (i.id === toSave.id ? toSave : i)));
-        } else {
-          setItemRecords((prev) => [toSave, ...prev]);
+        if (saved) {
+          if (isEdit) {
+            setItemRecords((prev) => prev.map((i) => (i.id === saved.id ? saved : i)));
+          } else {
+            setItemRecords((prev) => [saved, ...prev]);
+          }
         }
+        setEditingItem(null);
+        handleNavigateList("item", "/exim/master/item");
       } catch (err) {
-        console.warn("Item API sync failed:", err);
-        if (isEdit) {
-          setItemRecords((prev) => prev.map((i) => (i.id === record.id ? record : i)));
-        } else {
-          setItemRecords((prev) => [record, ...prev]);
-        }
+        console.error("Item API sync failed:", err);
+        alert(err instanceof Error ? err.message : "Failed to save Item.");
       }
-      setEditingItem(null);
-      handleNavigateList("item", "/exim/master/item");
     },
     [handleNavigateList]
   );
@@ -2424,10 +2462,11 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
   const handleDeleteItem = useCallback(async (id: string) => {
     try {
       await deleteItemApi(id);
+      setItemRecords((prev) => prev.filter((i) => i.id !== id));
     } catch (err) {
-      console.warn("Item delete failed:", err);
+      console.error("Item delete failed:", err);
+      alert(err instanceof Error ? err.message : "Failed to delete Item.");
     }
-    setItemRecords((prev) => prev.filter((i) => i.id !== id));
   }, []);
 
   // Stock Notification Master Handlers
@@ -2451,20 +2490,34 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
     }
   }, []);
 
-  const handleSaveStockNotification = useCallback((record: StockNotificationRecord, isEdit: boolean) => {
-    if (isEdit) {
-      setStockNotificationRecords((prev) =>
-        prev.map((r) => (r.id === record.id ? record : r))
-      );
-    } else {
-      setStockNotificationRecords((prev) => [record, ...prev]);
+  const handleSaveStockNotification = useCallback(async (record: StockNotificationRecord, isEdit: boolean) => {
+    try {
+      const saved = await saveStockNotificationApi(record, isEdit);
+      if (saved) {
+        if (isEdit) {
+          setStockNotificationRecords((prev) =>
+            prev.map((r) => (r.id === saved.id ? saved : r))
+          );
+        } else {
+          setStockNotificationRecords((prev) => [saved, ...prev]);
+        }
+      }
+      setEditingStockNotification(null);
+      handleNavigateList("stock-notification-master", "/dashboard/stock-notification-master");
+    } catch (err) {
+      console.error("Stock Notification API sync failed:", err);
+      alert(err instanceof Error ? err.message : "Failed to save Stock Notification.");
     }
-    setEditingStockNotification(null);
-    handleNavigateList("stock-notification-master", "/dashboard/stock-notification-master");
   }, [handleNavigateList]);
 
-  const handleDeleteStockNotification = useCallback((id: string) => {
-    setStockNotificationRecords((prev) => prev.filter((r) => r.id !== id));
+  const handleDeleteStockNotification = useCallback(async (id: string) => {
+    try {
+      await deleteStockNotificationApi(id);
+      setStockNotificationRecords((prev) => prev.filter((r) => r.id !== id));
+    } catch (err) {
+      console.error("Stock Notification delete failed:", err);
+      alert(err instanceof Error ? err.message : "Failed to delete Stock Notification.");
+    }
   }, []);
 
   // Type of Request Master Handlers
@@ -2488,20 +2541,34 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
     }
   }, []);
 
-  const handleSaveTypeOfRequest = useCallback((record: TypeOfRequestRecord, isEdit: boolean) => {
-    if (isEdit) {
-      setTypeOfRequestRecords((prev) =>
-        prev.map((r) => (r.id === record.id ? record : r))
-      );
-    } else {
-      setTypeOfRequestRecords((prev) => [record, ...prev]);
+  const handleSaveTypeOfRequest = useCallback(async (record: TypeOfRequestRecord, isEdit: boolean) => {
+    try {
+      const saved = await saveWarehouseTypeOfRequestApi(record, isEdit);
+      if (saved) {
+        if (isEdit) {
+          setTypeOfRequestRecords((prev) =>
+            prev.map((r) => (r.id === saved.id ? saved : r))
+          );
+        } else {
+          setTypeOfRequestRecords((prev) => [saved, ...prev]);
+        }
+      }
+      setEditingTypeOfRequest(null);
+      handleNavigateList("wh-type-of-request", "/warehouse/master/type-of-request");
+    } catch (err) {
+      console.error("Type of Request API sync failed:", err);
+      alert(err instanceof Error ? err.message : "Failed to save Type of Request.");
     }
-    setEditingTypeOfRequest(null);
-    handleNavigateList("wh-type-of-request", "/warehouse/master/type-of-request");
   }, [handleNavigateList]);
 
-  const handleDeleteTypeOfRequest = useCallback((id: string) => {
-    setTypeOfRequestRecords((prev) => prev.filter((r) => r.id !== id));
+  const handleDeleteTypeOfRequest = useCallback(async (id: string) => {
+    try {
+      await deleteWarehouseTypeOfRequestApi(id);
+      setTypeOfRequestRecords((prev) => prev.filter((r) => r.id !== id));
+    } catch (err) {
+      console.error("Type of Request delete failed:", err);
+      alert(err instanceof Error ? err.message : "Failed to delete Type of Request.");
+    }
   }, []);
 
   // Destination Location Master Handlers
@@ -2525,20 +2592,34 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
     }
   }, []);
 
-  const handleSaveDestinationLocation = useCallback((record: DestinationLocationRecord, isEdit: boolean) => {
-    if (isEdit) {
-      setDestinationLocationRecords((prev) =>
-        prev.map((r) => (r.id === record.id ? record : r))
-      );
-    } else {
-      setDestinationLocationRecords((prev) => [record, ...prev]);
+  const handleSaveDestinationLocation = useCallback(async (record: DestinationLocationRecord, isEdit: boolean) => {
+    try {
+      const saved = await saveDestinationLocationApi(record, isEdit);
+      if (saved) {
+        if (isEdit) {
+          setDestinationLocationRecords((prev) =>
+            prev.map((r) => (r.id === saved.id ? saved : r))
+          );
+        } else {
+          setDestinationLocationRecords((prev) => [saved, ...prev]);
+        }
+      }
+      setEditingDestinationLocation(null);
+      handleNavigateList("wh-destination-location", "/warehouse/master/destination-location");
+    } catch (err) {
+      console.error("Destination Location API sync failed:", err);
+      alert(err instanceof Error ? err.message : "Failed to save Destination Location.");
     }
-    setEditingDestinationLocation(null);
-    handleNavigateList("wh-destination-location", "/warehouse/master/destination-location");
   }, [handleNavigateList]);
 
-  const handleDeleteDestinationLocation = useCallback((id: string) => {
-    setDestinationLocationRecords((prev) => prev.filter((r) => r.id !== id));
+  const handleDeleteDestinationLocation = useCallback(async (id: string) => {
+    try {
+      await deleteDestinationLocationApi(id);
+      setDestinationLocationRecords((prev) => prev.filter((r) => r.id !== id));
+    } catch (err) {
+      console.error("Destination Location delete failed:", err);
+      alert(err instanceof Error ? err.message : "Failed to delete Destination Location.");
+    }
   }, []);
 
   // Navigate to edit profile view
@@ -2557,24 +2638,15 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
   }, []);
 
   // Confirm logout -> navigate to /login and reset session storage
-  const handleConfirmLogout = useCallback(() => {
+  const handleConfirmLogout = useCallback(async () => {
     setShowLogoutDialog(false);
+    await logoutUser();
     if (typeof window !== "undefined") {
-      try {
-        sessionStorage.removeItem("geniusone_user");
-        sessionStorage.removeItem("geniusone_token");
-        localStorage.removeItem("geniusone_user");
-        localStorage.removeItem("geniusone_token");
-        sessionStorage.removeItem("geniusone_sidebar_sections");
-        sessionStorage.removeItem("geniusone_sidebar_groups");
-      } catch {
-        // ignore
-      }
       window.scrollTo(0, 0);
       window.history.pushState({ type: "login" }, "", "/login");
     }
     setViewState({ type: "login" });
-  }, []);
+  }, [logoutUser]);
 
   // Login handler -> clears old session state and routes to dashboard with all menus collapsed
   const handleLoginSuccess = useCallback(() => {
@@ -2623,7 +2695,7 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
   }, []);
 
   // Standalone Login page view
-  if (viewState.type === "login") {
+  if (viewState.type === "login" || (authReady && !isAuthenticated)) {
     return (
       <Login
         onNavigateHome={handleLoginSuccess}

@@ -21,7 +21,10 @@ class PrPoTraceabilityService
         $query = PurchaseOrder::with([
             'supplier',
             'valuta',
+            'items.directItem.unitOfMeasurement',
+            'items.directItem.facility',
             'items.requisitionItem.item.unitOfMeasurement',
+            'items.requisitionItem.item.facility',
             'items.requisitionItem.purchaseRequisition',
             'receiveNotes.receiveNote',
             'receiveNotes.bpbMappings.bpbReceiveMaterial',
@@ -70,15 +73,24 @@ class PrPoTraceabilityService
             })->filter()->unique('pr_id')->values()->all();
 
             foreach ($po->items as $poItem) {
-                // Find all physical RN receipts for this PO item
-                $rnReceipts = $po->receiveNotes->filter(function ($rnItem) use ($poItem) {
-                    return $rnItem->item_name === $poItem->item?->name;
+                $resolvedItem = $poItem->directItem ?? $poItem->item;
+                // Find all non-rejected physical RN receipts for this PO item
+                $rnReceipts = $po->receiveNotes->filter(function ($rnItem) use ($poItem, $resolvedItem) {
+                    if ($rnItem->receiveNote && $rnItem->receiveNote->status === 'Rejected') {
+                        return false;
+                    }
+                    if (! empty($rnItem->po_has_items_id)) {
+                        return (int) $rnItem->po_has_items_id === (int) $poItem->id;
+                    }
+                    $candidateNames = array_filter([$resolvedItem?->name, $poItem->item_alias]);
+
+                    return in_array($rnItem->item_name, $candidateNames, true);
                 });
 
                 $totalGateReceived = (float) $rnReceipts->sum('quantity');
                 $totalRafaksi = (float) $rnReceipts->sum('rafaksi');
                 $netReceived = $totalGateReceived - $totalRafaksi;
-                $orderedQty = (float) $poItem->quantity;
+                $orderedQty = (float) ($poItem->order ?? $poItem->quantity ?? 0);
                 $outstanding = max(0, $orderedQty - $netReceived);
 
                 // Determine fulfillment status
@@ -117,12 +129,12 @@ class PrPoTraceabilityService
                     'po_status' => $po->status,
                     'supplier_id' => $po->supliers_id,
                     'supplier_name' => $po->supplier?->name,
-                    'currency' => $po->currency?->name ?? 'IDR',
+                    'currency' => $po->valuta?->code ?? $po->currency?->name ?? 'IDR',
                     'linked_prs' => $linkedPrs,
-                    'item_id' => $poItem->items_id,
-                    'item_code' => $poItem->item?->code,
-                    'item_name' => $poItem->item?->name,
-                    'unit' => $poItem->item?->unitOfMeasurement?->name ?? 'PCS',
+                    'item_id' => $resolvedItem?->id ?? $poItem->items_id,
+                    'item_code' => $resolvedItem?->code,
+                    'item_name' => $resolvedItem?->name ?? $poItem->item_alias,
+                    'unit' => $resolvedItem?->unitOfMeasurement?->name ?? '',
                     'ordered_quantity' => $orderedQty,
                     'price' => (float) $poItem->price,
                     'gate_received_quantity' => $totalGateReceived,
@@ -145,10 +157,10 @@ class PrPoTraceabilityService
     public function getExecutiveSummary(): array
     {
         $totalPrCount = PurchaseRequisition::count();
-        $approvedPrCount = PurchaseRequisition::whereIn('status', ['Approved 1', 'Approved 2'])->count();
+        $approvedPrCount = PurchaseRequisition::whereIn('status', ['Approved', 'Approved 1', 'Approved 2', 'Ordered', 'Outstanding', 'Partial Closing'])->count();
 
         $totalPoCount = PurchaseOrder::count();
-        $approvedPoCount = PurchaseOrder::whereHas('approvals', fn ($q) => $q->where('status', 1))->count();
+        $approvedPoCount = PurchaseOrder::whereIn('status', ['Approved', 'Approved 1', 'Approved 2', 'Completed'])->count();
         $totalPoValue = (float) DB::table('purchase_order_has_purchase_requisitions')->sum('grand_total');
 
         $totalRnCount = ReceiveNote::count();

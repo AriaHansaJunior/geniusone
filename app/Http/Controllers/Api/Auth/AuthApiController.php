@@ -44,8 +44,8 @@ class AuthApiController extends Controller
             ], 401);
         }
 
-        // Validate password against hashed password or plain fallback for initial seed
-        $passwordValid = Hash::check($password, $user->password) || $user->password === $password;
+        // Validate password against hashed password in DB
+        $passwordValid = Hash::check($password, (string) $user->password);
 
         if (! $passwordValid) {
             AuditLogger::logAuth('LOGIN_FAILED', $user->id, [
@@ -92,6 +92,9 @@ class AuthApiController extends Controller
         Cache::put("api_token:{$token}", $user->id, now()->addDays(30));
         $user->update(['remember_token' => $token]);
 
+        $user->load(['department', 'roleModel']);
+        $roleCode = $user->role ?: ($user->roleModel?->name ?? User::ROLE_VIEWER);
+
         return response()->json([
             'status' => 'success',
             'message' => 'Login successful',
@@ -102,11 +105,16 @@ class AuthApiController extends Controller
                     'name' => $user->name,
                     'username' => $user->username,
                     'email' => $user->email,
-                    'role' => $user->role ?? User::ROLE_ADMIN,
-                    'role_label' => $user->roleModel?->label ?? ucfirst($user->role),
+                    'role' => $roleCode,
+                    'role_label' => $user->roleModel?->label ?? ucfirst($roleCode),
+                    'department_id' => $user->departments_id,
+                    'department_name' => $user->department?->name,
+                    'job_title' => $user->job_title,
+                    'employee_id' => $user->employee_id,
+                    'preferred_language' => $user->preferred_language ?? 'EN',
                     'is_super_admin' => $user->isSuperAdmin(),
                     'permissions' => $user->getAllPermissions(),
-                    'sidebar_permissions' => $user->sidebar_permissions,
+                    'sidebar_permissions' => $user->sidebar_permissions ?? $user->roleModel?->sidebar_permissions ?? ($user->isSuperAdmin() ? ['*'] : []),
                     'photo' => $user->photo,
                 ],
             ],
@@ -160,6 +168,9 @@ class AuthApiController extends Controller
             ], 401);
         }
 
+        $user->load(['department', 'roleModel']);
+        $roleCode = $user->role ?: ($user->roleModel?->name ?? User::ROLE_VIEWER);
+
         return response()->json([
             'status' => 'success',
             'data' => [
@@ -167,11 +178,16 @@ class AuthApiController extends Controller
                 'name' => $user->name,
                 'username' => $user->username,
                 'email' => $user->email,
-                'role' => $user->role ?? User::ROLE_ADMIN,
-                'role_label' => $user->roleModel?->label ?? ucfirst($user->role),
+                'role' => $roleCode,
+                'role_label' => $user->roleModel?->label ?? ucfirst($roleCode),
+                'department_id' => $user->departments_id,
+                'department_name' => $user->department?->name,
+                'job_title' => $user->job_title,
+                'employee_id' => $user->employee_id,
+                'preferred_language' => $user->preferred_language ?? 'EN',
                 'is_super_admin' => $user->isSuperAdmin(),
                 'permissions' => $user->getAllPermissions(),
-                'sidebar_permissions' => $user->sidebar_permissions,
+                'sidebar_permissions' => $user->sidebar_permissions ?? $user->roleModel?->sidebar_permissions ?? ($user->isSuperAdmin() ? ['*'] : []),
                 'photo' => $user->photo,
             ],
         ]);

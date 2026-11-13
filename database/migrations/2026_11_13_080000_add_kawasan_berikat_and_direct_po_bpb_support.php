@@ -40,31 +40,43 @@ return new class extends Migration
             });
         }
 
-        Schema::table('purchase_order_has_receive_note', function (Blueprint $table) {
-            $table->dropForeign('fk_po_rn_rn');
-        });
+        if (DB::getDriverName() === 'sqlite') {
+            Schema::table('purchase_order_has_receive_note', function (Blueprint $table) {
+                $table->unsignedBigInteger('receive_note_id')->nullable()->change();
+            });
+        } else {
+            Schema::table('purchase_order_has_receive_note', function (Blueprint $table) {
+                $table->dropForeign('fk_po_rn_rn');
+            });
 
-        Schema::table('purchase_order_has_receive_note', function (Blueprint $table) {
-            $table->unsignedBigInteger('receive_note_id')->nullable()->change();
-            $table->foreign('receive_note_id', 'fk_po_rn_rn')
-                ->references('id')
-                ->on('receive_note')
-                ->nullOnDelete();
-        });
+            Schema::table('purchase_order_has_receive_note', function (Blueprint $table) {
+                $table->unsignedBigInteger('receive_note_id')->nullable()->change();
+                $table->foreign('receive_note_id', 'fk_po_rn_rn')
+                    ->references('id')
+                    ->on('receive_note')
+                    ->nullOnDelete();
+            });
+        }
     }
 
     public function down(): void
     {
-        Schema::table('purchase_order_has_receive_note', function (Blueprint $table) {
-            $table->dropForeign('fk_po_rn_rn');
-        });
+        if (DB::getDriverName() === 'sqlite') {
+            Schema::table('purchase_order_has_receive_note', function (Blueprint $table) {
+                $table->unsignedBigInteger('receive_note_id')->nullable(false)->change();
+            });
+        } else {
+            Schema::table('purchase_order_has_receive_note', function (Blueprint $table) {
+                $table->dropForeign('fk_po_rn_rn');
+            });
 
-        Schema::table('purchase_order_has_receive_note', function (Blueprint $table) {
-            $table->unsignedBigInteger('receive_note_id')->nullable(false)->change();
-            $table->foreign('receive_note_id', 'fk_po_rn_rn')
-                ->references('id')
-                ->on('receive_note');
-        });
+            Schema::table('purchase_order_has_receive_note', function (Blueprint $table) {
+                $table->unsignedBigInteger('receive_note_id')->nullable(false)->change();
+                $table->foreign('receive_note_id', 'fk_po_rn_rn')
+                    ->references('id')
+                    ->on('receive_note');
+            });
+        }
 
         if (Schema::hasColumn('bpb_receive_material', 'source_type')) {
             Schema::table('bpb_receive_material', function (Blueprint $table) {

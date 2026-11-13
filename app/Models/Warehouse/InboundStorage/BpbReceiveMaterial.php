@@ -19,6 +19,7 @@ class BpbReceiveMaterial extends Model
     protected $fillable = [
         'bpb_number',
         'source_type',
+        'bpb_type',
         'status',
         'note',
         'rejection_note',

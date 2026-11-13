@@ -116,17 +116,22 @@ class ItemApiController extends Controller
         }
 
         if (empty($validated['item_types_id'])) {
-            $firstType = ItemType::first();
-            $validated['item_types_id'] = $firstType?->id ?? 1;
+            $firstType = ItemType::orderBy('id')->first();
+            if (! $firstType) {
+                return response()->json(['message' => 'Reference table item_types has no records. Run database seeders first.'], 422);
+            }
+            $validated['item_types_id'] = $firstType->id;
         }
 
-        $validated['created_by'] = $request->user()?->id ?? 1;
+        $actorId = $this->requireActorId($request);
+        $validated['created_by'] = $actorId;
+        $validated['updated_by'] = $actorId;
 
         $item = Item::create($validated);
 
         return response()->json([
             'message' => 'Item created successfully',
-            'data' => $item->load(['classification', 'category', 'facility', 'unitOfMeasurement']),
+            'data' => $item->load(['classification', 'category', 'facility', 'unitOfMeasurement', 'createdByUser']),
         ], 201);
     }
 
@@ -176,17 +181,37 @@ class ItemApiController extends Controller
             'stock' => 'nullable|numeric',
         ]);
 
+        $actorId = $this->requireActorId($request);
+        $validated['updated_by'] = $actorId;
+
         $item->update($validated);
 
         return response()->json([
             'message' => 'Item updated successfully',
-            'data' => $item->load(['classification', 'category', 'facility', 'unitOfMeasurement']),
+            'data' => $item->load(['classification', 'category', 'facility', 'unitOfMeasurement', 'createdByUser']),
+        ]);
+    }
+
+    public function toggleStatus(Request $request, int $id): JsonResponse
+    {
+        $this->authorizeItemAction($request, 'update');
+        $actorId = $this->requireActorId($request);
+
+        $item = Item::findOrFail($id);
+        $item->status = (int) $item->status === 1 ? 0 : 1;
+        $item->updated_by = $actorId;
+        $item->save();
+
+        return response()->json([
+            'message' => 'Item status updated successfully',
+            'data' => $item->load(['classification', 'category', 'facility', 'unitOfMeasurement', 'createdByUser']),
         ]);
     }
 
     public function destroy(Request $request, int $id): JsonResponse
     {
         $this->authorizeItemAction($request, 'delete');
+        $actorId = $this->requireActorId($request);
 
         $item = Item::findOrFail($id);
         $item->delete();
@@ -195,7 +220,7 @@ class ItemApiController extends Controller
             type: 'ITEM_DELETED',
             old: ['id' => $id, 'code' => $item->code, 'name' => $item->name],
             new: null,
-            userId: $request->user()?->id ?? 1
+            userId: $actorId
         );
 
         return response()->json(['message' => 'Item deleted successfully']);

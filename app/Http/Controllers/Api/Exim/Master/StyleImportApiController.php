@@ -62,7 +62,8 @@ class StyleImportApiController extends Controller
                 $code = trim($row['code'] ?? $row['style_code'] ?? $row['Code'] ?? $row[0] ?? '');
                 $name = trim($row['name'] ?? $row['style_name'] ?? $row['Name'] ?? $row[1] ?? '');
                 $desc = trim($row['description'] ?? $row['Description'] ?? $row[2] ?? '');
-                $status = isset($row['status']) ? (int) $row['status'] : 1;
+                $rawStatus = strtolower(trim((string) ($row['status'] ?? 'active')));
+                $status = in_array($rawStatus, ['0', 'inactive', 'disabled', 'false'], true) ? 'inactive' : 'active';
 
                 if (empty($code) && empty($name)) {
                     continue; // Skip blank rows
@@ -130,9 +131,14 @@ class StyleImportApiController extends Controller
         return response()->stream(function () {
             $handle = fopen('php://output', 'w');
             fputcsv($handle, ['code', 'name', 'description', 'status']);
-            fputcsv($handle, ['STY-2026-001', 'Cotton Slim Shirt', '100% Combed Cotton', '1']);
-            fputcsv($handle, ['STY-2026-002', 'Denim Straight Pants', 'Indigo washed stretch denim', '1']);
-            fputcsv($handle, ['STY-2026-003', 'Polyester Windbreaker Jacket', 'Water-resistant coated shell', '1']);
+            Style::query()->orderBy('id')->limit(5)->get()->each(function (Style $style) use ($handle) {
+                fputcsv($handle, [
+                    $style->code,
+                    $style->name,
+                    $style->description ?? '',
+                    $style->status ?? 'active',
+                ]);
+            });
             fclose($handle);
         }, 200, $headers);
     }

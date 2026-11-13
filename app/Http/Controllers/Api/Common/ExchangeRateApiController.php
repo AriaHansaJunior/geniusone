@@ -3,145 +3,212 @@
 namespace App\Http\Controllers\Api\Common;
 
 use App\Http\Controllers\Controller;
+use App\Models\Common\ExchangeRate;
 use App\Models\Master\Finance\Currency;
+use App\Models\Master\Finance\Valuta;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class ExchangeRateApiController extends Controller
 {
     /**
-     * Get live or historical exchange rate dataset for dashboard and transactions.
+     * Query DB-stored exchange rate history from exchange_rates table.
      */
     public function index(Request $request): JsonResponse
     {
-        $startDate = $request->query('startDate', date('Y-m-01'));
-        $endDate = $request->query('endDate', date('Y-m-t'));
-        $currencyCode = $request->query('currency', 'All Currencies');
-        $rateType = $request->query('rateType', 'All Rate Types');
+        $startDate = $request->query('startDate');
+        $endDate = $request->query('endDate');
+        $currencyCode = trim((string) $request->query('currency', 'All Currencies'));
+        $rateType = trim((string) $request->query('rateType', 'All Rate Types'));
 
-        // Fetch registered master currencies
-        $currencies = Currency::where('status', 1)->get();
+        $valutaNames = Valuta::pluck('name', 'code')->toArray();
 
-        // Baseline rate profiles
-        $baseRates = [
-            'USD' => ['name' => 'US Dollar', 'base' => 15850.0, 'volatility' => 35.0],
-            'EUR' => ['name' => 'Euro', 'base' => 17150.0, 'volatility' => 45.0],
-            'JPY' => ['name' => 'Japanese Yen (100)', 'base' => 10450.0, 'volatility' => 20.0],
-            'SGD' => ['name' => 'Singapore Dollar', 'base' => 11980.0, 'volatility' => 25.0],
-            'CNY' => ['name' => 'Chinese Yuan', 'base' => 2180.0, 'volatility' => 8.0],
-            'GBP' => ['name' => 'British Pound', 'base' => 20120.0, 'volatility' => 50.0],
-        ];
+        $query = ExchangeRate::with('currency')
+            ->orderByDesc('rate_date')
+            ->orderBy('currencies_id');
 
-        // Enrich with any extra currency defined in master
-        foreach ($currencies as $c) {
-            $code = strtoupper(trim((string) ($c->code ?? $c->name ?? '')));
-            if (! empty($code) && ! isset($baseRates[$code]) && $code !== 'IDR') {
-                $baseRates[$code] = [
-                    'name' => $c->name ?: $code,
-                    'base' => 1000.0,
-                    'volatility' => 5.0,
-                ];
+        if (! empty($startDate)) {
+            $query->whereDate('rate_date', '>=', $startDate);
+        }
+        if (! empty($endDate)) {
+            $query->whereDate('rate_date', '<=', $endDate);
+        }
+        if (! empty($currencyCode) && strcasecmp($currencyCode, 'All Currencies') !== 0 && strtolower($currencyCode) !== 'all') {
+            $code = strtoupper($currencyCode);
+            $query->whereHas('currency', fn ($cq) => $cq->where('name', $code));
+        }
+
+        if (! empty($rateType) && strcasecmp($rateType, 'All Rate Types') !== 0 && strtolower($rateType) !== 'all') {
+            $normalized = strtoupper($rateType);
+            if (str_contains($normalized, 'BI') || str_contains($normalized, 'TENGAH') || str_contains($normalized, 'BANK INDONESIA')) {
+                $query->where(fn ($q) => $q->where('rate_type', 'KURS TENGAH BI')->orWhere('rate_type', 'like', '%BI%'));
+            } elseif (str_contains($normalized, 'KMK') || str_contains($normalized, 'PAJAK')) {
+                $query->where(fn ($q) => $q->where('rate_type', 'KURS PAJAK')->orWhere('rate_type', 'like', '%KMK%')->orWhere('rate_type', 'like', '%PAJAK%'));
+            } elseif (str_contains($normalized, 'COMMERCIAL') || str_contains($normalized, 'KOMERSIAL')) {
+                $query->where(fn ($q) => $q->where('rate_type', 'like', '%Commercial%')->orWhere('rate_type', 'like', '%Komersial%'));
+            } else {
+                $query->where('rate_type', $rateType);
             }
         }
 
-        $records = [];
-        $start = strtotime($startDate);
-        $end = strtotime($endDate);
-
-        // Cap range to maximum 60 days for performance
-        if ($end - $start > 60 * 86400) {
-            $start = $end - (60 * 86400);
-        }
-
-        $idCounter = 1;
-        // Generate chronological daily rates backwards from endDate
-        for ($current = $end; $current >= $start; $current -= 86400) {
-            $dateStr = date('Y-m-d', $current);
-            $dayOfWeek = date('N', $current);
-
-            // Skip weekends
-            if ($dayOfWeek >= 6) {
-                continue;
-            }
-
-            $seed = crc32($dateStr);
-
-            foreach ($baseRates as $code => $profile) {
-                if ($currencyCode !== 'All Currencies' && strtoupper($currencyCode) !== $code) {
-                    continue;
-                }
-
-                $delta = (float) (($seed % 100) - 50) / 50.0 * $profile['volatility'];
-                $middleRate = round($profile['base'] + $delta, 2);
-                $taxRate = round($middleRate - ($profile['volatility'] * 0.4), 2);
-                $buyRate = round($middleRate - ($profile['volatility'] * 0.8), 2);
-                $sellRate = round($middleRate + ($profile['volatility'] * 0.8), 2);
-
-                $availableTypes = ['Bank Indonesia (BI)', 'Pajak (KMK)', 'Commercial Bank (Counter)'];
-
-                foreach ($availableTypes as $type) {
-                    // Normalize filter comparison
-                    if ($rateType !== 'All Rate Types') {
-                        $matchesFilter = false;
-                        if ($rateType === $type) {
-                            $matchesFilter = true;
-                        } elseif (str_contains($type, 'Bank Indonesia') && str_contains($rateType, 'Bank Indonesia')) {
-                            $matchesFilter = true;
-                        } elseif (str_contains($type, 'KMK') && str_contains($rateType, 'KMK')) {
-                            $matchesFilter = true;
-                        } elseif (
-                            (str_contains($type, 'Commercial') || str_contains($type, 'Komersial')) &&
-                            (str_contains($rateType, 'Commercial') || str_contains($rateType, 'Komersial'))
-                        ) {
-                            $matchesFilter = true;
-                        }
-
-                        if (! $matchesFilter) {
-                            continue;
-                        }
-                    }
-
-                    $effectiveRate = match ($type) {
-                        'Pajak (KMK)' => $taxRate,
-                        'Commercial Bank (Counter)' => $sellRate,
-                        default => $middleRate,
-                    };
-
-                    $flag = match ($type) {
-                        'Pajak (KMK)' => 'KMK Valuation',
-                        'Bank Indonesia (BI)' => 'BI Reference',
-                        default => 'Commercial Counter',
-                    };
-
-                    $records[] = [
-                        'id' => (string) $idCounter++,
-                        'rate_date' => $dateStr,
-                        'currency_code' => $code,
-                        'currency_name' => $profile['name'],
-                        'rate_type' => $type,
-                        'rate' => $effectiveRate,
-                        'middle_rate' => $middleRate,
-                        'tax_rate' => $taxRate,
-                        'buy_rate' => $buyRate,
-                        'buying_rate' => $buyRate,
-                        'sell_rate' => $sellRate,
-                        'selling_rate' => $sellRate,
-                        'flag' => $flag,
-                        'availability' => 'Available',
-                        'note' => "Published rate for {$code} on {$dateStr}",
-                    ];
-                }
-            }
-        }
+        $rows = $query->get()->map(fn (ExchangeRate $er) => $this->transformRow($er, $valutaNames));
 
         return response()->json([
             'status' => 'success',
-            'data' => $records,
+            'data' => $rows,
             'meta' => [
-                'total' => count($records),
+                'total' => $rows->count(),
                 'start_date' => $startDate,
                 'end_date' => $endDate,
             ],
         ]);
+    }
+
+    /**
+     * Get latest DB rate per currency.
+     * GET /api/dashboard/exchange-rates/latest
+     */
+    public function latest(Request $request): JsonResponse
+    {
+        $valutaNames = Valuta::pluck('name', 'code')->toArray();
+        $currencies = Currency::where('status', 1)->orderBy('name')->get();
+
+        $rates = $currencies->map(function (Currency $c) use ($valutaNames) {
+            $latest = ExchangeRate::with('currency')
+                ->where('currencies_id', $c->id)
+                ->orderByDesc('rate_date')
+                ->orderByDesc('id')
+                ->first();
+
+            $code = strtoupper(trim((string) $c->name));
+
+            return [
+                'currencies_id' => $c->id,
+                'currency_code' => $code,
+                'currency_name' => $valutaNames[$code] ?? $code,
+                'middle_rate' => $latest ? (float) $latest->middle_rate : ($code === 'IDR' ? 1.0 : 0.0),
+                'buy_rate' => $latest ? (float) $latest->buy_rate : ($code === 'IDR' ? 1.0 : 0.0),
+                'sell_rate' => $latest ? (float) $latest->sell_rate : ($code === 'IDR' ? 1.0 : 0.0),
+                'rate_type' => $latest?->rate_type ?? 'KURS TENGAH BI',
+                'rate_date' => $latest?->rate_date?->format('Y-m-d'),
+            ];
+        });
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $rates,
+        ]);
+    }
+
+    public function store(Request $request): JsonResponse
+    {
+        $actorId = $this->requireActorId($request);
+
+        $validated = $request->validate([
+            'currencies_id' => 'nullable|integer|exists:currencies,id',
+            'currency_code' => 'required_without:currencies_id|string|max:20',
+            'rate_date' => 'required|date',
+            'rate_type' => 'required|string|max:60',
+            'buy_rate' => 'nullable|numeric|min:0',
+            'sell_rate' => 'nullable|numeric|min:0',
+            'middle_rate' => 'required|numeric|gt:0',
+            'source' => 'nullable|string|max:100',
+        ]);
+
+        $currencyId = $validated['currencies_id'] ?? null;
+        if (! $currencyId && ! empty($validated['currency_code'])) {
+            $currency = Currency::firstOrCreate(
+                ['name' => strtoupper(trim($validated['currency_code']))],
+                ['status' => 1]
+            );
+            $currencyId = $currency->id;
+        }
+
+        $record = ExchangeRate::create([
+            'currencies_id' => $currencyId,
+            'rate_date' => $validated['rate_date'],
+            'rate_type' => $validated['rate_type'],
+            'buy_rate' => (float) ($validated['buy_rate'] ?? $validated['middle_rate']),
+            'sell_rate' => (float) ($validated['sell_rate'] ?? $validated['middle_rate']),
+            'middle_rate' => (float) $validated['middle_rate'],
+            'source' => $validated['source'] ?? 'Manual Entry',
+            'created_by' => $actorId,
+        ]);
+
+        $valutaNames = Valuta::pluck('name', 'code')->toArray();
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Exchange rate recorded.',
+            'data' => $this->transformRow($record->load('currency'), $valutaNames),
+        ], 201);
+    }
+
+    public function update(Request $request, int $id): JsonResponse
+    {
+        $this->requireActorId($request);
+        $record = ExchangeRate::findOrFail($id);
+
+        $validated = $request->validate([
+            'rate_date' => 'sometimes|date',
+            'rate_type' => 'sometimes|string|max:60',
+            'buy_rate' => 'nullable|numeric|min:0',
+            'sell_rate' => 'nullable|numeric|min:0',
+            'middle_rate' => 'sometimes|numeric|gt:0',
+            'source' => 'nullable|string|max:100',
+        ]);
+
+        $record->fill($validated);
+        $record->save();
+
+        $valutaNames = Valuta::pluck('name', 'code')->toArray();
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Exchange rate updated.',
+            'data' => $this->transformRow($record->load('currency'), $valutaNames),
+        ]);
+    }
+
+    public function destroy(Request $request, int $id): JsonResponse
+    {
+        $this->requireActorId($request);
+        $record = ExchangeRate::findOrFail($id);
+        $record->delete();
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Exchange rate deleted.',
+        ]);
+    }
+
+    private function transformRow(ExchangeRate $er, array $valutaNames): array
+    {
+        $code = strtoupper(trim((string) ($er->currency?->name ?? '')));
+        $rateType = (string) $er->rate_type;
+        $flag = str_contains(strtoupper($rateType), 'PAJAK') || str_contains(strtoupper($rateType), 'KMK')
+            ? 'KMK Valuation'
+            : (str_contains(strtoupper($rateType), 'COMMERCIAL') ? 'Commercial Counter' : 'BI Reference');
+
+        return [
+            'id' => (string) $er->id,
+            'rawId' => $er->id,
+            'currencies_id' => $er->currencies_id,
+            'rate_date' => $er->rate_date?->format('Y-m-d') ?? '',
+            'currency_code' => $code,
+            'currency_name' => $valutaNames[$code] ?? $code,
+            'rate_type' => $rateType,
+            'rate' => (float) $er->middle_rate,
+            'middle_rate' => (float) $er->middle_rate,
+            'tax_rate' => (float) $er->middle_rate,
+            'buy_rate' => (float) $er->buy_rate,
+            'buying_rate' => (float) $er->buy_rate,
+            'sell_rate' => (float) $er->sell_rate,
+            'selling_rate' => (float) $er->sell_rate,
+            'flag' => $flag,
+            'source' => $er->source ?? 'Database',
+            'availability' => 'Available',
+            'note' => $er->source ? "Source: {$er->source} ({$code})" : "Rate for {$code}",
+        ];
     }
 }

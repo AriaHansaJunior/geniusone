@@ -82,4 +82,16 @@ class FacilityApiController extends Controller
 
         return response()->json(['message' => 'Facility deleted successfully']);
     }
+
+    public function toggleStatus(int $id): JsonResponse
+    {
+        $record = Facility::findOrFail($id);
+        $record->status = (int) $record->status === 1 ? 0 : 1;
+        $record->save();
+
+        return response()->json([
+            'message' => 'Facility status updated successfully',
+            'data' => $record,
+        ]);
+    }
 }

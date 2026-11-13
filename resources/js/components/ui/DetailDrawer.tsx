@@ -15,14 +15,14 @@ export function DetailDrawer({ row, onClose }: { row: TableRow; onClose: () => v
   const [showHistoryModal, setShowHistoryModal] = useState(false);
 
   const type = row._type || "po";
-  const docNumber = row._rawNumber || "PO-2503-0039";
-  const prNumber = row._rawPr || "0135/PR-IMLI/IX/2026";
-  const poNumber = row._rawPo || (type === "po" ? docNumber : "POL-1026-0040");
-  const rmNumber = row._rawRn || "RM-1026-0018";
-  const supplierName = row._rawSupplier || "[ASSL.0002] PT. Astra Otoparts, Tbk";
-  const orderTotal = row._rawTotal || "IDR 260,112,910.68";
-  const status = row._rawStatus || "Approved 2";
-  const dateStr = row._rawDate || "08-Oct-2026";
+  const docNumber = row._rawNumber || "-";
+  const prNumber = row._rawPr || "-";
+  const poNumber = row._rawPo || (type === "po" ? docNumber : "-");
+  const rmNumber = row._rawRn || "-";
+  const supplierName = row._rawSupplier || "-";
+  const orderTotal = row._rawTotal || "-";
+  const status = row._rawStatus || "-";
+  const dateStr = row._rawDate || "-";
 
   const title =
     type === "pr"
@@ -44,36 +44,10 @@ export function DetailDrawer({ row, onClose }: { row: TableRow; onClose: () => v
       ? "blue"
       : "gray";
 
-  // Data for PO items (defaulting to POL-1026-0040's full record from SmartOne)
   const isPo = type === "po";
   const isReport = type === "report";
   const isWarehouse = type === "warehouse";
-  const poItems =
-    row._items && row._items.length > 0
-      ? row._items
-      : [
-          {
-            no: 1,
-            prNumber: prNumber,
-            item: "Battery Scrap",
-            itemCode: "10.100.100.001",
-            itemAlias: "—",
-            quantity: String(row._totalQty || "17,693.01000 KGM"),
-            unit: "KGM",
-            price: "13,244.55000",
-            discount: "0.00000",
-            subtotal: "234,335,955.60",
-            priceRp: "13,244.55",
-            discountRp: "0.00",
-            subtotalRp: "234,335,955.60",
-            lme: "1,855",
-            optionalRate: "17,849",
-            lmePercentage: "40.00%",
-            subtotalPph: "0.00",
-            currency: String(row._rawCurrency || "IDR"),
-            remark: String(row._rawRemark || "U/ Proses BB"),
-          },
-        ];
+  const poItems = Array.isArray(row._items) ? row._items : [];
 
   const otherCosts = row._otherCosts || [];
 

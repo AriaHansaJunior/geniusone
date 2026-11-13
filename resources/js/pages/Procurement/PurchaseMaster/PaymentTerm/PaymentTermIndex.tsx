@@ -5,7 +5,6 @@ import { Pagination } from "../../../../components/ui/Pagination";
 import { Icon } from "../../../../components/ui/Icon";
 import { StatusToggle } from "../../../../components/ui/StatusToggle";
 import {
-  initialPaymentTermRecords,
   type PaymentTermRecord,
 } from "./payment-term-types";
 
@@ -18,7 +17,7 @@ interface PaymentTermIndexProps {
 type SortDirection = "none" | "asc" | "desc";
 
 export function PaymentTermIndex({
-  records = initialPaymentTermRecords,
+  records = [],
   onAddNew,
   onToggleHide,
 }: PaymentTermIndexProps) {

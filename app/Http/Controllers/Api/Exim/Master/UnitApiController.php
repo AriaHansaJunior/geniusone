@@ -93,19 +93,35 @@ class UnitApiController extends Controller
         return response()->json(['message' => 'Unit deleted successfully']);
     }
 
+    public function toggleStatus(int $id): JsonResponse
+    {
+        $record = Unit::findOrFail($id);
+        $record->status = (int) $record->status === 1 ? 0 : 1;
+        $record->save();
+
+        return response()->json([
+            'message' => 'Unit status updated successfully',
+            'data' => $record,
+        ]);
+    }
+
     /**
      * List Unit Reference (Satuan Ukur / units_of_measurements).
      */
     public function unitReferences(Request $request): JsonResponse
     {
-        $query = UnitOfMeasurement::query();
+        $query = UnitOfMeasurement::with('createdByUser');
 
         if ($search = $request->query('search')) {
-            $query->where('name', 'like', "%{$search}%");
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('code', 'like', "%{$search}%")
+                    ->orWhere('description', 'like', "%{$search}%");
+            });
         }
 
         $perPage = (int) $request->query('per_page', 50);
-        $records = $query->paginate($perPage);
+        $records = $query->latest('id')->paginate($perPage);
 
         return response()->json([
             'data' => $records->items(),
@@ -116,5 +132,68 @@ class UnitApiController extends Controller
                 'total' => $records->total(),
             ],
         ]);
+    }
+
+    public function storeUnitReference(Request $request): JsonResponse
+    {
+        $actorId = $this->requireActorId($request);
+
+        $validated = $request->validate([
+            'code' => 'nullable|string|max:45|unique:units_of_measurements,code',
+            'name' => 'required|string|max:45|unique:units_of_measurements,name',
+            'description' => 'nullable|string|max:255',
+            'status' => 'nullable|integer',
+        ]);
+
+        $validated['created_by'] = $actorId;
+
+        $record = UnitOfMeasurement::create($validated);
+
+        return response()->json([
+            'message' => 'Unit reference created successfully',
+            'data' => $record->load('createdByUser'),
+        ], 201);
+    }
+
+    public function updateUnitReference(Request $request, int $id): JsonResponse
+    {
+        $this->requireActorId($request);
+        $record = UnitOfMeasurement::findOrFail($id);
+
+        $validated = $request->validate([
+            'code' => 'nullable|string|max:45|unique:units_of_measurements,code,'.$id,
+            'name' => 'sometimes|required|string|max:45|unique:units_of_measurements,name,'.$id,
+            'description' => 'nullable|string|max:255',
+            'status' => 'nullable|integer',
+        ]);
+
+        $record->update($validated);
+
+        return response()->json([
+            'message' => 'Unit reference updated successfully',
+            'data' => $record->load('createdByUser'),
+        ]);
+    }
+
+    public function toggleUnitReferenceStatus(Request $request, int $id): JsonResponse
+    {
+        $this->requireActorId($request);
+        $record = UnitOfMeasurement::findOrFail($id);
+        $record->status = (int) $record->status === 1 ? 0 : 1;
+        $record->save();
+
+        return response()->json([
+            'message' => 'Unit reference status updated successfully',
+            'data' => $record->load('createdByUser'),
+        ]);
+    }
+
+    public function destroyUnitReference(Request $request, int $id): JsonResponse
+    {
+        $this->requireActorId($request);
+        $record = UnitOfMeasurement::findOrFail($id);
+        $record->delete();
+
+        return response()->json(['message' => 'Unit reference deleted successfully']);
     }
 }

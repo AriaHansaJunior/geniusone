@@ -33,6 +33,7 @@ class PurchaseOrderItem extends Model
         'optional_rate',
         'percentage_lme',
         'pph_id',
+        'pph_rate',
         'subtotal_pph',
         'total',
         'discount',

@@ -67,13 +67,16 @@ class UserManagementApiController extends Controller
             'password' => 'required|string|min:6',
             'role' => 'required|string|max:50',
             'departments_id' => 'nullable|integer',
+            'job_title' => 'nullable|string|max:120',
+            'employee_id' => 'nullable|string|max:60',
+            'preferred_language' => 'nullable|string|in:EN,ID',
             'status' => 'nullable|integer|in:0,1',
             'permissions' => 'nullable|array',
             'permissions.*' => 'string',
             'sidebar_permissions' => 'nullable|array',
         ]);
 
-        $actorId = $request->user()?->id ?? 1;
+        $actorId = $this->requireActorId($request);
         $user = $this->userService->createUser($validated, $actorId);
 
         return response()->json([
@@ -99,6 +102,9 @@ class UserManagementApiController extends Controller
                 'username' => $user->username,
                 'email' => $user->email,
                 'role' => $user->role,
+                'job_title' => $user->job_title,
+                'employee_id' => $user->employee_id,
+                'preferred_language' => $user->preferred_language ?? 'EN',
                 'status' => $user->status,
                 'department' => $user->department ? [
                     'id' => $user->department->id,
@@ -130,13 +136,16 @@ class UserManagementApiController extends Controller
             'password' => 'nullable|string|min:6',
             'role' => 'sometimes|required|string|max:50',
             'departments_id' => 'nullable|integer',
+            'job_title' => 'nullable|string|max:120',
+            'employee_id' => 'nullable|string|max:60',
+            'preferred_language' => 'nullable|string|in:EN,ID',
             'status' => 'nullable|integer|in:0,1',
             'permissions' => 'nullable|array',
             'permissions.*' => 'string',
             'sidebar_permissions' => 'nullable|array',
         ]);
 
-        $actorId = $request->user()?->id ?? 1;
+        $actorId = $this->requireActorId($request);
         $updatedUser = $this->userService->updateUser($id, $validated, $actorId);
 
         return response()->json([
@@ -157,7 +166,7 @@ class UserManagementApiController extends Controller
             'sidebar_permissions' => 'nullable|array',
         ]);
 
-        $actorId = $request->user()?->id ?? 1;
+        $actorId = $this->requireActorId($request);
         $updatedUser = $this->userService->updateUserPermissions(
             $id,
             $validated['permissions'] ?? [],
@@ -183,7 +192,7 @@ class UserManagementApiController extends Controller
      */
     public function toggleStatus(Request $request, int $id): JsonResponse
     {
-        $actorId = $request->user()?->id ?? 1;
+        $actorId = $this->requireActorId($request);
         $user = $this->userService->toggleStatus($id, $actorId);
 
         $statusLabel = $user->status === 1 ? 'activated' : 'deactivated';
@@ -209,7 +218,7 @@ class UserManagementApiController extends Controller
             'password' => 'required|string|min:6',
         ]);
 
-        $actorId = $request->user()?->id ?? 1;
+        $actorId = $this->requireActorId($request);
         $this->userService->resetPassword($id, $validated['password'], $actorId);
 
         return response()->json([
@@ -224,7 +233,7 @@ class UserManagementApiController extends Controller
      */
     public function destroy(Request $request, int $id): JsonResponse
     {
-        $actorId = $request->user()?->id ?? 1;
+        $actorId = $this->requireActorId($request);
         $this->userService->deleteUser($id, $actorId);
 
         return response()->json([

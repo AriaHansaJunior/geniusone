@@ -17,7 +17,7 @@ import type { StockCardRecord } from "./stock-card-types";
 export function StockCardIndex() {
   const [startDate, setStartDate] = useState("2026-10-01");
   const [endDate, setEndDate] = useState("2026-10-31");
-  const [selectedItemCode, setSelectedItemCode] = useState("60.154.300.101");
+  const [selectedItemCode, setSelectedItemCode] = useState("");
   const [selectedUnit, setSelectedUnit] = useState("All Units");
   const [selectedWarehouse, setSelectedWarehouse] = useState("All Warehouse");
 
@@ -25,7 +25,7 @@ export function StockCardIndex() {
   const [appliedFilters, setAppliedFilters] = useState({
     startDate: "2026-10-01",
     endDate: "2026-10-31",
-    itemCode: "60.154.300.101",
+    itemCode: "",
     unit: "All Units",
     warehouse: "All Warehouse",
   });
@@ -50,15 +50,17 @@ export function StockCardIndex() {
             code: it.code || "",
             name: it.name || "",
             unit: it.unit?.name || it.unit_of_measurement?.name || "PCE",
-            defaultWarehouse: it.facility?.name || "Gudang Sparepart",
+            defaultWarehouse: it.facility?.name || "-",
           }));
-          const merged = [...stockCardItemsList];
-          mappedItems.forEach((m) => {
-            if (m.code && !merged.some((existing) => existing.code === m.code)) {
-              merged.push(m);
-            }
-          });
-          setItemsList(merged);
+          const validItems = mappedItems.filter((m) => Boolean(m.code));
+          setItemsList(validItems);
+          if (validItems.length > 0) {
+            setSelectedItemCode((prev) => prev || validItems[0].code);
+            setAppliedFilters((prev) => ({
+              ...prev,
+              itemCode: prev.itemCode || validItems[0].code,
+            }));
+          }
         }
       })
       .catch(() => {});
@@ -68,7 +70,7 @@ export function StockCardIndex() {
       .then((json) => {
         if (json?.data && Array.isArray(json.data) && json.data.length > 0) {
           const names = json.data.map((w: any) => w.name).filter(Boolean);
-          setWarehousesList(Array.from(new Set(["All Warehouse", ...names, ...stockCardWarehousesList])));
+          setWarehousesList(Array.from(new Set(["All Warehouse", ...names])));
         }
       })
       .catch(() => {});
@@ -78,7 +80,12 @@ export function StockCardIndex() {
   const currentItemInfo = useMemo(() => {
     return (
       itemsList.find((i) => i.code === appliedFilters.itemCode) ||
-      itemsList[0]
+      itemsList[0] || {
+        code: appliedFilters.itemCode || "-",
+        name: "-",
+        unit: "-",
+        defaultWarehouse: "-",
+      }
     );
   }, [itemsList, appliedFilters.itemCode]);
 

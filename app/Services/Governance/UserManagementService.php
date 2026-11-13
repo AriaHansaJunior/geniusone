@@ -61,6 +61,9 @@ class UserManagementService
             'password' => Hash::make($data['password']),
             'role' => $roleName,
             'departments_id' => $data['departments_id'] ?? null,
+            'job_title' => $data['job_title'] ?? null,
+            'employee_id' => $data['employee_id'] ?? null,
+            'preferred_language' => $data['preferred_language'] ?? 'EN',
             'status' => isset($data['status']) ? (int) $data['status'] : 1,
             'photo' => $data['photo'] ?? null,
             'sidebar_permissions' => $data['sidebar_permissions'] ?? null,
@@ -99,6 +102,9 @@ class UserManagementService
             'email' => $data['email'] ?? $user->email,
             'role' => $data['role'] ?? $user->role,
             'departments_id' => array_key_exists('departments_id', $data) ? $data['departments_id'] : $user->departments_id,
+            'job_title' => array_key_exists('job_title', $data) ? $data['job_title'] : $user->job_title,
+            'employee_id' => array_key_exists('employee_id', $data) ? $data['employee_id'] : $user->employee_id,
+            'preferred_language' => array_key_exists('preferred_language', $data) ? ($data['preferred_language'] ?: 'EN') : $user->preferred_language,
             'status' => isset($data['status']) ? (int) $data['status'] : $user->status,
         ];
 

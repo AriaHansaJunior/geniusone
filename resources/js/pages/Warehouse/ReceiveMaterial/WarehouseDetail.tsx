@@ -4,11 +4,15 @@ import { Icon } from "../../../components/ui/Icon";
 import { Button } from "../../../components/ui/Button";
 import { Badge } from "../../../components/ui/Badge";
 import { Material } from "../../../components/common/CommonCells";
-import { warehouseRows, findRowBySlug, docToSlug } from "../../../data/mockData";
+import { docToSlug } from "../../../utils/docSlug";
 import { fetchDetail } from "../../../data/api";
 import { ApprovalStatusBadge } from "../../../components/approval/ApprovalStatusBadge";
 import { ApprovalActionBar } from "../../../components/approval/ApprovalActionBar";
-import { getLocalApprovalState, recordDocumentActivity } from "../../../services/approvalApi";
+import {
+  deriveApprovalState,
+  fetchDocumentApprovalHistory,
+  recordDocumentActivity,
+} from "../../../services/approvalApi";
 import { useAuthPermission } from "../../../context/AuthPermissionContext";
 import { normalizeApprovalStatus, type DocumentApprovalState } from "../../../types/approval";
 import type { TableRow } from "../../../types";
@@ -47,8 +51,6 @@ export function WarehouseDetail({
         } catch (_) { }
       }
     }
-    const match = findRowBySlug(warehouseRows, code);
-    if (match) return match;
     const cleanDoc = code ? code.replace(/-/g, "/") : "BPB";
     return {
       _id: `wh-${code}`,
@@ -92,65 +94,54 @@ export function WarehouseDetail({
           ? row.bpbNumber
           : typeof code === "string"
             ? code.replace(/-/g, "/")
-            : "0138/WHIN-IMLI/G/X/2026";
+            : "BPB";
 
-  const rnNumber = String(row._rawRn || row.rnNumber || "0131/RN-IMLI/X/2026");
-  const poNumber = String(row._rawPo || row.poNumber || "POL-0926-0332");
-  const prNumber = String(row._rawPr || row.prNumber || "0085/PR-IMLI/IX/2026");
-  const supplierName = String(row._rawSupplier || row.supplier || "PT. Hasil Fastindo");
+  const rnNumber = String(row._rawRn || row.rnNumber || "—");
+  const poNumber = String(row._rawPo || row.poNumber || "—");
+  const prNumber = String(row._rawPr || row.prNumber || "—");
+  const supplierName = String(row._rawSupplier || row.supplier || "—");
   const rawStatus = String(row._rawStatus || row._rawApproval || row.status || "Waiting for Approve 1");
-  const receiveDate = String(row._rawDate || row.date || "08-10-2026");
+  const receiveDate = String(row._rawDate || row.date || "—");
   const rnDate = String(row._rawRnDate || receiveDate);
-  const sjNumber = String(row._rawSj || row.deliveryOrder || "SRA/H2/2610/00262");
-  const ajuNumber = String(row._rawAju || "00004001456220261008004282");
-  const plateNo = String(row._rawPlateNo || "L 8372 VQ");
-  const noPen = String(row._rawNoPen || "088370");
-  const bcType = String(row._rawBc || row.docType || "BC 4.0");
-  const bpbType = String(row._rawBpbType || row.bpbType || "Gudang");
-  const location = String(row._rawWarehouseLocation || "Gudang Sparepart");
-  const totalQty = String(row._rawTotalQty || "25.00");
-  const createdBy = String(row._rawCreatedBy || "ADMINISTRATOR");
+  const sjNumber = String(row._rawSj || row.deliveryOrder || "—");
+  const ajuNumber = String(row._rawAju || "—");
+  const plateNo = String(row._rawPlateNo || "—");
+  const noPen = String(row._rawNoPen || "—");
+  const bcType = String(row._rawBc || row.docType || "—");
+  const bpbType = String(row._rawBpbType || row.bpbType || "—");
+  const location = String(row._rawWarehouseLocation || "—");
+  const totalQty = String(row._rawTotalQty || "0.00");
+  const createdBy = String(row._rawCreatedBy || "—");
   const createdAt = String(row._rawCreatedAt || receiveDate);
-  const remark = String(row._rawRemark || row.remark || "Inbound physical receipt verified at warehouse");
-  const materialName = String(row._rawMaterialName || row.material || row.itemName || "Mur Baut M 10 x 40 + ring pir");
-  const materialCode = String(row._rawMaterialCode || row.itemCode || row.code || "60.149.301.404");
+  const remark = String(row._rawRemark || row.remark || "—");
+  const materialName = String(row._rawMaterialName || row.material || row.itemName || "—");
+  const materialCode = String(row._rawMaterialCode || row.itemCode || row.code || "—");
 
   const backendNormalizedStatus = normalizeApprovalStatus(rawStatus);
 
-  const [approvalState, setApprovalState] = useState<DocumentApprovalState>(() => {
-    const local = getLocalApprovalState("bpb", docNumber, backendNormalizedStatus);
-    if (backendNormalizedStatus && local.status !== backendNormalizedStatus) {
-      return {
-        ...local,
-        status: backendNormalizedStatus,
-        currentTier:
-          backendNormalizedStatus === "WAITING_APPROVE_2"
-            ? 2
-            : backendNormalizedStatus === "APPROVED"
-              ? 2
-              : 1,
-      };
-    }
-    return local;
-  });
+  const [approvalState, setApprovalState] = useState<DocumentApprovalState>(() =>
+    deriveApprovalState(backendNormalizedStatus)
+  );
 
   useEffect(() => {
-    const local = getLocalApprovalState("bpb", docNumber, backendNormalizedStatus);
-    if (local.status !== backendNormalizedStatus) {
-      setApprovalState({
-        ...local,
-        status: backendNormalizedStatus,
-        currentTier:
-          backendNormalizedStatus === "WAITING_APPROVE_2"
-            ? 2
-            : backendNormalizedStatus === "APPROVED"
-              ? 2
-              : 1,
-      });
-    } else {
-      setApprovalState(local);
-    }
+    setApprovalState((prev) => ({
+      ...prev,
+      status: backendNormalizedStatus,
+      currentTier: deriveApprovalState(backendNormalizedStatus).currentTier,
+    }));
   }, [docNumber, rawStatus, backendNormalizedStatus]);
+
+  useEffect(() => {
+    const targetId = row.id ? String(row.id) : docNumber;
+    if (!targetId || targetId === "BPB") return;
+    let active = true;
+    fetchDocumentApprovalHistory("bpb", targetId).then((history) => {
+      if (active) setApprovalState((prev) => ({ ...prev, history }));
+    });
+    return () => {
+      active = false;
+    };
+  }, [row.id, docNumber]);
 
   const isApproved = approvalState.status === "APPROVED";
 
@@ -159,28 +150,14 @@ export function WarehouseDetail({
       ? row._items
       : row.items && Array.isArray(row.items) && row.items.length > 0
         ? row.items
-        : [
-          {
-            no: 1,
-            name: materialName,
-            code: materialCode,
-            jobNumber: "—",
-            poNumber,
-            prNumber,
-            deliveryNote: sjNumber,
-            receiveQty: parseFloat(totalQty.replace(/[^0-9.]/g, "")) || 25,
-            unit: "PCE",
-            location,
-            purpose: remark,
-          },
-        ];
+        : [];
 
   const totalItemCount = bpbItems.length;
   const computedTotalQty = bpbItems
     .reduce((sum, it) => sum + (Number(it.receiveQty || it.rawQty || 0) || 0), 0)
     .toFixed(2);
   const displayTotalQty = Number(computedTotalQty) > 0 ? computedTotalQty : totalQty;
-  const primaryUnit = bpbItems[0]?.unit || "PCE";
+  const primaryUnit = bpbItems[0]?.unit || "—";
 
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
 
@@ -189,17 +166,17 @@ export function WarehouseDetail({
   };
 
   const handleExecutePrint = async () => {
-    const newState = await recordDocumentActivity({
+    const newHistory = await recordDocumentActivity({
       module: "bpb",
       documentId: row.id ? String(row.id) : docNumber,
       documentNumber: docNumber,
       action: "printed",
-      userId: currentUser?.id || "user",
-      userName: currentUser?.name || "Warehouse Staff",
-      userRole: currentUser?.role || "warehouse",
+      userId: currentUser?.id,
+      userName: currentUser?.name,
+      userRole: currentUser?.role,
       note: `Printed Receive Material (BPB) ${docNumber}`,
     });
-    setApprovalState(newState);
+    setApprovalState((prev) => ({ ...prev, history: newHistory }));
     window.print();
   };
 

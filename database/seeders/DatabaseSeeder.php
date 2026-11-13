@@ -18,6 +18,8 @@ class DatabaseSeeder extends Seeder
             GeniusOneDemoSeeder::class,
             GovernanceAndRbacSeeder::class,
             WarehouseStockSeeder::class,
+            MasterDepartmentSectionSeeder::class,
+            SystemReferenceDataSeeder::class,
         ]);
     }
 }

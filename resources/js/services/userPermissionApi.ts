@@ -1,346 +1,229 @@
 /**
  * GENIUSONE UI 2.0 — User & Permission Administration API Service
- * Handles user account management and granular module permissions for SuperAdmin.
+ * All user accounts, roles, and granular permissions are stored in the database.
  */
 
-import type {
-  ApprovalModule,
-  ModulePermissions,
-  PermissionAction,
-  UserAccount,
-  UserPermissionMap,
+import { apiGet, apiPost, apiPut, apiPatch, apiDelete } from "../data/api";
+import {
+  type RoleDefinition,
+  type UserAccount,
+  type UserPermissionMap,
+  convertPermissionMapToStrings,
+  mapBackendRoleToDefinition,
 } from "../types/permissions";
-import { APPROVAL_MODULES, createDefaultPermissionMap } from "../types/permissions";
-
-const USERS_STORAGE_KEY = "geniusone_admin_users_v2";
-const CURRENT_USER_KEY = "geniusone_current_user_v2";
-
-/**
- * Builds custom permissions helper for a user.
- */
-function buildCustomPermissions(custom: Partial<Record<ApprovalModule, Partial<ModulePermissions>>>): UserPermissionMap {
-  const base = createDefaultPermissionMap(false);
-  for (const mod of APPROVAL_MODULES) {
-    if (custom[mod.id]) {
-      base[mod.id] = { ...base[mod.id], ...custom[mod.id] };
-    }
-  }
-  return base;
-}
-
-/**
- * Initial Realistic Seed Users for GENIUSONE enterprise system.
- */
-const INITIAL_USERS: UserAccount[] = [
-  {
-    id: "usr_superadmin",
-    name: "Super Administrator",
-    username: "superadmin",
-    email: "superadmin@geniusone.internal",
-    role: "SuperAdmin",
-    department: "Executive & Systems",
-    status: "active",
-    isSuperAdmin: true,
-    permissions: createDefaultPermissionMap(true),
-    createdAt: "2026-01-10 08:00",
-    updatedAt: "2026-10-26 12:00",
-  },
-  {
-    id: "usr_rizky",
-    name: "Rizky Aditya",
-    username: "rizky.aditya",
-    email: "rizky.aditya@geniusone.internal",
-    role: "Procurement Manager",
-    department: "Purchasing",
-    status: "active",
-    permissions: buildCustomPermissions({
-      purchase_requisition: { create: true, view: true, update: true, delete: true, approve_1: true, unapprove_1: true, approve_2: true, unapprove_2: true },
-      purchase_order: { create: true, view: true, update: true, delete: true, approve_1: true, unapprove_1: true, approve_2: false, unapprove_2: false },
-      receive_note: { create: false, view: true, update: false, delete: false, approve_1: false, unapprove_1: false, approve_2: false, unapprove_2: false },
-      request_material: { create: false, view: true, update: false, delete: false, approve_1: false, unapprove_1: false, approve_2: false, unapprove_2: false },
-    }),
-    createdAt: "2026-02-01 09:30",
-    updatedAt: "2026-10-26 10:15",
-  },
-  {
-    id: "usr_arsyeila",
-    name: "Arsyeila Putri",
-    username: "arsyeila",
-    email: "arsyeila.putri@geniusone.internal",
-    role: "Purchasing Staff (Creator)",
-    department: "Purchasing",
-    status: "active",
-    permissions: buildCustomPermissions({
-      purchase_requisition: { create: true, view: true, update: true, delete: true, approve_1: false, unapprove_1: false, approve_2: false, unapprove_2: false },
-      purchase_order: { create: true, view: true, update: true, delete: false, approve_1: false, unapprove_1: false, approve_2: false, unapprove_2: false },
-      receive_note: { create: false, view: true, update: false, delete: false, approve_1: false, unapprove_1: false, approve_2: false, unapprove_2: false },
-      request_material: { create: false, view: true, update: false, delete: false, approve_1: false, unapprove_1: false, approve_2: false, unapprove_2: false },
-    }),
-    createdAt: "2026-03-15 11:00",
-    updatedAt: "2026-10-20 14:20",
-  },
-  {
-    id: "usr_yustina",
-    name: "Yustina",
-    username: "yustina",
-    email: "yustina@geniusone.internal",
-    role: "Finance & PO Lead (Approver 1)",
-    department: "Finance",
-    status: "active",
-    permissions: buildCustomPermissions({
-      purchase_requisition: { create: false, view: true, update: false, delete: false, approve_1: true, unapprove_1: true, approve_2: false, unapprove_2: false },
-      purchase_order: { create: false, view: true, update: false, delete: false, approve_1: true, unapprove_1: true, approve_2: false, unapprove_2: false },
-      receive_note: { create: false, view: true, update: false, delete: false, approve_1: true, unapprove_1: true, approve_2: false, unapprove_2: false },
-      request_material: { create: false, view: true, update: false, delete: false, approve_1: false, unapprove_1: false, approve_2: false, unapprove_2: false },
-    }),
-    createdAt: "2026-02-12 10:00",
-    updatedAt: "2026-10-18 16:40",
-  },
-  {
-    id: "usr_awi",
-    name: "Awi L",
-    username: "awi.l",
-    email: "awi.l@geniusone.internal",
-    role: "Executive Director (Approver 2)",
-    department: "Board of Directors",
-    status: "active",
-    permissions: buildCustomPermissions({
-      purchase_requisition: { create: false, view: true, update: false, delete: false, approve_1: false, unapprove_1: false, approve_2: true, unapprove_2: true },
-      purchase_order: { create: false, view: true, update: false, delete: false, approve_1: false, unapprove_1: false, approve_2: true, unapprove_2: true },
-      receive_note: { create: false, view: true, update: false, delete: false, approve_1: false, unapprove_1: false, approve_2: true, unapprove_2: true },
-      request_material: { create: false, view: true, update: false, delete: false, approve_1: false, unapprove_1: false, approve_2: true, unapprove_2: true },
-    }),
-    createdAt: "2026-01-05 08:30",
-    updatedAt: "2026-10-12 09:10",
-  },
-  {
-    id: "usr_bambang",
-    name: "Bambang Sudarmono",
-    username: "bambang.s",
-    email: "bambang.s@geniusone.internal",
-    role: "Warehouse Head",
-    department: "Warehouse",
-    status: "active",
-    permissions: buildCustomPermissions({
-      purchase_requisition: { create: false, view: true, update: false, delete: false, approve_1: false, unapprove_1: false, approve_2: false, unapprove_2: false },
-      purchase_order: { create: false, view: true, update: false, delete: false, approve_1: false, unapprove_1: false, approve_2: false, unapprove_2: false },
-      receive_note: { create: true, view: true, update: true, delete: false, approve_1: true, unapprove_1: true, approve_2: true, unapprove_2: true },
-      request_material: { create: true, view: true, update: true, delete: true, approve_1: true, unapprove_1: true, approve_2: true, unapprove_2: true },
-    }),
-    createdAt: "2026-03-01 08:00",
-    updatedAt: "2026-10-22 11:30",
-  },
-  {
-    id: "usr_budi",
-    name: "Budi Santoso",
-    username: "budi.s",
-    email: "budi.s@geniusone.internal",
-    role: "Warehouse Material Requisition Staff",
-    department: "Warehouse",
-    status: "active",
-    permissions: buildCustomPermissions({
-      purchase_requisition: { create: false, view: false, update: false, delete: false, approve_1: false, unapprove_1: false, approve_2: false, unapprove_2: false },
-      purchase_order: { create: false, view: false, update: false, delete: false, approve_1: false, unapprove_1: false, approve_2: false, unapprove_2: false },
-      receive_note: { create: true, view: true, update: true, delete: false, approve_1: false, unapprove_1: false, approve_2: false, unapprove_2: false },
-      request_material: { create: true, view: true, update: true, delete: false, approve_1: false, unapprove_1: false, approve_2: false, unapprove_2: false },
-    }),
-    createdAt: "2026-04-10 09:00",
-    updatedAt: "2026-10-15 13:00",
-  },
-];
-
-/**
- * Loads users from localStorage or initializes with seed users.
- */
-export function getStoredUsers(): UserAccount[] {
-  try {
-    const raw = localStorage.getItem(USERS_STORAGE_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed;
-      }
-    }
-  } catch (err) {
-    console.warn("Error reading stored users:", err);
-  }
-
-  // Save initial seed users
-  try {
-    localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(INITIAL_USERS));
-  } catch {
-    // Ignore storage errors
-  }
-  return INITIAL_USERS;
-}
-
-export function saveStoredUsers(users: UserAccount[]): void {
-  try {
-    localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
-  } catch (err) {
-    console.warn("Error saving stored users:", err);
-  }
-}
-
-/**
- * Gets currently active simulated user.
- * Defaults to SuperAdmin or Rizky Aditya.
- */
-export function getCurrentUser(): UserAccount {
-  const users = getStoredUsers();
-  try {
-    const currentId = localStorage.getItem(CURRENT_USER_KEY);
-    if (currentId) {
-      const found = users.find((u) => u.id === currentId);
-      if (found) return found;
-    }
-  } catch (err) {
-    console.warn("Error getting current user:", err);
-  }
-
-  return users[0]; // Default SuperAdmin
-}
-
-export function setCurrentUser(userId: string | number): UserAccount {
-  const users = getStoredUsers();
-  const found = users.find((u) => String(u.id) === String(userId)) || users[0];
-  try {
-    localStorage.setItem(CURRENT_USER_KEY, String(found.id));
-  } catch (err) {
-    console.warn("Error setting current user:", err);
-  }
-  return found;
-}
 
 export interface CreateUserPayload {
   name: string;
   username: string;
   email: string;
+  password?: string;
   role: string;
-  department: string;
+  department?: string;
+  departments_id?: number | null;
+  job_title?: string;
+  employee_id?: string;
+  preferred_language?: string;
+  status?: "active" | "inactive" | number;
   isSuperAdmin?: boolean;
-  permissions?: UserPermissionMap;
+  permissions?: UserPermissionMap | string[];
+  sidebar_permissions?: string[] | null;
 }
 
-/**
- * Creates a new user in the system.
- */
-export async function createUserApi(payload: CreateUserPayload): Promise<{ success: boolean; user?: UserAccount; error?: string }> {
-  // Validate required fields
-  if (!payload.name?.trim()) return { success: false, error: "Name is required." };
-  if (!payload.username?.trim()) return { success: false, error: "Username is required." };
-  if (!payload.email?.trim()) return { success: false, error: "Email is required." };
-
-  const users = getStoredUsers();
-
-  // Check unique username and email
-  if (users.some((u) => u.username.toLowerCase() === payload.username.trim().toLowerCase())) {
-    return { success: false, error: "Username is already taken." };
-  }
-  if (users.some((u) => u.email.toLowerCase() === payload.email.trim().toLowerCase())) {
-    return { success: false, error: "Email address is already in use." };
-  }
-
-  const now = new Date().toISOString().replace("T", " ").substring(0, 16);
-  const newUser: UserAccount = {
-    id: `usr_${Date.now()}`,
-    name: payload.name.trim(),
-    username: payload.username.trim().toLowerCase(),
-    email: payload.email.trim().toLowerCase(),
-    role: payload.role?.trim() || "Staff",
-    department: payload.department?.trim() || "General",
-    status: "active",
-    isSuperAdmin: Boolean(payload.isSuperAdmin),
-    permissions: payload.permissions || (payload.isSuperAdmin ? createDefaultPermissionMap(true) : createDefaultPermissionMap(false)),
-    createdAt: now,
-    updatedAt: now,
+export function mapBackendUserToAccount(u: any): UserAccount {
+  const isSuper =
+    Boolean(u.is_super_admin ?? u.isSuperAdmin) ||
+    String(u.role || "").toLowerCase() === "superadmin";
+  return {
+    id: u.id,
+    name: u.name || "",
+    username: u.username || "",
+    email: u.email || "",
+    role: u.role || "viewer",
+    role_label: u.role_label || u.roleModel?.label || u.role || "Viewer",
+    department: u.department_name || u.department?.name || (typeof u.department === "string" ? u.department : "-"),
+    department_id: u.department_id ?? u.departments_id ?? u.department?.id ?? null,
+    departments_id: u.departments_id ?? u.department_id ?? u.department?.id ?? null,
+    job_title: u.job_title ?? null,
+    employee_id: u.employee_id ?? null,
+    preferred_language: u.preferred_language ?? "EN",
+    photo: u.photo ?? null,
+    status: u.status === 0 || u.status === "inactive" ? "inactive" : "active",
+    isSuperAdmin: isSuper,
+    is_super_admin: isSuper,
+    permissions: Array.isArray(u.permissions)
+      ? u.permissions
+      : Array.isArray(u.direct_permissions)
+        ? u.direct_permissions.map((p: any) => (typeof p === "string" ? p : p.name)).filter(Boolean)
+        : u.permissions || [],
+    sidebar_permissions: Array.isArray(u.sidebar_permissions) ? u.sidebar_permissions : null,
+    createdAt: u.created_at || u.createdAt || "-",
+    updatedAt: u.updated_at || u.updatedAt || "-",
   };
-
-  const updatedUsers = [newUser, ...users];
-  saveStoredUsers(updatedUsers);
-
-  return { success: true, user: newUser };
 }
 
-/**
- * Updates user account details.
- */
+export async function fetchUsersApi(params?: Record<string, string | number | undefined>): Promise<UserAccount[]> {
+  const res = await apiGet<{ data: any[] }>("/api/admin/users", { per_page: 200, ...params });
+  if (!res?.data || !Array.isArray(res.data)) return [];
+  return res.data.map(mapBackendUserToAccount);
+}
+
+export async function createUserApi(
+  payload: CreateUserPayload
+): Promise<{ success: boolean; user?: UserAccount; error?: string }> {
+  try {
+    const permsArray = Array.isArray(payload.permissions)
+      ? payload.permissions
+      : payload.permissions
+        ? convertPermissionMapToStrings(payload.permissions)
+        : undefined;
+
+    const res = await apiPost<{ data: any }>("/api/admin/users", {
+      name: payload.name.trim(),
+      username: payload.username.trim(),
+      email: payload.email.trim(),
+      password: payload.password,
+      role: payload.role.trim(),
+      departments_id: payload.departments_id ?? (payload as any).department_id ?? null,
+      job_title: payload.job_title,
+      employee_id: payload.employee_id,
+      preferred_language: payload.preferred_language || "EN",
+      status: payload.status === "inactive" || payload.status === 0 ? 0 : 1,
+      permissions: permsArray,
+      sidebar_permissions: payload.sidebar_permissions ?? null,
+    });
+    return {
+      success: true,
+      user: res?.data ? mapBackendUserToAccount(res.data) : undefined,
+    };
+  } catch (err: any) {
+    return { success: false, error: err?.message || "Failed to create user." };
+  }
+}
+
 export async function updateUserApi(
-  id: string,
-  updates: Partial<Pick<UserAccount, "name" | "role" | "department" | "status" | "isSuperAdmin">>
+  userId: string | number,
+  updates: Partial<UserAccount> & { password?: string }
 ): Promise<{ success: boolean; user?: UserAccount; error?: string }> {
-  const users = getStoredUsers();
-  const index = users.findIndex((u) => u.id === id);
-  if (index === -1) return { success: false, error: "User not found." };
+  try {
+    const permsArray = Array.isArray(updates.permissions)
+      ? updates.permissions
+      : updates.permissions
+        ? convertPermissionMapToStrings(updates.permissions)
+        : undefined;
 
-  const target = users[index];
-  const now = new Date().toISOString().replace("T", " ").substring(0, 16);
-
-  const updated: UserAccount = {
-    ...target,
-    ...updates,
-    updatedAt: now,
-  };
-
-  users[index] = updated;
-  saveStoredUsers(users);
-
-  // Update current user if modifying active session
-  if (getCurrentUser().id === id) {
-    setCurrentUser(id);
+    const res = await apiPut<{ data: any }>(`/api/admin/users/${userId}`, {
+      name: updates.name,
+      username: updates.username,
+      email: updates.email,
+      password: updates.password,
+      role: updates.role,
+      departments_id: updates.departments_id ?? updates.department_id,
+      job_title: updates.job_title,
+      employee_id: updates.employee_id,
+      preferred_language: updates.preferred_language,
+      status:
+        updates.status === undefined
+          ? undefined
+          : updates.status === "inactive" || updates.status === 0
+            ? 0
+            : 1,
+      permissions: permsArray,
+      sidebar_permissions: updates.sidebar_permissions,
+    });
+    return {
+      success: true,
+      user: res?.data ? mapBackendUserToAccount(res.data) : undefined,
+    };
+  } catch (err: any) {
+    return { success: false, error: err?.message || "Failed to update user." };
   }
-
-  return { success: true, user: updated };
 }
 
-/**
- * Updates granular permissions for a user.
- */
 export async function updateUserPermissionsApi(
-  userId: string,
-  permissions: UserPermissionMap
+  userId: string | number,
+  permissions: UserPermissionMap | string[],
+  sidebarPermissions?: string[] | null
 ): Promise<{ success: boolean; user?: UserAccount; error?: string }> {
-  const users = getStoredUsers();
-  const index = users.findIndex((u) => u.id === userId);
-  if (index === -1) return { success: false, error: "User not found." };
-
-  const target = users[index];
-  const now = new Date().toISOString().replace("T", " ").substring(0, 16);
-
-  const updated: UserAccount = {
-    ...target,
-    permissions,
-    updatedAt: now,
-  };
-
-  users[index] = updated;
-  saveStoredUsers(users);
-
-  if (getCurrentUser().id === userId) {
-    setCurrentUser(userId);
+  try {
+    const permsArray = Array.isArray(permissions)
+      ? permissions
+      : convertPermissionMapToStrings(permissions);
+    const res = await apiPost<{ data: any }>(`/api/admin/users/${userId}/permissions`, {
+      permissions: permsArray,
+      sidebar_permissions: sidebarPermissions ?? null,
+    });
+    return {
+      success: true,
+      user: res?.data ? mapBackendUserToAccount(res.data) : undefined,
+    };
+  } catch (err: any) {
+    return { success: false, error: err?.message || "Failed to update user permissions." };
   }
-
-  return { success: true, user: updated };
 }
 
-/**
- * Deletes a user account.
- */
-export async function deleteUserApi(userId: string): Promise<{ success: boolean; error?: string }> {
-  const users = getStoredUsers();
-  const target = users.find((u) => u.id === userId);
-  if (!target) return { success: false, error: "User not found." };
-
-  if (target.isSuperAdmin && users.filter((u) => u.isSuperAdmin).length <= 1) {
-    return { success: false, error: "Cannot delete the primary SuperAdmin account." };
+export async function toggleUserStatusApi(
+  userId: string | number
+): Promise<{ success: boolean; status?: number; error?: string }> {
+  try {
+    const res = await apiPatch<{ data: { status: number } }>(`/api/admin/users/${userId}/toggle-status`);
+    return { success: true, status: res?.data?.status };
+  } catch (err: any) {
+    return { success: false, error: err?.message || "Failed to toggle user status." };
   }
+}
 
-  const filtered = users.filter((u) => u.id !== userId);
-  saveStoredUsers(filtered);
-
-  if (getCurrentUser().id === userId) {
-    setCurrentUser(filtered[0]?.id || "usr_superadmin");
+export async function resetUserPasswordApi(
+  userId: string | number,
+  newPassword: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    await apiPost(`/api/admin/users/${userId}/reset-password`, {
+      new_password: newPassword,
+      new_password_confirmation: newPassword,
+    });
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err?.message || "Failed to reset password." };
   }
+}
 
-  return { success: true };
+export async function deleteUserApi(userId: string | number): Promise<{ success: boolean; error?: string }> {
+  try {
+    await apiDelete(`/api/admin/users/${userId}`);
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err?.message || "Failed to delete user." };
+  }
+}
+
+export async function fetchRolesApi(): Promise<RoleDefinition[]> {
+  const res = await apiGet<{ data: any[] }>("/api/admin/roles");
+  if (!res?.data || !Array.isArray(res.data)) return [];
+  return res.data.map(mapBackendRoleToDefinition);
+}
+
+export async function createRoleApi(role: RoleDefinition): Promise<RoleDefinition> {
+  const res = await apiPost<{ data: any }>("/api/admin/roles", {
+    name: role.code,
+    label: role.name,
+    description: role.description,
+    sidebar_permissions: role.sidebarPermissions || [],
+    permissions: convertPermissionMapToStrings(role.permissions),
+  });
+  return mapBackendRoleToDefinition(res?.data || role);
+}
+
+export async function updateRoleApi(roleId: string | number, role: RoleDefinition): Promise<RoleDefinition> {
+  const res = await apiPut<{ data: any }>(`/api/admin/roles/${roleId}`, {
+    name: role.code,
+    label: role.name,
+    description: role.description,
+    sidebar_permissions: role.sidebarPermissions || [],
+    permissions: convertPermissionMapToStrings(role.permissions),
+  });
+  return mapBackendRoleToDefinition(res?.data || role);
+}
+
+export async function deleteRoleApi(roleId: string | number): Promise<boolean> {
+  return apiDelete(`/api/admin/roles/${roleId}`);
 }

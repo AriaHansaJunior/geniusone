@@ -3,13 +3,17 @@ import { Icon } from "../../../components/ui/Icon";
 import { Button } from "../../../components/ui/Button";
 import { Badge } from "../../../components/ui/Badge";
 import { Material } from "../../../components/common/CommonCells";
-import { poRows, findRowBySlug, docToSlug } from "../../../data/mockData";
-import { fetchDetail } from "../../../data/api";
+import { docToSlug } from "../../../utils/docSlug";
+import { fetchDetail, apiFetch } from "../../../data/api";
 import type { TableRow } from "../../../types";
 import { ApprovalActionBar } from "../../../components/approval/ApprovalActionBar";
 import { ApprovalTimeline } from "../../../components/approval/ApprovalTimeline";
 import { ApprovalStatusBadge } from "../../../components/approval/ApprovalStatusBadge";
-import { getLocalApprovalState, recordDocumentActivity } from "../../../services/approvalApi";
+import {
+  deriveApprovalState,
+  fetchDocumentApprovalHistory,
+  recordDocumentActivity,
+} from "../../../services/approvalApi";
 import { normalizeApprovalStatus, type DocumentApprovalState } from "../../../types/approval";
 import { useAuthPermission } from "../../../context/AuthPermissionContext";
 
@@ -42,8 +46,6 @@ export function PurchaseOrderDetail({
         } catch (_) { }
       }
     }
-    const match = findRowBySlug(poRows, code);
-    if (match) return match;
     const cleanDoc = code ? code.replace(/-/g, "/") : "PO";
     return {
       _id: `po-${code}`,
@@ -86,11 +88,11 @@ export function PurchaseOrderDetail({
   const rawStatus = row._rawStatus || row.status || "Waiting for Approve 1";
   const dateStr = row._rawDate || row.date || "-";
   const dueDate = row._rawDueDate || row.dueDate || "-";
-  const facility = String(row._rawFacility || row.statusFacility || row.facility || "FASILITAS");
+  const facility = String(row._rawFacility || row.statusFacility || row.facility || "—");
   const currency = String(row._rawCurrency || "IDR");
   const rate = String(row._rawRate || "1.00");
-  const paymentMethod = String(row._rawPaymentMethod || "TRANSFER");
-  const paymentTerm = String(row._rawPaymentTerm || "Full amount within 14 days after received invoice");
+  const paymentMethod = String(row._rawPaymentMethod || "—");
+  const paymentTerm = String(row._rawPaymentTerm || "—");
   const createdBy = String(row._rawCreatedBy || "-");
   const releasedBy = String(row._rawReleasedBy || "-");
   const approvedBy = String(row._rawApprovedBy || "-");
@@ -99,66 +101,62 @@ export function PurchaseOrderDetail({
 
   const backendNormalizedStatus = normalizeApprovalStatus(rawStatus);
 
-  const resolveSyncedApprovalState = (): DocumentApprovalState => {
-    const localByNum = getLocalApprovalState("purchase_order", docNumber, backendNormalizedStatus);
-    const localById = row.id
-      ? getLocalApprovalState("purchase_order", String(row.id), backendNormalizedStatus)
-      : localByNum;
-    const local = localByNum.history.length >= localById.history.length ? localByNum : localById;
-
-    if (backendNormalizedStatus !== "WAITING_APPROVE_1" && local.status !== backendNormalizedStatus) {
-      return {
-        ...local,
-        status: backendNormalizedStatus,
-        currentTier:
-          backendNormalizedStatus === "WAITING_APPROVE_2"
-            ? 2
-            : backendNormalizedStatus === "APPROVED"
-              ? 2
-              : 1,
-      };
-    }
-    return local;
-  };
-
   const [approvalState, setApprovalState] = useState<DocumentApprovalState>(() =>
-    resolveSyncedApprovalState()
+    deriveApprovalState(backendNormalizedStatus)
   );
 
   useEffect(() => {
-    setApprovalState(resolveSyncedApprovalState());
-  }, [docNumber, row.id, rawStatus, backendNormalizedStatus]);
+    setApprovalState((prev) => ({
+      ...prev,
+      status: backendNormalizedStatus,
+      currentTier: deriveApprovalState(backendNormalizedStatus).currentTier,
+      approved1By: releasedBy !== "-" ? releasedBy : prev.approved1By,
+      approved2By: approvedBy !== "-" ? approvedBy : prev.approved2By,
+    }));
+  }, [docNumber, row.id, rawStatus, backendNormalizedStatus, releasedBy, approvedBy]);
+
+  useEffect(() => {
+    const targetId = row.id ? String(row.id) : docNumber;
+    if (!targetId || targetId === "PO") return;
+    let active = true;
+    fetchDocumentApprovalHistory("purchase_order", targetId).then((history) => {
+      if (active) setApprovalState((prev) => ({ ...prev, history }));
+    });
+    return () => {
+      active = false;
+    };
+  }, [row.id, docNumber]);
 
   const { currentUser } = useAuthPermission();
   const isApproved = approvalState.status === "APPROVED";
 
   const handlePrintPdf = async () => {
-    const newState = await recordDocumentActivity({
+    const newHistory = await recordDocumentActivity({
       module: "purchase_order",
       documentId: row.id ? String(row.id) : docNumber,
       documentNumber: docNumber,
       action: "printed",
-      userId: currentUser.id,
-      userName: currentUser.name,
-      userRole: currentUser.role,
+      userId: currentUser?.id,
+      userName: currentUser?.name,
+      userRole: currentUser?.role,
       note: `Printed Purchase Order ${docNumber}`,
     });
-    setApprovalState(newState);
+    setApprovalState((prev) => ({ ...prev, history: newHistory }));
     window.print();
   };
 
   const handleRecordRevision = async () => {
-    const newState = await recordDocumentActivity({
+    const newHistory = await recordDocumentActivity({
       module: "purchase_order",
       documentId: row.id ? String(row.id) : docNumber,
       documentNumber: docNumber,
       action: "revised",
-      userId: currentUser.id,
-      userName: currentUser.name,
-      userRole: currentUser.role,
+      userId: currentUser?.id,
+      userName: currentUser?.name,
+      userRole: currentUser?.role,
       note: `Revised Purchase Order ${docNumber}`,
     });
-    setApprovalState(newState);
+    setApprovalState((prev) => ({ ...prev, history: newHistory }));
   };
 
   // Build comprehensive Transaction Activity & History Log (UI-04)
@@ -205,78 +203,49 @@ export function PurchaseOrderDetail({
       };
     });
 
-    const hasPrintEntry = dynamicEntries.some((e) => e.statusLabel === "Printed");
-    const hasReviseEntry = dynamicEntries.some((e) => e.statusLabel === "Revised");
     const hasApprove1Entry = dynamicEntries.some((e) => e.action.includes("Approve 1"));
     const hasApprove2Entry = dynamicEntries.some((e) => e.action.includes("Approve 2"));
+    const hasCreateEntry = dynamicEntries.some((e) => e.statusLabel === "Created");
 
     const baselineEntries: typeof dynamicEntries = [];
 
-    if (
-      !hasApprove2Entry &&
-      (approvalState.status === "APPROVED" || approvalState.approved2By)
-    ) {
+    const app2Actor = approvalState.approved2By || (approvedBy !== "-" ? approvedBy : "");
+    if (!hasApprove2Entry && app2Actor) {
       baselineEntries.push({
         id: "base-app2",
-        actor: approvalState.approved2By || (approvedBy !== "-" ? approvedBy : "AWI L"),
+        actor: app2Actor,
         role: "Approver Stage 2",
         action: "Approve 2 Purchase Order",
-        timestamp: approvalState.approved2At || `${dateStr !== "-" ? dateStr : "08-10-2026"} 14:04:25`,
+        timestamp: approvalState.approved2At || "-",
         statusLabel: "Approve 2",
         tone: "green",
       });
     }
 
-    if (
-      !hasApprove1Entry &&
-      (approvalState.status === "WAITING_APPROVE_2" ||
-        approvalState.status === "APPROVED" ||
-        approvalState.approved1By)
-    ) {
+    const app1Actor = approvalState.approved1By || (releasedBy !== "-" ? releasedBy : "");
+    if (!hasApprove1Entry && app1Actor) {
       baselineEntries.push({
         id: "base-app1",
-        actor: approvalState.approved1By || (releasedBy !== "-" ? releasedBy : "YUSTINA"),
+        actor: app1Actor,
         role: "Approver Stage 1",
         action: "Approve 1 Purchase Order",
-        timestamp: approvalState.approved1At || `${dateStr !== "-" ? dateStr : "08-10-2026"} 13:57:26`,
+        timestamp: approvalState.approved1At || "-",
         statusLabel: "Approve 1",
         tone: "green",
       });
     }
 
-    if (!hasPrintEntry && row._printedBy) {
+    if (!hasCreateEntry && createdBy !== "-") {
       baselineEntries.push({
-        id: "base-print",
-        actor: String(row._printedBy),
-        role: "Document Print",
-        action: "Printed Purchase Order Document",
-        timestamp: String(row._printedAt || `${dateStr !== "-" ? dateStr : "08-10-2026"} 14:30:00`),
-        statusLabel: "Printed",
-        tone: "purple",
-      });
-    }
-
-    if (!hasReviseEntry) {
-      baselineEntries.push({
-        id: "base-rev",
-        actor: String(createdBy !== "-" ? createdBy : "Michelle"),
+        id: "base-create",
+        actor: String(createdBy),
         role: "Purchasing Officer",
-        action: "Revised & Confirmed Commercial Terms",
-        timestamp: `${dateStr !== "-" ? dateStr : "08-10-2026"} 13:50:10`,
-        statusLabel: "Revised",
-        tone: "blue",
+        action: "Created Purchase Order Document",
+        timestamp: String((row as any).createdAt || (row as any).created_at || dateStr),
+        statusLabel: "Created",
+        tone: "gray",
       });
     }
-
-    baselineEntries.push({
-      id: "base-create",
-      actor: String(createdBy !== "-" ? createdBy : "Michelle"),
-      role: "Purchasing Officer",
-      action: "Created Purchase Order Document",
-      timestamp: `${dateStr !== "-" ? dateStr : "08-10-2026"} 13:44:33`,
-      statusLabel: "Created",
-      tone: "gray",
-    });
 
     return [...dynamicEntries, ...baselineEntries];
   })();
@@ -286,31 +255,7 @@ export function PurchaseOrderDetail({
       ? row._items
       : row.items && Array.isArray(row.items) && row.items.length > 0
         ? row.items
-        : [
-          {
-            no: 1,
-            prNumber: row._rawPr || row.prNumber || "0135/PR-IMLI/IX/2026",
-            item: row.material || row.itemName || "Industrial Procurement Material",
-            itemName: row.material || row.itemName || "Industrial Procurement Material",
-            itemCode: "10.100.100.001",
-            itemAlias: row.material || row.itemName || "Industrial Procurement Material",
-            quantity: row._totalQty || "1.0000 KGM",
-            orderQty: parseFloat(String(row._totalQty || "1").replace(/[^0-9.]/g, "")) || 1,
-            unit: String(row._totalQty || "").replace(/[0-9., ]/g, "") || "KGM",
-            price: row._rawTotal ? String(row._rawTotal).replace(/[^0-9.,]/g, "") : "0.00",
-            discount: "0.00",
-            subtotal: row._rawTotal ? String(row._rawTotal).replace(/[^0-9.,]/g, "") : "0.00",
-            priceRp: row._rawTotal ? String(row._rawTotal).replace(/[^0-9.,]/g, "") : "0.00",
-            discountRp: "0.00",
-            subtotalRp: row._rawTotal ? String(row._rawTotal).replace(/[^0-9.,]/g, "") : "0.00",
-            lme: "—",
-            optionalRate: "—",
-            lmePercentage: "—",
-            subtotalPph: "0.00",
-            currency: row._rawCurrency || "IDR",
-            remark: row._rawRemark || "Industrial Procurement Item",
-          },
-        ];
+        : [];
 
   const isHeaderNonFac = useMemo(() => {
     if (/non/i.test(facility)) return true;
@@ -337,7 +282,7 @@ export function PurchaseOrderDetail({
   const [availableCostTypes, setAvailableCostTypes] = useState<any[]>([]);
 
   useEffect(() => {
-    fetch("/api/procurement/master/additional-costs?per_page=100")
+    apiFetch("/api/procurement/master/additional-costs?per_page=100")
       .then((res) => res.json())
       .then((json) => {
         if (json?.data && Array.isArray(json.data)) {
@@ -361,16 +306,8 @@ export function PurchaseOrderDetail({
     try {
       const poTarget = row.id ? String(row.id) : docToSlug(docNumber);
       const matched = availableCostTypes.find((t) => t.name === costName || t.code === costName);
-      const res = await fetch(`/api/po/${poTarget}/additional-costs`, {
+      const res = await apiFetch(`/api/procurement/po/${poTarget}/additional-costs`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Accept": "application/json",
-          "X-Requested-With": "XMLHttpRequest",
-          ...(document.querySelector('meta[name="csrf-token"]')
-            ? { "X-CSRF-TOKEN": document.querySelector('meta[name="csrf-token"]')?.getAttribute("content") || "" }
-            : {}),
-        },
         body: JSON.stringify({
           name: costName.trim(),
           costName: costName.trim(),
@@ -384,17 +321,9 @@ export function PurchaseOrderDetail({
       if (!res.ok) {
         throw new Error(data.message || "Failed to add additional cost");
       }
-      const newCost = data.data || {
-        id: Date.now(),
-        name: costName.trim(),
-        costName: costName.trim(),
-        amount: Number(costAmount),
-        value: Number(costAmount),
-        nominal: `${currency} ${Number(costAmount).toLocaleString("en-US", { minimumFractionDigits: 2 })}`,
-        remark: costNote.trim(),
-        note: costNote.trim(),
-      };
-      setLocalOtherCosts((prev) => [...prev, newCost]);
+      if (data.data) {
+        setLocalOtherCosts((prev) => [...prev, data.data]);
+      }
       setIsAddingCost(false);
       setCostName("");
       setCostAmount("");

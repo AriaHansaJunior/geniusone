@@ -17,7 +17,7 @@ return new class extends Migration
             ->where('tax_invoice', '!=', '-')
             ->whereNull('tax_invoice_date')
             ->update([
-                'tax_invoice_date' => DB::raw("COALESCE(invoice_date, arrival_date, CURDATE())"),
+                'tax_invoice_date' => DB::raw("COALESCE(invoice_date, arrival_date, CURRENT_DATE)"),
             ]);
 
         // 2. Catalog standard price mappings for materials

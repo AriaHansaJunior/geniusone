@@ -5,6 +5,7 @@ namespace App\Models\Master\Partner;
 use App\Models\Master\Finance\Currency;
 use App\Models\Master\Finance\PaymentMethod;
 use App\Models\Master\Finance\PaymentTerm;
+use App\Models\Master\Finance\RafaksiType;
 use App\Models\Procurement\PurchaseOrder\PurchaseOrder;
 use App\Models\System\Auth\User;
 use App\Traits\LogsActivity;
@@ -40,6 +41,7 @@ class Supplier extends Model
         'nitku',
         'whatsapp',
         'wechat_id',
+        'status',
         'created_by',
     ];
 
@@ -71,6 +73,11 @@ class Supplier extends Model
     public function port(): BelongsTo
     {
         return $this->belongsTo(Port::class, 'ports_id');
+    }
+
+    public function rafaksiType(): BelongsTo
+    {
+        return $this->belongsTo(RafaksiType::class, 'rafaksi_types_id');
     }
 
     public function purchaseOrders(): HasMany

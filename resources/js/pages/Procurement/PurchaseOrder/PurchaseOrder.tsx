@@ -5,7 +5,7 @@ import { SummaryCard } from "../../../components/ui/SummaryCard";
 import { SearchField } from "../../../components/ui/SearchField";
 import { DataTable } from "../../../components/ui/DataTable";
 import { FilterPanel } from "../../../components/common/FilterPanel";
-import { pageConfigs } from "../../../data/mockData";
+import { listColumns } from "../../../config/listColumns";
 import { fetchList } from "../../../data/api";
 import type { TableRow } from "../../../types";
 
@@ -17,9 +17,9 @@ interface PurchaseOrderProps {
 
 export function PurchaseOrder({ onDetail, onCreate, onSelectPr }: PurchaseOrderProps) {
   const [search, setSearch] = useState("");
-  const config = pageConfigs.po;
-  const [stats, setStats] = useState(config.stats);
-  const [rows, setRows] = useState(config.rows);
+  const columns = listColumns.po;
+  const [stats, setStats] = useState<[string, string, string][]>([]);
+  const [rows, setRows] = useState<TableRow[]>([]);
   const [poFilters, setPoFilters] = useState<Record<string, any>>({
     dateRange: "all",
     supplier: "all",
@@ -31,7 +31,7 @@ export function PurchaseOrder({ onDetail, onCreate, onSelectPr }: PurchaseOrderP
   useEffect(() => {
     let isMounted = true;
     fetchList("po").then((res) => {
-      if (isMounted && res.rows && res.rows.length > 0) {
+      if (isMounted) {
         setStats(res.stats);
         setRows(res.rows);
       }
@@ -172,7 +172,7 @@ export function PurchaseOrder({ onDetail, onCreate, onSelectPr }: PurchaseOrderP
         </div>
 
         <DataTable
-          columns={config.columns}
+          columns={columns}
           rows={filtered}
           onDetail={onDetail}
           onSelectPr={(pr) => (onSelectPr ? onSelectPr(pr) : undefined)}

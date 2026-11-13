@@ -49,7 +49,7 @@ class RolePermissionApiController extends Controller
             'permissions.*' => 'string',
         ]);
 
-        $actorId = $request->user()?->id ?? 1;
+        $actorId = $this->requireActorId($request);
         $role = $this->permissionService->createRole($validated, $actorId);
 
         return response()->json([
@@ -74,7 +74,7 @@ class RolePermissionApiController extends Controller
             'permissions.*' => 'string',
         ]);
 
-        $actorId = $request->user()?->id ?? 1;
+        $actorId = $this->requireActorId($request);
         $role = $this->permissionService->updateRole($id, $validated, $actorId);
 
         return response()->json([
@@ -90,7 +90,7 @@ class RolePermissionApiController extends Controller
      */
     public function destroyRole(Request $request, int $id): JsonResponse
     {
-        $actorId = $request->user()?->id ?? 1;
+        $actorId = $this->requireActorId($request);
         $this->permissionService->deleteRole($id, $actorId);
 
         return response()->json([
@@ -138,7 +138,7 @@ class RolePermissionApiController extends Controller
             'permissions.*' => 'string',
         ]);
 
-        $actorId = $request->user()?->id ?? 1;
+        $actorId = $this->requireActorId($request);
         $role = $this->permissionService->updateRolePermissions($id, $validated['permissions'], $actorId);
 
         return response()->json([

@@ -5,7 +5,6 @@ import { Pagination } from "../../../../components/ui/Pagination";
 import { Icon } from "../../../../components/ui/Icon";
 import { StatusToggle } from "../../../../components/ui/StatusToggle";
 import {
-  initialPphRecords,
   type PphRecord,
 } from "./pph-types";
 
@@ -18,7 +17,7 @@ interface PphIndexProps {
 type SortField = "name" | "rate" | "deduction";
 type SortDirection = "asc" | "desc";
 
-export function PphIndex({ records = initialPphRecords, onAddNew, onToggleHide }: PphIndexProps) {
+export function PphIndex({ records = [], onAddNew, onToggleHide }: PphIndexProps) {
   const [localRecords, setLocalRecords] = useState<PphRecord[]>(records);
 
   useEffect(() => {

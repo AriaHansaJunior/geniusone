@@ -16,9 +16,6 @@ import {
   type ApprovalStatus,
 } from "../../types/approval";
 import { fetchList } from "../../data/api";
-import { prRows, poRows, warehouseRows } from "../../data/mockData";
-import { initialReceiveNoteRecords } from "../Exim/ReceiveNote/receive-note-data";
-import { initialRequestMaterialRecords } from "../Warehouse/Request/RequestMaterial/request-material-data";
 import type { ReceiveNoteRecord } from "../Exim/ReceiveNote/receive-note-types";
 import type { RequestMaterialRecord } from "../Warehouse/Request/RequestMaterial/request-material-types";
 
@@ -108,7 +105,7 @@ export function DashboardPendingApprovals({
     // 1. Purchase Requisitions (PR)
     try {
       const prRes = await fetchList("pr");
-      const list = prRes && Array.isArray(prRes.rows) && prRes.rows.length > 0 ? prRes.rows : prRows;
+      const list = prRes.rows;
       for (const row of list) {
         const docNum = String(row._rawNumber || row._rawPr || row.prNumber || row.id || "").trim();
         if (!docNum) continue;
@@ -122,10 +119,10 @@ export function DashboardPendingApprovals({
             docType: "PR",
             docNumber: docNum,
             date: String(row._rawDate || row.date || "-"),
-            party: String(row._rawDept || row.deptRequest || "Purchasing"),
+            party: String(row._rawDept || row.deptRequest || "—"),
             amountFormatted: String(row._rawTotal || row.totalEstimatedAmount || "—"),
             amountNumeric: typeof row._numericTotal === "number" ? row._numericTotal : 0,
-            itemsSummary: String(row._rawItemCount ? `${row._rawItemCount} items` : "PR Requisition items"),
+            itemsSummary: String(row._rawItemCount ? `${row._rawItemCount} items` : "—"),
             status: local.status,
             currentTier: local.currentTier,
             createdAtRaw: parseDateToTimestamp(String(row._rawDate || row.date || "")),
@@ -139,7 +136,7 @@ export function DashboardPendingApprovals({
     // 2. Purchase Orders (PO)
     try {
       const poRes = await fetchList("po");
-      const list = poRes && Array.isArray(poRes.rows) && poRes.rows.length > 0 ? poRes.rows : poRows;
+      const list = poRes.rows;
       for (const row of list) {
         const docNum = String(row._rawPo || row._rawNumber || row.poNumber || row.id || "").trim();
         if (!docNum) continue;
@@ -155,10 +152,10 @@ export function DashboardPendingApprovals({
             docType: "PO",
             docNumber: docNum,
             date: String(row._rawDate || row.date || "-"),
-            party: String(row._rawSupplier || row.supplier || "Vendor"),
+            party: String(row._rawSupplier || row.supplier || "—"),
             amountFormatted: rawAmount || "—",
             amountNumeric: numAmount,
-            itemsSummary: String(row._rawItemCount ? `${row._rawItemCount} items` : "PO items"),
+            itemsSummary: String(row._rawItemCount ? `${row._rawItemCount} items` : "—"),
             status: local.status,
             currentTier: local.currentTier,
             createdAtRaw: parseDateToTimestamp(String(row._rawDate || row.date || "")),
@@ -172,9 +169,7 @@ export function DashboardPendingApprovals({
     // 3. Receive Notes (RN)
     try {
       const rnList =
-        receiveNoteRecords && receiveNoteRecords.length > 0
-          ? receiveNoteRecords
-          : initialReceiveNoteRecords;
+        receiveNoteRecords || [];
       for (const rn of rnList) {
         const docNum = String(rn.rnNumber || rn.id || "").trim();
         if (!docNum) continue;
@@ -188,12 +183,12 @@ export function DashboardPendingApprovals({
             docType: "Receive Note",
             docNumber: docNum,
             date: rn.arrivalDate || rn.date || "-",
-            party: rn.supplier || "Supplier",
+            party: rn.supplier || "—",
             amountFormatted:
               rn.amountFormatted ||
               `IDR ${Number(rn.amount || 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}`,
             amountNumeric: Number(rn.amount || 0),
-            itemsSummary: `${rn.items?.length || 1} items (${rn.poNumber || "PO"})`,
+            itemsSummary: `${rn.items?.length || 0} items${rn.poNumber ? ` (${rn.poNumber})` : ""}`,
             status: local.status,
             currentTier: local.currentTier,
             createdAtRaw: parseDateToTimestamp(rn.arrivalDate || rn.date || ""),
@@ -207,7 +202,7 @@ export function DashboardPendingApprovals({
     // 4. Receive Material (BPB)
     try {
       const whRes = await fetchList("warehouse");
-      const list = whRes && Array.isArray(whRes.rows) && whRes.rows.length > 0 ? whRes.rows : warehouseRows;
+      const list = whRes.rows;
       for (const row of list) {
         const docNum = String(row._rawNumber || row._rawRn || row.bpbNumber || row.id || "").trim();
         if (!docNum) continue;
@@ -221,10 +216,10 @@ export function DashboardPendingApprovals({
             docType: "Receive Material (BPB)",
             docNumber: docNum,
             date: String(row._rawDate || row.date || "-"),
-            party: String(row._rawSupplier || row.supplier || "Warehouse Inbound"),
+            party: String(row._rawSupplier || row.supplier || "—"),
             amountFormatted: "—",
             amountNumeric: 0,
-            itemsSummary: String(row._rawItemCount ? `${row._rawItemCount} received items` : "BPB items"),
+            itemsSummary: String(row._rawItemCount ? `${row._rawItemCount} received items` : "—"),
             status: local.status,
             currentTier: local.currentTier,
             createdAtRaw: parseDateToTimestamp(String(row._rawDate || row.date || "")),
@@ -238,9 +233,7 @@ export function DashboardPendingApprovals({
     // 5. Request Material
     try {
       const reqList =
-        requestMaterialRecords && requestMaterialRecords.length > 0
-          ? requestMaterialRecords
-          : initialRequestMaterialRecords;
+        requestMaterialRecords || [];
       for (const req of reqList) {
         const docNum = String(req.requestCode || req.id || "").trim();
         if (!docNum) continue;
@@ -254,10 +247,10 @@ export function DashboardPendingApprovals({
             docType: "Request Material",
             docNumber: docNum,
             date: req.requestDate || req.createdDate || "-",
-            party: `${req.department} (${req.createdBy || "Staff"})`,
+            party: `${req.department || "—"}${req.createdBy ? ` (${req.createdBy})` : ""}`,
             amountFormatted: "—",
             amountNumeric: 0,
-            itemsSummary: `${req.totalItems || req.items?.length || 1} material items`,
+            itemsSummary: `${req.totalItems || req.items?.length || 0} material items`,
             status: local.status,
             currentTier: local.currentTier,
             createdAtRaw: parseDateToTimestamp(req.requestDate || req.createdDate || ""),

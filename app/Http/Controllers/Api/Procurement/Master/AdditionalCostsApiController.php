@@ -82,4 +82,16 @@ class AdditionalCostsApiController extends Controller
 
         return response()->json(['message' => 'Additional cost type deleted successfully']);
     }
+
+    public function toggleStatus(int $id): JsonResponse
+    {
+        $record = AdditionalCostType::findOrFail($id);
+        $record->status = (int) $record->status === 1 ? 0 : 1;
+        $record->save();
+
+        return response()->json([
+            'message' => 'Additional cost type status updated successfully',
+            'data' => $record,
+        ]);
+    }
 }

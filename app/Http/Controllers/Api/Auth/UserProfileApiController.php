@@ -6,10 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Models\System\Auth\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class UserProfileApiController extends Controller
 {
@@ -18,20 +18,8 @@ class UserProfileApiController extends Controller
      */
     public function show(Request $request): JsonResponse
     {
-        $user = $request->user() ?: Auth::user();
-        if (! $user && $request->query('user_id')) {
-            $user = User::find($request->query('user_id'));
-        }
-        if (! $user && app()->environment('testing', 'local')) {
-            $user = User::first();
-        }
-
-        if (! $user) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Unauthenticated: User profile not found.',
-            ], 401);
-        }
+        $user = $this->requireActor($request)->load(['department', 'roleModel']);
+        $roleCode = $user->role ?: ($user->roleModel?->name ?? User::ROLE_VIEWER);
 
         return response()->json([
             'status' => 'success',
@@ -40,7 +28,13 @@ class UserProfileApiController extends Controller
                 'name' => $user->name,
                 'username' => $user->username,
                 'email' => $user->email,
-                'role' => $user->role ?? User::ROLE_ADMIN,
+                'role' => $roleCode,
+                'role_label' => $user->roleModel?->label ?? ucfirst($roleCode),
+                'department_id' => $user->departments_id,
+                'department_name' => $user->department?->name,
+                'job_title' => $user->job_title,
+                'employee_id' => $user->employee_id,
+                'preferred_language' => $user->preferred_language ?? 'EN',
                 'photo' => $user->photo,
                 'created_at' => $user->created_at?->toIso8601String(),
             ],
@@ -52,25 +46,17 @@ class UserProfileApiController extends Controller
      */
     public function update(Request $request): JsonResponse
     {
-        $user = $request->user() ?: Auth::user();
-        if (! $user && $request->input('user_id')) {
-            $user = User::find($request->input('user_id'));
-        }
-        if (! $user && app()->environment('testing', 'local')) {
-            $user = User::first();
-        }
-
-        if (! $user) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Unauthenticated: User profile not found to update.',
-            ], 401);
-        }
+        $user = $this->requireActor($request);
 
         $validated = $request->validate([
             'name' => 'sometimes|string|max:255',
-            'username' => 'sometimes|string|max:100',
-            'email' => 'sometimes|email|max:255',
+            'username' => ['sometimes', 'string', 'max:100', Rule::unique('users', 'username')->ignore($user->id)],
+            'email' => ['sometimes', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
+            'job_title' => 'nullable|string|max:120',
+            'employee_id' => 'nullable|string|max:60',
+            'preferred_language' => 'nullable|string|in:EN,ID',
+            'department_id' => 'nullable|integer|exists:departments,id',
+            'departments_id' => 'nullable|integer|exists:departments,id',
             'password' => 'nullable|string|min:6',
             'photo' => 'nullable', // Base64 data URL, image file, or string path
         ]);
@@ -85,6 +71,22 @@ class UserProfileApiController extends Controller
 
         if (! empty($validated['email'])) {
             $user->email = $validated['email'];
+        }
+
+        if (array_key_exists('job_title', $validated)) {
+            $user->job_title = $validated['job_title'];
+        }
+
+        if (array_key_exists('employee_id', $validated)) {
+            $user->employee_id = $validated['employee_id'];
+        }
+
+        if (! empty($validated['preferred_language'])) {
+            $user->preferred_language = $validated['preferred_language'];
+        }
+
+        if (array_key_exists('departments_id', $validated) || array_key_exists('department_id', $validated)) {
+            $user->departments_id = $validated['departments_id'] ?? $validated['department_id'] ?? null;
         }
 
         if (! empty($validated['password'])) {
@@ -113,6 +115,8 @@ class UserProfileApiController extends Controller
         }
 
         $user->save();
+        $user->load(['department', 'roleModel']);
+        $roleCode = $user->role ?: ($user->roleModel?->name ?? User::ROLE_VIEWER);
 
         return response()->json([
             'status' => 'success',
@@ -122,7 +126,13 @@ class UserProfileApiController extends Controller
                 'name' => $user->name,
                 'username' => $user->username,
                 'email' => $user->email,
-                'role' => $user->role ?? User::ROLE_ADMIN,
+                'role' => $roleCode,
+                'role_label' => $user->roleModel?->label ?? ucfirst($roleCode),
+                'department_id' => $user->departments_id,
+                'department_name' => $user->department?->name,
+                'job_title' => $user->job_title,
+                'employee_id' => $user->employee_id,
+                'preferred_language' => $user->preferred_language ?? 'EN',
                 'photo' => $user->photo,
             ],
         ]);

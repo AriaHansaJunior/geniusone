@@ -5,7 +5,6 @@ import { SearchField } from "../../../../components/ui/SearchField";
 import { Pagination } from "../../../../components/ui/Pagination";
 import { StatusToggle } from "../../../../components/ui/StatusToggle";
 import {
-  initialSupplierRecords,
   type SupplierRecord,
 } from "./supplier-types";
 
@@ -28,7 +27,7 @@ type SortField =
 type SortDirection = "asc" | "desc";
 
 export function SupplierIndex({
-  records = initialSupplierRecords,
+  records = [],
   onAddNew,
   onToggleHide,
 }: SupplierIndexProps) {

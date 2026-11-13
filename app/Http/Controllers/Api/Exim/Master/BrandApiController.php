@@ -84,4 +84,16 @@ class BrandApiController extends Controller
 
         return response()->json(['message' => 'Brand deleted successfully']);
     }
+
+    public function toggleStatus(int $id): JsonResponse
+    {
+        $record = Brand::findOrFail($id);
+        $record->status = (int) $record->status === 1 ? 0 : 1;
+        $record->save();
+
+        return response()->json([
+            'message' => 'Brand status updated successfully',
+            'data' => $record,
+        ]);
+    }
 }

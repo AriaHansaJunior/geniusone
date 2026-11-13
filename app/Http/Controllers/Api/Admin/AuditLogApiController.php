@@ -299,6 +299,8 @@ class AuditLogApiController extends Controller
      */
     public function approvalHistories(Request $request): JsonResponse
     {
+        $this->requireSuperAdmin($request);
+
         $query = ApprovalHistory::with('user:id,name,username,role')->orderByDesc('id');
 
         if ($request->has('document_type') && ! empty($request->query('document_type'))) {

@@ -4,15 +4,15 @@ import { Icon } from "../../../components/ui/Icon";
 import { Button } from "../../../components/ui/Button";
 import { Badge } from "../../../components/ui/Badge";
 import { Material } from "../../../components/common/CommonCells";
-import { prRows, findRowBySlug, docToSlug } from "../../../data/mockData";
+import { docToSlug } from "../../../utils/docSlug";
 import { fetchDetail } from "../../../data/api";
 import type { TableRow } from "../../../types";
 import { ApprovalActionBar } from "../../../components/approval/ApprovalActionBar";
 import { ApprovalTimeline } from "../../../components/approval/ApprovalTimeline";
 import { ApprovalStatusBadge } from "../../../components/approval/ApprovalStatusBadge";
 import {
-  getLocalApprovalState,
-  getPrClosedItemsMap,
+  deriveApprovalState,
+  fetchDocumentApprovalHistory,
   isPrItemClosed,
   recordDocumentActivity,
   togglePrItemClosing,
@@ -48,8 +48,6 @@ export function PurchaseRequisitionDetail({
         } catch (_) { }
       }
     }
-    const match = findRowBySlug(prRows, code);
-    if (match) return match;
     const cleanDoc = code ? code.replace(/-/g, "/") : "PR";
     return {
       _id: `pr-${code}`,
@@ -61,7 +59,7 @@ export function PurchaseRequisitionDetail({
       date: "-",
       dueDate: "-",
       deptRequest: "Loading...",
-      section: "Operations",
+      section: "-",
       remark: "-",
       createdBy: "-",
       totalQuantity: "-",
@@ -75,31 +73,7 @@ export function PurchaseRequisitionDetail({
     fetchDetail("pr", code).then((item) => {
       if (isMounted && item) {
         setRow(item);
-        const norm = normalizeApprovalStatus(item._rawStatus || item.status);
-        if (norm) {
-          const local = getLocalApprovalState("purchase_requisition", item._rawNumber || item.prNumber || code, norm);
-          const app1 = Array.isArray(item.approvals)
-            ? item.approvals.find((a: any) => (a.tier === 1 || a.approval_ke == 1) && (a.status === 1 || a.status === "Approved"))
-            : null;
-          const app2 = Array.isArray(item.approvals)
-            ? item.approvals.find((a: any) => (a.tier === 2 || a.approval_ke == 2) && (a.status === 1 || a.status === "Approved"))
-            : null;
 
-          const approved1By = item.approved1_by || app1?.user || local.approved1By;
-          const approved1At = item.approved1_at || app1?.date || local.approved1At;
-          const approved2By = item.approved2_by || app2?.user || local.approved2By;
-          const approved2At = item.approved2_at || app2?.date || local.approved2At;
-
-          setApprovalState({
-            ...local,
-            status: norm,
-            currentTier: norm === "WAITING_APPROVE_2" ? 2 : (norm === "APPROVED" || norm === "OUTSTANDING" || approved2By) ? 2 : 1,
-            approved1By,
-            approved1At,
-            approved2By,
-            approved2At,
-          });
-        }
       }
     });
     return () => {
@@ -118,7 +92,7 @@ export function PurchaseRequisitionDetail({
   const reqDate = row._rawDate || row.date || "-";
   const dueDate = row._rawDueDate || row.dueDate || "-";
   const dept = String(row._rawDept || row.deptRequest || "-");
-  const sectionName = String(row.section || row._rawSection || "Operations");
+  const sectionName = String(row.section || row._rawSection || "-");
   const remark = row._rawRemark || row.remark || "-";
   const createdBy = row._rawCreatedBy || row.createdBy || "-";
   const totalQty = String(row._totalQty || row.totalQuantity || "-");
@@ -159,20 +133,11 @@ export function PurchaseRequisitionDetail({
 
   const backendNormalizedStatus = normalizeApprovalStatus(rawStatus);
 
-  const [approvalState, setApprovalState] = useState<DocumentApprovalState>(() => {
-    const local = getLocalApprovalState("purchase_requisition", docNumber, backendNormalizedStatus);
-    if (backendNormalizedStatus && local.status !== backendNormalizedStatus) {
-      return {
-        ...local,
-        status: backendNormalizedStatus,
-        currentTier: backendNormalizedStatus === "WAITING_APPROVE_2" ? 2 : (backendNormalizedStatus === "APPROVED" || backendNormalizedStatus === "OUTSTANDING") ? 2 : 1,
-      };
-    }
-    return local;
-  });
+  const [approvalState, setApprovalState] = useState<DocumentApprovalState>(() =>
+    deriveApprovalState(backendNormalizedStatus)
+  );
 
   useEffect(() => {
-    const local = getLocalApprovalState("purchase_requisition", docNumber, backendNormalizedStatus);
     const app1 = Array.isArray(row.approvals)
       ? row.approvals.find((a: any) => (a.tier === 1 || a.approval_ke == 1) && (a.status === 1 || a.status === "Approved"))
       : null;
@@ -180,32 +145,27 @@ export function PurchaseRequisitionDetail({
       ? row.approvals.find((a: any) => (a.tier === 2 || a.approval_ke == 2) && (a.status === 1 || a.status === "Approved"))
       : null;
 
-    const approved1By = (row as any).approved1_by || app1?.user || local.approved1By;
-    const approved1At = (row as any).approved1_at || app1?.date || local.approved1At;
-    const approved2By = (row as any).approved2_by || app2?.user || local.approved2By;
-    const approved2At = (row as any).approved2_at || app2?.date || local.approved2At;
-
-    if (local.status !== backendNormalizedStatus) {
-      const synchedState: DocumentApprovalState = {
-        ...local,
-        status: backendNormalizedStatus,
-        currentTier: backendNormalizedStatus === "WAITING_APPROVE_2" ? 2 : (backendNormalizedStatus === "APPROVED" || backendNormalizedStatus === "OUTSTANDING" || approved2By) ? 2 : 1,
-        approved1By,
-        approved1At,
-        approved2By,
-        approved2At,
-      };
-      setApprovalState(synchedState);
-    } else {
-      setApprovalState({
-        ...local,
-        approved1By: approved1By || local.approved1By,
-        approved1At: approved1At || local.approved1At,
-        approved2By: approved2By || local.approved2By,
-        approved2At: approved2At || local.approved2At,
-      });
-    }
+    setApprovalState((prev) => ({
+      ...prev,
+      status: backendNormalizedStatus,
+      currentTier: deriveApprovalState(backendNormalizedStatus).currentTier,
+      approved1By: (row as any).approved1_by || app1?.user || undefined,
+      approved1At: (row as any).approved1_at || app1?.date || undefined,
+      approved2By: (row as any).approved2_by || app2?.user || undefined,
+      approved2At: (row as any).approved2_at || app2?.date || undefined,
+    }));
   }, [docNumber, rawStatus, backendNormalizedStatus, row.approvals]);
+
+  useEffect(() => {
+    if (!row.id) return;
+    let active = true;
+    fetchDocumentApprovalHistory("purchase_requisition", String(row.id)).then((history) => {
+      if (active) setApprovalState((prev) => ({ ...prev, history }));
+    });
+    return () => {
+      active = false;
+    };
+  }, [row.id]);
 
   const { currentUser } = useAuthPermission();
   const [closedMapVersion, setClosedMapVersion] = useState(0);
@@ -247,75 +207,72 @@ export function PurchaseRequisitionDetail({
   };
 
   const handleExecutePrint = async () => {
-    const newState = await recordDocumentActivity({
+    const newHistory = await recordDocumentActivity({
       module: "purchase_requisition",
       documentId: row.id ? String(row.id) : docNumber,
       documentNumber: docNumber,
       action: "printed",
-      userId: currentUser.id,
-      userName: currentUser.name,
-      userRole: currentUser.role,
+      userId: currentUser?.id,
+      userName: currentUser?.name,
+      userRole: currentUser?.role,
       note: `Printed Purchase Requisition ${docNumber} (${printVariant === "internal" ? "KWT-PPIC-001 Internal" : "KWT-PPIC-002 Eksternal"})`,
     });
-    setApprovalState(newState);
+    setApprovalState((prev) => ({ ...prev, history: newHistory }));
     window.print();
   };
 
   const handleRecordRevision = async () => {
-    const newState = await recordDocumentActivity({
+    const newHistory = await recordDocumentActivity({
       module: "purchase_requisition",
       documentId: row.id ? String(row.id) : docNumber,
       documentNumber: docNumber,
       action: "revised",
-      userId: currentUser.id,
-      userName: currentUser.name,
-      userRole: currentUser.role,
+      userId: currentUser?.id,
+      userName: currentUser?.name,
+      userRole: currentUser?.role,
       note: `Revised Purchase Requisition ${docNumber}`,
     });
-    setApprovalState(newState);
+    setApprovalState((prev) => ({ ...prev, history: newHistory }));
   };
 
   const handleToggleItemClosing = async (it: any, idx: number) => {
-    const currentlyClosed = isPrItemClosed(docNumber, it, idx);
-    const nextClosed = !currentlyClosed;
+    const nextClosed = !isPrItemClosed(docNumber, it, idx);
 
-    await togglePrItemClosing({
-      prNumber: docNumber,
-      prId: row.id || docNumber.replace(/[\/\\]/g, "-"),
-      item: it,
-      index: idx,
-      close: nextClosed,
-      userId: currentUser.id,
-      userName: currentUser.name,
-      userRole: currentUser.role,
-    });
-    setClosedMapVersion((v) => v + 1);
+    try {
+      const { history } = await togglePrItemClosing({
+        prNumber: docNumber,
+        prId: row.id || docNumber.replace(/[\/\\]/g, "-"),
+        item: it,
+        index: idx,
+        close: nextClosed,
+      });
 
-    const updateItem = (itemRow: any, i: number) => {
-      if (itemRow.id === it.id || i === idx) {
-        return {
-          ...itemRow,
-          is_closed: nextClosed,
-          isClosed: nextClosed,
-          closing_status: nextClosed ? "Closing" : "Open",
-          status: nextClosed ? "Closing" : (rawStatus || "Approved"),
-        };
-      }
-      return itemRow;
-    };
+      const updateItem = (itemRow: any, i: number) => {
+        if ((it.id && itemRow.id === it.id) || (!it.id && i === idx)) {
+          return {
+            ...itemRow,
+            is_closed: nextClosed,
+            isClosed: nextClosed,
+            closing_status: nextClosed ? "Closing" : "Open",
+          };
+        }
+        return itemRow;
+      };
 
-    setRow((prev: any) => ({
-      ...prev,
-      items: (prev.items || []).map(updateItem),
-      _items: (prev._items || []).map(updateItem),
-    }));
+      setRow((prev: any) => ({
+        ...prev,
+        items: (prev.items || []).map(updateItem),
+        _items: (prev._items || []).map(updateItem),
+      }));
+      setApprovalState((prev) => ({ ...prev, history }));
+      setClosedMapVersion((v) => v + 1);
 
-    const updated = getLocalApprovalState(
-      "purchase_requisition",
-      docNumber,
-      approvalState.status
-    );
-    setApprovalState(updated);
+      // Refresh the document so the computed PR status comes from the database
+      const fresh = await fetchDetail("pr", row.id ? String(row.id) : code);
+      if (fresh) setRow(fresh);
+    } catch (err: any) {
+      window.alert(err?.message || "Failed to update the PR item closing status.");
+    }
   };
 
   // Build comprehensive Transaction Activity & History Log (UI-04)
@@ -370,78 +327,47 @@ export function PurchaseRequisitionDetail({
       };
     });
 
-    const hasPrintEntry = dynamicEntries.some((e) => e.statusLabel === "Printed");
-    const hasReviseEntry = dynamicEntries.some((e) => e.statusLabel === "Revised");
     const hasApprove1Entry = dynamicEntries.some((e) => e.action.includes("Approve 1"));
     const hasApprove2Entry = dynamicEntries.some((e) => e.action.includes("Approve 2"));
+    const hasCreateEntry = dynamicEntries.some((e) => e.statusLabel === "Created");
 
     const baselineEntries: typeof dynamicEntries = [];
 
-    if (
-      !hasApprove2Entry &&
-      (approvalState.status === "APPROVED" || approvalState.approved2By)
-    ) {
+    if (!hasApprove2Entry && approvalState.approved2By) {
       baselineEntries.push({
         id: "base-app2",
-        actor: approvalState.approved2By || "AWI L",
+        actor: approvalState.approved2By,
         role: "Approver Stage 2",
         action: "Approve 2 Purchase Requisition",
-        timestamp: approvalState.approved2At || `${reqDate !== "-" ? reqDate : "08-10-2026"} 16:20:10`,
+        timestamp: approvalState.approved2At || "-",
         statusLabel: "Approve 2",
         tone: "green",
       });
     }
 
-    if (
-      !hasApprove1Entry &&
-      (approvalState.status === "WAITING_APPROVE_2" ||
-        approvalState.status === "APPROVED" ||
-        approvalState.approved1By)
-    ) {
+    if (!hasApprove1Entry && approvalState.approved1By) {
       baselineEntries.push({
         id: "base-app1",
-        actor: approvalState.approved1By || String(createdBy !== "-" ? createdBy : "Arsyeila"),
+        actor: approvalState.approved1By,
         role: "Approver Stage 1",
         action: "Approve 1 Purchase Requisition",
-        timestamp: approvalState.approved1At || `${reqDate !== "-" ? reqDate : "07-10-2026"} 15:08:40`,
+        timestamp: approvalState.approved1At || "-",
         statusLabel: "Approve 1",
         tone: "green",
       });
     }
 
-    if (!hasPrintEntry && row._printedBy) {
+    if (!hasCreateEntry && createdBy !== "-") {
       baselineEntries.push({
-        id: "base-print",
-        actor: String(row._printedBy),
-        role: "Document Print",
-        action: "Printed Purchase Requisition Document",
-        timestamp: String(row._printedAt || `${reqDate !== "-" ? reqDate : "07-10-2026"} 15:30:00`),
-        statusLabel: "Printed",
-        tone: "purple",
+        id: "base-create",
+        actor: String(createdBy),
+        role: dept !== "-" ? dept : "-",
+        action: "Created Purchase Requisition Document",
+        timestamp: String((row as any).createdAt || (row as any).created_at || reqDate),
+        statusLabel: "Created",
+        tone: "gray",
       });
     }
-
-    if (!hasReviseEntry) {
-      baselineEntries.push({
-        id: "base-rev",
-        actor: String(row._rawUpdatedBy || row.lastUpdated || createdBy || "Arsyeila").split(" ")[0] || "Arsyeila",
-        role: "Document Editor",
-        action: "Revised & Verified Requisition Items",
-        timestamp: `${reqDate !== "-" ? reqDate : "07-10-2026"} 14:45:12`,
-        statusLabel: "Revised",
-        tone: "blue",
-      });
-    }
-
-    baselineEntries.push({
-      id: "base-create",
-      actor: String(createdBy !== "-" ? createdBy : "Arsyeila"),
-      role: `${dept !== "-" ? dept : "Requester"}`,
-      action: "Created Purchase Requisition Document",
-      timestamp: `${reqDate !== "-" ? reqDate : "07-10-2026"} 14:10:05`,
-      statusLabel: "Created",
-      tone: "gray",
-    });
 
     return [...dynamicEntries, ...baselineEntries];
   })();
@@ -463,10 +389,10 @@ export function PurchaseRequisitionDetail({
       ...items.map((it, idx) => [
         idx + 1,
         it.itemCode || "-",
-        it.item || it.itemName || "Material Item",
-        it.facility || "NON FASILITAS",
+        it.item || it.itemName || "-",
+        it.facility || "-",
         parseFloat(String(it.quantity).replace(/[^0-9.]/g, "") || "1") || 1,
-        it.unit || "PCE",
+        it.unit || "-",
         it.dueDate || dueDate,
         it.jobNumber || "-",
         dept,
@@ -475,8 +401,8 @@ export function PurchaseRequisitionDetail({
       [],
       ["APPROVAL WORKFLOW AUDIT TRAIL"],
       ["Stage", "Approver / Role", "Decision", "Timestamp"],
-      ["Stage 1 (Department Lead)", approvalState.approved1By || "Department Lead", approvalState.approved1By || approvalState.status === "WAITING_APPROVE_2" || approvalState.status === "APPROVED" ? "Approved" : "Pending", approvalState.approved1At || reqDate],
-      ["Stage 2 (Director / Final)", approvalState.approved2By || "Directorate Executive", approvalState.status === "APPROVED" ? "Approved" : "Pending", approvalState.approved2At || "-"]
+      ["Stage 1 (Department Lead)", approvalState.approved1By || "-", approvalState.approved1By || approvalState.status === "WAITING_APPROVE_2" || approvalState.status === "APPROVED" ? "Approved" : "Pending", approvalState.approved1At || reqDate],
+      ["Stage 2 (Director / Final)", approvalState.approved2By || "-", approvalState.status === "APPROVED" ? "Approved" : "Pending", approvalState.approved2At || "-"]
     ];
 
     const ws = XLSX.utils.aoa_to_sheet(wsData);
@@ -508,29 +434,6 @@ export function PurchaseRequisitionDetail({
       window.open(`/api/procurement/pr/${cleanDoc}/attachment`, "_blank");
       return;
     }
-    const content = `GENIUSONE TECHNICAL SPECIFICATION ATTACHMENT
-Document Reference: ${docNumber}
-Department: ${dept}
-Target Due Date: ${dueDate}
-Requested By: ${createdBy}
-Attachment Name: PR_${docNumber.replace(/[\/\\?%*:|"<>]/g, "_")}_specs.txt
-
-SPECIFICATION DETAILS:
-- Total Items: ${items.length || 1}
-- Total Quantity: ${totalQty}
-- Department: ${dept} (${sectionName})
-- Requisition Purpose: ${remark}
-- Approval Status: ${approvalState.status.replace(/_/g, " ")}
-`;
-    const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `PR_${docNumber.replace(/[\/\\?%*:|"<>]/g, "_")}_specs.txt`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
   };
 
   return (
@@ -619,11 +522,11 @@ SPECIFICATION DETAILS:
           <strong>{approvalState.status.replace(/_/g, " ")}</strong>
           <small>
             {isApproved || approvalState.approved2By
-              ? `Approved by ${approvalState.approved2By || "Administrator GeniusOne"}`
+              ? `Approved by ${approvalState.approved2By || "-"}`
               : approvalState.status === "WAITING_APPROVE_2" || approvalState.approved1By
-                ? `Verified by Stage 1: ${approvalState.approved1By || "Department Lead"}`
+                ? `Verified by Stage 1: ${approvalState.approved1By || "-"}`
                 : approvalState.status === "REJECTED"
-                  ? `Rejected by ${approvalState.rejectedBy || "Approver"}`
+                  ? `Rejected by ${approvalState.rejectedBy || "-"}`
                   : "Awaiting Stage 1 verification"}
           </small>
         </div>
@@ -783,7 +686,7 @@ SPECIFICATION DETAILS:
                 items.map((it: any, idx: number) => {
                   const qtyStr = it.quantity ? String(it.quantity) : "1.0000";
                   const qtyOnly = parseFloat(qtyStr.replace(/[^0-9.]/g, "") || "1").toFixed(4);
-                  const unitStr = it.unit || qtyStr.replace(/[0-9.\s]/g, "") || "PCE";
+                  const unitStr = it.unit || qtyStr.replace(/[0-9.\s]/g, "") || "-";
                   const itFacility = /non/i.test(String(it.facility || it.facility_status || "")) ? "NON FASILITAS" : "FASILITAS";
                   // UI-05: Check Closing status (closedMapVersion triggers re-evaluation)
                   const isClosed = closedMapVersion >= 0 && isPrItemClosed(docNumber, it, idx);
@@ -797,7 +700,7 @@ SPECIFICATION DETAILS:
                       <td style={{ textAlign: "center", fontWeight: 700, color: "var(--muted)" }}>{idx + 1}</td>
                       <td>
                         <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-                          <Material name={it.item || it.itemName || "Material Item"} code={it.itemCode || "-"} />
+                          <Material name={it.item || it.itemName || "-"} code={it.itemCode || "-"} />
                           {isClosed && (
                             <Badge tone="red" style={{ fontSize: "10.5px", padding: "1px 7px" }}>
                               Closing
@@ -896,7 +799,7 @@ SPECIFICATION DETAILS:
                 <td style={{ textAlign: "right", padding: "8px 10px", fontFamily: "ui-monospace, monospace" }}>
                   {items.reduce((sum: number, it: any) => sum + (parseFloat(String(it.quantity).replace(/[^0-9.]/g, "")) || 0), 0).toFixed(4)}
                 </td>
-                <td style={{ padding: "8px 10px" }}>{items[0]?.unit || "PCE"}</td>
+                <td style={{ padding: "8px 10px" }}>{items[0]?.unit || "-"}</td>
                 <td colSpan={6} style={{ padding: "8px 10px", color: "var(--muted)", fontSize: "11px" }}>
                   {items.filter((it, idx) => !isPrItemClosed(docNumber, it, idx)).length} active ·{" "}
                   {items.filter((it, idx) => isPrItemClosed(docNumber, it, idx)).length} closing
@@ -959,18 +862,24 @@ SPECIFICATION DETAILS:
                   <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                     <Icon name="file" size={16} />
                     <div>
-                      <strong style={{ fontSize: "12px" }}>UGT-26-004_safety_specs.pdf</strong>
-                      <small style={{ display: "block", color: "var(--muted)", fontSize: "10.5px" }}>1.4 MB · Uploaded by Arsyeila</small>
+                      <strong style={{ fontSize: "12px" }}>{row.attachment_file || "No attachment uploaded"}</strong>
+                      {row.attachment_file && (
+                        <small style={{ display: "block", color: "var(--muted)", fontSize: "10.5px" }}>
+                          Uploaded by {createdBy !== "-" ? createdBy : "—"}
+                        </small>
+                      )}
                     </div>
                   </div>
-                  <Button
-                    variant="ghost"
-                    icon="download"
-                    style={{ padding: "6px 12px", fontSize: "11px" }}
-                    onClick={handleDownloadAttachment}
-                  >
-                    Download
-                  </Button>
+                  {(row.attachment_file || row.attachment_url) && (
+                    <Button
+                      variant="ghost"
+                      icon="download"
+                      style={{ padding: "6px 12px", fontSize: "11px" }}
+                      onClick={handleDownloadAttachment}
+                    >
+                      Download
+                    </Button>
+                  )}
                 </div>
               </div>
             </div>
@@ -1040,7 +949,7 @@ SPECIFICATION DETAILS:
             no: idx + 1,
             itemName: it.itemName || it.item || it.name || "Material Item",
             quantity: typeof it.quantity === "number" || typeof it.quantity === "string" ? it.quantity : 1,
-            unit: it.unit || "PCE",
+            unit: it.unit || "-",
             requiredDate: it.dueDate || dueDate || reqDate,
             facility: it.facility || "Non Fasilitas",
             remark: it.remark || remark || "-",
@@ -1063,7 +972,7 @@ SPECIFICATION DETAILS:
             no: idx + 1,
             itemName: it.itemName || it.item || it.name || "Material Item",
             quantity: typeof it.quantity === "number" || typeof it.quantity === "string" ? it.quantity : 1,
-            unit: it.unit || "PCE",
+            unit: it.unit || "-",
             requiredDate: it.dueDate || dueDate || reqDate,
             facility: it.facility || "Non Fasilitas",
             remark: it.remark || remark || "-",

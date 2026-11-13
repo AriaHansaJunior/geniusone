@@ -1,10 +1,12 @@
 /**
- * GENIUSONE UI 2.0 — Approval API Client & Isolated Development Adapter
- * Coordinates backend API contracts with seamless development fallback.
+ * GENIUSONE UI 2.0 — Approval API Client
+ * All approval state, history and PR item closing are persisted in the database.
+ * Nothing is cached or simulated in browser storage: a failed request is reported as a failure.
  */
 
+import { apiFetch } from "../data/api";
+import { normalizeApprovalStatus } from "../types/approval";
 import type {
-  ApprovalAction,
   ApprovalHistoryAction,
   ApprovalHistoryEntry,
   ApprovalModule,
@@ -12,71 +14,6 @@ import type {
   ApprovalTier,
   DocumentApprovalState,
 } from "../types/approval";
-
-const STORAGE_KEY_PREFIX = "geniusone_approval_state_";
-
-/**
- * In-memory / localStorage adapter to persist approval states in development.
- */
-function getStorageKey(module: ApprovalModule, documentId: string): string {
-  return `${STORAGE_KEY_PREFIX}${module}_${documentId}`;
-}
-
-export function getLocalApprovalState(
-  module: ApprovalModule,
-  documentId: string,
-  initialStatus: ApprovalStatus = "WAITING_APPROVE_1"
-): DocumentApprovalState {
-  try {
-    const raw =
-      localStorage.getItem(getStorageKey(module, documentId)) ||
-      localStorage.getItem(getStorageKey(module, documentId.replace(/-/g, "/"))) ||
-      localStorage.getItem(getStorageKey(module, documentId.replace(/[\/\\]/g, "-")));
-    if (raw) {
-      const parsed: DocumentApprovalState = JSON.parse(raw);
-      if (initialStatus === "APPROVED" && parsed.status !== "APPROVED") {
-        parsed.status = "APPROVED";
-        parsed.currentTier = 2;
-        saveLocalApprovalState(module, documentId, parsed);
-      } else if (initialStatus === "WAITING_APPROVE_2" && parsed.status === "WAITING_APPROVE_1") {
-        parsed.status = "WAITING_APPROVE_2";
-        parsed.currentTier = 2;
-        saveLocalApprovalState(module, documentId, parsed);
-      }
-      return parsed;
-    }
-  } catch (err) {
-    console.warn("Error reading local approval state:", err);
-  }
-
-  // Initial canonical state
-  return {
-    status: initialStatus,
-    currentTier: initialStatus === "WAITING_APPROVE_2" ? 2 : 1,
-    history: [],
-  };
-}
-
-export function saveLocalApprovalState(
-  module: ApprovalModule,
-  documentId: string,
-  state: DocumentApprovalState
-): void {
-  try {
-    const serialized = JSON.stringify(state);
-    localStorage.setItem(getStorageKey(module, documentId), serialized);
-    const slashKey = documentId.replace(/-/g, "/");
-    const dashKey = documentId.replace(/[\/\\]/g, "-");
-    if (slashKey !== documentId) {
-      localStorage.setItem(getStorageKey(module, slashKey), serialized);
-    }
-    if (dashKey !== documentId) {
-      localStorage.setItem(getStorageKey(module, dashKey), serialized);
-    }
-  } catch (err) {
-    console.warn("Error saving local approval state:", err);
-  }
-}
 
 export interface ApprovalApiResponse {
   success: boolean;
@@ -87,648 +24,310 @@ export interface ApprovalApiResponse {
   error?: string;
 }
 
+const MODULE_SLUG: Partial<Record<ApprovalModule, string>> = {
+  purchase_requisition: "pr",
+  purchase_order: "po",
+  receive_note: "rn",
+  bpb: "bpb",
+  request_material: "request-materials",
+};
+
+function approvalEndpoint(module: ApprovalModule, documentId: string | number, action: string): string | null {
+  const slug = MODULE_SLUG[module];
+  if (!slug) return null;
+  const safeId = encodeURIComponent(String(documentId).replace(/[\/\\]/g, "-"));
+  return `/api/approval/${slug}/${safeId}/${action}`;
+}
+
 /**
- * Execute Approve action for Tier 1 or Tier 2.
+ * Builds the canonical approval state for a document from the status stored in the database.
+ * History is loaded separately via `fetchDocumentApprovalHistory`.
  */
+export function deriveApprovalState(
+  status: ApprovalStatus = "WAITING_APPROVE_1",
+  history: ApprovalHistoryEntry[] = []
+): DocumentApprovalState {
+  return {
+    status,
+    currentTier: status === "WAITING_APPROVE_1" || status === "REJECTED" ? 1 : 2,
+    history,
+  };
+}
+
+/**
+ * Backwards-compatible alias used by list/detail pages. It no longer reads browser storage:
+ * the returned state reflects only the database status passed in.
+ */
+export function getLocalApprovalState(
+  _module: ApprovalModule,
+  _documentId: string,
+  status: ApprovalStatus = "WAITING_APPROVE_1"
+): DocumentApprovalState {
+  return deriveApprovalState(status);
+}
+
+/** Loads the full approval / activity history of a document from `approval_histories`. */
+export async function fetchDocumentApprovalHistory(
+  module: ApprovalModule,
+  documentId: string | number
+): Promise<ApprovalHistoryEntry[]> {
+  const endpoint = approvalEndpoint(module, documentId, "history");
+  if (!endpoint) return [];
+  try {
+    const res = await apiFetch(endpoint);
+    if (!res.ok) return [];
+    const json = await res.json();
+    return Array.isArray(json?.data) ? (json.data as ApprovalHistoryEntry[]) : [];
+  } catch (err) {
+    console.warn("[approvalApi] Failed to load approval history:", err);
+    return [];
+  }
+}
+
+function emitApprovalChanged(detail: Record<string, any>) {
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent("geniusone_approval_changed", { detail }));
+  }
+}
+
+async function postWorkflowAction(
+  module: ApprovalModule,
+  documentId: string | number,
+  documentNumber: string | undefined,
+  action: "approve" | "unapprove" | "reject" | "resubmit",
+  body: Record<string, any>,
+  successMessage: string,
+  fallbackStatus: ApprovalStatus
+): Promise<ApprovalApiResponse> {
+  const endpoint = approvalEndpoint(module, documentId, action);
+  if (!endpoint) {
+    return {
+      success: false,
+      status: fallbackStatus,
+      message: "Approval workflow is not available for this document type.",
+      state: deriveApprovalState(fallbackStatus),
+      error: "Unsupported module",
+    };
+  }
+
+  try {
+    const res = await apiFetch(endpoint, { method: "POST", body: JSON.stringify(body) });
+    const json = await res.json().catch(() => ({} as any));
+    if (!res.ok || json?.status === "error") {
+      const message = json?.message || `Request failed (HTTP ${res.status}).`;
+      return {
+        success: false,
+        status: fallbackStatus,
+        message,
+        state: deriveApprovalState(fallbackStatus),
+        error: message,
+      };
+    }
+
+    const rawStatus: string | undefined = json?.data?.status;
+    const status = rawStatus ? normalizeApprovalStatus(rawStatus) : fallbackStatus;
+    const history = await fetchDocumentApprovalHistory(module, documentId);
+    const state = deriveApprovalState(status, history);
+
+    emitApprovalChanged({ module, documentId: String(documentId), documentNumber, action, status, state });
+
+    return { success: true, status, message: json?.message || successMessage, state, data: json?.data };
+  } catch (err: any) {
+    const message = err?.message || "Unable to reach the server.";
+    return {
+      success: false,
+      status: fallbackStatus,
+      message,
+      state: deriveApprovalState(fallbackStatus),
+      error: message,
+    };
+  }
+}
+
+/** Execute Approve action for Tier 1 or Tier 2. */
 export async function executeApprove(params: {
   module: ApprovalModule;
   documentId: string | number;
   documentNumber?: string;
   tier: ApprovalTier;
-  userId: string | number;
-  userName: string;
+  userId?: string | number;
+  userName?: string;
   userRole?: string;
   note?: string;
 }): Promise<ApprovalApiResponse> {
-  const { module, documentId, documentNumber, tier, userId, userName, userRole, note } = params;
-  const docIdStr = String(documentId);
-
-  // Try calling real backend API first if numeric ID or available endpoint
-  let backendSuccess = false;
-  let backendData: any = null;
-
-  try {
-    const safeId = encodeURIComponent(String(documentId).replace(/[\/\\]/g, "-"));
-    const endpointMap: Partial<Record<ApprovalModule, string>> = {
-      purchase_requisition: `/api/approval/pr/${safeId}/approve`,
-      purchase_order: `/api/approval/po/${safeId}/approve`,
-      receive_note: `/api/approval/rn/${safeId}/approve`,
-      bpb: `/api/approval/bpb/${safeId}/approve`,
-      request_material: `/api/approval/request-materials/${safeId}/approve`,
-    };
-
-    const endpoint = endpointMap[module];
-    if (endpoint) {
-      const response = await fetch(endpoint, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-          "X-CSRF-TOKEN":
-            (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || "",
-        },
-        body: JSON.stringify({ tier, note }),
-      });
-
-      if (response.ok) {
-        backendSuccess = true;
-        backendData = await response.json();
-      }
-    }
-  } catch (err) {
-    console.info("Backend API unavailable or returned error, using local adapter:", err);
-  }
-
-  // Update local state adapter for seamless responsive UI state
-  const currentState = getLocalApprovalState(module, docIdStr);
-  const now = new Date();
-  const timestamp = now.toLocaleDateString("id-ID", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-
-  const nextStatus: ApprovalStatus = tier === 1 ? "WAITING_APPROVE_2" : "APPROVED";
-  const nextTier: ApprovalTier = tier === 1 ? 2 : 2;
-
-  const historyEntry: ApprovalHistoryEntry = {
-    id: `appr_${Date.now()}`,
-    tier,
-    action: "approved",
-    userId,
-    userName,
-    userRole: userRole || (tier === 1 ? "Approver 1" : "Approver 2"),
-    timestamp,
-    note: note || undefined,
-  };
-
-  const updatedState: DocumentApprovalState = {
-    ...currentState,
-    status: nextStatus,
-    currentTier: nextTier,
-    rejectionNote: undefined,
-    rejectedBy: undefined,
-    rejectedAt: undefined,
-    approved1By: tier === 1 ? userName : currentState.approved1By,
-    approved1At: tier === 1 ? timestamp : currentState.approved1At,
-    approved2By: tier === 2 ? userName : currentState.approved2By,
-    approved2At: tier === 2 ? timestamp : currentState.approved2At,
-    history: [historyEntry, ...currentState.history],
-  };
-
-  saveLocalApprovalState(module, docIdStr, updatedState);
-  if (documentNumber && documentNumber !== docIdStr) {
-    saveLocalApprovalState(module, documentNumber, updatedState);
-  }
-
-  if (typeof window !== "undefined") {
-    window.dispatchEvent(
-      new CustomEvent("geniusone_approval_changed", {
-        detail: {
-          module,
-          documentId: docIdStr,
-          documentNumber,
-          tier,
-          status: nextStatus,
-          state: updatedState,
-        },
-      })
-    );
-  }
-
-  return {
-    success: true,
-    status: nextStatus,
-    message: `Document successfully approved (Stage ${tier}).`,
-    state: updatedState,
-    data: backendData,
-  };
+  const { module, documentId, documentNumber, tier, note } = params;
+  return postWorkflowAction(
+    module,
+    documentId,
+    documentNumber,
+    "approve",
+    { tier, note },
+    `Document successfully approved (Stage ${tier}).`,
+    tier === 1 ? "WAITING_APPROVE_1" : "WAITING_APPROVE_2"
+  );
 }
 
-/**
- * Execute Reject action with required reason note.
- */
+/** Execute Reject action with required reason note. */
 export async function executeReject(params: {
   module: ApprovalModule;
   documentId: string | number;
   documentNumber?: string;
   tier: ApprovalTier;
-  userId: string | number;
-  userName: string;
+  userId?: string | number;
+  userName?: string;
   userRole?: string;
   reason: string;
 }): Promise<ApprovalApiResponse> {
-  const { module, documentId, documentNumber, tier, userId, userName, userRole, reason } = params;
-  const docIdStr = String(documentId);
-
+  const { module, documentId, documentNumber, tier, reason } = params;
+  const current: ApprovalStatus = tier === 1 ? "WAITING_APPROVE_1" : "WAITING_APPROVE_2";
   if (!reason || !reason.trim()) {
     return {
       success: false,
-      status: "REJECTED",
-      message: "Rejection reason is strictly required.",
-      state: getLocalApprovalState(module, docIdStr),
+      status: current,
+      message: "Rejection reason is required.",
+      state: deriveApprovalState(current),
       error: "Rejection reason cannot be blank.",
     };
   }
-
-  // Attempt backend API
-  let backendData: any = null;
-  try {
-    const safeId = encodeURIComponent(String(documentId).replace(/[\/\\]/g, "-"));
-    const endpointMap: Partial<Record<ApprovalModule, string>> = {
-      purchase_requisition: `/api/approval/pr/${safeId}/reject`,
-      purchase_order: `/api/approval/po/${safeId}/reject`,
-      receive_note: `/api/approval/rn/${safeId}/reject`,
-      bpb: `/api/approval/bpb/${safeId}/reject`,
-      request_material: `/api/approval/request-materials/${safeId}/reject`,
-    };
-
-    const endpoint = endpointMap[module];
-    if (endpoint) {
-      const response = await fetch(endpoint, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-          "X-CSRF-TOKEN":
-            (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || "",
-        },
-        body: JSON.stringify({ tier, reason }),
-      });
-      if (response.ok) {
-        backendData = await response.json();
-      }
-    }
-  } catch (err) {
-    console.info("Backend reject API error or offline, fallback to local adapter:", err);
-  }
-
-  const currentState = getLocalApprovalState(module, docIdStr);
-  const now = new Date();
-  const timestamp = now.toLocaleDateString("id-ID", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-
-  const historyEntry: ApprovalHistoryEntry = {
-    id: `rej_${Date.now()}`,
-    tier,
-    action: "rejected",
-    userId,
-    userName,
-    userRole: userRole || (tier === 1 ? "Approver 1" : "Approver 2"),
-    timestamp,
-    note: reason,
-  };
-
-  const updatedState: DocumentApprovalState = {
-    ...currentState,
-    status: "REJECTED",
-    currentTier: tier,
-    rejectionNote: reason,
-    rejectedBy: userName,
-    rejectedAt: timestamp,
-    history: [historyEntry, ...currentState.history],
-  };
-
-  saveLocalApprovalState(module, docIdStr, updatedState);
-  if (documentNumber && documentNumber !== docIdStr) {
-    saveLocalApprovalState(module, documentNumber, updatedState);
-  }
-
-  if (typeof window !== "undefined") {
-    window.dispatchEvent(
-      new CustomEvent("geniusone_approval_changed", {
-        detail: {
-          module,
-          documentId: docIdStr,
-          documentNumber,
-          tier,
-          status: "REJECTED",
-          state: updatedState,
-        },
-      })
-    );
-  }
-
-  return {
-    success: true,
-    status: "REJECTED",
-    message: "Document has been rejected and returned to creator for revision.",
-    state: updatedState,
-    data: backendData,
-  };
+  return postWorkflowAction(
+    module,
+    documentId,
+    documentNumber,
+    "reject",
+    { tier, reason },
+    "Document has been rejected and returned to the creator for revision.",
+    current
+  );
 }
 
-/**
- * Execute UnApprove action (UnApprove 1 or UnApprove 2).
- */
+/** Execute UnApprove action (UnApprove 1 or UnApprove 2). */
 export async function executeUnapprove(params: {
   module: ApprovalModule;
   documentId: string | number;
   documentNumber?: string;
   tier: ApprovalTier;
-  userId: string | number;
-  userName: string;
+  userId?: string | number;
+  userName?: string;
   userRole?: string;
   reason?: string;
 }): Promise<ApprovalApiResponse> {
-  const { module, documentId, documentNumber, tier, userId, userName, userRole, reason } = params;
-  const docIdStr = String(documentId);
-
-  // Call real backend API unapproval
-  try {
-    const safeId = encodeURIComponent(String(documentId).replace(/[\/\\]/g, "-"));
-    const endpointMap: Partial<Record<ApprovalModule, string>> = {
-      purchase_requisition: `/api/approval/pr/${safeId}/unapprove`,
-      purchase_order: `/api/approval/po/${safeId}/unapprove`,
-      receive_note: `/api/approval/rn/${safeId}/unapprove`,
-      bpb: `/api/approval/bpb/${safeId}/unapprove`,
-      request_material: `/api/approval/request-materials/${safeId}/unapprove`,
-    };
-
-    const endpoint = endpointMap[module];
-    if (endpoint) {
-      await fetch(endpoint, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-          "X-CSRF-TOKEN":
-            (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || "",
-        },
-        body: JSON.stringify({ tier, reason }),
-      });
-    }
-  } catch (err) {
-    console.info("Backend unapprove API error or offline:", err);
-  }
-
-  const currentState = getLocalApprovalState(module, docIdStr);
-  const now = new Date();
-  const timestamp = now.toLocaleDateString("id-ID", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-
-  // If UnApprove 1 is performed when document is Approved (or Waiting 2),
-  // both approval stages are invalidated and document returns to WAITING_APPROVE_1 for revision.
-  // If UnApprove 2 is performed, document rolls back to WAITING_APPROVE_2.
-  const nextStatus: ApprovalStatus = tier === 1 ? "WAITING_APPROVE_1" : "WAITING_APPROVE_2";
-  const nextTier: ApprovalTier = tier === 1 ? 1 : 2;
-
-  const historyEntry: ApprovalHistoryEntry = {
-    id: `unappr_${Date.now()}`,
-    tier,
-    action: "unapproved",
-    userId,
-    userName,
-    userRole: userRole || `Approver ${tier}`,
-    timestamp,
-    note: reason || `Unapproved Stage ${tier}`,
-  };
-
-  const updatedState: DocumentApprovalState = {
-    ...currentState,
-    status: nextStatus,
-    currentTier: nextTier,
-    rejectionNote: undefined,
-    approved1By: tier === 1 ? undefined : currentState.approved1By,
-    approved1At: tier === 1 ? undefined : currentState.approved1At,
-    approved2By: undefined,
-    approved2At: undefined,
-    history: [historyEntry, ...currentState.history],
-  };
-
-  saveLocalApprovalState(module, docIdStr, updatedState);
-  if (documentNumber && documentNumber !== docIdStr) {
-    saveLocalApprovalState(module, documentNumber, updatedState);
-  }
-
-  return {
-    success: true,
-    status: nextStatus,
-    message: `Stage ${tier} approval revoked. Document returned for revision.`,
-    state: updatedState,
-  };
+  const { module, documentId, documentNumber, tier, reason } = params;
+  return postWorkflowAction(
+    module,
+    documentId,
+    documentNumber,
+    "unapprove",
+    { tier, reason },
+    `Stage ${tier} approval revoked.`,
+    tier === 1 ? "WAITING_APPROVE_2" : "APPROVED"
+  );
 }
 
-/**
- * Resubmits a revised rejected document back to WAITING_APPROVE_1.
- */
+/** Resubmits a revised rejected document back to WAITING_APPROVE_1. */
 export async function executeResubmit(params: {
   module: ApprovalModule;
   documentId: string | number;
   documentNumber?: string;
-  userId: string | number;
-  userName: string;
+  userId?: string | number;
+  userName?: string;
 }): Promise<ApprovalApiResponse> {
-  const { module, documentId, documentNumber, userId, userName } = params;
-  const docIdStr = String(documentId);
-
-  const currentState = getLocalApprovalState(module, docIdStr);
-  const now = new Date();
-  const timestamp = now.toLocaleDateString("id-ID", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-
-  const historyEntry: ApprovalHistoryEntry = {
-    id: `resubmit_${Date.now()}`,
-    tier: 1,
-    action: "revised",
-    userId,
-    userName,
-    userRole: "Document Creator",
-    timestamp,
-    note: "Document revised and resubmitted for approval",
-  };
-
-  const updatedState: DocumentApprovalState = {
-    ...currentState,
-    status: "WAITING_APPROVE_1",
-    currentTier: 1,
-    rejectionNote: undefined,
-    rejectedBy: undefined,
-    rejectedAt: undefined,
-    history: [historyEntry, ...currentState.history],
-  };
-
-  saveLocalApprovalState(module, docIdStr, updatedState);
-  if (documentNumber && documentNumber !== docIdStr) {
-    saveLocalApprovalState(module, documentNumber, updatedState);
-  }
-
-  return {
-    success: true,
-    status: "WAITING_APPROVE_1",
-    message: "Document revised and resubmitted. Approval workflow restarted at Stage 1.",
-    state: updatedState,
-  };
+  const { module, documentId, documentNumber } = params;
+  return postWorkflowAction(
+    module,
+    documentId,
+    documentNumber,
+    "resubmit",
+    {},
+    "Document resubmitted. Approval workflow restarted at Stage 1.",
+    "REJECTED"
+  );
 }
 
 /**
- * Records a general transaction activity (e.g. printed, revised, created, closed_item, unclosed_item)
- * into the document's activity history.
+ * Records a document activity (printed, revised, closed_item, ...) in `approval_histories`
+ * and returns the refreshed history from the database.
  */
-export function recordDocumentActivity(params: {
+export async function recordDocumentActivity(params: {
   module: ApprovalModule;
   documentId: string | number;
   documentNumber?: string;
   action: ApprovalHistoryAction;
-  userId: string | number;
-  userName: string;
+  userId?: string | number;
+  userName?: string;
   userRole?: string;
   note?: string;
   tier?: ApprovalTier;
-}): DocumentApprovalState {
-  const { module, documentId, documentNumber, action, userId, userName, userRole, note, tier } = params;
-  const docIdStr = String(documentId);
-  const currentState = getLocalApprovalState(module, documentNumber || docIdStr);
-
-  const now = new Date();
-  const timestamp = now.toLocaleDateString("id-ID", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-
-  const entry: ApprovalHistoryEntry = {
-    id: `act_${action}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-    tier,
-    action,
-    userId,
-    userName,
-    userRole: userRole || "User",
-    timestamp,
-    note,
-  };
-
-  const updatedState: DocumentApprovalState = {
-    ...currentState,
-    history: [entry, ...currentState.history],
-  };
-
-  saveLocalApprovalState(module, docIdStr, updatedState);
-  if (documentNumber && documentNumber !== docIdStr) {
-    saveLocalApprovalState(module, documentNumber, updatedState);
-  }
-
-  // Optional async notification to backend activity log if available
-  try {
-    const safeId = encodeURIComponent(String(documentId).replace(/[\/\\]/g, "-"));
-    const endpointMap: Partial<Record<ApprovalModule, string>> = {
-      purchase_requisition: `/api/approval/pr/${safeId}/activity`,
-      purchase_order: `/api/approval/po/${safeId}/activity`,
-    };
-    const ep = endpointMap[module];
-    if (ep && typeof fetch !== "undefined") {
-      fetch(ep, {
+}): Promise<ApprovalHistoryEntry[]> {
+  const { module, documentId, documentNumber, action, note, tier } = params;
+  const endpoint = approvalEndpoint(module, documentId, "activity");
+  if (endpoint) {
+    try {
+      const res = await apiFetch(endpoint, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-          "X-CSRF-TOKEN":
-            (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || "",
-        },
-        body: JSON.stringify({ action, note, documentNumber }),
-      }).catch(() => { });
+        body: JSON.stringify({ action, note, tier, documentNumber }),
+      });
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({} as any));
+        console.warn("[approvalApi] Activity was not recorded:", json?.message || res.status);
+      }
+    } catch (err) {
+      console.warn("[approvalApi] Activity was not recorded:", err);
     }
-  } catch {
-    // ignore
   }
-
-  return updatedState;
+  return fetchDocumentApprovalHistory(module, documentId);
 }
 
 // ============================================================================
-// PR ITEM CLOSING / UNCLOSING PERSISTENCE ADAPTER (UI-05)
+// PR ITEM CLOSING / UNCLOSING (persisted in pr_has_items)
 // ============================================================================
 
-const PR_CLOSED_ITEMS_KEY = "geniusone_pr_closed_items_v1";
-
-export interface PrClosedItemInfo {
-  closed: boolean;
-  closedBy: string;
-  closedAt: string;
-  itemName?: string;
-  itemCode?: string;
-}
-
-function normalizePrKey(prNumber: string): string {
-  return String(prNumber || "")
-    .trim()
-    .replace(/[-\\]/g, "/")
-    .toUpperCase();
-}
-
-export function getPrItemKey(item: any, index?: number): string {
-  const code = String(item?.itemCode || item?.code || "").trim();
-  const name = String(item?.item || item?.itemName || item?.name || "").trim();
-  if (item?.id) return `id_${item.id}`;
-  if (code && code !== "-") return `code_${code.toUpperCase()}_${index ?? 0}`;
-  if (name) return `name_${name.toUpperCase()}_${index ?? 0}`;
-  return `idx_${index ?? 0}`;
-}
-
-export function getPrClosedItemsMap(prNumber: string): Record<string, PrClosedItemInfo> {
-  const normPr = normalizePrKey(prNumber);
-  if (!normPr) return {};
-  try {
-    const raw = localStorage.getItem(PR_CLOSED_ITEMS_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      return parsed[normPr] || {};
-    }
-  } catch {
-    // ignore
-  }
-  return {};
-}
-
-export function isPrItemClosed(prNumber: string, item: any, index?: number): boolean {
+/** A PR item is closed only when the database says so. */
+export function isPrItemClosed(_prNumber: string, item: any, _index?: number): boolean {
   if (!item) return false;
-  // Check backend item flags first
-  if (
+  const flag = (v: any) => String(v || "").toLowerCase();
+  return (
     item.is_closed === true ||
     item.is_closed === 1 ||
+    item.is_closed === "1" ||
     item.isClosed === true ||
-    String(item.status || "").toLowerCase() === "closing" ||
-    String(item.status || "").toLowerCase() === "closed" ||
-    String(item.closing_status || "").toLowerCase() === "closing" ||
-    String(item.closing_status || "").toLowerCase() === "closed"
-  ) {
-    return true;
-  }
-
-  const map = getPrClosedItemsMap(prNumber);
-  const key = getPrItemKey(item, index);
-  if (map[key]?.closed) return true;
-
-  // Also check by itemCode or itemName without index so PO population matches reliably
-  const code = String(item?.itemCode || item?.code || "").trim().toUpperCase();
-  const name = String(item?.item || item?.itemName || item?.name || "").trim().toUpperCase();
-  for (const [k, info] of Object.entries(map)) {
-    if (!info?.closed) continue;
-    if (code && code !== "-" && info.itemCode?.toUpperCase() === code) return true;
-    if (name && info.itemName?.toUpperCase() === name) return true;
-    if (code && k.startsWith(`code_${code}_`)) return true;
-    if (name && k.startsWith(`name_${name}_`)) return true;
-  }
-
-  return false;
+    flag(item.status) === "closing" ||
+    flag(item.status) === "closed" ||
+    flag(item.closing_status) === "closing" ||
+    flag(item.closing_status) === "closed"
+  );
 }
 
-export function togglePrItemClosing(params: {
+/**
+ * Closes or re-opens a PR item on the server. Throws with the server message on failure.
+ */
+export async function togglePrItemClosing(params: {
   prNumber: string;
   prId?: string | number;
   item: any;
   index: number;
   close: boolean;
-  userId: string | number;
-  userName: string;
+  userId?: string | number;
+  userName?: string;
   userRole?: string;
-}): {
-  closedMap: Record<string, PrClosedItemInfo>;
-  approvalState: DocumentApprovalState;
-} {
-  const { prNumber, prId, item, index, close, userId, userName, userRole } = params;
-  const normPr = normalizePrKey(prNumber);
-  const key = getPrItemKey(item, index);
-  const itemName = String(item?.item || item?.itemName || item?.name || "Material Item");
-  const itemCode = String(item?.itemCode || item?.code || "-");
-
-  const now = new Date();
-  const timestamp = now.toLocaleDateString("id-ID", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-
-  let allMaps: Record<string, Record<string, PrClosedItemInfo>> = {};
-  try {
-    const raw = localStorage.getItem(PR_CLOSED_ITEMS_KEY);
-    if (raw) allMaps = JSON.parse(raw) || {};
-  } catch {
-    allMaps = {};
+}): Promise<{ history: ApprovalHistoryEntry[]; data?: any }> {
+  const { prNumber, prId, item, close } = params;
+  const itemId = item?.id ?? item?.pr_has_items_id;
+  if (!itemId) {
+    throw new Error("This PR item has not been saved yet and cannot be closed.");
+  }
+  const target = String(prId || prNumber || "").trim().replace(/[\/\\]/g, "-");
+  const res = await apiFetch(
+    `/api/procurement/purchase-requisitions/${encodeURIComponent(target)}/items/${encodeURIComponent(
+      String(itemId)
+    )}/${close ? "close" : "unclose"}`,
+    { method: "POST", body: JSON.stringify({ is_closed: close }) }
+  );
+  const json = await res.json().catch(() => ({} as any));
+  if (!res.ok || json?.status === "error") {
+    throw new Error(json?.message || `Failed to ${close ? "close" : "reopen"} PR item (HTTP ${res.status}).`);
   }
 
-  const currentPrMap = { ...(allMaps[normPr] || {}) };
-  if (close) {
-    currentPrMap[key] = {
-      closed: true,
-      closedBy: userName,
-      closedAt: timestamp,
-      itemName,
-      itemCode,
-    };
-  } else {
-    delete currentPrMap[key];
-    // Also remove any matching code/name entry
-    for (const k of Object.keys(currentPrMap)) {
-      if (
-        (itemCode !== "-" && currentPrMap[k]?.itemCode?.toUpperCase() === itemCode.toUpperCase()) ||
-        currentPrMap[k]?.itemName?.toUpperCase() === itemName.toUpperCase()
-      ) {
-        delete currentPrMap[k];
-      }
-    }
-  }
-
-  allMaps[normPr] = currentPrMap;
-  try {
-    localStorage.setItem(PR_CLOSED_ITEMS_KEY, JSON.stringify(allMaps));
-  } catch {
-    // ignore
-  }
-
-  // Attempt backend sync if endpoint exists
-  if (typeof fetch !== "undefined") {
-    const rawTarget = String(prId || prNumber || "").trim();
-    const safeTargetId = rawTarget.replace(/[\/\\]/g, "-");
-    const rawItemId = item?.id || item?.pr_has_items_id || (index + 1);
-    fetch(`/api/procurement/purchase-requisitions/${encodeURIComponent(safeTargetId)}/items/${encodeURIComponent(rawItemId)}/${close ? "close" : "unclose"}`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-        "X-CSRF-TOKEN":
-          (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || "",
-      },
-      body: JSON.stringify({ itemCode, itemName, is_closed: close }),
-    }).catch((err) => {
-      console.warn("[togglePrItemClosing] Backend sync warning:", err);
-    });
-  }
-
-  const approvalState = recordDocumentActivity({
-    module: "purchase_requisition",
-    documentId: prId || prNumber,
-    documentNumber: prNumber,
-    action: close ? "closed_item" : "unclosed_item",
-    userId,
-    userName,
-    userRole,
-    note: `${close ? "Closed" : "Unclosed (reactivated)"} PR item: ${itemName} (${itemCode})`,
-  });
-
-  return {
-    closedMap: currentPrMap,
-    approvalState,
-  };
+  const history = await fetchDocumentApprovalHistory("purchase_requisition", prId || prNumber);
+  emitApprovalChanged({ module: "purchase_requisition", documentId: String(prId || prNumber), action: close ? "closed_item" : "unclosed_item" });
+  return { history, data: json?.data };
 }

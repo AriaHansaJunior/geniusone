@@ -4,13 +4,10 @@ import { Icon } from "../../../components/ui/Icon";
 import { ConfirmDialog } from "../../../components/ui/ConfirmDialog";
 import { CustomDatePicker } from "../../../components/ui/CustomDatePicker";
 import { CustomSelect } from "../../../components/ui/CustomSelect";
-import { initialSupplierRecords } from "../PurchaseMaster/Supplier/supplier-types";
-import { initialAdditionalCostRecords, type AdditionalCostRecord } from "../PurchaseMaster/AdditionalCosts/additional-costs-types";
-import { initialItemRecords } from "../../Exim/Master/Item/item-data";
+import { type AdditionalCostRecord } from "../PurchaseMaster/AdditionalCosts/additional-costs-types";
 import type { ItemRecord } from "../../Exim/Master/Item/item-types";
-import { prRows, poRows } from "../../../data/mockData";
 import { fetchList, fetchDetail, createPurchaseOrder } from "../../../data/api";
-import { getLocalApprovalState, isPrItemClosed } from "../../../services/approvalApi";
+import { isPrItemClosed } from "../../../services/approvalApi";
 import { PickPrItemModal, type PrItemToPick } from "./PickPrItemModal";
 
 export interface POItemRow {
@@ -74,11 +71,11 @@ export function PurchaseOrderCreate({
   const [deliveryTerms, setDeliveryTerms] = useState<any[]>([]);
   const [currencies, setCurrencies] = useState<any[]>([]);
   const [masterAdditionalCosts, setMasterAdditionalCosts] = useState<AdditionalCostRecord[]>(
-    () => (availableAdditionalCosts && availableAdditionalCosts.length > 0 ? availableAdditionalCosts : initialAdditionalCostRecords)
+    () => (availableAdditionalCosts && availableAdditionalCosts.length > 0 ? availableAdditionalCosts : [])
   );
   const [loadedMasterItems, setLoadedMasterItems] = useState<any[]>([]);
   const masterItems = useMemo(
-    () => (loadedMasterItems.length > 0 ? loadedMasterItems : availableItems && availableItems.length > 0 ? availableItems : initialItemRecords),
+    () => (loadedMasterItems.length > 0 ? loadedMasterItems : availableItems && availableItems.length > 0 ? availableItems : []),
     [loadedMasterItems, availableItems]
   );
 
@@ -233,7 +230,7 @@ export function PurchaseOrderCreate({
     if (!prStr || prStr === "—" || prStr === "None") return null;
     const cleanTarget = prStr.replace(/[^a-zA-Z0-9]/g, "").toLowerCase();
 
-    const pool = existingPos.length > 0 ? existingPos : poRows;
+    const pool = existingPos;
     for (const po of pool) {
       const poNum = safeExtractString(po._rawNumber || po._rawPo || po.poNumber);
       const rawPr = safeExtractString(po._rawPr || po.prNumber);
@@ -372,12 +369,6 @@ export function PurchaseOrderCreate({
         const approved = res.rows.filter((r: any) => {
           const st = safeExtractString(r._rawStatus || r.status).toLowerCase();
           const prNum = safeExtractString(r._rawNumber || r.prNumber);
-          const localByNum = prNum ? getLocalApprovalState("purchase_requisition", prNum) : null;
-          const localById = r.id ? getLocalApprovalState("purchase_requisition", String(r.id)) : null;
-          const isLocalApproved =
-            localByNum?.status === "APPROVED" ||
-            localById?.status === "APPROVED" ||
-            Boolean(localByNum?.approved2By || localById?.approved2By);
           const isBackendApproved =
             r.is_approved === true ||
             r.is_approved === 1 ||
@@ -385,7 +376,6 @@ export function PurchaseOrderCreate({
             Boolean(r.approvals?.some((a: any) => (a.tier === 2 || a.approval_ke == 2) && (a.status === 1 || a.status === "Approved")));
 
           const isPassedApproval =
-            isLocalApproved ||
             isBackendApproved ||
             st.includes("approved") ||
             st === "approved 1" ||
@@ -535,11 +525,6 @@ export function PurchaseOrderCreate({
         setPaymentMethod(foundApi.payment_method.name);
       }
       return;
-    }
-
-    const foundMock = initialSupplierRecords.find((s) => s.id === supplierId);
-    if (foundMock) {
-      setSupplierAddress(foundMock.address);
     }
   };
 
@@ -1184,45 +1169,7 @@ const handleConfirmSubmit = async () => {
     if (res && res.data) {
       if (onSaveSuccess) onSaveSuccess(res.data);
     } else {
-      const poNumber = `POL-1026-${String(Math.floor(Math.random() * 900) + 100)}`;
-      const supplierObj = suppliers.find((s) => String(s.id) === String(selectedSupplierId)) || initialSupplierRecords.find((s) => s.id === selectedSupplierId);
-
-      const newPO = {
-        _id: `po-${Date.now()}`,
-        _type: "po",
-        _rawNumber: poNumber,
-        _rawStatus: "Waiting for Approve 1",
-        _rawDate: date,
-        _rawDueDate: dueDate,
-        _rawSupplier: supplierObj ? `[${supplierObj.code || supplierObj.supplierCode || "SUPP"}] ${supplierObj.name || supplierObj.supplierName}` : "Selected Supplier",
-        _rawTotal: `${currency.split(" ")[0]} ${grandTotal.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-        _rawCurrency: currency.split(" ")[0],
-        _rawRate: exchangeRate.toString(),
-        _rawPaymentMethod: paymentMethod,
-        _rawPaymentTerm: paymentTerm,
-        _rawFacility: statusFacility === "Facility" ? "FASILITAS" : "NON FASILITAS",
-        is_kawasan_berikat: statusFacility === "Facility" ? true : isKawasanBerikat,
-        _rawDeptCreated: "PROCUREMENT",
-        _rawCreatedBy: "ADMINISTRATOR " + today,
-        _rawRemark: remarkPo || "New PO",
-        _items: items,
-        _otherCosts: additionalCosts,
-        _financials: {
-          total: totalSubtotal,
-          discount: discountAmount,
-          dpp,
-          ppn: ppnAmount,
-          otherCosts: totalAdditionalCosts,
-          totalPph,
-          grandTotal,
-        },
-        totalItem: items.length,
-        totalQuantity: items.reduce((acc, it) => acc + (Number(it.orderQty) || 0), 0),
-      };
-
-      if (onSaveSuccess) {
-        onSaveSuccess(newPO);
-      }
+      throw new Error("Failed to create Purchase Order.");
     }
   } catch (err: any) {
     console.error("Failed to submit PO to backend:", err);
@@ -1291,33 +1238,6 @@ const allPrOptions = useMemo(() => {
     });
   });
 
-  // Also include initial mock prRows if approvedPrs was empty
-  if (list.length === 0) {
-    prRows.forEach((p) => {
-      const raw = safeExtractString(p._rawNumber || p.prNumber);
-      if (raw && !seen.has(raw)) {
-        const st = safeExtractString(p._rawStatus || p.status).toLowerCase();
-        const rawItems = p._items || [];
-        const openItems = getPrItemsList(p);
-        const openRemainingItems = openItems.filter((it: any) => {
-          const reqQty = Number(it.rawQty || it.qty || it.quantity || 1);
-          const ordQty = Number(it.ordered_qty || 0);
-          const remQty = it.remaining_qty !== undefined ? Number(it.remaining_qty) : Math.max(0, reqQty - ordQty);
-          return remQty > 0;
-        });
-        if (st !== "closing" && !(rawItems.length > 0 && openItems.length === 0) && (openItems.length === 0 || openRemainingItems.length > 0)) {
-          seen.add(raw);
-          const targetFac = statusFacility;
-          const matchingCount = openRemainingItems.filter((it: any) => resolveFacilityFromItem(it) === targetFac).length;
-          const existingPo = findExistingPoForPr(raw);
-          const poWarning = existingPo ? ` ⚠️ [In PO: ${existingPo.poNumber}]` : "";
-          const facLabel = targetFac === "Facility" ? "Fasilitas" : "Non Fasilitas";
-          const countBadge = matchingCount > 0 ? `${matchingCount} ${facLabel}` : `0 ${facLabel}`;
-          list.push({ prNumber: raw, label: `${raw} (${countBadge})${poWarning}` });
-        }
-      }
-    });
-  }
 
   return list;
 }, [approvedPrs, existingPos, masterItems, statusFacility]);
@@ -1464,15 +1384,10 @@ return (
               placeholder="Find Supplier"
               options={[
                 { value: "", label: "Find Supplier" },
-                ...(suppliers.length > 0
-                  ? suppliers.map((sup) => ({
-                    value: String(sup.id),
-                    label: `${sup.code ? `[${sup.code}] ` : ""}${sup.name}`,
-                  }))
-                  : initialSupplierRecords.map((sup) => ({
-                    value: String(sup.id),
-                    label: `${sup.supplierCode ? `[${sup.supplierCode}] ` : ""}${sup.supplierName}`,
-                  }))),
+                ...suppliers.map((sup) => ({
+                  value: String(sup.id),
+                  label: `${sup.code ? `[${sup.code}] ` : ""}${sup.name}`,
+                })),
               ]}
             />
             {formErrors.supplier && <span className="master-form-error">{formErrors.supplier}</span>}
@@ -1487,26 +1402,14 @@ return (
               value={currency}
               onChange={(val) => {
                 setCurrency(val);
-                if (val.includes("USD")) setExchangeRate(15850);
-                else if (val.includes("EUR")) setExchangeRate(17200);
-                else if (val.includes("SGD")) setExchangeRate(12100);
-                else setExchangeRate(1.0);
+                const selectedCurr = currencies.find((c: any) => `${c.code || c.name} - ${c.name}` === val);
+                const rateVal = Number(selectedCurr?.exchange_rate || selectedCurr?.rate || 1.0);
+                setExchangeRate(rateVal > 0 ? rateVal : 1.0);
               }}
-              options={
-                currencies.length > 0
-                  ? currencies.map((c: any) => ({
-                    value: `${c.code || c.name} - ${c.name}`,
-                    label: `${c.code || c.name} - ${c.name}`,
-                  }))
-                  : [
-                    { value: "IDR - Indonesian Rupiah", label: "IDR - Indonesian Rupiah" },
-                    { value: "USD - US Dollar", label: "USD - US Dollar" },
-                    { value: "EUR - Euro", label: "EUR - Euro" },
-                    { value: "SGD - Singapore Dollar", label: "SGD - Singapore Dollar" },
-                    { value: "CNY - Chinese Yuan", label: "CNY - Chinese Yuan" },
-                    { value: "JPY - Japanese Yen", label: "JPY - Japanese Yen" },
-                  ]
-              }
+              options={currencies.map((c: any) => ({
+                value: `${c.code || c.name} - ${c.name}`,
+                label: `${c.code || c.name} - ${c.name}`,
+              }))}
             />
             {formErrors.currency && <span className="master-form-error">{formErrors.currency}</span>}
           </div>
@@ -1553,16 +1456,7 @@ return (
               placeholder="Choose Payment Term"
               options={[
                 { value: "", label: "Choose Payment Term" },
-                ...(paymentTerms.length > 0
-                  ? paymentTerms.map((pt) => ({ value: pt.name, label: pt.name }))
-                  : [
-                    "Net 30 Days",
-                    "Net 14 Days",
-                    "100% by TT within 14 days",
-                    "COD (Cash on Delivery)",
-                    "CBD (Cash Before Delivery)",
-                    "LC at Sight",
-                  ].map((pt) => ({ value: pt, label: pt }))),
+                ...paymentTerms.map((pt) => ({ value: pt.name, label: pt.name })),
               ]}
             />
           </div>
@@ -1598,15 +1492,7 @@ return (
               placeholder="Choose Delivery Term"
               options={[
                 { value: "", label: "Choose Delivery Term" },
-                ...(deliveryTerms.length > 0
-                  ? deliveryTerms.map((dt) => ({ value: dt.name, label: dt.name }))
-                  : [
-                    "Franco Gudang Surabaya",
-                    "Loco Pabrik",
-                    "FOB Port Tanjung Perak",
-                    "CIF Tanjung Priok",
-                    "Ex-Works",
-                  ].map((dt) => ({ value: dt, label: dt }))),
+                ...deliveryTerms.map((dt) => ({ value: dt.name, label: dt.name })),
               ]}
             />
           </div>

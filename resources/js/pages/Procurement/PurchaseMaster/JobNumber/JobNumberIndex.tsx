@@ -7,7 +7,6 @@ import { StatusToggle } from "../../../../components/ui/StatusToggle";
 import { ConfirmDialog } from "../../../../components/ui/ConfirmDialog";
 import { JobNumberForm } from "./JobNumberForm";
 import {
-  initialJobNumberRecords,
   type JobNumberRecord,
   type JobNumberSortField,
   type SortDirection,
@@ -23,7 +22,7 @@ interface JobNumberIndexProps {
 }
 
 export function JobNumberIndex({
-  records = initialJobNumberRecords,
+  records = [],
   onAddNew,
   onEdit,
   onDelete,
