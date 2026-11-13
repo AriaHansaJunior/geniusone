@@ -17,6 +17,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
             GeniusOneDemoSeeder::class,
             GovernanceAndRbacSeeder::class,
+            WarehouseStockSeeder::class,
         ]);
     }
 }
