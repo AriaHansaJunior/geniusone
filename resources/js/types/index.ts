@@ -178,6 +178,7 @@ export type ViewState =
   | { type: "item-qr" }
   | { type: "wh-req-material-create" }
   | { type: "wh-req-material-detail"; id: string }
+  | { type: "transfer-stock-return-detail"; code: string }
   | { type: "stock-notification-create" }
   | { type: "stock-notification-edit"; record?: any }
   | { type: "wh-type-of-request-create" }

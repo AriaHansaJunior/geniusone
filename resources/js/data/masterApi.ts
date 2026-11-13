@@ -1791,50 +1791,71 @@ export async function saveRequestMaterialApi(record: RequestMaterialRecord & Rec
   });
 }
 
+function mapTransferStockReturnRecord(r: any): TransferStockReturnRecord {
+  const rawStatus = String(r.status || "Waiting Approve 1");
+  let status: TransferStockReturnStatus = "Waiting Approve 1";
+  if (/reject/i.test(rawStatus)) status = "Rejected";
+  else if (/approved\s*1|waiting.*2/i.test(rawStatus)) status = "Waiting Approve 2";
+  else if (/^approved$|approved\s*2/i.test(rawStatus)) status = "Approved";
+  else if (/draft/i.test(rawStatus)) status = "Draft";
+  else if (/waiting.*1/i.test(rawStatus)) status = "Waiting Approve 1";
+
+  const items = Array.isArray(r.items)
+    ? r.items.map((it: any, idx: number) => ({
+        id: String(it.id || idx + 1),
+        items_id: it.items_id ? Number(it.items_id) : undefined,
+        itemCode: it.itemCode || it.item_code || "-",
+        itemName: it.itemName || it.item_name || "-",
+        quantity: Number(it.quantity ?? it.return_qty ?? 0),
+        unit: it.unit || "-",
+        sourceLocation: it.sourceLocation || it.source_location || "-",
+        destinationLocation: it.destinationLocation || it.destination_location || "-",
+        reason: it.remark || it.reason || "-",
+      }))
+    : [];
+
+  return {
+    id: String(r.rawId ?? r.id),
+    warehouses_id: r.warehouses_id ?? r.warehouseId ? Number(r.warehouses_id ?? r.warehouseId) : undefined,
+    warehouseName: r.warehouse || r.warehouseName || "",
+    request_material_id: r.request_material_id ?? r.requestMaterialId ? Number(r.request_material_id ?? r.requestMaterialId) : undefined,
+    job_number_id: r.job_number_id ?? r.jobNumberId ? Number(r.job_number_id ?? r.jobNumberId) : undefined,
+    mutationCode: r.returnNumber || r.mutationCode || r.mutation_code || "",
+    productionCode: r.productionCode || r.production_code || "",
+    jobNumber: r.jobNumber || r.job_number || "-",
+    transferDate: r.returnDateFormatted || r.returnDate || r.transferDate || r.transfer_date || "-",
+    transferNote: r.note || r.transferNote || r.transfer_note || "-",
+    totalItems: Number(r.itemCount ?? r.totalItems ?? items.length),
+    status,
+    userCreated: r.createdBy || r.userCreated || r.created_by || "-",
+    userLastUpdated: formatDisplayDate(r.updatedAt || r.createdAt || r.userLastUpdated),
+    items,
+  };
+}
+
 export async function fetchTransferStockReturnsApi(): Promise<TransferStockReturnRecord[] | null> {
   const res = await apiGet<{ data: any[] }>("/api/warehouse/transfer-stock-returns", { per_page: 200 });
   if (!res?.data) return null;
-  return res.data.map((r: any) => {
-    const rawStatus = String(r.status || "Waiting Approve 1");
-    let status: TransferStockReturnStatus = "Waiting Approve 1";
-    if (/reject/i.test(rawStatus)) status = "Rejected";
-    else if (/approved\s*1|waiting.*2/i.test(rawStatus)) status = "Waiting Approve 2";
-    else if (/^approved$|approved\s*2/i.test(rawStatus)) status = "Approved";
-    else if (/draft/i.test(rawStatus)) status = "Draft";
-    else if (/waiting.*1/i.test(rawStatus)) status = "Waiting Approve 1";
+  return res.data.map(mapTransferStockReturnRecord);
+}
 
-    const items = Array.isArray(r.items)
-      ? r.items.map((it: any, idx: number) => ({
-          id: String(it.id || idx + 1),
-          items_id: it.items_id ? Number(it.items_id) : undefined,
-          itemCode: it.itemCode || it.item_code || "-",
-          itemName: it.itemName || it.item_name || "-",
-          quantity: Number(it.quantity ?? it.return_qty ?? 0),
-          unit: it.unit || "-",
-          sourceLocation: it.sourceLocation || it.source_location || "-",
-          destinationLocation: it.destinationLocation || it.destination_location || "-",
-          reason: it.remark || it.reason || "-",
-        }))
-      : [];
-
-    return {
-      id: String(r.rawId ?? r.id),
-      warehouses_id: r.warehouses_id ?? r.warehouseId ? Number(r.warehouses_id ?? r.warehouseId) : undefined,
-      warehouseName: r.warehouse || r.warehouseName || "",
-      request_material_id: r.request_material_id ?? r.requestMaterialId ? Number(r.request_material_id ?? r.requestMaterialId) : undefined,
-      job_number_id: r.job_number_id ?? r.jobNumberId ? Number(r.job_number_id ?? r.jobNumberId) : undefined,
-      mutationCode: r.returnNumber || r.mutationCode || r.mutation_code || "",
-      productionCode: r.productionCode || r.production_code || "",
-      jobNumber: r.jobNumber || r.job_number || "-",
-      transferDate: r.returnDateFormatted || r.returnDate || r.transferDate || r.transfer_date || "-",
-      transferNote: r.note || r.transferNote || r.transfer_note || "-",
-      totalItems: Number(r.itemCount ?? r.totalItems ?? items.length),
-      status,
-      userCreated: r.createdBy || r.userCreated || r.created_by || "-",
-      userLastUpdated: formatDisplayDate(r.updatedAt || r.createdAt || r.userLastUpdated),
-      items,
-    };
-  });
+export async function fetchTransferStockReturnDetailApi(code: string): Promise<TransferStockReturnRecord | null> {
+  const cleanCode = encodeURIComponent(code.trim());
+  const res = await apiGet<{ data: any }>(`/api/warehouse/transfer-stock-returns/${cleanCode}`);
+  if (res?.data) {
+    return mapTransferStockReturnRecord(res.data);
+  }
+  const all = await fetchTransferStockReturnsApi();
+  if (!all) return null;
+  const normTarget = code.replace(/[^A-Za-z0-9]/g, "").toLowerCase();
+  return (
+    all.find(
+      (r) =>
+        r.id === code ||
+        r.mutationCode.toLowerCase() === code.toLowerCase() ||
+        r.mutationCode.replace(/[^A-Za-z0-9]/g, "").toLowerCase() === normTarget
+    ) || null
+  );
 }
 
 export async function fetchTransferStockReturnAvailableSourcesApi(): Promise<any[]> {

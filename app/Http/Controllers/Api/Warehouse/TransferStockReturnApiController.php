@@ -482,6 +482,7 @@ class TransferStockReturnApiController extends Controller
             'totalQty' => (float) $totalQty,
             'itemCount' => $row->items->count(),
             'createdAt' => $row->created_at?->format('Y-m-d H:i:s'),
+            'updatedAt' => $row->updated_at?->format('Y-m-d H:i:s'),
             'items' => $row->items->map(fn (TransferStockReturnItem $line, int $idx) => [
                 'id' => (string) $line->id,
                 'no' => $idx + 1,

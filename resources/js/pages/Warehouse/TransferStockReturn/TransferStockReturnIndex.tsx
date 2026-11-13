@@ -7,7 +7,7 @@ import { Badge } from "../../../components/ui/Badge";
 import { Icon } from "../../../components/ui/Icon";
 import { CustomDatePicker } from "../../../components/ui/CustomDatePicker";
 import { ConfirmDialog } from "../../../components/ui/ConfirmDialog";
-import { TransferStockReturnDetailModal } from "./TransferStockReturnDetailModal";
+import { TransferStockReturnDetail } from "./TransferStockReturnDetail";
 import { TransferStockReturnForm } from "./TransferStockReturnForm";
 import {
   fetchTransferStockReturnsApi,
@@ -31,6 +31,7 @@ type SortDirection = "none" | "asc" | "desc";
 
 export function TransferStockReturnIndex({
   records,
+  onOpenDetail,
 }: TransferStockReturnIndexProps) {
   const [localRecords, setLocalRecords] = useState<TransferStockReturnRecord[]>(records || []);
   const [loading, setLoading] = useState(!records);
@@ -44,9 +45,9 @@ export function TransferStockReturnIndex({
   const [sortField, setSortField] = useState<TransferStockReturnSortField>("mutationCode");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
 
-  // Modals state
+  // Detail & Form state
   const [selectedRecord, setSelectedRecord] = useState<TransferStockReturnRecord | null>(null);
-  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [activeDetailCode, setActiveDetailCode] = useState<string | null>(null);
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState<TransferStockReturnRecord | null>(null);
   const [recordToDelete, setRecordToDelete] = useState<TransferStockReturnRecord | null>(null);
@@ -219,10 +220,15 @@ export function TransferStockReturnIndex({
     }
   };
 
-  // Open detail
+  // Open full detail page
   const handleOpenDetailModal = (record: TransferStockReturnRecord) => {
     setSelectedRecord(record);
-    setIsDetailModalOpen(true);
+    const code = record.mutationCode || record.id;
+    if (onOpenDetail) {
+      onOpenDetail(code);
+      return;
+    }
+    setActiveDetailCode(code);
   };
 
   // Open edit
@@ -312,7 +318,6 @@ export function TransferStockReturnIndex({
         `Approved Stage ${tier} via Stock Transfer Return`
       );
       await loadRecords();
-      if (isDetailModalOpen) setIsDetailModalOpen(false);
       setNotification({
         type: "success",
         message: res?.message || `${rec.mutationCode} approved for Stage ${tier}.`,
@@ -321,32 +326,6 @@ export function TransferStockReturnIndex({
       setNotification({
         type: "warning",
         message: err?.message || `Failed to approve ${rec.mutationCode}.`,
-      });
-    } finally {
-      setActionBusy(false);
-      setTimeout(() => setNotification(null), 4000);
-    }
-  };
-
-  const handleRejectRecord = async (rec: TransferStockReturnRecord) => {
-    const reason = window.prompt(
-      `Enter rejection reason for ${rec.mutationCode}:`,
-      "Rejected during verification"
-    );
-    if (reason === null) return;
-    setActionBusy(true);
-    try {
-      const res = await rejectTransferStockReturnApi(rec.id, reason.trim() || "Rejected");
-      await loadRecords();
-      if (isDetailModalOpen) setIsDetailModalOpen(false);
-      setNotification({
-        type: "success",
-        message: res?.message || `${rec.mutationCode} rejected.`,
-      });
-    } catch (err: any) {
-      setNotification({
-        type: "warning",
-        message: err?.message || `Failed to reject ${rec.mutationCode}.`,
       });
     } finally {
       setActionBusy(false);
@@ -419,6 +398,18 @@ export function TransferStockReturnIndex({
     }
   };
 
+  if (activeDetailCode) {
+    return (
+      <TransferStockReturnDetail
+        code={activeDetailCode}
+        record={selectedRecord}
+        records={localRecords}
+        onBack={() => setActiveDetailCode(null)}
+        onUpdated={loadRecords}
+      />
+    );
+  }
+
   return (
     <div className="wh-page">
       {/* Toast Notification */}
@@ -473,66 +464,38 @@ export function TransferStockReturnIndex({
           overflow: "hidden",
         }}
       >
-        {/* Card Header matching SmartOne Content + GeniusOne UI Guidelines */}
+        {/* Top Action Bar (Clean without redundant page title) */}
         <div
           style={{
             display: "flex",
             alignItems: "center",
-            justifyContent: "space-between",
-            padding: "14px 20px",
+            justifyContent: "flex-end",
+            padding: "12px 20px",
             background: "linear-gradient(180deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.8) 100%)",
             borderBottom: "1px solid var(--line, #e2e8f0)",
             flexWrap: "wrap",
-            gap: "12px",
+            gap: "10px",
           }}
         >
-          <div>
-            <span
-              style={{
-                fontSize: "10px",
-                fontWeight: 800,
-                color: "var(--blue-600)",
-                textTransform: "uppercase",
-                letterSpacing: "0.8px",
-              }}
-            >
-              Warehouse / Incoming
-            </span>
-            <h2
-              style={{
-                margin: "2px 0 0",
-                fontSize: "18px",
-                fontWeight: 800,
-                color: "var(--ink)",
-                letterSpacing: "-0.2px",
-              }}
-            >
-              Stock Transfer Return
-            </h2>
-          </div>
+          <Button
+            type="button"
+            variant="primary"
+            onClick={() => {
+              setEditingRecord(null);
+              setIsFormModalOpen(true);
+            }}
+          >
+            Add New
+          </Button>
 
-          {/* Top Actions: Add New (Text-only without icons as required) & Export To Excel */}
-          <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
-            <Button
-              type="button"
-              variant="primary"
-              onClick={() => {
-                setEditingRecord(null);
-                setIsFormModalOpen(true);
-              }}
-            >
-              Add New
-            </Button>
-
-            <Button
-              type="button"
-              variant="excel"
-              onClick={handleExportExcel}
-              title="Export Stock Transfer Return to Excel (.xlsx)"
-            >
-              Export To Excel
-            </Button>
-          </div>
+          <Button
+            type="button"
+            variant="excel"
+            onClick={handleExportExcel}
+            title="Export Stock Transfer Return to Excel (.xlsx)"
+          >
+            Export To Excel
+          </Button>
         </div>
 
         {/* Filter Controls Bar matching SmartOne */}
@@ -1110,16 +1073,6 @@ export function TransferStockReturnIndex({
           }}
         />
       </div>
-
-      {/* Detail Modal */}
-      <TransferStockReturnDetailModal
-        isOpen={isDetailModalOpen}
-        onClose={() => setIsDetailModalOpen(false)}
-        record={selectedRecord}
-        onApprove={(rec) => handleApproveRecord(rec)}
-        onReject={(rec) => handleRejectRecord(rec)}
-        busy={actionBusy}
-      />
 
       {/* Form Modal (Create / Edit) */}
       <TransferStockReturnForm

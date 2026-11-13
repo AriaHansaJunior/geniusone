@@ -83,6 +83,7 @@ import {
   DestinationLocationIndex,
   DestinationLocationForm,
   TransferStockReturnIndex,
+  TransferStockReturnDetail,
   UserPermissionAdmin,
   AuditLogAdmin,
 } from "../pages";
@@ -595,6 +596,16 @@ function resolveViewStateFromPath(pathname: string, defaultPage: PageKey = "dash
     return { type: "wh-req-material-detail", id: decodeURIComponent(reqMaterialDetailMatch[1]) };
   }
 
+  const transferStockReturnDetailMatch = cleanPath.match(
+    /^\/(?:warehouse\/incoming\/transfer-stock-return|warehouse\/incoming\/transfer-stock-retur|warehouse\/transfer-stock-return|warehouse\/transfer_stok_retur)\/(?:details?\/)?(?!create$|add$)(.+)$/
+  );
+  if (transferStockReturnDetailMatch) {
+    return {
+      type: "transfer-stock-return-detail",
+      code: decodeURIComponent(transferStockReturnDetailMatch[1]),
+    };
+  }
+
   // Check navigationConfig items (matches all hierarchical paths configured)
   for (const section of navigationConfig) {
     if (section.path && cleanPath === section.path) {
@@ -805,6 +816,7 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
     if (initialPage === "warehouse-detail") return { type: "warehouse-detail", code: initialCode || "" };
     if (initialPage === "wh-req-material-create") return { type: "wh-req-material-create" };
     if (initialPage === "wh-req-material-detail") return { type: "wh-req-material-detail", id: initialCode || "" };
+    if (initialPage === "transfer-stock-return-detail") return { type: "transfer-stock-return-detail", code: initialCode || "" };
     if (initialPage === "stock-notification-create") return { type: "stock-notification-create" };
     if (initialPage === "wh-type-of-request-create") return { type: "wh-type-of-request-create" };
     if (initialPage === "wh-destination-location-create") return { type: "wh-destination-location-create" };
@@ -870,7 +882,9 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
                                                         ? "item"
                                                         : viewState.type === "wh-req-material-create" || viewState.type === "wh-req-material-detail"
                                                           ? "wh-req-material"
-                                                          : viewState.type === "stock-notification-create" || viewState.type === "stock-notification-edit"
+                                                          : viewState.type === "transfer-stock-return-detail"
+                                                            ? "transfer-stock-return"
+                                                            : viewState.type === "stock-notification-create" || viewState.type === "stock-notification-edit"
                                                             ? "stock-notification-master"
                                                             : viewState.type === "wh-type-of-request-create" || viewState.type === "wh-type-of-request-edit"
                                                               ? "wh-type-of-request"
@@ -2300,6 +2314,21 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
     }
   }, []);
 
+  const handleNavigateTransferStockReturnDetail = useCallback((mutationCode: string) => {
+    const slug = docToSlug(String(mutationCode || ""));
+    const nextState: ViewState = { type: "transfer-stock-return-detail", code: slug };
+    setViewState(nextState);
+
+    if (typeof window !== "undefined") {
+      window.scrollTo(0, 0);
+      window.history.pushState(
+        nextState,
+        "",
+        `/warehouse/incoming/transfer-stock-return/detail/${slug}`
+      );
+    }
+  }, []);
+
   const handleNavigateMasterWarehouseCreate = useCallback(() => {
     const nextState: ViewState = { type: "warehouse-master-create" };
     setViewState(nextState);
@@ -3140,7 +3169,9 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
 
         {/* Warehouse Incoming: Transfer Stock Return */}
         {viewState.type === "list" && viewState.page === "transfer-stock-return" && (
-          <TransferStockReturnIndex />
+          <TransferStockReturnIndex
+            onOpenDetail={handleNavigateTransferStockReturnDetail}
+          />
         )}
 
         {/* New Lightweight Placeholder Pages */}
@@ -3233,6 +3264,19 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
             id={viewState.id}
             records={requestMaterialRecords}
             onBack={() => handleNavigateList("wh-req-material", "/warehouse/request/request-material")}
+          />
+        )}
+
+        {/* Dedicated Transfer Stock Return Detail View */}
+        {viewState.type === "transfer-stock-return-detail" && (
+          <TransferStockReturnDetail
+            code={viewState.code}
+            onBack={() =>
+              handleNavigateList(
+                "transfer-stock-return",
+                "/warehouse/incoming/transfer-stock-return"
+              )
+            }
           />
         )}
 

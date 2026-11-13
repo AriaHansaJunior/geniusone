@@ -311,7 +311,11 @@ Route::get('/warehouse/adjustment/adjustment-stock', fn () => view('app', ['page
 
 // Warehouse Incoming Routes
 Route::get('/warehouse/incoming/transfer-stock-return', fn () => view('app', ['page' => 'transfer-stock-return']))->name('warehouse.transfer-stock-return');
+Route::get('/warehouse/incoming/transfer-stock-return/detail/{code}', fn ($code) => view('app', ['page' => 'transfer-stock-return-detail', 'code' => $code]))->where('code', '.*')->name('warehouse.transfer-stock-return.detail');
+Route::get('/warehouse/incoming/transfer-stock-return/details/{code}', fn ($code) => view('app', ['page' => 'transfer-stock-return-detail', 'code' => $code]))->where('code', '.*');
+Route::get('/warehouse/incoming/transfer-stock-return/{code}', fn ($code) => view('app', ['page' => 'transfer-stock-return-detail', 'code' => $code]))->where('code', '.*');
 Route::get('/warehouse/transfer-stock-return', fn () => redirect('/warehouse/incoming/transfer-stock-return'));
+Route::get('/warehouse/transfer-stock-return/detail/{code}', fn ($code) => view('app', ['page' => 'transfer-stock-return-detail', 'code' => $code]))->where('code', '.*');
 Route::get('/warehouse/transfer_stok_retur', fn () => redirect('/warehouse/incoming/transfer-stock-return'));
 Route::get('/warehouse/incoming/transfer-stock-result', fn () => view('app', ['page' => 'transfer-stock-result']));
 Route::get('/warehouse/incoming/receive-material-non-fasilitas', fn () => view('app', ['page' => 'receive-material-non-fasilitas']));

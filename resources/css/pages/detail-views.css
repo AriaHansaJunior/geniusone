@@ -351,3 +351,29 @@
 .audit-log-table tr:last-child td {
   border-bottom: 0;
 }
+
+@media (max-width: 640px) {
+  .detail-top-bar {
+    padding: 10px 14px;
+    gap: 10px;
+  }
+
+  .detail-breadcrumb-trail {
+    flex-wrap: wrap;
+    row-gap: 4px;
+  }
+
+  .detail-top-bar__right {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .approval-timeline-card > div:first-child {
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
+  }
+
+  .approval-timeline-card > div:first-child > div:nth-child(2) {
+    display: none !important;
+  }
+}
