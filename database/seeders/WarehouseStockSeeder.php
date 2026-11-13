@@ -375,6 +375,7 @@ class WarehouseStockSeeder extends Seeder
             ?: $fallbackWarehouseId;
         $userId = DB::table('users')->value('id');
         $supplierId = DB::table('supliers')->value('id');
+        $currencyId = DB::table('currencies')->value('id');
         $poId = DB::table('purchase_order')->value('id');
         $jobId = DB::table('job_number')->value('id');
         $deptId = DB::table('departments')->value('id');
@@ -399,171 +400,133 @@ class WarehouseStockSeeder extends Seeder
             ]);
         }
 
-        if ($nozzleItem && $userId && $supplierId && $poId && $jobId && $deptId && $torId) {
-            $hasOctBpb = DB::table('bpb_receive_material')
-                ->where('bpb_number', '0138/WHIN-IMLI/G/X/2026')
-                ->exists();
-
-            if (! $hasOctBpb) {
-                $bpb1Id = DB::table('bpb_receive_material')->insertGetId([
+        if ($nozzleItem && $userId && $supplierId && $currencyId && $poId && $jobId && $deptId && $torId) {
+            $receiptSamples = [
+                [
                     'bpb_number' => '0112/WHIN-IMLI/G/IX/2026',
                     'note' => 'Beginning Balance / Inward Transfer',
                     'receive_date' => '2026-10-01 08:30:00',
-                    'status' => 'Approved',
-                    'creator_id' => $userId,
-                    'updated_by' => $userId,
-                    'created_at' => '2026-10-01 08:30:00',
-                    'updated_at' => '2026-10-01 08:30:00',
-                ]);
-
-                $rn1Id = DB::table('receive_note')->insertGetId([
                     'rn_number' => 'RN-2026-0891',
                     'arrival_date' => '2026-10-01 08:00:00',
-                    'status' => 'Approved',
-                    'creator_id' => $userId,
-                    'supliers_id' => $supplierId,
-                    'created_at' => '2026-10-01 08:00:00',
-                    'updated_at' => '2026-10-01 08:00:00',
-                ]);
-
-                $poRn1Id = DB::table('purchase_order_has_receive_note')->insertGetId([
-                    'purchase_order_id' => $poId,
-                    'receive_note_id' => $rn1Id,
                     'dn_number' => 'LOT-202609-01',
-                    'job_number_id' => $jobId,
-                    'item_name' => $nozzleItem->name,
                     'quantity' => 50.0,
-                    'rafaksi' => 0,
-                    'price' => 350000,
                     'grand_total' => 17500000,
                     'remark' => 'JOB-2026-77',
-                    'created_at' => '2026-10-01 08:30:00',
-                    'updated_at' => '2026-10-01 08:30:00',
-                ]);
-
-                DB::table('po_rn_to_bpb')->insert([
-                    'po_has_rn_id' => $poRn1Id,
-                    'bpb_receive_material_id' => $bpb1Id,
-                    'warehouses_id' => $whSparepartId,
-                    'created_at' => '2026-10-01 08:30:00',
-                    'updated_at' => '2026-10-01 08:30:00',
-                ]);
-
-                $rm1Id = DB::table('request_material')->insertGetId([
-                    'request_number' => 'REQ-WH-2026-001',
-                    'departments_id' => $deptId,
-                    'warehouses_id' => $whSparepartId,
-                    'type_of_request_id' => $torId,
-                    'destination_location_id' => $destId,
-                    'creator' => $userId,
-                    'updated_by' => $userId,
-                    'request_date' => '2026-10-03 14:15:00',
-                    'note' => '0120/WHOUT-IMLI/X/2026: Issue to Maintenance Line 2',
-                    'status' => 'Approved 2',
-                    'created_at' => '2026-10-03 14:15:00',
-                    'updated_at' => '2026-10-03 14:15:00',
-                ]);
-
-                DB::table('request_material_item')->insert([
-                    'items_id' => $nozzleItem->id,
-                    'request_material_id' => $rm1Id,
-                    'request' => 10.0,
-                    'remark' => 'Issue to Maintenance Line 2 | JOB-2026-77 | LOT-202609-01',
-                    'created_at' => '2026-10-03 14:15:00',
-                    'updated_at' => '2026-10-03 14:15:00',
-                ]);
-
-                $bpb2Id = DB::table('bpb_receive_material')->insertGetId([
+                ],
+                [
                     'bpb_number' => '0138/WHIN-IMLI/G/X/2026',
                     'note' => 'Receipt BPB from PT. Hasil Fastindo',
                     'receive_date' => '2026-10-08 15:50:00',
-                    'status' => 'Approved',
-                    'creator_id' => $userId,
-                    'updated_by' => $userId,
-                    'created_at' => '2026-10-08 15:50:00',
-                    'updated_at' => '2026-10-08 15:50:00',
-                ]);
-
-                $rn2Id = DB::table('receive_note')->insertGetId([
                     'rn_number' => '0131/RN-IMLI/X/2026',
                     'arrival_date' => '2026-10-08 15:00:00',
-                    'status' => 'Approved',
-                    'creator_id' => $userId,
-                    'supliers_id' => $supplierId,
-                    'created_at' => '2026-10-08 15:00:00',
-                    'updated_at' => '2026-10-08 15:00:00',
-                ]);
-
-                $poRn2Id = DB::table('purchase_order_has_receive_note')->insertGetId([
-                    'purchase_order_id' => $poId,
-                    'receive_note_id' => $rn2Id,
                     'dn_number' => 'LOT-202610-09',
-                    'job_number_id' => $jobId,
-                    'item_name' => $nozzleItem->name,
                     'quantity' => 25.0,
-                    'rafaksi' => 0,
-                    'price' => 350000,
                     'grand_total' => 8750000,
                     'remark' => 'JOB-2026-88',
-                    'created_at' => '2026-10-08 15:50:00',
-                    'updated_at' => '2026-10-08 15:50:00',
-                ]);
+                ],
+            ];
 
-                DB::table('po_rn_to_bpb')->insert([
-                    'po_has_rn_id' => $poRn2Id,
-                    'bpb_receive_material_id' => $bpb2Id,
-                    'warehouses_id' => $whSparepartId,
-                    'created_at' => '2026-10-08 15:50:00',
-                    'updated_at' => '2026-10-08 15:50:00',
-                ]);
+            foreach ($receiptSamples as $receipt) {
+                if (! DB::table('bpb_receive_material')->where('bpb_number', $receipt['bpb_number'])->exists()) {
+                    $bpbId = DB::table('bpb_receive_material')->insertGetId([
+                        'bpb_number' => $receipt['bpb_number'],
+                        'note' => $receipt['note'],
+                        'receive_date' => $receipt['receive_date'],
+                        'status' => 'Approved',
+                        'creator_id' => $userId,
+                        'updated_by' => $userId,
+                        'created_at' => $receipt['receive_date'],
+                        'updated_at' => $receipt['receive_date'],
+                    ]);
 
-                $rm2Id = DB::table('request_material')->insertGetId([
+                    $rnId = DB::table('receive_note')->where('rn_number', $receipt['rn_number'])->value('id')
+                        ?: DB::table('receive_note')->insertGetId([
+                            'rn_number' => $receipt['rn_number'],
+                            'arrival_date' => $receipt['arrival_date'],
+                            'status' => 'Approved',
+                            'supliers_id' => $supplierId,
+                            'currencies_id' => $currencyId,
+                            'rate' => 1.0,
+                            'updated_by' => $userId,
+                            'created_at' => $receipt['arrival_date'],
+                            'updated_at' => $receipt['arrival_date'],
+                        ]);
+
+                    $poRnId = DB::table('purchase_order_has_receive_note')->insertGetId([
+                        'purchase_order_id' => $poId,
+                        'receive_note_id' => $rnId,
+                        'dn_number' => $receipt['dn_number'],
+                        'job_number_id' => $jobId,
+                        'item_name' => $nozzleItem->name,
+                        'quantity' => $receipt['quantity'],
+                        'rafaksi' => 0,
+                        'price' => 350000,
+                        'grand_total' => $receipt['grand_total'],
+                        'remark' => $receipt['remark'],
+                        'created_at' => $receipt['receive_date'],
+                        'updated_at' => $receipt['receive_date'],
+                    ]);
+
+                    DB::table('po_rn_to_bpb')->insert([
+                        'po_has_rn_id' => $poRnId,
+                        'bpb_receive_material_id' => $bpbId,
+                        'warehouses_id' => $whSparepartId,
+                        'created_at' => $receipt['receive_date'],
+                        'updated_at' => $receipt['receive_date'],
+                    ]);
+                }
+            }
+
+            $outboundSamples = [
+                [
+                    'request_number' => 'REQ-WH-2026-001',
+                    'request_date' => '2026-10-03 14:15:00',
+                    'note' => '0120/WHOUT-IMLI/X/2026: Issue to Maintenance Line 2',
+                    'qty' => 10.0,
+                    'remark' => 'Issue to Maintenance Line 2 | JOB-2026-77 | LOT-202609-01',
+                ],
+                [
                     'request_number' => 'REQ-WH-2026-002',
-                    'departments_id' => $deptId,
-                    'warehouses_id' => $whSparepartId,
-                    'type_of_request_id' => $torId,
-                    'destination_location_id' => $destId,
-                    'creator' => $userId,
-                    'updated_by' => $userId,
                     'request_date' => '2026-10-12 11:20:00',
                     'note' => '0142/WHOUT-IMLI/X/2026: Issue to Production Workstation 3',
-                    'status' => 'Approved 2',
-                    'created_at' => '2026-10-12 11:20:00',
-                    'updated_at' => '2026-10-12 11:20:00',
-                ]);
-
-                DB::table('request_material_item')->insert([
-                    'items_id' => $nozzleItem->id,
-                    'request_material_id' => $rm2Id,
-                    'request' => 15.0,
+                    'qty' => 15.0,
                     'remark' => 'Issue to Production Workstation 3 | JOB-2026-88 | LOT-202610-09',
-                    'created_at' => '2026-10-12 11:20:00',
-                    'updated_at' => '2026-10-12 11:20:00',
-                ]);
-
-                $rm3Id = DB::table('request_material')->insertGetId([
+                ],
+                [
                     'request_number' => 'REQ-WH-2026-003',
-                    'departments_id' => $deptId,
-                    'warehouses_id' => $whSparepartId,
-                    'type_of_request_id' => $torId,
-                    'destination_location_id' => $destId,
-                    'creator' => $userId,
-                    'updated_by' => $userId,
                     'request_date' => '2026-10-15 16:40:00',
                     'note' => '0150/WHOUT-IMLI/X/2026: Issue to Preventive Overhaul Team',
-                    'status' => 'Approved 2',
-                    'created_at' => '2026-10-15 16:40:00',
-                    'updated_at' => '2026-10-15 16:40:00',
-                ]);
-
-                DB::table('request_material_item')->insert([
-                    'items_id' => $nozzleItem->id,
-                    'request_material_id' => $rm3Id,
-                    'request' => 5.0,
+                    'qty' => 5.0,
                     'remark' => 'Issue to Preventive Overhaul Team | JOB-2026-88 | LOT-202610-09',
-                    'created_at' => '2026-10-15 16:40:00',
-                    'updated_at' => '2026-10-15 16:40:00',
-                ]);
+                ],
+            ];
+
+            foreach ($outboundSamples as $outSample) {
+                if (! DB::table('request_material')->where('request_number', $outSample['request_number'])->exists()) {
+                    $rmId = DB::table('request_material')->insertGetId([
+                        'request_number' => $outSample['request_number'],
+                        'departments_id' => $deptId,
+                        'warehouses_id' => $whSparepartId,
+                        'type_of_request_id' => $torId,
+                        'destination_location_id' => $destId,
+                        'creator' => $userId,
+                        'updated_by' => $userId,
+                        'request_date' => $outSample['request_date'],
+                        'note' => $outSample['note'],
+                        'status' => 'Approved 2',
+                        'created_at' => $outSample['request_date'],
+                        'updated_at' => $outSample['request_date'],
+                    ]);
+
+                    DB::table('request_material_item')->insert([
+                        'items_id' => $nozzleItem->id,
+                        'request_material_id' => $rmId,
+                        'request' => $outSample['qty'],
+                        'remark' => $outSample['remark'],
+                        'created_at' => $outSample['request_date'],
+                        'updated_at' => $outSample['request_date'],
+                    ]);
+                }
             }
         }
     }
