@@ -149,7 +149,7 @@
 
 .dashboard-filters-grid .master-form-group {
   flex: 1 1 0;
-  min-width: 130px;
+  min-width: 160px;
   margin-bottom: 0;
 }
 
@@ -343,22 +343,161 @@
   margin: 0;
 }
 
-/* Responsive Dashboard (< 768px) */
+/* ==========================================================================
+   Dashboard Pending Approvals Card Component
+   ========================================================================== */
+.dashboard-approval-controls {
+  padding: 10px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid var(--line, #e2e8f0);
+  background: #fafafa;
+  flex-wrap: wrap;
+}
+
+.dashboard-approval-pills {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.dashboard-approval-filters {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  flex: 1 1 auto;
+  justify-content: flex-end;
+  min-width: 0;
+}
+
+.dashboard-approval-filter-item {
+  min-width: 0;
+}
+
+.dashboard-approval-filter-item--doctype {
+  min-width: 220px;
+  flex: 1 1 220px;
+  max-width: 280px;
+}
+
+.dashboard-approval-filter-item--sort {
+  min-width: 165px;
+  flex: 1 1 165px;
+  max-width: 200px;
+}
+
+.dashboard-approval-filter-item--search {
+  min-width: 230px;
+  flex: 2 1 230px;
+  max-width: 320px;
+}
+
+/* Responsive Dashboard (< 768px and Small Mobile 320px-480px) */
 @media (max-width: 768px) {
   .dashboard-rate-card__header {
     padding: 12px 14px;
     flex-direction: column;
     align-items: flex-start;
+    gap: 10px;
   }
+
   .dashboard-filters-bar {
     padding: 12px 14px;
   }
+
   .dashboard-filters-grid {
-    grid-template-columns: 1fr;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
   }
+
+  .dashboard-filters-grid .master-form-group {
+    flex: 1 1 100%;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .dashboard-filters-actions {
+    width: 100%;
+    display: flex;
+    justify-content: stretch;
+    gap: 8px;
+  }
+
+  .dashboard-filters-actions .button {
+    flex: 1 1 50%;
+  }
+
   .dashboard-table-toolbar {
     padding: 10px 14px;
     flex-direction: column;
     align-items: flex-start;
+    gap: 10px;
+  }
+
+  .dashboard-tabs {
+    padding: 10px 14px;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .dashboard-tabs__search {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .dashboard-approval-controls {
+    padding: 10px 14px;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .dashboard-approval-pills {
+    width: 100%;
+    gap: 6px;
+  }
+
+  .dashboard-approval-filters {
+    width: 100%;
+    justify-content: stretch;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .dashboard-approval-filter-item--doctype,
+  .dashboard-approval-filter-item--sort,
+  .dashboard-approval-filter-item--search {
+    min-width: 100%;
+    max-width: 100%;
+    width: 100%;
+    flex: 1 1 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .dashboard-view {
+    gap: 12px;
+  }
+
+  .dashboard-approval-pills button {
+    font-size: 11px !important;
+    padding: 4px 10px !important;
+  }
+
+  .dashboard-rate-card__title,
+  .dashboard-approval-card h3 {
+    font-size: 14px;
+  }
+
+  .dashboard-filters-bar,
+  .dashboard-approval-controls {
+    padding: 10px 10px;
   }
 }

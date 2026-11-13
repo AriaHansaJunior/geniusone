@@ -188,7 +188,7 @@ export function Field({
           ref={listRef}
           className="custom-select-dropdown"
           role="listbox"
-          style={{ minWidth: "100%", width: "max-content", maxWidth: "340px" }}
+          style={{ minWidth: "100%", width: "max-content", maxWidth: "min(92vw, 420px)" }}
         >
           {normalizedOptions.map((opt) => {
             const isSelected = opt.value === value;
@@ -203,7 +203,9 @@ export function Field({
                   handleSelectOption(opt.value);
                 }}
               >
-                <span className="custom-select-option-text">{opt.label}</span>
+                <span className="custom-select-option-text" title={opt.label}>
+                  {opt.label}
+                </span>
                 {isSelected && (
                   <span className="custom-select-option-check" aria-hidden="true">
                     <Icon name="check" size={14} strokeWidth={2.5} />

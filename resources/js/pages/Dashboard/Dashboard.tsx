@@ -352,8 +352,7 @@ export function Dashboard({
 
           <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
             <Button
-              variant="outline"
-              icon="refresh"
+              className="button-live-feed"
               onClick={handleCheckLiveFeed}
               disabled={isRefreshing}
             >

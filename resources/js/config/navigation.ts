@@ -148,7 +148,7 @@ export const navigationConfig: NavSection[] = [
         id: "warehouse-incoming",
         label: "Incoming",
         items: [
-          { id: "transfer-stock-return", label: "Transfer Stock Return", path: "/warehouse/incoming/transfer-stock-return", isPlaceholder: true },
+          { id: "transfer-stock-return", label: "Transfer Stock Return", path: "/warehouse/incoming/transfer-stock-return" },
           { id: "transfer-stock-result", label: "Transfer Stock Result", path: "/warehouse/incoming/transfer-stock-result", isPlaceholder: true },
           { id: "receive-material-non-fasilitas", label: "Receive Material (Non-Fasilitas)", path: "/warehouse/incoming/receive-material-non-fasilitas", isPlaceholder: true },
           { id: "warehouse", label: "Receive Material (BPB)", path: "/warehouse/incoming/receive-material-bpb" },
