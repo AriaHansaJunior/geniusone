@@ -468,8 +468,16 @@ export async function fetchMasterClassifications(): Promise<ClassificationRecord
     code: r.code || "",
     name: r.name || "",
     description: r.description || "",
-    reportingType: r.reporting_type || r.hs_group || "-",
-    account: r.account ? `${r.account.code} - ${r.account.name}` : (r.account_name || undefined),
+    reportingType:
+      r.reporting_type?.name ||
+      (typeof r.reporting_type === "string" ? r.reporting_type : "") ||
+      r.hs_group ||
+      "-",
+    account: r.account
+      ? typeof r.account === "object"
+        ? `${r.account.code || ""} - ${r.account.name || ""}`.replace(/^ - | - $/g, "")
+        : String(r.account)
+      : r.account_name || undefined,
     status: isTruthyStatus(r.status),
   }));
 }
@@ -493,7 +501,11 @@ export async function saveClassificationApi(record: ClassificationRecord, isEdit
     code: r?.code || record.code,
     name: r?.name || record.name,
     description: r?.description ?? record.description ?? "",
-    reportingType: r?.reporting_type || record.reportingType || "-",
+    reportingType:
+      r?.reporting_type?.name ||
+      (typeof r?.reporting_type === "string" ? r.reporting_type : "") ||
+      record.reportingType ||
+      "-",
     status: isTruthyStatus(r?.status ?? record.status),
   };
 }
@@ -1368,6 +1380,10 @@ export async function fetchMasterReceiveNotes(): Promise<ReceiveNoteRecord[] | n
 
   return rows.map((r: any, idx: number) => {
     const rawFac = String(r.facility || "");
+    const supplierName =
+      typeof r.supplier === "object" && r.supplier !== null
+        ? String(r.supplier.name || r.supplier.code || "-")
+        : String(r.supplier || r._rawSupplier || "-");
     const items = Array.isArray(r.items)
       ? r.items.map((it: any, iIdx: number) => ({
           id: String(it.id || iIdx + 1),
@@ -1378,14 +1394,14 @@ export async function fetchMasterReceiveNotes(): Promise<ReceiveNoteRecord[] | n
           dnDate: it.dnDate || it.dn_date || "-",
           jobNumber: it.jobNumber || it.job_number || "-",
           jobDate: it.jobDate || it.job_date || "-",
-          itemCode: it.itemCode || it.code || "-",
-          itemName: it.itemName || it.item || "-",
+          itemCode: it.itemCode || it.item_code || it.code || "-",
+          itemName: it.itemName || it.item_name || it.item || "-",
           qty: Number(it.quantity ?? it.qty ?? 0),
           unit: it.unit || "-",
           rafaksi: Number(it.rafaksi ?? 0),
           rafaksiPercent: Number(it.rafaksi_percent ?? 0),
           pricePerUnit: Number(it.price ?? it.pricePerUnit ?? 0),
-          priceSubtotal: Number(it.subtotal ?? (Number(it.quantity || 0) * Number(it.price || 0))),
+          priceSubtotal: Number(it.priceSubtotal ?? it.subtotal ?? it.grand_total ?? (Number(it.quantity || 0) * Number(it.price || 0))),
           price2PerUnit: Number(it.price2 ?? it.price ?? 0),
           price2Subtotal: Number(it.subtotal2 ?? it.subtotal ?? 0),
           remark: it.remark || "-",
@@ -1393,7 +1409,7 @@ export async function fetchMasterReceiveNotes(): Promise<ReceiveNoteRecord[] | n
           sjDate: it.sj_date || r.sj_date || "-",
           poQty: Number(it.po_qty ?? it.quantity ?? 0),
           dlvrQty: Number(it.dlvr_qty ?? it.quantity ?? 0),
-          suratJalanQty: Number(it.surat_jalan_qty ?? it.quantity ?? 0),
+          suratJalanQty: Number(it.surat_jalan_qty ?? it.suratJalanQty ?? it.quantity ?? 0),
         }))
       : [];
 
@@ -1404,25 +1420,25 @@ export async function fetchMasterReceiveNotes(): Promise<ReceiveNoteRecord[] | n
     return {
       id: String(r.id || r._id || idx + 1),
       no: idx + 1,
-      rnNumber: r.rn_number || r._rawRn || "",
+      rnNumber: r.rn_number || r.rnNumber || r._rawRn || "",
       arrivalDate: r.arrival_date || r.date || "-",
       poNumber: r.po_number || items[0]?.poNumber || "-",
       date: r.date || r.arrival_date || "-",
-      supplier: r.supplier || r._rawSupplier || "-",
+      supplier: supplierName,
       facility: /non/i.test(rawFac) ? "NON FASILITAS" : "FASILITAS",
-      bcCode: r.bc_type || "-",
+      bcCode: r.bc_code || r.bcCode || r.bc_type || "-",
       ajuNumber: r.aju_number || "-",
       noDaftar: r.no_daftar || "-",
-      amount: Number(r.grand_total ?? totalSubtotal),
-      amountFormatted: `${r.currency || "IDR"} ${Number(r.grand_total ?? totalSubtotal).toLocaleString("en-US", { minimumFractionDigits: 2 })}`,
+      amount: Number(r.grand_total ?? r.amount ?? totalSubtotal),
+      amountFormatted: r.amountFormatted || r.formatted_grand_total || `${r.currency || "IDR"} ${Number(r.grand_total ?? totalSubtotal).toLocaleString("en-US", { minimumFractionDigits: 2 })}`,
       description: r.note || r.description || "-",
-      warehouseTransaction: bpbNumbers[0] || "-",
-      bpb_number: bpbNumbers[0] || undefined,
-      is_received_in_bpb: Boolean(r.is_received || bpbNumbers.length > 0),
+      warehouseTransaction: bpbNumbers[0] || r.bpb_number || "-",
+      bpb_number: bpbNumbers[0] || r.bpb_number || undefined,
+      is_received_in_bpb: Boolean(r.is_received || r.is_received_in_bpb || bpbNumbers.length > 0),
       notes: r.note || r.description || "-",
       note: r.note || r.description || "-",
       remark: r.note || r.description || "-",
-      currency: r.currency || "IDR",
+      currency: typeof r.currency === "object" && r.currency !== null ? String(r.currency.code || r.currency.name || "IDR") : String(r.currency || "IDR"),
       rate: Number(r.rate || 1),
       invoiceNumber: r.invoice_number || "-",
       invoiceDate: r.invoice_date || "-",
@@ -1436,8 +1452,8 @@ export async function fetchMasterReceiveNotes(): Promise<ReceiveNoteRecord[] | n
       status: String(r.status || "Waiting for Approve 1"),
       createdAt: formatDisplayDate(r.created_at),
       lastUpdatedAt: formatDisplayDate(r.updated_at || r.created_at),
-      approval1At: r.approval1_at || "-",
-      approval2At: r.approval2_at || "-",
+      approval1At: r.approval_1_at || r.approval1_at || "-",
+      approval2At: r.approval_2_at || r.approval2_at || "-",
       items,
       totalQty: Number(r.total_qty ?? totalQty),
       biayaLain: Number(r.biaya_lain ?? 0),

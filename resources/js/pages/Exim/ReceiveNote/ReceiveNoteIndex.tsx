@@ -77,7 +77,10 @@ export function ReceiveNoteIndex({
                 arrivalDate: ar.arrival_date ? ar.arrival_date.slice(0, 10) : (existing?.arrivalDate || "-"),
                 poNumber: ar.items?.[0]?.po_number || existing?.poNumber || "—",
                 date: ar.sj_date || existing?.date || "—",
-                supplier: ar.supplier?.name || existing?.supplier || "—",
+                supplier:
+                  typeof ar.supplier === "object" && ar.supplier !== null
+                    ? ar.supplier.name || existing?.supplier || "—"
+                    : ar.supplier || existing?.supplier || "—",
                 facility: ar.facility || existing?.facility || "FASILITAS",
                 bcCode: ar.bc_code || ar.bcCode || existing?.bcCode || "BC 4.0",
                 ajuNumber: ar.aju_number || ar.ajuNumber || existing?.ajuNumber || "00004001456220261014004999",

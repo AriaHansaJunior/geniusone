@@ -43,6 +43,19 @@ interface DashboardPendingApprovalsProps {
   onReceiveNotesUpdate?: React.Dispatch<React.SetStateAction<ReceiveNoteRecord[]>>;
 }
 
+function toSafeText(val: any, fallback = "—"): string {
+  if (val === null || val === undefined || val === "") return fallback;
+  if (typeof val === "string") return val.trim() || fallback;
+  if (typeof val === "number" || typeof val === "boolean") return String(val);
+  if (typeof val === "object") {
+    const candidate = val.name ?? val.nama ?? val.code ?? val.label ?? val.title ?? val.id;
+    return candidate !== undefined && candidate !== null && String(candidate).trim() !== ""
+      ? String(candidate).trim()
+      : fallback;
+  }
+  return String(val);
+}
+
 function parseDateToTimestamp(dateStr?: string): number {
   if (!dateStr || dateStr === "-") return 0;
   const clean = dateStr.trim();
@@ -118,14 +131,14 @@ export function DashboardPendingApprovals({
             module: "purchase_requisition",
             docType: "PR",
             docNumber: docNum,
-            date: String(row._rawDate || row.date || "-"),
-            party: String(row._rawDept || row.deptRequest || "—"),
-            amountFormatted: String(row._rawTotal || row.totalEstimatedAmount || "—"),
+            date: toSafeText(row._rawDate || row.date, "-"),
+            party: toSafeText(row._rawDept || row.deptRequest, "—"),
+            amountFormatted: toSafeText(row._rawTotal || row.totalEstimatedAmount, "—"),
             amountNumeric: typeof row._numericTotal === "number" ? row._numericTotal : 0,
             itemsSummary: String(row._rawItemCount ? `${row._rawItemCount} items` : "—"),
             status: local.status,
             currentTier: local.currentTier,
-            createdAtRaw: parseDateToTimestamp(String(row._rawDate || row.date || "")),
+            createdAtRaw: parseDateToTimestamp(toSafeText(row._rawDate || row.date, "")),
           });
         }
       }
@@ -144,21 +157,21 @@ export function DashboardPendingApprovals({
         const local = getLocalApprovalState("purchase_order", docNum, norm);
 
         if (local.status === "WAITING_APPROVE_1" || local.status === "WAITING_APPROVE_2") {
-          const rawAmount = String(row._rawTotalPrice || row.totalPrice || "");
+          const rawAmount = toSafeText(row._rawTotalPrice || row.totalPrice, "");
           const numAmount = parseFloat(rawAmount.replace(/[^0-9.-]/g, "")) || 0;
           collected.push({
             id: `po-${docNum}`,
             module: "purchase_order",
             docType: "PO",
             docNumber: docNum,
-            date: String(row._rawDate || row.date || "-"),
-            party: String(row._rawSupplier || row.supplier || "—"),
+            date: toSafeText(row._rawDate || row.date, "-"),
+            party: toSafeText(row._rawSupplier || row.supplier, "—"),
             amountFormatted: rawAmount || "—",
             amountNumeric: numAmount,
             itemsSummary: String(row._rawItemCount ? `${row._rawItemCount} items` : "—"),
             status: local.status,
             currentTier: local.currentTier,
-            createdAtRaw: parseDateToTimestamp(String(row._rawDate || row.date || "")),
+            createdAtRaw: parseDateToTimestamp(toSafeText(row._rawDate || row.date, "")),
           });
         }
       }
@@ -182,16 +195,16 @@ export function DashboardPendingApprovals({
             module: "receive_note",
             docType: "Receive Note",
             docNumber: docNum,
-            date: rn.arrivalDate || rn.date || "-",
-            party: rn.supplier || "—",
+            date: toSafeText(rn.arrivalDate || rn.date, "-"),
+            party: toSafeText(rn.supplier, "—"),
             amountFormatted:
               rn.amountFormatted ||
               `IDR ${Number(rn.amount || 0).toLocaleString("en-US", { minimumFractionDigits: 2 })}`,
             amountNumeric: Number(rn.amount || 0),
-            itemsSummary: `${rn.items?.length || 0} items${rn.poNumber ? ` (${rn.poNumber})` : ""}`,
+            itemsSummary: `${rn.items?.length || 0} items${rn.poNumber ? ` (${toSafeText(rn.poNumber, "")})` : ""}`,
             status: local.status,
             currentTier: local.currentTier,
-            createdAtRaw: parseDateToTimestamp(rn.arrivalDate || rn.date || ""),
+            createdAtRaw: parseDateToTimestamp(toSafeText(rn.arrivalDate || rn.date, "")),
           });
         }
       }
@@ -215,14 +228,14 @@ export function DashboardPendingApprovals({
             module: "bpb",
             docType: "Receive Material (BPB)",
             docNumber: docNum,
-            date: String(row._rawDate || row.date || "-"),
-            party: String(row._rawSupplier || row.supplier || "—"),
+            date: toSafeText(row._rawDate || row.date, "-"),
+            party: toSafeText(row._rawSupplier || row.supplier, "—"),
             amountFormatted: "—",
             amountNumeric: 0,
             itemsSummary: String(row._rawItemCount ? `${row._rawItemCount} received items` : "—"),
             status: local.status,
             currentTier: local.currentTier,
-            createdAtRaw: parseDateToTimestamp(String(row._rawDate || row.date || "")),
+            createdAtRaw: parseDateToTimestamp(toSafeText(row._rawDate || row.date, "")),
           });
         }
       }
@@ -241,13 +254,15 @@ export function DashboardPendingApprovals({
         const local = getLocalApprovalState("request_material", docNum, norm);
 
         if (local.status === "WAITING_APPROVE_1" || local.status === "WAITING_APPROVE_2") {
+          const deptText = toSafeText(req.department, "—");
+          const creatorText = req.createdBy ? toSafeText(req.createdBy, "") : "";
           collected.push({
             id: `req-${docNum}`,
             module: "request_material",
             docType: "Request Material",
             docNumber: docNum,
-            date: req.requestDate || req.createdDate || "-",
-            party: `${req.department || "—"}${req.createdBy ? ` (${req.createdBy})` : ""}`,
+            date: toSafeText(req.requestDate || req.createdDate, "-"),
+            party: `${deptText}${creatorText && creatorText !== "—" ? ` (${creatorText})` : ""}`,
             amountFormatted: "—",
             amountNumeric: 0,
             itemsSummary: `${req.totalItems || req.items?.length || 0} material items`,
