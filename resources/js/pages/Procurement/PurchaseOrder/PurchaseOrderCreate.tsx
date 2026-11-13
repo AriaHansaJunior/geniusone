@@ -135,7 +135,7 @@ export function PurchaseOrderCreate({
   // Tax and Financial Summary Options
   const [discountOverallPercent, setDiscountOverallPercent] = useState<number>(0);
   const [isPpnActive, setIsPpnActive] = useState<boolean>(true);
-  const [isKawasanBerikat, setIsKawasanBerikat] = useState<boolean>(false);
+  const [isKawasanBerikat, setIsKawasanBerikat] = useState<boolean>(true);
 
   // Dialog States
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
@@ -1139,8 +1139,8 @@ const handleConfirmSubmit = async () => {
       deliveryTerm,
       latest_delivery: latestDelivery,
       service_subkon: isSubkon,
-      facility_status: statusFacility === "Non Facility" ? "NON FASILITAS" : (isKawasanBerikat || statusFacility === "Facility" ? "FASILITAS" : "NON FASILITAS"),
-      is_kawasan_berikat: statusFacility === "Non Facility" ? false : isKawasanBerikat,
+      facility_status: statusFacility === "Non Facility" ? "NON FASILITAS" : "FASILITAS",
+      is_kawasan_berikat: statusFacility === "Facility" ? true : isKawasanBerikat,
       remark: remarkPo,
       items: items.map((it) => {
         const hasDiscount = it.discountType && it.discountType !== "none";
@@ -1201,6 +1201,7 @@ const handleConfirmSubmit = async () => {
         _rawPaymentMethod: paymentMethod,
         _rawPaymentTerm: paymentTerm,
         _rawFacility: statusFacility === "Facility" ? "FASILITAS" : "NON FASILITAS",
+        is_kawasan_berikat: statusFacility === "Facility" ? true : isKawasanBerikat,
         _rawDeptCreated: "PROCUREMENT",
         _rawCreatedBy: "ADMINISTRATOR " + today,
         _rawRemark: remarkPo || "New PO",
@@ -2205,30 +2206,44 @@ return (
               <span>{ppnAmount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
             </div>
 
-            {/* Kawasan Berikat (Only appears when PPN is checked) */}
-            {isPpnActive && (
-              <div
-                className="po-summary-row"
+            {/* Kawasan Berikat Routing & Tax Rule: Facility = mandatory Kawasan Berikat; Non Facility = optional */}
+            <div
+              className="po-summary-row"
+              style={{
+                padding: "4px 8px",
+                background: "rgba(241, 245, 249, 0.7)",
+                borderRadius: "var(--radius-xs)",
+                fontSize: "11.5px",
+              }}
+            >
+              <label
+                className="master-checkbox-label"
                 style={{
-                  padding: "4px 8px",
-                  background: "rgba(241, 245, 249, 0.7)",
-                  borderRadius: "var(--radius-xs)",
                   fontSize: "11.5px",
+                  gap: "6px",
+                  opacity: statusFacility === "Facility" ? 0.85 : 1,
                 }}
               >
-                <label className="master-checkbox-label" style={{ fontSize: "11.5px", gap: "6px" }}>
-                  <input
-                    type="checkbox"
-                    checked={isKawasanBerikat}
-                    onChange={(e) => setIsKawasanBerikat(e.target.checked)}
-                  />
-                  <span style={{ fontWeight: 600 }}>Kawasan Berikat (PPN Ditangguhkan)</span>
-                </label>
-                <span style={{ fontSize: "11px", color: isKawasanBerikat ? "var(--blue-700)" : "var(--muted)", fontWeight: 700 }}>
-                  {isKawasanBerikat ? "Ditangguhkan (Rp 0.00)" : "Dipungut"}
+                <input
+                  type="checkbox"
+                  checked={statusFacility === "Facility" ? true : isKawasanBerikat}
+                  disabled={statusFacility === "Facility"}
+                  onChange={(e) => setIsKawasanBerikat(e.target.checked)}
+                />
+                <span style={{ fontWeight: 600 }}>
+                  Kawasan Berikat {statusFacility === "Facility" ? "(Mandatory)" : "(Optional)"}
                 </span>
-              </div>
-            )}
+              </label>
+              <span
+                style={{
+                  fontSize: "11px",
+                  color: (statusFacility === "Facility" || isKawasanBerikat) ? "var(--blue-700)" : "var(--muted)",
+                  fontWeight: 700,
+                }}
+              >
+                {statusFacility === "Facility" || isKawasanBerikat ? "Via Receive Note (RN)" : "Direct to BPB"}
+              </span>
+            </div>
 
             <div className="po-summary-row">
               <span>Total Additional Costs</span>

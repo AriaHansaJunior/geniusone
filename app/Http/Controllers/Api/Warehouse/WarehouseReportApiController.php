@@ -59,6 +59,7 @@ class WarehouseReportApiController extends Controller
             ->join('po_rn_to_bpb as pb', 'pb.po_has_rn_id', '=', 'porn.id')
             ->join('bpb_receive_material as bpb', 'pb.bpb_receive_material_id', '=', 'bpb.id')
             ->leftJoin('receive_note as rn', 'porn.receive_note_id', '=', 'rn.id')
+            ->leftJoin('purchase_order as po', 'porn.purchase_order_id', '=', 'po.id')
             ->leftJoin('warehouses as w', 'pb.warehouses_id', '=', 'w.id')
             ->leftJoin('job_number as j', 'porn.job_number_id', '=', 'j.id')
             ->where('bpb.status', '!=', 'Rejected')
@@ -80,8 +81,10 @@ class WarehouseReportApiController extends Controller
         $allInbounds = $inboundsQuery->select([
             'bpb.id as bpb_id',
             'bpb.bpb_number',
+            'bpb.source_type',
             DB::raw('COALESCE(bpb.receive_date, rn.arrival_date, bpb.created_at) as movement_date'),
             'rn.rn_number',
+            'po.po_number',
             'porn.quantity',
             'porn.rafaksi',
             'porn.dn_number',
@@ -172,8 +175,8 @@ class WarehouseReportApiController extends Controller
                 'sort_id' => (int) $in->bpb_id,
                 'doc_type' => 'Receive Material (BPB)',
                 'doc_number' => $in->bpb_number ?: ($in->rn_number ?: 'BPB-'.str_pad($in->bpb_id, 4, '0', STR_PAD_LEFT)),
-                'reference_no' => $in->bpb_number ?: ($in->rn_number ?: '-'),
-                'history_doc_in' => $in->rn_number ?: '-',
+                'reference_no' => $in->bpb_number ?: ($in->rn_number ?: ($in->po_number ?: '-')),
+                'history_doc_in' => $in->rn_number ?: ($in->po_number ? 'Direct PO: '.$in->po_number : '-'),
                 'doc_out_ref' => '—',
                 'warehouse' => $whClean,
                 'warehouse_id' => $in->warehouse_id,

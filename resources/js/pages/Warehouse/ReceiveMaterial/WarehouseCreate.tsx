@@ -10,6 +10,11 @@ import { initialItemRecords } from "../../Exim/Master/Item/item-data";
 import { poRows, warehouseRows } from "../../../data/mockData";
 import { fetchList, fetchDetail, createWarehouseBpb } from "../../../data/api";
 import { getLocalApprovalState } from "../../../services/approvalApi";
+import {
+  PickBpbSourceModal,
+  BpbSourceType,
+  isPoKawasanBerikat,
+} from "./PickBpbSourceModal";
 
 export interface BPBItemRow {
   id: string;
@@ -53,6 +58,7 @@ export function WarehouseCreate({
   const [jobNumbers, setJobNumbers] = useState<string[]>([]);
 
   // Header State
+  const [sourceType, setSourceType] = useState<BpbSourceType>("RN");
   const [rnNumber, setRnNumber] = useState("");
   const [poNumberHeader, setPoNumberHeader] = useState(initialPoNumber || "");
   const [bpbType, setBpbType] = useState("Gudang");
@@ -69,12 +75,13 @@ export function WarehouseCreate({
   const [regDate, setRegDate] = useState(today);
   const [remark, setRemark] = useState("");
 
-  // Items State — auto populated from selected RN
+  // Items State — populated from selected RN or Direct Non-Berikat PO
   const [items, setItems] = useState<BPBItemRow[]>([]);
 
   // Dialog & Feedback State
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [showSaveConfirm, setShowSaveConfirm] = useState(false);
+  const [isSourcePickerOpen, setIsSourcePickerOpen] = useState(false);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [notification, setNotification] = useState<{ type: "success" | "error" | "warning"; message: string } | null>(null);
@@ -172,24 +179,36 @@ export function WarehouseCreate({
     return false;
   };
 
-  // Populate form from selected PO
+  // Populate form from selected Non-Kawasan Berikat PO (Direct PO -> BPB)
   const populateFromPo = (poObj: any) => {
     if (!poObj) return;
-    const poNum = poObj._rawNumber || poObj._rawPo || poObj.poNumber || "";
+    const poNum = poObj._rawNumber || poObj._rawPo || poObj.poNumber || poObj.po_number || "";
+
+    if (isPoKawasanBerikat(poObj)) {
+      setNotification({
+        type: "error",
+        message: `Purchase Order ${poNum} is a Kawasan Berikat PO and must go through Receive Note (RN) first before Receive Material (BPB).`,
+      });
+      setSourceType("RN");
+      setPoNumberHeader("");
+      setItems([]);
+      return;
+    }
+
     const prNum = poObj._rawPr || poObj.prNumber || "—";
     const rawSup = String(poObj._rawSupplier || poObj.supplier || "").replace(/^\[[^\]]+\]\s*/, "").trim();
 
+    setSourceType("PO");
+    setRnNumber("");
     setPoNumberHeader(poNum);
     if (rawSup) {
       setSupplier(rawSup);
     }
-
-    if (poObj._rawRn && poObj._rawRn !== "—") {
-      setRnNumber(poObj._rawRn);
-    } else if (!rnNumber.trim()) {
-      const rand = String(Math.floor(Math.random() * 900) + 100).padStart(4, "0");
-      setRnNumber(`${rand}/RN-IMLI/X/2026`);
-    }
+    setInvoiceNumber("");
+    setTaxInvoice("");
+    setPlateNo("");
+    setAjuNumber("");
+    setNoPen("");
 
     if (poObj._rawRemark && poObj._rawRemark !== "-") {
       setRemark(poObj._rawRemark);
@@ -211,14 +230,14 @@ export function WarehouseCreate({
           poNumber: poNum,
           prNumber: it.prNumber || prNum,
           name: it.item || it.itemName || "Material Item",
-          code: it.itemCode || it.itemAlias || "10.100.100.001",
+          code: it.itemCode || it.itemAlias || "—",
           jobNumber: it.jobNumber || "—",
           deliveryNote: defaultSj,
           orderedQty: qtyNum,
           receiveQty: qtyNum,
           unit: unitStr,
           location: warehouses[0]?.name || "Gudang Sparepart",
-          purpose: it.remark || poObj._rawRemark || "Warehouse Inbound Receipt",
+          purpose: it.remark || poObj._rawRemark || "Direct PO Warehouse Receipt",
         };
       });
       setItems(mapped);
@@ -230,14 +249,14 @@ export function WarehouseCreate({
           poNumber: poNum,
           prNumber: prNum,
           name: poObj.material || poObj._rawMaterialName || poObj.itemName || poObj.item || (poObj.items && poObj.items[0]?.itemName) || "Material Item",
-          code: poObj.itemCode || poObj._rawMaterialCode || "10.100.100.001",
+          code: poObj.itemCode || poObj._rawMaterialCode || "—",
           jobNumber: "—",
           deliveryNote: defaultSj,
           orderedQty: totalQtyNum,
           receiveQty: totalQtyNum,
           unit: "PCE",
           location: warehouses[0]?.name || "Gudang Sparepart",
-          purpose: poObj._rawRemark || "Warehouse Inbound Receipt",
+          purpose: poObj._rawRemark || "Direct PO Warehouse Receipt",
         },
       ]);
 
@@ -258,14 +277,14 @@ export function WarehouseCreate({
                 poNumber: poNum,
                 prNumber: it.prNumber || prNum,
                 name: it.item || it.itemName || "Material Item",
-                code: it.itemCode || it.itemAlias || "10.100.100.001",
+                code: it.itemCode || it.itemAlias || "—",
                 jobNumber: it.jobNumber || "—",
                 deliveryNote: defaultSj,
                 orderedQty: qtyNum,
                 receiveQty: qtyNum,
                 unit: unitStr,
                 location: warehouses[0]?.name || "Gudang Sparepart",
-                purpose: it.remark || detail._rawRemark || "Warehouse Inbound Receipt",
+                purpose: it.remark || detail._rawRemark || "Direct PO Warehouse Receipt",
               };
             });
             setItems(detailMapped);
@@ -386,6 +405,7 @@ export function WarehouseCreate({
       return;
     }
 
+    setSourceType("RN");
     setRnNumber(selectedRnNumber);
     setNotification(null);
 
@@ -572,38 +592,106 @@ export function WarehouseCreate({
     };
   }, [initialPoNumber]);
 
-  // Add Item Line
-  const handleAddItemLine = () => {
-    const defaultWh =
-      warehouses[0]?.name ||
-      (initialWarehouseMasterRecords[0] as any)?.name ||
-      "Gudang Sparepart";
-    const newItem: BPBItemRow = {
-      id: `bpb-item-${Date.now()}-${items.length + 1}`,
-      poNumber: poNumberHeader || "POL-1026-0040",
-      prNumber: "—",
-      name: "",
-      code: "",
-      jobNumber: "—",
-      deliveryNote: items[0]?.deliveryNote || `SJ-${new Date().getFullYear()}-001`,
-      orderedQty: 1,
-      receiveQty: 1,
-      unit: "PCE",
-      location: defaultWh,
-      purpose: remark || "Operational Warehouse Receipt",
-    };
-    setItems((prev) => [...prev, newItem]);
+  const handleSelectPo = (selectedPoNumber: string) => {
+    if (!selectedPoNumber) {
+      setPoNumberHeader("");
+      setSupplier("");
+      setRemark("");
+      setItems([]);
+      setNotification(null);
+      return;
+    }
+
+    const matchedPo = approvedPos.find((p) => {
+      const num = getSafeDocString(p._rawNumber) || getSafeDocString(p._rawPo) || getSafeDocString(p.poNumber) || getSafeDocString(p.po_number);
+      return num === selectedPoNumber;
+    });
+
+    if (matchedPo) {
+      populateFromPo(matchedPo);
+    } else {
+      fetchDetail("po", selectedPoNumber).then((detail) => {
+        if (detail) populateFromPo(detail);
+      });
+    }
+  };
+
+  // Add Item via Source Picker Modal (PO / RN -> Document Number -> Items)
+  const handleAddItemsFromSourcePicker = ({
+    sourceType: pickedSource,
+    sourceNumber: pickedNumber,
+    sourceRecord,
+    items: pickedItems,
+  }: {
+    sourceType: BpbSourceType;
+    sourceNumber: string;
+    sourceRecord: any;
+    items: BPBItemRow[];
+  }) => {
+    setNotification(null);
+    setFormErrors((prev) => {
+      const next = { ...prev };
+      delete next.rnNumber;
+      delete next.poNumber;
+      delete next.items;
+      return next;
+    });
+
+    if (pickedSource === "RN") {
+      setSourceType("RN");
+      setRnNumber(pickedNumber);
+      setPoNumberHeader(pickedItems[0]?.poNumber || "");
+      const supName =
+        sourceRecord?.supplier?.name ||
+        sourceRecord?.supplierName ||
+        (typeof sourceRecord?.supplier === "string" ? sourceRecord.supplier : "");
+      if (supName) setSupplier(supName);
+      setInvoiceNumber(sourceRecord?.invoice_number && sourceRecord.invoice_number !== "-" ? sourceRecord.invoice_number : "-");
+      setInvoiceDate(sourceRecord?.invoice_date || sourceRecord?.arrival_date?.slice(0, 10) || today);
+      setTaxInvoice(sourceRecord?.tax_invoice && sourceRecord.tax_invoice !== "-" ? sourceRecord.tax_invoice : "-");
+      setPlateNo(sourceRecord?.license_plate && sourceRecord.license_plate !== "-" ? sourceRecord.license_plate : "-");
+      setAjuNumber(sourceRecord?.aju_number && sourceRecord.aju_number !== "-" ? sourceRecord.aju_number : "-");
+      setAjuDate(sourceRecord?.aju_date || sourceRecord?.arrival_date?.slice(0, 10) || today);
+      setNoPen(sourceRecord?.no_pen && sourceRecord.no_pen !== "-" ? sourceRecord.no_pen : "-");
+      setRegDate(sourceRecord?.reg_date || sourceRecord?.arrival_date?.slice(0, 10) || today);
+      if (sourceRecord?.note && sourceRecord.note !== "-") setRemark(sourceRecord.note);
+      setItems(pickedItems);
+      return;
+    }
+
+    // PO Source Mode (Non-Kawasan Berikat Direct PO)
+    const rawSup = String(sourceRecord?._rawSupplier || sourceRecord?.supplier || "").replace(/^\[[^\]]+\]\s*/, "").trim();
+    const isSwitchingToPo = sourceType !== "PO" || poNumberHeader !== pickedNumber;
+    setSourceType("PO");
+    setRnNumber("");
+    setPoNumberHeader(pickedNumber);
+    if (rawSup) setSupplier(rawSup);
+    setInvoiceNumber("");
+    setTaxInvoice("");
+    setPlateNo("");
+    setAjuNumber("");
+    setNoPen("");
+    if (sourceRecord?._rawRemark && sourceRecord._rawRemark !== "-") {
+      setRemark(sourceRecord._rawRemark);
+    }
+
+    if (isSwitchingToPo) {
+      setItems(pickedItems);
+    } else {
+      setItems((prev) => {
+        const existingSignatures = new Set(
+          prev.map((it) => `${it.poNumber}::${it.po_has_items_id ?? it.name}`)
+        );
+        const newUnique = pickedItems.filter(
+          (it) => !existingSignatures.has(`${it.poNumber}::${it.po_has_items_id ?? it.name}`)
+        );
+        return [...prev, ...newUnique];
+      });
+    }
   };
 
   // Delete Item Line
   const handleDeleteItemLine = (id: string) => {
-    if (items.length <= 1) {
-      setNotification({
-        type: "error",
-        message: "At least one material item line is required for a BPB document.",
-      });
-      return;
-    }
     setItems((prev) => prev.filter((i) => i.id !== id));
   };
 
@@ -649,25 +737,40 @@ export function WarehouseCreate({
   // Validation
   const validate = () => {
     const errors: Record<string, string> = {};
-    if (!rnNumber.trim()) {
-      errors.rnNumber = "RN Number is required.";
-    } else {
-      const existingBpb = findExistingBpbForRn(rnNumber.trim());
-      if (existingBpb) {
-        errors.rnNumber = `RN ${rnNumber} has already been received in BPB ${existingBpb.bpbNumber}. Duplicate receipt is prohibited.`;
+    if (sourceType === "RN") {
+      if (!rnNumber.trim()) {
+        errors.rnNumber = "RN Number is required when source is Receive Note (RN).";
+      } else {
+        const existingBpb = findExistingBpbForRn(rnNumber.trim());
+        if (existingBpb) {
+          errors.rnNumber = `RN ${rnNumber} has already been received in BPB ${existingBpb.bpbNumber}. Duplicate receipt is prohibited.`;
+        }
+        const matchedRn = existingRns.find((r) => {
+          const num = getSafeDocString(r.rn_number) || getSafeDocString(r._rawRn) || getSafeDocString(r.rnNumber);
+          return num === rnNumber.trim();
+        });
+        if (matchedRn && !isRnApproved(matchedRn)) {
+          errors.rnNumber = `RN ${rnNumber} has not been approved yet. Only approved Receive Notes can be accepted into the warehouse.`;
+        }
       }
-      const matchedRn = existingRns.find((r) => {
-        const num = getSafeDocString(r.rn_number) || getSafeDocString(r._rawRn) || getSafeDocString(r.rnNumber);
-        return num === rnNumber.trim();
-      });
-      if (matchedRn && !isRnApproved(matchedRn)) {
-        errors.rnNumber = `RN ${rnNumber} has not been approved yet. Only approved Receive Notes can be accepted into the warehouse.`;
+    } else {
+      const targetPoNum = poNumberHeader.trim() || items[0]?.poNumber || "";
+      if (!targetPoNum) {
+        errors.poNumber = "PO Number is required when source is Purchase Order (PO).";
+      } else {
+        const matchedPo = approvedPos.find((p) => {
+          const num = getSafeDocString(p._rawNumber) || getSafeDocString(p._rawPo) || getSafeDocString(p.poNumber) || getSafeDocString(p.po_number);
+          return num === targetPoNum;
+        });
+        if (matchedPo && isPoKawasanBerikat(matchedPo)) {
+          errors.poNumber = `PO ${targetPoNum} is Kawasan Berikat and must be received via Receive Note (RN).`;
+        }
       }
     }
     if (!receiveDate.trim()) errors.receiveDate = "Receive Date is required.";
 
     if (items.length === 0) {
-      errors.items = "At least one material item is required.";
+      errors.items = "At least one material item is required. Click Add Item to pick from PO or RN.";
     } else {
       items.forEach((it, idx) => {
         if (!it.name.trim()) {
@@ -689,17 +792,19 @@ export function WarehouseCreate({
     if (!validate()) {
       setNotification({
         type: "error",
-        message: "Please complete all required fields and ensure the selected RN is valid and approved before saving.",
+        message: "Please complete all required fields and select a valid source document (PO or RN) before saving.",
       });
       return;
     }
-    const existingBpb = findExistingBpbForRn(rnNumber.trim());
-    if (existingBpb) {
-      setNotification({
-        type: "error",
-        message: `RN ${rnNumber} has already been received in BPB ${existingBpb.bpbNumber}. Duplicate BPB receipt is not allowed.`,
-      });
-      return;
+    if (sourceType === "RN") {
+      const existingBpb = findExistingBpbForRn(rnNumber.trim());
+      if (existingBpb) {
+        setNotification({
+          type: "error",
+          message: `RN ${rnNumber} has already been received in BPB ${existingBpb.bpbNumber}. Duplicate BPB receipt is not allowed.`,
+        });
+        return;
+      }
     }
     setShowSaveConfirm(true);
   };
@@ -708,21 +813,24 @@ export function WarehouseCreate({
     setIsSubmitting(true);
     setNotification(null);
 
-    const existingBpb = findExistingBpbForRn(rnNumber.trim());
-    if (existingBpb) {
-      setNotification({
-        type: "error",
-        message: `RN ${rnNumber} has already been received in BPB ${existingBpb.bpbNumber}. Duplicate BPB receipt is not allowed.`,
-      });
-      setIsSubmitting(false);
-      setShowSaveConfirm(false);
-      return;
+    if (sourceType === "RN") {
+      const existingBpb = findExistingBpbForRn(rnNumber.trim());
+      if (existingBpb) {
+        setNotification({
+          type: "error",
+          message: `RN ${rnNumber} has already been received in BPB ${existingBpb.bpbNumber}. Duplicate BPB receipt is not allowed.`,
+        });
+        setIsSubmitting(false);
+        setShowSaveConfirm(false);
+        return;
+      }
     }
 
     try {
       const payload = {
-        rn_number: rnNumber.trim(),
-        po_number: poNumberHeader || items[0]?.poNumber || "POL-1026-0040",
+        source_type: sourceType,
+        rn_number: sourceType === "RN" ? rnNumber.trim() : "",
+        po_number: poNumberHeader || items[0]?.poNumber || "",
         bpb_type: bpbType,
         supplier: supplier.trim() || "Supplier",
         receive_date: receiveDate,
@@ -734,13 +842,13 @@ export function WarehouseCreate({
         aju_date: ajuDate || undefined,
         no_pen: noPen.trim() || undefined,
         reg_date: regDate || undefined,
-        note: remark.trim() || "Inbound physical receipt verified at warehouse",
+        note: remark.trim() || (sourceType === "PO" ? "Direct PO physical receipt verified at warehouse" : "Inbound physical receipt verified at warehouse"),
         items: items.map((it) => ({
           po_has_items_id: it.po_has_items_id,
           po_has_rn_id: it.po_has_rn_id,
-          poNumber: it.poNumber || poNumberHeader || "POL-1026-0040",
+          poNumber: it.poNumber || poNumberHeader || "",
           prNumber: it.prNumber || "—",
-          code: it.code || "10.100.100.001",
+          code: it.code || "—",
           name: it.name,
           jobNumber: it.jobNumber || "—",
           deliveryNote: it.deliveryNote || "SJ-2026-001",
@@ -807,6 +915,25 @@ export function WarehouseCreate({
 
     return list;
   }, [existingRns, existingBpbs]);
+
+  const directPoOptions = useMemo(() => {
+    const list: Array<{ value: string; label: string }> = [];
+    const seen = new Set<string>();
+
+    approvedPos.forEach((p) => {
+      if (isPoKawasanBerikat(p)) return;
+      const num = getSafeDocString(p._rawNumber) || getSafeDocString(p._rawPo) || getSafeDocString(p.poNumber) || getSafeDocString(p.po_number);
+      if (!num || seen.has(num)) return;
+      seen.add(num);
+      const sup = String(p._rawSupplier || p.supplier || "").replace(/^\[[^\]]+\]\s*/, "").trim();
+      list.push({
+        value: num,
+        label: `${num}${sup ? ` (${sup})` : ""}`,
+      });
+    });
+
+    return list;
+  }, [approvedPos]);
 
   return (
     <div className="transaction-create-page">
@@ -880,53 +1007,102 @@ export function WarehouseCreate({
         <form onSubmit={handleSaveClick}>
           {/* Header Field Grid (Structured 4-column layout with balanced rows) */}
           <div className="tx-header-grid">
-            {/* Row 1: RN Number | BPB Type | Receive Date | Supplier Name (Takes from RN, Read-Only) */}
+            {/* Row 1: Source Type | RN or PO Number | BPB Type | Receive Date */}
             <div className="master-form-group">
-              <label htmlFor="bpbRnNumber" className="master-form-label">
-                RN Number <span className="required-asterisk">*</span>
+              <label htmlFor="bpbSourceType" className="master-form-label">
+                Source Type <span className="required-asterisk">*</span>
               </label>
               <CustomSelect
-                id="bpbRnNumber"
-                value={rnNumber}
-                onChange={(val) => handleSelectRn(val)}
-                placeholder="Select RN Number..."
+                id="bpbSourceType"
+                value={sourceType}
+                onChange={(val) => {
+                  const next = (val === "PO" ? "PO" : "RN") as BpbSourceType;
+                  setSourceType(next);
+                  setRnNumber("");
+                  setPoNumberHeader("");
+                  setSupplier("");
+                  setInvoiceNumber("");
+                  setTaxInvoice("");
+                  setPlateNo("");
+                  setAjuNumber("");
+                  setNoPen("");
+                  setItems([]);
+                  setNotification(null);
+                }}
                 options={[
-                  { value: "", label: "Select RN Number..." },
-                  ...rnOptions,
+                  { value: "RN", label: "Receive Note (RN · Kawasan Berikat)" },
+                  { value: "PO", label: "Purchase Order (PO · Non-Kawasan Berikat)" },
                 ]}
               />
-              {(() => {
-                const existingBpb = findExistingBpbForRn(rnNumber);
-                if (existingBpb) {
-                  return (
-                    <div
-                      style={{
-                        fontSize: "11px",
-                        color: "#b91c1c",
-                        background: "#fef2f2",
-                        border: "1px solid #fecaca",
-                        borderRadius: "4px",
-                        padding: "4px 8px",
-                        marginTop: "5px",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "5px",
-                        lineHeight: 1.3,
-                      }}
-                    >
-                      <Icon name="alertTriangle" size={13} />
-                      <span>
-                        Blocked: RN was already received in <strong>{existingBpb.bpbNumber}</strong>. Duplicate BPB is strictly prohibited.
-                      </span>
-                    </div>
-                  );
-                }
-                return null;
-              })()}
-              {formErrors.rnNumber && (
-                <span className="master-form-error">{formErrors.rnNumber}</span>
-              )}
             </div>
+
+            {sourceType === "RN" ? (
+              <div className="master-form-group">
+                <label htmlFor="bpbRnNumber" className="master-form-label">
+                  RN Number <span className="required-asterisk">*</span>
+                </label>
+                <CustomSelect
+                  id="bpbRnNumber"
+                  value={rnNumber}
+                  onChange={(val) => handleSelectRn(val)}
+                  placeholder="Select RN Number..."
+                  options={[
+                    { value: "", label: "Select RN Number..." },
+                    ...rnOptions,
+                  ]}
+                />
+                {(() => {
+                  const existingBpb = findExistingBpbForRn(rnNumber);
+                  if (existingBpb) {
+                    return (
+                      <div
+                        style={{
+                          fontSize: "11px",
+                          color: "#b91c1c",
+                          background: "#fef2f2",
+                          border: "1px solid #fecaca",
+                          borderRadius: "4px",
+                          padding: "4px 8px",
+                          marginTop: "5px",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "5px",
+                          lineHeight: 1.3,
+                        }}
+                      >
+                        <Icon name="alertTriangle" size={13} />
+                        <span>
+                          Blocked: RN was already received in <strong>{existingBpb.bpbNumber}</strong>. Duplicate BPB is strictly prohibited.
+                        </span>
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
+                {formErrors.rnNumber && (
+                  <span className="master-form-error">{formErrors.rnNumber}</span>
+                )}
+              </div>
+            ) : (
+              <div className="master-form-group">
+                <label htmlFor="bpbPoNumber" className="master-form-label">
+                  PO Number (Non-Berikat) <span className="required-asterisk">*</span>
+                </label>
+                <CustomSelect
+                  id="bpbPoNumber"
+                  value={poNumberHeader}
+                  onChange={(val) => handleSelectPo(val)}
+                  placeholder="Select Non-Berikat PO..."
+                  options={[
+                    { value: "", label: "Select Non-Berikat PO..." },
+                    ...directPoOptions,
+                  ]}
+                />
+                {formErrors.poNumber && (
+                  <span className="master-form-error">{formErrors.poNumber}</span>
+                )}
+              </div>
+            )}
 
             <div className="master-form-group">
               <label htmlFor="bpbType" className="master-form-label">
@@ -1105,14 +1281,17 @@ export function WarehouseCreate({
               }}
             >
               <span style={{ fontSize: "12px", color: "var(--muted)", fontWeight: 600 }}>
-                Material items from selected RN ({rnNumber || "None selected"}).
+                {sourceType === "PO"
+                  ? `Material items from Direct PO (${poNumberHeader || items[0]?.poNumber || "None selected"}).`
+                  : `Material items from Receive Note (${rnNumber || "None selected"}).`}
               </span>
               <Button
                 type="button"
                 variant="secondary"
-                onClick={handleAddItemLine}
+                icon="plus"
+                onClick={() => setIsSourcePickerOpen(true)}
               >
-                Add Item Line
+                Add Item
               </Button>
             </div>
 
@@ -1148,7 +1327,7 @@ export function WarehouseCreate({
                   {items.length === 0 ? (
                     <tr>
                       <td colSpan={9} style={{ textAlign: "center", padding: "40px 20px", color: "var(--muted)" }}>
-                        No items loaded yet. Please select an RN Number above to load items.
+                        No items loaded yet. Click <strong>Add Item</strong> and choose a source (<strong>PO</strong> or <strong>RN</strong>) and document number.
                       </td>
                     </tr>
                   ) : (
@@ -1356,13 +1535,30 @@ export function WarehouseCreate({
       <ConfirmDialog
         isOpen={showSaveConfirm}
         title="Submit Receive Material (BPB)?"
-        message={`Are you sure you want to record this Receive Material (BPB) for RN ${rnNumber} (${supplier}) with ${items.length} item line(s)?`}
+        message={
+          sourceType === "PO"
+            ? `Are you sure you want to record this Receive Material (BPB) directly from PO ${poNumberHeader || items[0]?.poNumber} (${supplier}) with ${items.length} item line(s)?`
+            : `Are you sure you want to record this Receive Material (BPB) for RN ${rnNumber} (${supplier}) with ${items.length} item line(s)?`
+        }
         confirmLabel="Confirm & Save"
         cancelLabel="Review BPB"
         confirmVariant="primary"
         icon="check"
         onConfirm={handleConfirmSubmit}
         onCancel={() => setShowSaveConfirm(false)}
+      />
+
+      {/* Add Item Source Modal (Step 1: PO / RN -> Step 2: Document Number -> Step 3: Items) */}
+      <PickBpbSourceModal
+        isOpen={isSourcePickerOpen}
+        onClose={() => setIsSourcePickerOpen(false)}
+        defaultSourceType={sourceType}
+        defaultSourceNumber={sourceType === "RN" ? rnNumber : poNumberHeader}
+        existingRns={existingRns}
+        approvedPos={approvedPos}
+        existingBpbs={existingBpbs}
+        warehouses={warehouses}
+        onAddItems={handleAddItemsFromSourcePicker}
       />
     </div>
   );

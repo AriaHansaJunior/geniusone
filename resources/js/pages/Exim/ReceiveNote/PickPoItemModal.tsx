@@ -72,6 +72,18 @@ export function PickPoItemModal({
             const poNum = po.po_number || po.poNumber || po._rawNumber || "";
             const rawItems = po.items || po._items || [];
             const poFac = String(po.facility || po.facility_status || po._rawFacility || "FASILITAS");
+            const isPoFacility = !poFac.toUpperCase().includes("NON");
+            const isPoKawasanBerikat = isPoFacility
+              ? true
+              : Boolean(
+                  po.is_kawasan_berikat ??
+                    po.isKawasanBerikat ??
+                    rawItems.some((it: any) => Boolean(it.ditangguhkan_kawasan_berikat))
+                );
+
+            if (!isPoKawasanBerikat) {
+              return;
+            }
             rawItems.forEach((it: any, idx: number) => {
               const qty = Number(it.order || it.orderQty || it.rawQty || 1);
               const name = it.item || it.itemName || it.item_alias || "Material Item";

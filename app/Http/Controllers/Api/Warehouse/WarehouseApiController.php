@@ -196,58 +196,186 @@ class WarehouseApiController extends Controller
                 $supplierId = Supplier::first()?->id ?? 1;
             }
 
-            // Resolve ReceiveNote (RN) - strictly mandatory: PR -> PO -> RN -> BPB
-            $rnCode = trim((string) ($request->input('rn_number') ?? $request->input('rnNumber') ?? ''));
-            if ($rnCode === '') {
-                DB::rollBack();
-                return response()->json([
-                    'status' => 'error',
-                    'message' => 'RN Number is required. BPB / Receive Material must be created from an existing Receive Note.',
-                    'errors' => ['rn_number' => ['Please select an RN Number to create BPB.']],
-                ], 422);
-            }
-
-            $cleanRn = preg_replace('/[^A-Za-z0-9]/', '', $rnCode);
-            $rn = ReceiveNote::where('rn_number', $rnCode)
-                ->orWhereRaw("REPLACE(REPLACE(rn_number, '/', ''), '-', '') = ?", [$cleanRn])
-                ->first();
-
-            if (! $rn) {
-                DB::rollBack();
-                return response()->json([
-                    'status' => 'error',
-                    'message' => "Receive Note '{$rnCode}' not found. BPB must be created from an existing Receive Note.",
-                    'errors' => ['rn_number' => ['The selected RN does not exist in the database.']],
-                ], 422);
-            }
-
-            // Ensure RN is approved before accepting into warehouse
-            if ($rn->status !== 'Approved') {
-                DB::rollBack();
-                return response()->json([
-                    'status' => 'error',
-                    'message' => "Receive Note '{$rnCode}' has not been approved yet (Current status: {$rn->status}). Only approved Receive Notes can be received into warehouse.",
-                    'errors' => ['rn_number' => ["Receive Note '{$rnCode}' must be Approved before creating a BPB."]],
-                ], 422);
-            }
-
-            // Double BPB Prevention: check if RN has already been processed in an active BPB
-            $existingBpb = BpbReceiveMaterial::where('status', '!=', 'Rejected')
-                ->whereHas('mappings.purchaseOrderReceiveNote', function ($q) use ($rn) {
-                    $q->where('receive_note_id', $rn->id);
-                })
-                ->first();
-
-            if ($existingBpb) {
-                DB::rollBack();
-                return response()->json([
-                    'status' => 'error',
-                    'message' => "Receive Note '{$rnCode}' has already been processed in BPB '{$existingBpb->bpb_number}'. Duplicate material receipt (Double BPB) is not allowed.",
-                    'errors' => ['rn_number' => ["Receive Note '{$rnCode}' has already been processed in BPB '{$existingBpb->bpb_number}'."]],
-                ], 422);
-            }
-
             $rawItems = $request->input('items', []);
+            $rnCode = trim((string) ($request->input('rn_number') ?? $request->input('rnNumber') ?? ''));
+            $requestedSource = strtoupper(trim((string) ($request->input('source_type') ?? $request->input('sourceType') ?? '')));
+            $hasPoReference = $headerPo !== null || (is_array($rawItems) && collect($rawItems)->contains(function ($it) {
+                $p = trim((string) ($it['poNumber'] ?? $it['po_number'] ?? ''));
+
+                return $p !== '' && $p !== '—' && $p !== '-';
+            }));
+
+            if ($requestedSource === '') {
+                $sourceType = $rnCode !== '' ? 'RN' : ($hasPoReference ? 'PO' : 'RN');
+            } else {
+                $sourceType = $requestedSource;
+            }
+
+            if (! in_array($sourceType, ['RN', 'PO'], true)) {
+                DB::rollBack();
+
+                return response()->json([
+                    'status' => 'error',
+                    'message' => "Invalid BPB source type '{$sourceType}'. Allowed values are 'RN' or 'PO'.",
+                ], 422);
+            }
+
+            $rn = null;
+            if ($sourceType === 'RN') {
+                if ($rnCode === '') {
+                    DB::rollBack();
+
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => 'RN Number is required when creating BPB from Receive Note.',
+                        'errors' => ['rn_number' => ['Please select an RN Number to create BPB.']],
+                    ], 422);
+                }
+
+                $cleanRn = preg_replace('/[^A-Za-z0-9]/', '', $rnCode);
+                $rn = ReceiveNote::where('rn_number', $rnCode)
+                    ->orWhereRaw("REPLACE(REPLACE(rn_number, '/', ''), '-', '') = ?", [$cleanRn])
+                    ->first();
+
+                if (! $rn) {
+                    DB::rollBack();
+
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => "Receive Note '{$rnCode}' not found. BPB from RN requires an existing Receive Note.",
+                        'errors' => ['rn_number' => ['The selected RN does not exist in the database.']],
+                    ], 422);
+                }
+
+                if ($rn->status !== 'Approved') {
+                    DB::rollBack();
+
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => "Receive Note '{$rnCode}' has not been approved yet (Current status: {$rn->status}). Only approved Receive Notes can be received into warehouse.",
+                        'errors' => ['rn_number' => ["Receive Note '{$rnCode}' must be Approved before creating a BPB."]],
+                    ], 422);
+                }
+
+                // Double BPB Prevention for RN
+                $existingBpb = BpbReceiveMaterial::where('status', '!=', 'Rejected')
+                    ->whereHas('mappings.purchaseOrderReceiveNote', function ($q) use ($rn) {
+                        $q->where('receive_note_id', $rn->id);
+                    })
+                    ->first();
+
+                if ($existingBpb) {
+                    DB::rollBack();
+
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => "Receive Note '{$rnCode}' has already been processed in BPB '{$existingBpb->bpb_number}'. Duplicate material receipt (Double BPB) is not allowed.",
+                        'errors' => ['rn_number' => ["Receive Note '{$rnCode}' has already been processed in BPB '{$existingBpb->bpb_number}'."]],
+                    ], 422);
+                }
+            } else {
+                // Direct PO -> BPB: resolve all referenced POs and validate Approved + Non-Kawasan Berikat
+                $referencedPoIds = collect();
+                if ($headerPo) {
+                    $referencedPoIds->push($headerPo->id);
+                }
+                if (is_array($rawItems)) {
+                    foreach ($rawItems as $it) {
+                        $itPoCode = trim((string) ($it['poNumber'] ?? $it['po_number'] ?? ''));
+                        if ($itPoCode !== '' && $itPoCode !== '—' && $itPoCode !== '-') {
+                            $cleanItPo = preg_replace('/[^A-Za-z0-9]/', '', $itPoCode);
+                            $matched = PurchaseOrder::where('po_number', $itPoCode)
+                                ->orWhereRaw("REPLACE(REPLACE(po_number, '/', ''), '-', '') = ?", [$cleanItPo])
+                                ->first();
+                            if (! $matched) {
+                                DB::rollBack();
+
+                                return response()->json([
+                                    'status' => 'error',
+                                    'message' => "Purchase Order '{$itPoCode}' not found.",
+                                    'errors' => ['po_number' => ["Purchase Order '{$itPoCode}' not found."]],
+                                ], 422);
+                            }
+                            $referencedPoIds->push($matched->id);
+                            if (! $headerPo) {
+                                $headerPo = $matched;
+                                $supplierId = $matched->supliers_id ?: $supplierId;
+                            }
+                        }
+                    }
+                }
+
+                $referencedPoIds = $referencedPoIds->unique()->values();
+                if ($referencedPoIds->isEmpty()) {
+                    DB::rollBack();
+
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => 'PO Number is required when creating direct BPB from Purchase Order.',
+                        'errors' => ['po_number' => ['Please select an Approved Non-Kawasan Berikat Purchase Order.']],
+                    ], 422);
+                }
+
+                $referencedPos = PurchaseOrder::with('items')->whereIn('id', $referencedPoIds)->get();
+                foreach ($referencedPos as $refPo) {
+                    if (! in_array($refPo->status, ['Approved', 'Approved 2'], true)) {
+                        DB::rollBack();
+
+                        return response()->json([
+                            'status' => 'error',
+                            'message' => "Purchase Order '{$refPo->po_number}' is not fully Approved yet (Current status: {$refPo->status}).",
+                            'errors' => ['po_number' => ["Purchase Order '{$refPo->po_number}' must be Approved before receiving into BPB."]],
+                        ], 422);
+                    }
+
+                    if ($refPo->isKawasanBerikat()) {
+                        DB::rollBack();
+
+                        return response()->json([
+                            'status' => 'error',
+                            'message' => "Purchase Order '{$refPo->po_number}' is a Kawasan Berikat PO and must go through Receive Note (EXIM) before Receive Material (BPB).",
+                            'errors' => ['po_number' => ["PO '{$refPo->po_number}' is Kawasan Berikat and requires a Receive Note (RN)."]],
+                        ], 422);
+                    }
+
+                    // Prevent duplicate/over-receiving direct PO items
+                    $orderedTotal = (float) $refPo->items->sum('order');
+                    if ($orderedTotal > 0) {
+                        $alreadyReceived = (float) DB::table('purchase_order_has_receive_note as porn')
+                            ->join('po_rn_to_bpb as pb', 'pb.po_has_rn_id', '=', 'porn.id')
+                            ->join('bpb_receive_material as bpb', 'pb.bpb_receive_material_id', '=', 'bpb.id')
+                            ->where('porn.purchase_order_id', $refPo->id)
+                            ->where('bpb.status', '!=', 'Rejected')
+                            ->whereNull('porn.deleted_at')
+                            ->whereNull('bpb.deleted_at')
+                            ->sum(DB::raw('GREATEST(0, porn.quantity - COALESCE(porn.rafaksi, 0))'));
+
+                        $incomingTotal = is_array($rawItems) ? collect($rawItems)->sum(function ($it) use ($refPo) {
+                            $p = trim((string) ($it['poNumber'] ?? $it['po_number'] ?? $refPo->po_number));
+                            $cleanP = preg_replace('/[^A-Za-z0-9]/', '', $p);
+                            $cleanRef = preg_replace('/[^A-Za-z0-9]/', '', $refPo->po_number);
+                            if ($cleanP !== '' && $cleanP !== $cleanRef) {
+                                return 0;
+                            }
+                            $q = (float) ($it['receiveQty'] ?? $it['quantity'] ?? $it['qty'] ?? 0);
+                            $r = (float) ($it['rafaksi'] ?? 0);
+
+                            return max(0.0, $q - $r);
+                        }) : 0.0;
+
+                        if ($alreadyReceived >= $orderedTotal - 0.0001 || ($alreadyReceived + $incomingTotal) > $orderedTotal + 0.0001) {
+                            DB::rollBack();
+
+                            return response()->json([
+                                'status' => 'error',
+                                'message' => "Purchase Order '{$refPo->po_number}' quantity already received or exceeded (Ordered: {$orderedTotal}, Already Received: {$alreadyReceived}, Incoming: {$incomingTotal}).",
+                                'errors' => ['po_number' => ["PO '{$refPo->po_number}' exceeds remaining receivable quantity."]],
+                            ], 422);
+                        }
+                    }
+                }
+            }
+
             $firstSj = $request->input('sj_number') ?? $request->input('delivery_note');
             if (! $firstSj && is_array($rawItems) && ! empty($rawItems)) {
                 $firstSj = $rawItems[0]['deliveryNote'] ?? $rawItems[0]['dn_number'] ?? $rawItems[0]['sjNumber'] ?? null;
@@ -279,31 +407,33 @@ class WarehouseApiController extends Controller
             $invoiceNumber = $request->input('invoice_number') ?? $request->input('invoiceNumber');
             $taxInvoice = $request->input('tax_invoice') ?? $request->input('taxInvoice');
 
-            // Update optional customs/logistics metadata on the Receive Note if provided
-            $rnUpdates = [];
-            if ($invoiceNumber) {
-                $rnUpdates['invoice_number'] = $invoiceNumber;
-            }
-            if ($invoiceDate) {
-                $rnUpdates['invoice_date'] = $invoiceDate;
-            }
-            if ($taxInvoice) {
-                $rnUpdates['tax_invoice'] = $taxInvoice;
-            }
-            if ($plateNo) {
-                $rnUpdates['license_plate'] = $plateNo;
-            }
-            if ($firstSj) {
-                $rnUpdates['sj_number'] = $firstSj;
-            }
-            if ($noPen) {
-                $rnUpdates['pl_number'] = $noPen;
-            }
-            if ($ajuNumber) {
-                $rnUpdates['note'] = $ajuNumber;
-            }
-            if (! empty($rnUpdates)) {
-                $rn->update($rnUpdates);
+            // Update optional customs/logistics metadata on the Receive Note if RN mode
+            if ($rn) {
+                $rnUpdates = [];
+                if ($invoiceNumber) {
+                    $rnUpdates['invoice_number'] = $invoiceNumber;
+                }
+                if ($invoiceDate) {
+                    $rnUpdates['invoice_date'] = $invoiceDate;
+                }
+                if ($taxInvoice) {
+                    $rnUpdates['tax_invoice'] = $taxInvoice;
+                }
+                if ($plateNo) {
+                    $rnUpdates['license_plate'] = $plateNo;
+                }
+                if ($firstSj) {
+                    $rnUpdates['sj_number'] = $firstSj;
+                }
+                if ($noPen) {
+                    $rnUpdates['pl_number'] = $noPen;
+                }
+                if ($ajuNumber) {
+                    $rnUpdates['note'] = $ajuNumber;
+                }
+                if (! empty($rnUpdates)) {
+                    $rn->update($rnUpdates);
+                }
             }
 
             $noteText = $request->input('note') ?? $request->input('remark');
@@ -313,8 +443,9 @@ class WarehouseApiController extends Controller
 
             $bpb = BpbReceiveMaterial::create([
                 'bpb_number' => $bpbNumber,
+                'source_type' => $sourceType,
                 'status' => 'Waiting for Approve 1',
-                'note' => $noteText ?: 'Inbound physical receipt from logistics',
+                'note' => $noteText ?: ($sourceType === 'PO' ? 'Direct physical receipt from Non-Kawasan Berikat PO' : 'Inbound physical receipt from logistics'),
                 'receive_date' => $receiveDate,
                 'creator_id' => $creatorId,
                 'updated_by' => $creatorId,
@@ -370,16 +501,23 @@ class WarehouseApiController extends Controller
                     $rafaksi = (float) ($itemData['rafaksi'] ?? 0);
                     $dnNumber = $itemData['deliveryNote'] ?? $itemData['dn_number'] ?? $itemData['sjNumber'] ?? $firstSj ?? 'SJ-'.date('Ymd');
 
-                    $poRn = null;
-                    if (! empty($itemData['po_has_rn_id']) && is_numeric($itemData['po_has_rn_id'])) {
-                        $poRn = PurchaseOrderReceiveNote::where('id', (int) $itemData['po_has_rn_id'])
-                            ->where('receive_note_id', $rn->id)
-                            ->first();
+                    $resolvedPoHasItemId = null;
+                    if (! empty($itemData['po_has_items_id']) && is_numeric($itemData['po_has_items_id'])) {
+                        $resolvedPoHasItemId = (int) $itemData['po_has_items_id'];
                     }
-                    if (! $poRn) {
-                        $poRn = PurchaseOrderReceiveNote::where('receive_note_id', $rn->id)
-                            ->where('item_name', $itemName)
-                            ->first();
+
+                    $poRn = null;
+                    if ($rn) {
+                        if (! empty($itemData['po_has_rn_id']) && is_numeric($itemData['po_has_rn_id'])) {
+                            $poRn = PurchaseOrderReceiveNote::where('id', (int) $itemData['po_has_rn_id'])
+                                ->where('receive_note_id', $rn->id)
+                                ->first();
+                        }
+                        if (! $poRn) {
+                            $poRn = PurchaseOrderReceiveNote::where('receive_note_id', $rn->id)
+                                ->where('item_name', $itemName)
+                                ->first();
+                        }
                     }
 
                     if ($poRn) {
@@ -391,7 +529,8 @@ class WarehouseApiController extends Controller
                     } else {
                         $poRn = PurchaseOrderReceiveNote::create([
                             'purchase_order_id' => $itemPoId,
-                            'receive_note_id' => $rn->id,
+                            'po_has_items_id' => $resolvedPoHasItemId,
+                            'receive_note_id' => $rn?->id,
                             'dn_number' => $dnNumber,
                             'job_number_id' => $itemJobId,
                             'item_name' => $itemName,
@@ -458,7 +597,7 @@ class WarehouseApiController extends Controller
                         $targetItem->update(['stock' => $totalStock]);
                     }
                 }
-            } elseif ($rn->purchaseOrders()->count() > 0) {
+            } elseif ($rn && $rn->purchaseOrders()->count() > 0) {
                 foreach ($rn->purchaseOrders as $poRn) {
                     $bpb->mappings()->create([
                         'po_has_rn_id' => $poRn->id,
@@ -472,7 +611,8 @@ class WarehouseApiController extends Controller
                         $itName = $poItem->requisitionItem?->item?->name ?? $poItem->item_alias ?? 'Material Item';
                         $poRn = PurchaseOrderReceiveNote::create([
                             'purchase_order_id' => $headerPo->id,
-                            'receive_note_id' => $rn->id,
+                            'po_has_items_id' => $poItem->id,
+                            'receive_note_id' => $rn?->id,
                             'dn_number' => $firstSj ?: 'SJ-'.date('Ymd'),
                             'job_number_id' => $poItem->requisitionItem?->job_number_id ?? $defaultJobId,
                             'item_name' => $itName,
@@ -493,7 +633,7 @@ class WarehouseApiController extends Controller
                 } else {
                     $poRn = PurchaseOrderReceiveNote::create([
                         'purchase_order_id' => $defaultPoId,
-                        'receive_note_id' => $rn->id,
+                        'receive_note_id' => $rn?->id,
                         'dn_number' => $firstSj ?: 'SJ-'.date('Ymd'),
                         'job_number_id' => $defaultJobId,
                         'item_name' => 'General Inbound Material',
@@ -572,50 +712,48 @@ class WarehouseApiController extends Controller
         $rn = $poRn?->receiveNote;
         $supplier = $rn?->supplier ?? $po?->supplier;
 
-        $supplierName = $supplier ? $supplier->name : 'PT. Hasil Fastindo';
-        $rnNumber = $rn?->rn_number ?? '0131/RN-IMLI/X/2026';
-        $rnDate = $this->safeFormatDate($rn?->arrival_date ?? $rn?->created_at, 'd-m-Y', $this->safeFormatDate($bpb->receive_date, 'd-m-Y', '08-10-2026'));
-        $poNumber = $po?->po_number ?? 'POL-0926-0332';
-        $poDate = $this->safeFormatDate($po?->date, 'd-m-Y', '29-09-2026');
+        $sourceType = strtoupper((string) ($bpb->source_type ?? ($rn ? 'RN' : 'PO')));
+        $supplierName = $supplier ? $supplier->name : '—';
+        $rnNumber = $rn?->rn_number ?? ($sourceType === 'PO' ? 'Direct PO' : '—');
+        $rnDate = $this->safeFormatDate($rn?->arrival_date ?? $rn?->created_at, 'd-m-Y', $this->safeFormatDate($bpb->receive_date, 'd-m-Y', '—'));
+        $poNumber = $po?->po_number ?? '—';
+        $poDate = $this->safeFormatDate($po?->date, 'd-m-Y', '—');
 
         $firstPoItem = $po?->items?->first();
         $pr = $firstPoItem?->requisitionItem?->purchaseRequisition;
-        $prNumber = $pr?->pr_number ?? '0085/PR-IMLI/IX/2026';
-        $prDate = $this->safeFormatDate($pr?->date, 'd-m-Y', '29-09-2026');
+        $prNumber = $pr?->pr_number ?? '—';
+        $prDate = $this->safeFormatDate($pr?->date, 'd-m-Y', '—');
 
         $totalQty = $bpb->mappings->sum(function ($m) {
             $prn = $m->purchaseOrderReceiveNote;
 
             return (float) (($prn?->quantity ?? 0) - ($prn?->rafaksi ?? 0));
         });
-        if ($totalQty <= 0) {
-            $totalQty = 25.0;
-        }
 
         $totalItem = max(1, $bpb->mappings->count());
-        $materialName = $poRn?->item_name ?? 'Mur Baut M 10 x 40 + ring pir';
+        $materialName = $poRn?->item_name ?? 'Material Item';
 
         // Try to resolve item code & unit from Master Item or PO item
         $matchedMasterItem = Item::with('unitOfMeasurement')->where('name', $materialName)->first()
             ?? $firstPoItem?->requisitionItem?->item;
-        $itemCode = $matchedMasterItem?->code ?? '60.149.301.404';
+        $itemCode = $matchedMasterItem?->code ?? '—';
         $defaultUnit = $matchedMasterItem?->unitOfMeasurement?->code ?? $matchedMasterItem?->unitOfMeasurement?->name ?? 'PCE';
 
         $warehouseName = $firstMapping?->warehouse?->name ?? 'Gudang Sparepart';
-        $creatorName = $bpb->creator?->name ?? 'MUKHANIFAH';
-        $createdTime = $bpb->created_at ? $bpb->created_at->format('d-m-Y H:i') : '08-10-2026 15:47';
-        $receiveDateStr = $this->safeFormatDate($bpb->receive_date, 'd-m-Y', '08-10-2026');
+        $creatorName = $bpb->creator?->name ?? 'System';
+        $createdTime = $bpb->created_at ? $bpb->created_at->format('d-m-Y H:i') : '—';
+        $receiveDateStr = $this->safeFormatDate($bpb->receive_date, 'd-m-Y', '—');
 
         $apprStatus = $bpb->status;
 
-        $sjNumber = $poRn?->dn_number ?: ($rn?->sj_number ?: 'SRA/H2/2610/00262');
-        $plateNo = $rn?->license_plate ?: 'L 8372 VQ';
-        $noPen = $rn?->pl_number ?: '088370';
+        $sjNumber = $poRn?->dn_number ?: ($rn?->sj_number ?: '—');
+        $plateNo = $rn?->license_plate ?: '—';
+        $noPen = $rn?->pl_number ?: '—';
         $ajuNumber = ($rn?->note && strlen($rn->note) >= 10 && is_numeric(substr($rn->note, 0, 6)))
             ? $rn->note
-            : '00004001456220261008004282';
-        $bcType = 'BC 4.0';
-        $bpbType = 'Warehouse';
+            : '—';
+        $bcType = $rn ? 'BC 4.0' : 'Non-BC (Direct PO)';
+        $bpbType = $sourceType === 'PO' ? 'Direct PO' : 'Warehouse';
 
         // Line Items
         $lineItems = $bpb->mappings->values()->map(function ($map, $mIdx) use ($bpb, $poNumber, $poDate, $prNumber, $prDate, $sjNumber, $defaultUnit) {
@@ -713,6 +851,8 @@ class WarehouseApiController extends Controller
             'statusFacility' => $bpbFacility,
             'bpbType' => $bpbType,
             '_rawBpbType' => $bpbType,
+            'sourceType' => $sourceType,
+            'source_type' => $sourceType,
             '_rawWarehouseLocation' => $warehouseName,
             'material' => $materialName,
             '_rawMaterialName' => $materialName,

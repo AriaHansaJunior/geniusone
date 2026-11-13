@@ -464,7 +464,12 @@ export function PurchaseOrderDetail({
   }, [row._financials, poItems]);
 
   const ppnRate = 11;
-  const isKawasanBerikat = !isHeaderNonFac;
+  const isKawasanBerikat = useMemo(() => {
+    if (!isHeaderNonFac) return true;
+    const rawKb = row.is_kawasan_berikat ?? row.isKawasanBerikat;
+    if (rawKb !== undefined && rawKb !== null) return Boolean(rawKb);
+    return poItems.some((it: any) => Boolean(it.ditangguhkan_kawasan_berikat));
+  }, [isHeaderNonFac, row.is_kawasan_berikat, row.isKawasanBerikat, poItems]);
 
   const ppnAmount = useMemo(() => {
     if (isKawasanBerikat) return 0;
@@ -557,6 +562,9 @@ export function PurchaseOrderDetail({
           <Badge tone={isHeaderNonFac ? "gray" : "purple"}>
             {isHeaderNonFac ? "NON FASILITAS" : "FASILITAS"}
           </Badge>
+          <Badge tone={isKawasanBerikat ? "purple" : "gray"}>
+            {isKawasanBerikat ? "Kawasan Berikat (Via RN)" : "Non-Kawasan Berikat (Direct BPB)"}
+          </Badge>
           <Badge tone="gray">
             {currency} · Rate {rate}
           </Badge>
@@ -576,6 +584,9 @@ export function PurchaseOrderDetail({
             <ApprovalStatusBadge status={approvalState.status} />
             <Badge tone={isHeaderNonFac ? "gray" : "purple"}>
               {isHeaderNonFac ? "NON FASILITAS" : "FASILITAS"}
+            </Badge>
+            <Badge tone={isKawasanBerikat ? "purple" : "gray"}>
+              {isKawasanBerikat ? "Kawasan Berikat (Via RN)" : "Non-Kawasan Berikat (Direct BPB)"}
             </Badge>
           </div>
           <span className="detail-header-card__meta">
@@ -710,16 +721,24 @@ export function PurchaseOrderDetail({
           }}
           title={
             !isApproved && receivingNumbersList.length === 0
-              ? "PO must be fully approved (Stage 2) before receiving material (BPB)"
+              ? isKawasanBerikat
+                ? "PO must be fully approved (Stage 2) before creating a Receive Note (RN)"
+                : "PO must be fully approved (Stage 2) before receiving material (BPB)"
               : receivingNumbersList.length > 0
                 ? "View Receive Material (BPB)"
-                : "Click to Receive Material (BPB) from this Approved PO"
+                : isKawasanBerikat
+                  ? "Kawasan Berikat PO: Click to create Receive Note (RN) first"
+                  : "Non-Kawasan Berikat PO: Click to Receive Material (BPB) directly"
           }
           onClick={() => {
             if (receivingNumbersList.length === 1 && onNavigateDetail) {
               onNavigateDetail("warehouse", docToSlug(receivingNumbersList[0]));
             } else if (isApproved && receivingNumbersList.length === 0 && onNavigateDetail) {
-              onNavigateDetail("warehouse-create" as any, docNumber);
+              if (isKawasanBerikat) {
+                onNavigateDetail("receive-note-create" as any, docNumber);
+              } else {
+                onNavigateDetail("warehouse-create" as any, docNumber);
+              }
             }
           }}
         >
@@ -727,7 +746,11 @@ export function PurchaseOrderDetail({
             <Icon name="box" size={16} />
           </div>
           <div className="pipeline-node__text">
-            <span>Step 3 · Receive Material</span>
+            <span>
+              {isKawasanBerikat
+                ? "Step 3 · Receive Note (Exim)"
+                : "Step 3 · Receive Material (Direct BPB)"}
+            </span>
             <strong>
               {receivingNumbersList.length > 0 ? (
                 <div style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}>
@@ -750,7 +773,7 @@ export function PurchaseOrderDetail({
                   ))}
                 </div>
               ) : isApproved ? (
-                "+ Create BPB from PO"
+                isKawasanBerikat ? "+ Create Receive Note" : "+ Create Direct BPB"
               ) : (
                 "Awaiting PO Approval"
               )}

@@ -163,6 +163,10 @@ class PurchaseOrderService
             $dueDate = $headerData['due_date'] ?? now()->addDays(14)->format('Y-m-d');
             $latestDeliv = $headerData['latest_delivery'] ?? now()->addDays(14);
 
+            $isKawasanBerikat = strtoupper($resolvedFacility) === 'FASILITAS'
+                ? true
+                : (bool) ($headerData['is_kawasan_berikat'] ?? false);
+
             $order = PurchaseOrder::create([
                 'po_number' => $poNumber,
                 'creator_id' => $userId,
@@ -177,14 +181,13 @@ class PurchaseOrderService
                 'payment_methods_id' => $payMethodId,
                 'service_subkon' => $headerData['service_subkon'] ?? 0,
                 'facility_status' => $resolvedFacility,
+                'is_kawasan_berikat' => $isKawasanBerikat,
                 'delivery_terms_id' => $delivTermId,
                 'latest_delivery' => $latestDeliv,
                 'status' => $headerData['status'] ?? 'Waiting for Approve 1',
                 'remark' => $headerData['remark'] ?? null,
                 'revision' => $headerData['revision'] ?? 0,
             ]);
-
-            $isKawasanBerikat = strtoupper($order->facility_status) === 'FASILITAS';
 
             foreach ($items as $item) {
                 // Determine discount type and value safely to ensure no foreign key violation

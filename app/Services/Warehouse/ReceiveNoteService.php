@@ -22,13 +22,20 @@ class ReceiveNoteService
             throw new InvalidArgumentException('A Receive Note must link to at least one PO item.');
         }
 
-        // BE-05: Strict Downstream Gating (PO must be Approved before receiving materials)
+        // BE-05: Strict Downstream Gating (PO must be Approved & Kawasan Berikat before receiving via RN)
         foreach ($receivedItems as $item) {
             $poId = $item['purchase_order_id'] ?? null;
-            if ($poId) {
-                $po = PurchaseOrder::find($poId);
-                if ($po && ! in_array($po->status, ['Approved', 'Approved 2'], true)) {
+            $poNum = $item['po_number'] ?? $item['poNumber'] ?? null;
+            $po = $poId
+                ? PurchaseOrder::with('items')->find($poId)
+                : ($poNum ? PurchaseOrder::with('items')->where('po_number', $poNum)->first() : null);
+
+            if ($po) {
+                if (! in_array($po->status, ['Approved', 'Approved 2'], true)) {
                     throw new InvalidArgumentException("Cannot create Receive Note: Linked Purchase Order '{$po->po_number}' must be fully Approved first (Current status: {$po->status}).");
+                }
+                if (! $po->isKawasanBerikat()) {
+                    throw new InvalidArgumentException("Cannot create Receive Note: Purchase Order '{$po->po_number}' is Non-Kawasan Berikat and must be received directly in Receive Material (BPB).");
                 }
             }
         }

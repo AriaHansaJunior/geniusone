@@ -970,6 +970,10 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
           nextState = { type: "warehouse-create", poNumber: identifier };
           targetPath = `/warehouse/incoming/receive-material-bpb/create?po=${encodeURIComponent(identifier)}`;
           break;
+        case "receive-note-create" as any:
+          nextState = { type: "receive-note-create" };
+          targetPath = "/exim/receive-note/create";
+          break;
       }
 
       setViewState(nextState);

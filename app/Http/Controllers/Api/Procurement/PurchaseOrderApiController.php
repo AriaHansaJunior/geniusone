@@ -384,6 +384,8 @@ class PurchaseOrderApiController extends Controller
             '_rawPaymentTerm' => $po->paymentTerm?->name ?? 'Cash On Delivery',
             'facility' => $facilityLabel,
             '_rawFacility' => $facilityLabel,
+            'is_kawasan_berikat' => $po->isKawasanBerikat(),
+            'isKawasanBerikat' => $po->isKawasanBerikat(),
             '_rawCreatedBy' => "{$creatorName} {$createdTime}",
             '_rawLastUpdated' => "{$creatorName} {$updatedTime}",
             '_rawReleasedBy' => $releasedBy,
@@ -598,6 +600,9 @@ class PurchaseOrderApiController extends Controller
             'latest_delivery' => $latestDeliv,
             'service_subkon' => $request->boolean('service_subkon', false) ? 1 : 0,
             'facility_status' => $facilityStatus,
+            'is_kawasan_berikat' => $facilityStatus === 'FASILITAS'
+                ? true
+                : $request->boolean('is_kawasan_berikat', false),
             'status' => 'Waiting for Approve 1',
             'remark' => $request->input('remark') ?? $request->input('remarkPo') ?? '',
         ];

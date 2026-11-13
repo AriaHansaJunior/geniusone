@@ -36,6 +36,7 @@ class PurchaseOrder extends Model
         'payment_methods_id',
         'service_subkon',
         'facility_status',
+        'is_kawasan_berikat',
         'status',
         'delivery_terms_id',
         'latest_delivery',
@@ -44,6 +45,23 @@ class PurchaseOrder extends Model
         'updated_by',
         'rejection_note',
     ];
+
+    protected $casts = [
+        'is_kawasan_berikat' => 'boolean',
+    ];
+
+    public function isKawasanBerikat(): bool
+    {
+        if (strtoupper((string) $this->facility_status) === 'FASILITAS') {
+            return true;
+        }
+
+        if ($this->is_kawasan_berikat !== null) {
+            return (bool) $this->is_kawasan_berikat;
+        }
+
+        return $this->items->contains(fn ($it) => (bool) $it->ditangguhkan_kawasan_berikat);
+    }
 
     public function creator(): BelongsTo
     {
@@ -147,7 +165,7 @@ class PurchaseOrder extends Model
     public function getPpnAttribute(): float
     {
         return (float) $this->items->sum(function ($it) {
-            if ($it->ditangguhkan_kawasan_berikat || strtoupper((string) $this->facility_status) === 'FASILITAS') {
+            if ($it->ditangguhkan_kawasan_berikat || $this->isKawasanBerikat()) {
                 return 0.0;
             }
             $rate = $it->ppn?->value ?? 11.0;
