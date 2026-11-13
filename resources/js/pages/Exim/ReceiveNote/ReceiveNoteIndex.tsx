@@ -11,6 +11,7 @@ import { ApprovalStatusBadge } from "../../../components/approval/ApprovalStatus
 import { getLocalApprovalState } from "../../../services/approvalApi";
 import { normalizeApprovalStatus } from "../../../types/approval";
 import { formatDisplayDate } from "../../../data/masterApi";
+import { apiFetch } from "../../../data/api";
 import {
   initialReceiveNoteRecords,
   suppliersList,
@@ -54,8 +55,8 @@ export function ReceiveNoteIndex({
   // Sync with backend API on mount
   useEffect(() => {
     let isMounted = true;
-    fetch("/api/warehouse/rn?per_page=100", { headers: { Accept: "application/json" } })
-      .then((r) => r.json())
+    apiFetch("/api/warehouse/rn?per_page=100")
+      .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
         if (!isMounted) return;
         const apiRows = d?.rows || (Array.isArray(d?.data) ? d.data : d?.data?.data) || [];

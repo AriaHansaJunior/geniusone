@@ -4,7 +4,7 @@ import { Button } from "../../../components/ui/Button";
 import { ConfirmDialog } from "../../../components/ui/ConfirmDialog";
 import { CustomDatePicker } from "../../../components/ui/CustomDatePicker";
 import { CustomSelect } from "../../../components/ui/CustomSelect";
-import { fetchList, fetchDetail, createWarehouseBpb } from "../../../data/api";
+import { apiFetch, fetchList, fetchDetail, createWarehouseBpb } from "../../../data/api";
 import { getLocalApprovalState } from "../../../services/approvalApi";
 import {
   PickBpbSourceModal,
@@ -498,8 +498,8 @@ export function WarehouseCreate({
     });
 
     // 2. Fetch existing Receive Notes
-    fetch("/api/warehouse/rn?per_page=100", { headers: { Accept: "application/json" } })
-      .then((r) => r.json())
+    apiFetch("/api/warehouse/rn?per_page=100")
+      .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
         if (!isMounted) return;
         const rns = d?.rows || (Array.isArray(d?.data) ? d.data : d?.data?.data) || [];
@@ -543,8 +543,8 @@ export function WarehouseCreate({
       .catch(() => { });
 
     // 3. Fetch Master Suppliers
-    fetch("/api/procurement/master/suppliers?per_page=100", { headers: { Accept: "application/json" } })
-      .then((r) => r.json())
+    apiFetch("/api/procurement/master/suppliers?per_page=100")
+      .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
         if (isMounted && d?.data && Array.isArray(d.data) && d.data.length > 0) {
           setSuppliers(d.data);
@@ -554,8 +554,8 @@ export function WarehouseCreate({
       .catch(() => { });
 
     // 4. Fetch Master Warehouses
-    fetch("/api/warehouse/master/warehouses?per_page=100", { headers: { Accept: "application/json" } })
-      .then((r) => r.json())
+    apiFetch("/api/warehouse/master/warehouses?per_page=100")
+      .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
         if (isMounted && d?.data && Array.isArray(d.data) && d.data.length > 0) {
           setWarehouses(d.data);
@@ -564,8 +564,8 @@ export function WarehouseCreate({
       .catch(() => { });
 
     // 5. Fetch Master Items
-    fetch("/api/exim/master/items?per_page=100", { headers: { Accept: "application/json" } })
-      .then((r) => r.json())
+    apiFetch("/api/exim/master/items?per_page=100")
+      .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
         if (isMounted && d?.data && Array.isArray(d.data) && d.data.length > 0) {
           setMasterItems(d.data);
@@ -574,8 +574,8 @@ export function WarehouseCreate({
       .catch(() => { });
 
     // 6. Fetch Master Job Numbers
-    fetch("/api/exim/master/job-numbers?per_page=100", { headers: { Accept: "application/json" } })
-      .then((r) => r.json())
+    apiFetch("/api/exim/master/job-numbers?per_page=100")
+      .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
         if (isMounted && d?.data && Array.isArray(d.data) && d.data.length > 0) {
           setJobNumbers(d.data.map((j: any) => j.code || j.name || j.job_number).filter(Boolean));

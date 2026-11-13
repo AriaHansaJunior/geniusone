@@ -19,6 +19,11 @@ export interface ItemRecord {
   brand: string;
   style: string;
   customReport?: string;
+  itemType?: string;
+  unitConversion?: number;
+  netto?: number;
+  size?: string;
+  dimension?: string;
   traceByLot: number | boolean;
   status: "Active" | "Inactive";
   createdAt: string;
@@ -27,6 +32,22 @@ export interface ItemRecord {
   updatedBy: string;
   stock?: number;
   stockUnit?: string;
+  categories_id?: number;
+  classifications_id?: number;
+  facilities_id?: number;
+  origins_id?: number;
+  item_types_id?: number;
+  units_of_measurements_id?: number;
+  smallest_unit_id?: number;
+  greatest_unit_id?: number;
+  colours_id?: number;
+  brands_id?: number;
+  styles_id?: number;
+  customs_reports_id?: number;
+  group_scrap_items_id?: number;
+  specifications_id?: number;
+  hs_code_id?: number;
+  job_number_id?: number;
 }
 
 export type ItemColumnKey =

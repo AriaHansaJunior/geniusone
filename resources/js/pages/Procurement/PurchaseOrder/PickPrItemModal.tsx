@@ -4,6 +4,7 @@ import { Button } from "../../../components/ui/Button";
 import { SearchField } from "../../../components/ui/SearchField";
 import { Pagination } from "../../../components/ui/Pagination";
 import { Badge } from "../../../components/ui/Badge";
+import { apiFetch } from "../../../data/api";
 
 export interface PrItemToPick {
   id: string; // unique row id
@@ -60,8 +61,8 @@ export function PickPrItemModal({
     let isMounted = true;
     setLoading(true);
 
-    fetch("/api/procurement/pr?per_page=100", { headers: { Accept: "application/json" } })
-      .then((r) => r.json())
+    apiFetch("/api/procurement/pr?per_page=100")
+      .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
         if (!isMounted) return;
         setLoading(false);

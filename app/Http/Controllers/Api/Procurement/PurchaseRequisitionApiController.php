@@ -40,8 +40,14 @@ class PurchaseRequisitionApiController extends Controller
             $s = $request->search;
             $query->where(function ($q) use ($s) {
                 $q->where('pr_number', 'like', "%{$s}%")
-                    ->orWhere('notes', 'like', "%{$s}%")
-                    ->orWhereHas('department', fn ($dq) => $dq->where('name', 'like', "%{$s}%"));
+                    ->orWhereHas('department', fn ($dq) => $dq->where('name', 'like', "%{$s}%"))
+                    ->orWhereHas('items', function ($iq) use ($s) {
+                        $iq->where('remark', 'like', "%{$s}%")
+                            ->orWhereHas('item', function ($mq) use ($s) {
+                                $mq->where('name', 'like', "%{$s}%")
+                                    ->orWhere('code', 'like', "%{$s}%");
+                            });
+                    });
             });
         }
 
@@ -711,7 +717,7 @@ class PurchaseRequisitionApiController extends Controller
             throw new InvalidArgumentException("Section '{$trimmed}' was not found in Section master data.");
         }
 
-        $defaultSection = Section::where('departments_id', $deptId)->first() ?? Section::first();
+        $defaultSection = Section::first();
         if (! $defaultSection) {
             throw new InvalidArgumentException('Section master data is empty. Please configure Section master data first.');
         }

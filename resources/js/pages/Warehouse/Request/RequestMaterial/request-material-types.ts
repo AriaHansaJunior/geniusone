@@ -2,6 +2,8 @@ export type ApprovalStatus = "Draft" | "Approved 1" | "Approved 2" | "Rejected";
 
 export interface RequestMaterialItemRow {
   id: string;
+  items_id?: number;
+  job_number_id?: number;
   itemCode: string;
   externalCode: string;
   itemName: string;
@@ -31,7 +33,12 @@ export interface RequestMaterialRecord {
   createdDate: string;
   lastUpdatedDate: string;
 
-  // Additional detail fields
+  // Additional detail fields & DB FK references
+  type_of_request_id?: number;
+  departments_id?: number;
+  warehouses_id?: number;
+  destination_location_id?: number;
+  job_number_id?: number;
   createdBy?: string;
   soNumber?: string;
   poBuyer?: string;

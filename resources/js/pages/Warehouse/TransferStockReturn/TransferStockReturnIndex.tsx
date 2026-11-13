@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import * as XLSX from "xlsx";
 import { Button } from "../../../components/ui/Button";
 import { SearchField } from "../../../components/ui/SearchField";
@@ -9,7 +9,13 @@ import { CustomDatePicker } from "../../../components/ui/CustomDatePicker";
 import { ConfirmDialog } from "../../../components/ui/ConfirmDialog";
 import { TransferStockReturnDetailModal } from "./TransferStockReturnDetailModal";
 import { TransferStockReturnForm } from "./TransferStockReturnForm";
-import { initialTransferStockReturnRecords } from "./transfer-stock-return-data";
+import {
+  fetchTransferStockReturnsApi,
+  saveTransferStockReturnApi,
+  deleteTransferStockReturnApi,
+  approveTransferStockReturnApi,
+  rejectTransferStockReturnApi,
+} from "../../../data/masterApi";
 import type {
   TransferStockReturnRecord,
   TransferStockReturnSortField,
@@ -24,12 +30,14 @@ interface TransferStockReturnIndexProps {
 type SortDirection = "none" | "asc" | "desc";
 
 export function TransferStockReturnIndex({
-  records = initialTransferStockReturnRecords,
+  records,
 }: TransferStockReturnIndexProps) {
-  const [localRecords, setLocalRecords] = useState<TransferStockReturnRecord[]>(records);
+  const [localRecords, setLocalRecords] = useState<TransferStockReturnRecord[]>(records || []);
+  const [loading, setLoading] = useState(!records);
+  const [actionBusy, setActionBusy] = useState(false);
   const [search, setSearch] = useState("");
-  const [startDate, setStartDate] = useState("01-11-2026");
-  const [endDate, setEndDate] = useState("12-11-2026");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
 
   const [pageSize, setPageSize] = useState<number>(10);
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -48,9 +56,33 @@ export function TransferStockReturnIndex({
     message: string;
   } | null>(null);
 
+  const loadRecords = useCallback(async () => {
+    setLoading(true);
+    try {
+      const apiRows = await fetchTransferStockReturnsApi();
+      if (Array.isArray(apiRows)) {
+        setLocalRecords(apiRows);
+        setSelectedRecord((prev) =>
+          prev ? apiRows.find((r) => r.id === prev.id || r.mutationCode === prev.mutationCode) || null : null
+        );
+      }
+    } catch (err: any) {
+      setNotification({
+        type: "warning",
+        message: err?.message || "Failed to load Transfer Stock Return records from database.",
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
-    setLocalRecords(records);
-  }, [records]);
+    if (records) {
+      setLocalRecords(records);
+      return;
+    }
+    loadRecords();
+  }, [records, loadRecords]);
 
   // Helper date parsing (DD-MM-YYYY)
   const parseDate = (dStr: string) => {
@@ -206,31 +238,120 @@ export function TransferStockReturnIndex({
     setRecordToDelete(record);
   };
 
-  const handleConfirmDelete = () => {
-    if (!recordToDelete) return;
-    setLocalRecords((prev) => prev.filter((r) => r.id !== recordToDelete.id));
-    setNotification({
-      type: "success",
-      message: `Stock Transfer Return ${recordToDelete.mutationCode} deleted successfully.`,
-    });
-    setRecordToDelete(null);
-    setTimeout(() => setNotification(null), 3500);
+  const toIsoDate = (dateStr: string): string => {
+    const clean = (dateStr || "").trim();
+    const dmy = clean.match(/^(\d{2})-(\d{2})-(\d{4})$/);
+    if (dmy) return `${dmy[3]}-${dmy[2]}-${dmy[1]}`;
+    return clean || new Date().toISOString().slice(0, 10);
   };
 
-  // Save from form
-  const handleSaveRecord = (record: TransferStockReturnRecord) => {
-    setLocalRecords((prev) => {
-      const exists = prev.some((r) => r.id === record.id);
-      if (exists) {
-        return prev.map((r) => (r.id === record.id ? record : r));
-      }
-      return [record, ...prev];
-    });
+  const handleConfirmDelete = async () => {
+    if (!recordToDelete) return;
+    const target = recordToDelete;
+    setActionBusy(true);
+    try {
+      await deleteTransferStockReturnApi(target.id);
+      await loadRecords();
+      setNotification({
+        type: "success",
+        message: `Stock Transfer Return ${target.mutationCode} deleted successfully.`,
+      });
+    } catch (err: any) {
+      setNotification({
+        type: "warning",
+        message: err?.message || `Failed to delete ${target.mutationCode}.`,
+      });
+    } finally {
+      setRecordToDelete(null);
+      setActionBusy(false);
+      setTimeout(() => setNotification(null), 4000);
+    }
+  };
+
+  // Save from form (Create or Edit)
+  const handleSaveRecord = async (record: TransferStockReturnRecord) => {
+    const payload = {
+      return_number: record.mutationCode,
+      production_code:
+        record.productionCode && record.productionCode !== "-" ? record.productionCode : null,
+      request_material_id: record.request_material_id || null,
+      warehouses_id: record.warehouses_id,
+      job_number_id: record.job_number_id || null,
+      job_number: record.jobNumber && record.jobNumber !== "-" ? record.jobNumber : null,
+      return_date: toIsoDate(record.transferDate),
+      note: record.transferNote,
+      items: record.items.map((it) => ({
+        items_id: it.items_id,
+        quantity: Number(it.quantity),
+        unit: it.unit,
+        source_location: it.sourceLocation,
+        destination_location: it.destinationLocation,
+        remark: it.reason,
+      })),
+    };
+
+    const isEditing = Boolean(editingRecord?.id);
+    await saveTransferStockReturnApi(payload, isEditing ? editingRecord?.id : undefined);
+    await loadRecords();
+    setEditingRecord(null);
     setNotification({
       type: "success",
-      message: `Stock Transfer Return ${record.mutationCode} saved successfully.`,
+      message: `Stock Transfer Return ${record.mutationCode} saved to database successfully.`,
     });
-    setTimeout(() => setNotification(null), 3500);
+    setTimeout(() => setNotification(null), 4000);
+  };
+
+  const handleApproveRecord = async (rec: TransferStockReturnRecord, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    const tier = rec.status === "Waiting Approve 2" ? 2 : 1;
+    setActionBusy(true);
+    try {
+      const res = await approveTransferStockReturnApi(
+        rec.id,
+        tier,
+        `Approved Stage ${tier} via Stock Transfer Return`
+      );
+      await loadRecords();
+      if (isDetailModalOpen) setIsDetailModalOpen(false);
+      setNotification({
+        type: "success",
+        message: res?.message || `${rec.mutationCode} approved for Stage ${tier}.`,
+      });
+    } catch (err: any) {
+      setNotification({
+        type: "warning",
+        message: err?.message || `Failed to approve ${rec.mutationCode}.`,
+      });
+    } finally {
+      setActionBusy(false);
+      setTimeout(() => setNotification(null), 4000);
+    }
+  };
+
+  const handleRejectRecord = async (rec: TransferStockReturnRecord) => {
+    const reason = window.prompt(
+      `Enter rejection reason for ${rec.mutationCode}:`,
+      "Rejected during verification"
+    );
+    if (reason === null) return;
+    setActionBusy(true);
+    try {
+      const res = await rejectTransferStockReturnApi(rec.id, reason.trim() || "Rejected");
+      await loadRecords();
+      if (isDetailModalOpen) setIsDetailModalOpen(false);
+      setNotification({
+        type: "success",
+        message: res?.message || `${rec.mutationCode} rejected.`,
+      });
+    } catch (err: any) {
+      setNotification({
+        type: "warning",
+        message: err?.message || `Failed to reject ${rec.mutationCode}.`,
+      });
+    } finally {
+      setActionBusy(false);
+      setTimeout(() => setNotification(null), 4000);
+    }
   };
 
   // Reset filters
@@ -779,7 +900,9 @@ export function TransferStockReturnIndex({
                       >
                         <Icon name="box" size={20} />
                       </div>
-                      <strong style={{ color: "var(--ink)" }}>No data available in table</strong>
+                      <strong style={{ color: "var(--ink)" }}>
+                        {loading ? "Loading Stock Transfer Returns..." : "No data available in table"}
+                      </strong>
                       <span style={{ fontSize: "12px", color: "var(--slate-500)" }}>
                         Click &ldquo;Add New&rdquo; above to record a new stock transfer return.
                       </span>
@@ -908,6 +1031,31 @@ export function TransferStockReturnIndex({
                             Detail
                           </button>
 
+                          {(rec.status === "Draft" ||
+                            rec.status === "Waiting Approve 1" ||
+                            rec.status === "Waiting Approve 2") && (
+                            <button
+                              type="button"
+                              disabled={actionBusy}
+                              onClick={(e) => handleApproveRecord(rec, e)}
+                              title={
+                                rec.status === "Waiting Approve 2"
+                                  ? "Approve Stage 2"
+                                  : "Approve Stage 1"
+                              }
+                              style={{
+                                border: "1px solid #bbf7d0",
+                                background: "#f0fdf4",
+                                borderRadius: "4px",
+                                padding: "4px 6px",
+                                cursor: actionBusy ? "not-allowed" : "pointer",
+                                color: "#15803d",
+                              }}
+                            >
+                              <Icon name="check" size={13} />
+                            </button>
+                          )}
+
                           <button
                             type="button"
                             onClick={(e) => handleOpenEdit(rec, e)}
@@ -968,6 +1116,9 @@ export function TransferStockReturnIndex({
         isOpen={isDetailModalOpen}
         onClose={() => setIsDetailModalOpen(false)}
         record={selectedRecord}
+        onApprove={(rec) => handleApproveRecord(rec)}
+        onReject={(rec) => handleRejectRecord(rec)}
+        busy={actionBusy}
       />
 
       {/* Form Modal (Create / Edit) */}

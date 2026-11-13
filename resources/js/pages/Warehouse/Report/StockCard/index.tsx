@@ -5,6 +5,7 @@ import { Icon } from "../../../../components/ui/Icon";
 import { Pagination } from "../../../../components/ui/Pagination";
 import { CustomDatePicker } from "../../../../components/ui/CustomDatePicker";
 import { CustomSelect } from "../../../../components/ui/CustomSelect";
+import { apiFetch } from "../../../../data/api";
 import {
   stockCardItemsList,
   stockCardWarehousesList,
@@ -42,8 +43,8 @@ export function StockCardIndex() {
 
   // Load real items and warehouses dynamically
   React.useEffect(() => {
-    fetch("/api/exim/master/items", { headers: { Accept: "application/json" } })
-      .then((res) => res.json())
+    apiFetch("/api/exim/master/items")
+      .then((res) => (res.ok ? res.json() : null))
       .then((json) => {
         if (json?.data && Array.isArray(json.data) && json.data.length > 0) {
           const mappedItems: StockCardItemOption[] = json.data.map((it: any) => ({
@@ -65,8 +66,8 @@ export function StockCardIndex() {
       })
       .catch(() => {});
 
-    fetch("/api/warehouse/master/warehouses", { headers: { Accept: "application/json" } })
-      .then((res) => res.json())
+    apiFetch("/api/warehouse/master/warehouses")
+      .then((res) => (res.ok ? res.json() : null))
       .then((json) => {
         if (json?.data && Array.isArray(json.data) && json.data.length > 0) {
           const names = json.data.map((w: any) => w.name).filter(Boolean);
@@ -133,10 +134,8 @@ export function StockCardIndex() {
       params.set("warehouseId", appliedFilters.warehouse);
     }
 
-    fetch(`/api/warehouse/reports/stock-card?${params.toString()}`, {
-      headers: { Accept: "application/json" },
-    })
-      .then((res) => res.json())
+    apiFetch(`/api/warehouse/reports/stock-card?${params.toString()}`)
+      .then((res) => (res.ok ? res.json() : null))
       .then((json) => {
         if (!isMounted) return;
         if (json?.status === "success" && json.data?.movements && json.data.movements.length > 0) {

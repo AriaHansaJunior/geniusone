@@ -1,4 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useMemo } from "react";
+import {
+  fetchMasterLookupsApi,
+  fetchTransferStockReturnAvailableSourcesApi,
+  fetchMasterItems,
+} from "../../../data/masterApi";
 import { Button } from "../../../components/ui/Button";
 import { CustomDatePicker } from "../../../components/ui/CustomDatePicker";
 import { CustomSelect } from "../../../components/ui/CustomSelect";
@@ -11,36 +16,41 @@ import type {
 interface TransferStockReturnFormProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (record: TransferStockReturnRecord) => void;
+  onSave: (record: TransferStockReturnRecord) => void | Promise<any>;
   existingRecord?: TransferStockReturnRecord | null;
 }
 
-const sampleItemsList = [
-  { code: "30.200.010.003", name: "Flux Refining Powder Smelting Grade", unit: "SAK" },
-  { code: "60.154.300.101", name: "Nozzle Jet Spray Spiral SUS 316 size ½\"", unit: "PIECE" },
-  { code: "80.200.001.408", name: "Besi UNP 200 x 75 x 7 mm x 382 cm", unit: "PIECE" },
-  { code: "80.200.001.406", name: "Besi H-Beam 200 x 200 x 334 cm", unit: "PIECE" },
-  { code: "10.002.400.020", name: "Hydraulic Oil Tellus S2 MX 68 (Drum 209L)", unit: "DRUM" },
-  { code: "50.100.002.015", name: "Cable NYY 4 x 16 mm Supreme", unit: "METER" },
-];
+interface WarehouseOption {
+  id: number;
+  code?: string;
+  name: string;
+}
 
-const destinationLocationsList = [
-  "Warehouse Raw Material (Gudang Bahan Baku)",
-  "Warehouse Sparepart (Gudang Sparepart)",
-  "Warehouse Metal & Steel (Gudang Besi)",
-  "Chemical & Lubricant Warehouse",
-  "Warehouse Quarantine Area",
-  "Finished Goods Warehouse (Gudang Barang Jadi)",
-];
+interface JobNumberOption {
+  id: number;
+  code?: string;
+  name: string;
+}
 
-const jobNumbersList = [
-  "JOB-2026-0045",
-  "JOB-2026-0048",
-  "JOB-2026-0052",
-  "JOB-2026-0038",
-  "JOB-2026-0035",
-  "JOB-2026-0060",
-];
+interface DestinationOption {
+  id: number;
+  name: string;
+}
+
+interface MasterItemOption {
+  id: number;
+  code: string;
+  name: string;
+  unit: string;
+}
+
+function getTodayDmy(): string {
+  const now = new Date();
+  return `${String(now.getDate()).padStart(2, "0")}-${String(now.getMonth() + 1).padStart(
+    2,
+    "0"
+  )}-${now.getFullYear()}`;
+}
 
 export function TransferStockReturnForm({
   isOpen,
@@ -48,13 +58,28 @@ export function TransferStockReturnForm({
   onSave,
   existingRecord,
 }: TransferStockReturnFormProps) {
-  const [mutationCode, setMutationCode] = useState(
-    existingRecord?.mutationCode || `MUT-2026-11-${String(Math.floor(Math.random() * 900) + 100)}`
+  const [warehouses, setWarehouses] = useState<WarehouseOption[]>([]);
+  const [jobNumbers, setJobNumbers] = useState<JobNumberOption[]>([]);
+  const [destinationLocations, setDestinationLocations] = useState<DestinationOption[]>([]);
+  const [masterItems, setMasterItems] = useState<MasterItemOption[]>([]);
+  const [availableSources, setAvailableSources] = useState<any[]>([]);
+  const [loadingLookups, setLoadingLookups] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  const [selectedSourceId, setSelectedSourceId] = useState<string>("");
+  const [warehousesId, setWarehousesId] = useState<number | undefined>(
+    existingRecord?.warehouses_id
   );
-  const [productionCode, setProductionCode] = useState(existingRecord?.productionCode || "PRD-2026-098");
-  const [jobNumber, setJobNumber] = useState(existingRecord?.jobNumber || jobNumbersList[0]);
+  const [mutationCode, setMutationCode] = useState(
+    existingRecord?.mutationCode || `MUT-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 9000) + 1000)}`
+  );
+  const [productionCode, setProductionCode] = useState(existingRecord?.productionCode || "");
+  const [jobNumberId, setJobNumberId] = useState<number | undefined>(
+    existingRecord?.job_number_id
+  );
+  const [jobNumber, setJobNumber] = useState(existingRecord?.jobNumber || "");
   const [transferDate, setTransferDate] = useState(
-    existingRecord?.transferDate || "12-11-2026"
+    existingRecord?.transferDate || getTodayDmy()
   );
   const [transferNote, setTransferNote] = useState(existingRecord?.transferNote || "");
 
@@ -62,33 +87,199 @@ export function TransferStockReturnForm({
     existingRecord?.items || [
       {
         id: "new-item-1",
-        itemCode: sampleItemsList[0].code,
-        itemName: sampleItemsList[0].name,
+        itemCode: "",
+        itemName: "",
         quantity: 1,
-        unit: sampleItemsList[0].unit,
-        sourceLocation: "Production Line 1",
-        destinationLocation: destinationLocationsList[0],
-        reason: "Surplus production material after batch completion",
+        unit: "PCE",
+        sourceLocation: "Production Line",
+        destinationLocation: "",
+        reason: "Surplus production material return",
       },
     ]
   );
 
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  // Sync form fields whenever modal opens or existingRecord switches
+  useEffect(() => {
+    if (!isOpen) return;
+    setErrorMessage(null);
+    setSelectedSourceId(
+      existingRecord?.request_material_id ? String(existingRecord.request_material_id) : ""
+    );
+    setWarehousesId(existingRecord?.warehouses_id);
+    setMutationCode(
+      existingRecord?.mutationCode ||
+        `MUT-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 9000) + 1000)}`
+    );
+    setProductionCode(existingRecord?.productionCode && existingRecord.productionCode !== "-" ? existingRecord.productionCode : "");
+    setJobNumberId(existingRecord?.job_number_id);
+    setJobNumber(existingRecord?.jobNumber && existingRecord.jobNumber !== "-" ? existingRecord.jobNumber : "");
+    setTransferDate(existingRecord?.transferDate || getTodayDmy());
+    setTransferNote(existingRecord?.transferNote || "");
+    setItems(
+      existingRecord?.items?.length
+        ? existingRecord.items
+        : [
+            {
+              id: `new-item-${Date.now()}`,
+              itemCode: "",
+              itemName: "",
+              quantity: 1,
+              unit: "PCE",
+              sourceLocation: "Production Line",
+              destinationLocation: "",
+              reason: "Return excess stock",
+            },
+          ]
+    );
+  }, [isOpen, existingRecord]);
+
+  // Load real DB lookups, available RM sources, and master items
+  useEffect(() => {
+    if (!isOpen) return;
+    let cancelled = false;
+    setLoadingLookups(true);
+
+    Promise.all([
+      fetchMasterLookupsApi(),
+      fetchTransferStockReturnAvailableSourcesApi().catch(() => []),
+      fetchMasterItems().catch(() => []),
+    ])
+      .then(([lookupData, sourcesData, itemsData]) => {
+        if (cancelled) return;
+        const d = lookupData || {};
+        const whList: WarehouseOption[] = Array.isArray(d.warehouses) ? d.warehouses : [];
+        const jnList: JobNumberOption[] = Array.isArray(d.job_numbers) ? d.job_numbers : [];
+        const dlList: DestinationOption[] = Array.isArray(d.destination_locations)
+          ? d.destination_locations
+          : [];
+        const mItems: MasterItemOption[] = Array.isArray(itemsData)
+          ? itemsData.map((m) => ({
+              id: Number(m.id),
+              code: m.itemCode || "",
+              name: m.itemName || "",
+              unit: m.smallestUnitCode || m.smallestUnitName || "PCE",
+            }))
+          : [];
+
+        setWarehouses(whList);
+        setJobNumbers(jnList);
+        setDestinationLocations(dlList);
+        setMasterItems(mItems);
+        setAvailableSources(Array.isArray(sourcesData) ? sourcesData : []);
+
+        // Default warehouse on create if none selected yet
+        if (!existingRecord?.warehouses_id && whList.length > 0) {
+          setWarehousesId((prev) => prev ?? Number(whList[0].id));
+        }
+
+        const defaultDest = dlList[0]?.name || whList[0]?.name || "Main Warehouse";
+        if (mItems.length > 0) {
+          setItems((prev) =>
+            prev.map((row) => {
+              const matched =
+                (row.items_id ? mItems.find((m) => m.id === row.items_id) : undefined) ||
+                (row.itemCode ? mItems.find((m) => m.code === row.itemCode) : undefined) ||
+                (!existingRecord ? mItems[0] : undefined);
+              return {
+                ...row,
+                items_id: row.items_id ?? (matched ? matched.id : undefined),
+                itemCode: row.itemCode || (matched ? matched.code : ""),
+                itemName: row.itemName || (matched ? matched.name : ""),
+                unit: row.unit && row.unit !== "-" ? row.unit : matched?.unit || "PCE",
+                destinationLocation: row.destinationLocation || defaultDest,
+              };
+            })
+          );
+        } else if (defaultDest) {
+          setItems((prev) =>
+            prev.map((row) => ({
+              ...row,
+              destinationLocation: row.destinationLocation || defaultDest,
+            }))
+          );
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingLookups(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, existingRecord]);
+
+  const itemSelectOptions = useMemo(
+    () => [
+      { value: "", label: "-- Select Master Item --" },
+      ...masterItems.map((m) => ({
+        value: String(m.id),
+        label: m.code ? `${m.code} - ${m.name}` : m.name,
+      })),
+    ],
+    [masterItems]
+  );
+
+  const destinationSelectOptions = useMemo(() => {
+    const names = new Set<string>();
+    destinationLocations.forEach((d) => {
+      if (d.name) names.add(d.name);
+    });
+    warehouses.forEach((w) => {
+      if (w.name) names.add(w.name);
+    });
+    return Array.from(names);
+  }, [destinationLocations, warehouses]);
+
   if (!isOpen) return null;
 
+  const handleSelectSourceRm = (sourceIdStr: string) => {
+    setSelectedSourceId(sourceIdStr);
+    if (!sourceIdStr) return;
+    const src = availableSources.find((s) => String(s.id) === sourceIdStr);
+    if (!src) return;
+
+    if (src.warehouses_id) setWarehousesId(Number(src.warehouses_id));
+    if (src.request_number || src.requestNumber) {
+      setProductionCode(src.request_number || src.requestNumber);
+    }
+    if (src.job_number_id) setJobNumberId(Number(src.job_number_id));
+    if (src.job_number || src.jobNumber) setJobNumber(src.job_number || src.jobNumber);
+
+    if (Array.isArray(src.items) && src.items.length > 0) {
+      const destFallback =
+        src.warehouseName || destinationSelectOptions[0] || "Main Warehouse";
+      const srcLocFallback = src.destinationLocation || "Production Area";
+      setItems(
+        src.items.map((it: any, idx: number) => ({
+          id: `src-item-${Date.now()}-${idx}`,
+          items_id: Number(it.items_id),
+          itemCode: it.itemCode || it.code || "",
+          itemName: it.itemName || it.name || "",
+          quantity: Math.max(1, Number(it.remaining_qty ?? it.quantity ?? 1)),
+          unit: it.unit || "PCE",
+          sourceLocation: srcLocFallback,
+          destinationLocation: destFallback,
+          reason: `Return from ${src.request_number || src.requestNumber || "Request Material"}`,
+        }))
+      );
+    }
+  };
+
   const handleAddItemRow = () => {
-    const nextItem = sampleItemsList[items.length % sampleItemsList.length];
+    const firstItem = masterItems[0];
     setItems((prev) => [
       ...prev,
       {
         id: `item-${Date.now()}-${prev.length}`,
-        itemCode: nextItem.code,
-        itemName: nextItem.name,
+        items_id: firstItem?.id,
+        itemCode: firstItem?.code || "",
+        itemName: firstItem?.name || "",
         quantity: 1,
-        unit: nextItem.unit,
+        unit: firstItem?.unit || "PCE",
         sourceLocation: "Production Area",
-        destinationLocation: destinationLocationsList[0],
+        destinationLocation: destinationSelectOptions[0] || "",
         reason: "Return excess stock",
       },
     ]);
@@ -106,12 +297,13 @@ export function TransferStockReturnForm({
     setItems((prev) =>
       prev.map((it, i) => {
         if (i !== idx) return it;
-        if (field === "itemCode") {
-          const match = sampleItemsList.find((s) => s.code === val);
+        if (field === "items_id") {
+          const match = masterItems.find((m) => String(m.id) === String(val));
           return {
             ...it,
-            itemCode: val,
-            itemName: match ? match.name : it.itemName,
+            items_id: match ? match.id : undefined,
+            itemCode: match ? match.code : "",
+            itemName: match ? match.name : "",
             unit: match ? match.unit : it.unit,
           };
         }
@@ -120,8 +312,10 @@ export function TransferStockReturnForm({
     );
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setErrorMessage(null);
+
     if (!mutationCode.trim()) {
       setErrorMessage("Mutation Code is required.");
       return;
@@ -130,13 +324,27 @@ export function TransferStockReturnForm({
       setErrorMessage("Transfer Date is required.");
       return;
     }
+    if (!warehousesId) {
+      setErrorMessage("Target Warehouse is required.");
+      return;
+    }
     if (items.length === 0) {
       setErrorMessage("Please add at least one item to return.");
       return;
     }
+    const invalidRow = items.find((it) => !it.items_id || Number(it.quantity) <= 0);
+    if (invalidRow) {
+      setErrorMessage("Each row must select a valid Master Item and have quantity greater than 0.");
+      return;
+    }
 
+    const whObj = warehouses.find((w) => Number(w.id) === Number(warehousesId));
     const newRecord: TransferStockReturnRecord = {
       id: existingRecord?.id || `tsr-${Date.now()}`,
+      warehouses_id: warehousesId,
+      warehouseName: whObj?.name || existingRecord?.warehouseName || "",
+      request_material_id: selectedSourceId ? Number(selectedSourceId) : existingRecord?.request_material_id,
+      job_number_id: jobNumberId,
       mutationCode: mutationCode.trim(),
       productionCode: productionCode.trim() || "-",
       jobNumber: jobNumber.trim() || "-",
@@ -145,12 +353,19 @@ export function TransferStockReturnForm({
       totalItems: items.length,
       status: existingRecord?.status || "Waiting Approve 1",
       userCreated: existingRecord?.userCreated || "Administrator GeniusOne",
-      userLastUpdated: "12-11-2026 15:00",
+      userLastUpdated: getTodayDmy(),
       items,
     };
 
-    onSave(newRecord);
-    onClose();
+    try {
+      setSaving(true);
+      await onSave(newRecord);
+      onClose();
+    } catch (err: any) {
+      setErrorMessage(err?.message || "Failed to save Stock Transfer Return to database.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -247,11 +462,60 @@ export function TransferStockReturnForm({
               </div>
 
               <div className="master-form-group">
+                <label className="master-form-label">
+                  Warehouse <span style={{ color: "var(--red-600)" }}>*</span>
+                </label>
+                <CustomSelect
+                  value={warehousesId ? String(warehousesId) : ""}
+                  onChange={(val: string) => setWarehousesId(val ? Number(val) : undefined)}
+                  placeholder={loadingLookups ? "Loading warehouses..." : "-- Select Warehouse --"}
+                  disabled={loadingLookups}
+                  options={[
+                    { value: "", label: "-- Select Warehouse --" },
+                    ...warehouses.map((w) => ({
+                      value: String(w.id),
+                      label: w.code ? `${w.code} - ${w.name}` : w.name,
+                    })),
+                  ]}
+                />
+              </div>
+
+              {!existingRecord && availableSources.length > 0 && (
+                <div className="master-form-group">
+                  <label className="master-form-label">Source Request Material</label>
+                  <CustomSelect
+                    value={selectedSourceId}
+                    onChange={handleSelectSourceRm}
+                    placeholder="-- Optional: Populate from Approved RM --"
+                    options={[
+                      { value: "", label: "-- Direct / Manual Entry --" },
+                      ...availableSources.map((src) => ({
+                        value: String(src.id),
+                        label: `${src.request_number || src.requestNumber || `RM-${src.id}`}${src.warehouseName ? ` (${src.warehouseName})` : ""}`,
+                      })),
+                    ]}
+                  />
+                </div>
+              )}
+
+              <div className="master-form-group">
                 <label className="master-form-label">Job Number</label>
                 <CustomSelect
-                  value={jobNumber}
-                  onChange={(val: string) => setJobNumber(val)}
-                  options={jobNumbersList}
+                  value={jobNumberId ? String(jobNumberId) : ""}
+                  onChange={(val: string) => {
+                    const matched = jobNumbers.find((j) => String(j.id) === val);
+                    setJobNumberId(matched ? Number(matched.id) : undefined);
+                    setJobNumber(matched ? matched.name : "");
+                  }}
+                  placeholder={loadingLookups ? "Loading job numbers..." : "-- Select Job Number --"}
+                  disabled={loadingLookups}
+                  options={[
+                    { value: "", label: "-- None / Optional --" },
+                    ...jobNumbers.map((j) => ({
+                      value: String(j.id),
+                      label: j.code && j.code !== j.name ? `${j.code} - ${j.name}` : j.name,
+                    })),
+                  ]}
                 />
               </div>
 
@@ -353,12 +617,11 @@ export function TransferStockReturnForm({
                         </td>
                         <td style={{ padding: "8px 10px" }}>
                           <CustomSelect
-                            value={it.itemCode}
-                            onChange={(val: string) => handleItemChange(idx, "itemCode", val)}
-                            options={sampleItemsList.map((s) => ({
-                              value: s.code,
-                              label: `${s.code} - ${s.name}`,
-                            }))}
+                            value={it.items_id ? String(it.items_id) : ""}
+                            onChange={(val: string) => handleItemChange(idx, "items_id", val)}
+                            placeholder={loadingLookups ? "Loading items..." : "-- Select Item --"}
+                            disabled={loadingLookups}
+                            options={itemSelectOptions}
                           />
                         </td>
                         <td style={{ padding: "8px 10px" }}>
@@ -381,7 +644,11 @@ export function TransferStockReturnForm({
                           <CustomSelect
                             value={it.destinationLocation}
                             onChange={(val: string) => handleItemChange(idx, "destinationLocation", val)}
-                            options={destinationLocationsList}
+                            placeholder="-- Select Destination --"
+                            options={destinationSelectOptions.map((name) => ({
+                              value: name,
+                              label: name,
+                            }))}
                           />
                         </td>
                         <td style={{ padding: "8px 10px" }}>
@@ -420,11 +687,11 @@ export function TransferStockReturnForm({
 
           {/* Form Actions Footer */}
           <div className="master-modal-footer" style={{ padding: "12px 20px" }}>
-            <Button type="button" variant="secondary" onClick={onClose}>
+            <Button type="button" variant="secondary" onClick={onClose} disabled={saving}>
               Cancel
             </Button>
-            <Button type="submit" variant="primary">
-              Save
+            <Button type="submit" variant="primary" disabled={saving || loadingLookups}>
+              {saving ? "Saving..." : "Save"}
             </Button>
           </div>
         </form>

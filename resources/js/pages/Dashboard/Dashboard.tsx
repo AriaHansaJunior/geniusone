@@ -71,16 +71,21 @@ export function Dashboard({
   requestMaterialRecords,
   onReceiveNotesUpdate,
 }: DashboardProps = {}) {
+  const defaultEndDate = useMemo(() => {
+    const today = new Date().toISOString().slice(0, 10);
+    return today > "2026-10-31" ? today : "2026-10-31";
+  }, []);
+
   // Filter form state
   const [startDate, setStartDate] = useState("2026-10-01");
-  const [endDate, setEndDate] = useState("2026-10-31");
+  const [endDate, setEndDate] = useState(defaultEndDate);
   const [currency, setCurrency] = useState("All Currencies");
   const [rateType, setRateType] = useState("All Rate Types");
 
   // Applied filter state (updated on Show or Reset)
   const [appliedFilters, setAppliedFilters] = useState({
     startDate: "2026-10-01",
-    endDate: "2026-10-31",
+    endDate: defaultEndDate,
     currency: "All Currencies",
     rateType: "All Rate Types",
   });
@@ -138,12 +143,12 @@ export function Dashboard({
   // Reset filters to defaults
   const handleResetFilters = () => {
     setStartDate("2026-10-01");
-    setEndDate("2026-10-31");
+    setEndDate(defaultEndDate);
     setCurrency("All Currencies");
     setRateType("All Rate Types");
     setAppliedFilters({
       startDate: "2026-10-01",
-      endDate: "2026-10-31",
+      endDate: defaultEndDate,
       currency: "All Currencies",
       rateType: "All Rate Types",
     });
@@ -160,7 +165,13 @@ export function Dashboard({
       message: "Checking live forex feed status from central bank servers...",
     });
 
-    apiFetch(`/api/dashboard/exchange-rates?startDate=${appliedFilters.startDate}&endDate=${appliedFilters.endDate}`)
+    const params = new URLSearchParams({
+      startDate: appliedFilters.startDate,
+      endDate: appliedFilters.endDate,
+      currency: appliedFilters.currency,
+      rateType: appliedFilters.rateType,
+    });
+    apiFetch(`/api/dashboard/exchange-rates?${params.toString()}`)
       .then((r) => r.json())
       .then((json) => {
         if (json?.status === "success" && Array.isArray(json.data)) {

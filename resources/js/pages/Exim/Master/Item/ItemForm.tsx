@@ -1,18 +1,85 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Button } from "../../../../components/ui/Button";
 import { Icon } from "../../../../components/ui/Icon";
 import { CustomSelect } from "../../../../components/ui/CustomSelect";
-import { itemCategories, itemClassifications } from "./item-data";
+import { fetchMasterLookupsApi, fetchMasterStyles } from "../../../../data/masterApi";
 import type { ItemRecord } from "./item-types";
 
 interface ItemFormProps {
   initialRecord?: ItemRecord | null;
   onBack: () => void;
-  onSave?: (record: ItemRecord, isEdit: boolean) => void;
+  onSave?: (record: ItemRecord, isEdit: boolean) => void | Promise<any>;
+}
+
+interface LookupOption {
+  id: number;
+  code?: string;
+  name: string;
+  description?: string;
+}
+
+interface ItemLookupState {
+  classifications: LookupOption[];
+  categories: LookupOption[];
+  facilities: LookupOption[];
+  hsCodes: LookupOption[];
+  customsReports: LookupOption[];
+  itemTypes: LookupOption[];
+  uoms: LookupOption[];
+  brands: LookupOption[];
+  styles: LookupOption[];
+  colours: LookupOption[];
+  origins: LookupOption[];
+  groupScrapItems: LookupOption[];
+  specifications: LookupOption[];
+}
+
+const EMPTY_LOOKUPS: ItemLookupState = {
+  classifications: [],
+  categories: [],
+  facilities: [],
+  hsCodes: [],
+  customsReports: [],
+  itemTypes: [],
+  uoms: [],
+  brands: [],
+  styles: [],
+  colours: [],
+  origins: [],
+  groupScrapItems: [],
+  specifications: [],
+};
+
+const normStr = (v?: string | null) => (v ?? "").trim().toLowerCase();
+
+function matchLookup<T extends { id: number; code?: string; name: string }>(
+  list: T[],
+  preferredId?: number | null,
+  ...names: (string | undefined | null)[]
+): T | undefined {
+  if (!list.length) return undefined;
+  if (preferredId) {
+    const byId = list.find((r) => Number(r.id) === Number(preferredId));
+    if (byId) return byId;
+  }
+  for (const raw of names) {
+    const target = normStr(raw);
+    if (!target || target === "-" || target === "—" || target === "none") continue;
+    const exact = list.find(
+      (r) => normStr(r.name) === target || (r.code && normStr(r.code) === target)
+    );
+    if (exact) return exact;
+  }
+  return undefined;
 }
 
 export function ItemForm({ initialRecord, onBack, onSave }: ItemFormProps) {
   const isEdit = !!initialRecord;
+
+  // Master lookups from DB
+  const [lookups, setLookups] = useState<ItemLookupState>(EMPTY_LOOKUPS);
+  const [loadingLookups, setLoadingLookups] = useState(true);
+  const [saving, setSaving] = useState(false);
 
   // Form states
   const [itemName, setItemName] = useState(initialRecord?.itemName || "");
@@ -23,49 +90,58 @@ export function ItemForm({ initialRecord, onBack, onSave }: ItemFormProps) {
     initialRecord ? !!initialRecord.traceByLot : true
   );
 
-  const [category, setCategory] = useState(
-    initialRecord?.category && initialRecord.category !== "-"
-      ? initialRecord.category
-      : "Umum"
+  // FK IDs (real DB IDs) + display labels
+  const [classificationsId, setClassificationsId] = useState<number | undefined>(
+    initialRecord?.classifications_id
   );
-  const [classification, setClassification] = useState(
-    initialRecord?.classification || "MESIN & SPARE PART"
+  const [categoriesId, setCategoriesId] = useState<number | undefined>(
+    initialRecord?.categories_id
   );
-  const [facility, setFacility] = useState<"FASILITAS" | "NON FASILITAS">(
-    initialRecord?.facility || "FASILITAS"
+  const [facilitiesId, setFacilitiesId] = useState<number | undefined>(
+    initialRecord?.facilities_id
   );
-  const [origin, setOrigin] = useState(initialRecord?.origin || "-");
-  const [jenisItem, setJenisItem] = useState("Raw Material");
+  const [hsCodeId, setHsCodeId] = useState<number | undefined>(
+    initialRecord?.hs_code_id
+  );
+  const [customsReportsId, setCustomsReportsId] = useState<number | undefined>(
+    initialRecord?.customs_reports_id
+  );
+  const [itemTypesId, setItemTypesId] = useState<number | undefined>(
+    initialRecord?.item_types_id
+  );
 
   // Units & conversion
-  const [smallestUnitCode, setSmallestUnitCode] = useState(
-    initialRecord?.smallestUnitCode || "PCE"
+  const [smallestUnitId, setSmallestUnitId] = useState<number | undefined>(
+    initialRecord?.smallest_unit_id ?? initialRecord?.units_of_measurements_id
   );
-  const [smallestUnitName, setSmallestUnitName] = useState(
-    initialRecord?.smallestUnitName || "PIECE"
+  const [greatestUnitId, setGreatestUnitId] = useState<number | undefined>(
+    initialRecord?.greatest_unit_id ?? initialRecord?.units_of_measurements_id
   );
-  const [greatestUnitCode, setGreatestUnitCode] = useState(
-    initialRecord?.greatestUnitCode || "PCE"
+  const [conversionRate, setConversionRate] = useState<number>(
+    initialRecord?.unitConversion ?? 1
   );
-  const [greatestUnitName, setGreatestUnitName] = useState(
-    initialRecord?.greatestUnitName || "PIECE"
-  );
-  const [conversionRate, setConversionRate] = useState<number>(1);
-  const [netto, setNetto] = useState<number>(0);
+  const [netto, setNetto] = useState<number>(initialRecord?.netto ?? 0);
 
-  // Attributes
-  const [hsCode, setHsCode] = useState(initialRecord?.hsCode || "");
-  const [colour, setColour] = useState(initialRecord?.colour || "-");
-  const [brand, setBrand] = useState(initialRecord?.brand || "NO BRAND");
-  const [style, setStyle] = useState(initialRecord?.style || "No Style");
-  const [size, setSize] = useState("-");
-  const [dimension, setDimension] = useState("-");
-  const [customReport, setCustomReport] = useState(
-    initialRecord?.customReport || "Sesuai Klasifikasi Barang"
+  // Physical Attributes & Specs FK IDs
+  const [brandsId, setBrandsId] = useState<number | undefined>(
+    initialRecord?.brands_id
   );
-  const [groupScrap, setGroupScrap] = useState(initialRecord?.groupScrap || "-");
-  const [specification, setSpecification] = useState(
-    initialRecord?.specification || "-"
+  const [stylesId, setStylesId] = useState<number | undefined>(
+    initialRecord?.styles_id
+  );
+  const [coloursId, setColoursId] = useState<number | undefined>(
+    initialRecord?.colours_id
+  );
+  const [size, setSize] = useState(initialRecord?.size || "");
+  const [dimension, setDimension] = useState(initialRecord?.dimension || "");
+  const [originsId, setOriginsId] = useState<number | undefined>(
+    initialRecord?.origins_id
+  );
+  const [groupScrapItemsId, setGroupScrapItemsId] = useState<number | undefined>(
+    initialRecord?.group_scrap_items_id
+  );
+  const [specificationsId, setSpecificationsId] = useState<number | undefined>(
+    initialRecord?.specifications_id
   );
 
   const [error, setError] = useState<string | null>(null);
@@ -74,7 +150,260 @@ export function ItemForm({ initialRecord, onBack, onSave }: ItemFormProps) {
     message: string;
   } | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Fetch all master lookups & styles from DB on mount
+  useEffect(() => {
+    let cancelled = false;
+    setLoadingLookups(true);
+
+    Promise.all([fetchMasterLookupsApi(), fetchMasterStyles()])
+      .then(([data, stylesData]) => {
+        if (cancelled) return;
+        const d = data || {};
+        const next: ItemLookupState = {
+          classifications: Array.isArray(d.classifications) ? d.classifications : [],
+          categories: Array.isArray(d.categories) ? d.categories : [],
+          facilities: Array.isArray(d.facilities) ? d.facilities : [],
+          hsCodes: Array.isArray(d.hs_codes) ? d.hs_codes : [],
+          customsReports: Array.isArray(d.customs_reports) ? d.customs_reports : [],
+          itemTypes: Array.isArray(d.item_types) ? d.item_types : [],
+          uoms: Array.isArray(d.units_of_measurements) ? d.units_of_measurements : [],
+          brands: Array.isArray(d.brands) ? d.brands : [],
+          styles: Array.isArray(stylesData)
+            ? stylesData.map((s) => ({ id: Number(s.id), code: s.code, name: s.name }))
+            : [],
+          colours: Array.isArray(d.colours) ? d.colours : [],
+          origins: Array.isArray(d.origins) ? d.origins : [],
+          groupScrapItems: Array.isArray(d.group_scrap_items) ? d.group_scrap_items : [],
+          specifications: Array.isArray(d.specifications) ? d.specifications : [],
+        };
+        setLookups(next);
+
+        // Resolve required FKs (fallback to first seeded DB row on create)
+        const clsMatch =
+          matchLookup(next.classifications, initialRecord?.classifications_id, initialRecord?.classification) ??
+          next.classifications[0];
+        if (clsMatch) setClassificationsId(Number(clsMatch.id));
+
+        const facMatch =
+          matchLookup(next.facilities, initialRecord?.facilities_id, initialRecord?.facility) ??
+          next.facilities[0];
+        if (facMatch) setFacilitiesId(Number(facMatch.id));
+
+        const smallUomMatch =
+          matchLookup(
+            next.uoms,
+            initialRecord?.smallest_unit_id ?? initialRecord?.units_of_measurements_id,
+            initialRecord?.smallestUnitCode,
+            initialRecord?.smallestUnitName
+          ) ??
+          matchLookup(next.uoms, undefined, "PCE", "PIECE") ??
+          next.uoms[0];
+        if (smallUomMatch) setSmallestUnitId(Number(smallUomMatch.id));
+
+        const greatUomMatch =
+          matchLookup(
+            next.uoms,
+            initialRecord?.greatest_unit_id ?? initialRecord?.units_of_measurements_id,
+            initialRecord?.greatestUnitCode,
+            initialRecord?.greatestUnitName
+          ) ?? smallUomMatch;
+        if (greatUomMatch) setGreatestUnitId(Number(greatUomMatch.id));
+
+        // Resolve optional FKs if initialRecord provides them
+        const catMatch =
+          matchLookup(next.categories, initialRecord?.categories_id, initialRecord?.category) ??
+          (!isEdit ? next.categories[0] : undefined);
+        if (catMatch) setCategoriesId(Number(catMatch.id));
+
+        const hsMatch = matchLookup(next.hsCodes, initialRecord?.hs_code_id, initialRecord?.hsCode);
+        if (hsMatch) setHsCodeId(Number(hsMatch.id));
+
+        const crMatch = matchLookup(
+          next.customsReports,
+          initialRecord?.customs_reports_id,
+          initialRecord?.customReport
+        );
+        if (crMatch) setCustomsReportsId(Number(crMatch.id));
+
+        const itMatch = matchLookup(
+          next.itemTypes,
+          initialRecord?.item_types_id,
+          initialRecord?.itemType
+        );
+        if (itMatch) setItemTypesId(Number(itMatch.id));
+
+        const brMatch = matchLookup(next.brands, initialRecord?.brands_id, initialRecord?.brand);
+        if (brMatch) setBrandsId(Number(brMatch.id));
+
+        const stMatch = matchLookup(next.styles, initialRecord?.styles_id, initialRecord?.style);
+        if (stMatch) setStylesId(Number(stMatch.id));
+
+        const coMatch = matchLookup(next.colours, initialRecord?.colours_id, initialRecord?.colour);
+        if (coMatch) setColoursId(Number(coMatch.id));
+
+        const orMatch = matchLookup(next.origins, initialRecord?.origins_id, initialRecord?.origin);
+        if (orMatch) setOriginsId(Number(orMatch.id));
+
+        const gsMatch = matchLookup(
+          next.groupScrapItems,
+          initialRecord?.group_scrap_items_id,
+          initialRecord?.groupScrap
+        );
+        if (gsMatch) setGroupScrapItemsId(Number(gsMatch.id));
+
+        const spMatch = matchLookup(
+          next.specifications,
+          initialRecord?.specifications_id,
+          initialRecord?.specification
+        );
+        if (spMatch) setSpecificationsId(Number(spMatch.id));
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setNotification({
+            type: "warning",
+            message: err?.message || "Failed to load master reference lookups from database.",
+          });
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingLookups(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [initialRecord, isEdit]);
+
+  // Pre-build CustomSelect options
+  const classificationOptions = useMemo(
+    () =>
+      lookups.classifications.map((c) => ({
+        value: String(c.id),
+        label: c.code ? `${c.code} - ${c.name}` : c.name,
+      })),
+    [lookups.classifications]
+  );
+
+  const categoryOptions = useMemo(
+    () => [
+      { value: "", label: "— None / Not Set —" },
+      ...lookups.categories.map((c) => ({
+        value: String(c.id),
+        label: c.code ? `${c.code} - ${c.name}` : c.name,
+      })),
+    ],
+    [lookups.categories]
+  );
+
+  const facilityOptions = useMemo(
+    () =>
+      lookups.facilities.map((f) => ({
+        value: String(f.id),
+        label: f.name,
+      })),
+    [lookups.facilities]
+  );
+
+  const hsCodeOptions = useMemo(
+    () => [
+      { value: "", label: "— None / Not Set —" },
+      ...lookups.hsCodes.map((h) => ({
+        value: String(h.id),
+        label: h.description ? `${h.name} - ${h.description}` : h.name,
+      })),
+    ],
+    [lookups.hsCodes]
+  );
+
+  const customsReportOptions = useMemo(
+    () => [
+      { value: "", label: "— None / Not Set —" },
+      ...lookups.customsReports.map((c) => ({ value: String(c.id), label: c.name })),
+    ],
+    [lookups.customsReports]
+  );
+
+  const itemTypeOptions = useMemo(
+    () => [
+      { value: "", label: "— None / Not Set —" },
+      ...lookups.itemTypes.map((t) => ({ value: String(t.id), label: t.name })),
+    ],
+    [lookups.itemTypes]
+  );
+
+  const uomOptions = useMemo(
+    () =>
+      lookups.uoms.map((u) => ({
+        value: String(u.id),
+        label: u.code ? `${u.code} - ${u.name}` : u.name,
+      })),
+    [lookups.uoms]
+  );
+
+  const optionalUomOptions = useMemo(
+    () => [{ value: "", label: "— Same as Usage Unit —" }, ...uomOptions],
+    [uomOptions]
+  );
+
+  const brandOptions = useMemo(
+    () => [
+      { value: "", label: "— None / Not Set —" },
+      ...lookups.brands.map((b) => ({ value: String(b.id), label: b.name })),
+    ],
+    [lookups.brands]
+  );
+
+  const styleOptions = useMemo(
+    () => [
+      { value: "", label: "— None / Not Set —" },
+      ...lookups.styles.map((s) => ({
+        value: String(s.id),
+        label: s.code ? `${s.code} - ${s.name}` : s.name,
+      })),
+    ],
+    [lookups.styles]
+  );
+
+  const colourOptions = useMemo(
+    () => [
+      { value: "", label: "— None / Not Set —" },
+      ...lookups.colours.map((c) => ({
+        value: String(c.id),
+        label: c.code ? `${c.code} - ${c.name}` : c.name,
+      })),
+    ],
+    [lookups.colours]
+  );
+
+  const originOptions = useMemo(
+    () => [
+      { value: "", label: "— None / Not Set —" },
+      ...lookups.origins.map((o) => ({ value: String(o.id), label: o.name })),
+    ],
+    [lookups.origins]
+  );
+
+  const groupScrapOptions = useMemo(
+    () => [
+      { value: "", label: "— None / Not Set —" },
+      ...lookups.groupScrapItems.map((g) => ({
+        value: String(g.id),
+        label: g.code ? `${g.code} - ${g.name}` : g.name,
+      })),
+    ],
+    [lookups.groupScrapItems]
+  );
+
+  const specificationOptions = useMemo(
+    () => [
+      { value: "", label: "— None / Not Set —" },
+      ...lookups.specifications.map((s) => ({ value: String(s.id), label: s.name })),
+    ],
+    [lookups.specifications]
+  );
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     const trimmedName = itemName.trim();
@@ -87,15 +416,58 @@ export function ItemForm({ initialRecord, onBack, onSave }: ItemFormProps) {
       return;
     }
 
+    if (loadingLookups) {
+      setNotification({
+        type: "warning",
+        message: "Master reference data is still loading. Please wait a moment.",
+      });
+      return;
+    }
+
+    const effectiveClassId = classificationsId ?? lookups.classifications[0]?.id;
+    const effectiveFacId = facilitiesId ?? lookups.facilities[0]?.id;
+    const effectiveSmallUomId = smallestUnitId ?? lookups.uoms[0]?.id;
+    const effectiveGreatUomId = greatestUnitId ?? effectiveSmallUomId;
+
+    if (!effectiveClassId || !effectiveFacId || !effectiveSmallUomId) {
+      setNotification({
+        type: "warning",
+        message:
+          "Required master references (Classification, Facility, and Unit of Measurement) must be selected before saving.",
+      });
+      return;
+    }
+
     let finalCode = itemCode.trim();
     if (autoCode || !finalCode) {
-      finalCode = isEdit && initialRecord?.itemCode
-        ? initialRecord.itemCode
-        : `ITM-${Date.now().toString().slice(-6)}`;
+      finalCode =
+        isEdit && initialRecord?.itemCode
+          ? initialRecord.itemCode
+          : `ITM-${Date.now().toString().slice(-6)}`;
     }
 
     setError(null);
     setNotification(null);
+
+    const clsObj = lookups.classifications.find((c) => c.id === effectiveClassId);
+    const catObj = lookups.categories.find((c) => c.id === categoriesId);
+    const facObj = lookups.facilities.find((f) => f.id === effectiveFacId);
+    const hsObj = lookups.hsCodes.find((h) => h.id === hsCodeId);
+    const crObj = lookups.customsReports.find((c) => c.id === customsReportsId);
+    const itObj = lookups.itemTypes.find((t) => t.id === itemTypesId);
+    const smallUomObj = lookups.uoms.find((u) => u.id === effectiveSmallUomId);
+    const greatUomObj = lookups.uoms.find((u) => u.id === effectiveGreatUomId);
+    const brandObj = lookups.brands.find((b) => b.id === brandsId);
+    const styleObj = lookups.styles.find((s) => s.id === stylesId);
+    const colourObj = lookups.colours.find((c) => c.id === coloursId);
+    const originObj = lookups.origins.find((o) => o.id === originsId);
+    const scrapObj = lookups.groupScrapItems.find((g) => g.id === groupScrapItemsId);
+    const specObj = lookups.specifications.find((s) => s.id === specificationsId);
+
+    const facLabel = (facObj?.name || initialRecord?.facility || "FASILITAS").toUpperCase();
+    const facilityDisplay: "FASILITAS" | "NON FASILITAS" = facLabel.includes("NON")
+      ? "NON FASILITAS"
+      : "FASILITAS";
 
     const updatedRecord: ItemRecord = {
       id: initialRecord ? initialRecord.id : `item-${Date.now()}`,
@@ -103,21 +475,42 @@ export function ItemForm({ initialRecord, onBack, onSave }: ItemFormProps) {
       itemCode: finalCode,
       kodeEksternal: kodeEksternal.trim() || "-",
       itemName: trimmedName,
-      classification,
-      category,
-      hsCode: hsCode.trim() || "-",
-      smallestUnitCode,
-      smallestUnitName,
-      greatestUnitCode,
-      greatestUnitName,
-      facility,
-      groupScrap: groupScrap.trim() || "-",
-      specification: specification.trim() || "-",
-      origin: origin.trim() || "-",
-      colour: colour.trim() || "-",
-      brand: brand.trim() || "NO BRAND",
-      style: style.trim() || "No Style",
-      customReport,
+      classification: clsObj?.name || initialRecord?.classification || "-",
+      category: catObj?.name || "-",
+      hsCode: hsObj?.name || "-",
+      smallestUnitCode: smallUomObj?.code || smallUomObj?.name || "PCE",
+      smallestUnitName: smallUomObj?.name || "PIECE",
+      greatestUnitCode: greatUomObj?.code || greatUomObj?.name || smallUomObj?.code || "PCE",
+      greatestUnitName: greatUomObj?.name || smallUomObj?.name || "PIECE",
+      facility: facilityDisplay,
+      groupScrap: scrapObj?.name || "-",
+      specification: specObj?.name || "-",
+      origin: originObj?.name || "-",
+      colour: colourObj?.name || "-",
+      brand: brandObj?.name || "NO BRAND",
+      style: styleObj?.name || "No Style",
+      customReport: crObj?.name || "-",
+      itemType: itObj?.name || "-",
+      unitConversion: Number.isFinite(conversionRate) && conversionRate > 0 ? conversionRate : 1,
+      netto: Number.isFinite(netto) && netto >= 0 ? netto : 0,
+      size: size.trim() || "-",
+      dimension: dimension.trim() || "-",
+      // Real database foreign keys
+      classifications_id: effectiveClassId,
+      categories_id: categoriesId,
+      facilities_id: effectiveFacId,
+      hs_code_id: hsCodeId,
+      customs_reports_id: customsReportsId,
+      item_types_id: itemTypesId,
+      units_of_measurements_id: effectiveSmallUomId,
+      smallest_unit_id: effectiveSmallUomId,
+      greatest_unit_id: effectiveGreatUomId,
+      brands_id: brandsId,
+      styles_id: stylesId,
+      colours_id: coloursId,
+      origins_id: originsId,
+      group_scrap_items_id: groupScrapItemsId,
+      specifications_id: specificationsId,
       traceByLot: traceByLot ? 1 : 0,
       status: initialRecord ? initialRecord.status : "Active",
       createdAt:
@@ -127,11 +520,22 @@ export function ItemForm({ initialRecord, onBack, onSave }: ItemFormProps) {
       updatedAt: `${new Date().toISOString().slice(0, 10)} by USER`,
       updatedBy: "USER",
       stock: initialRecord?.stock || 0,
-      stockUnit: smallestUnitCode,
+      stockUnit: smallUomObj?.code || smallUomObj?.name || "PCE",
     };
 
     if (onSave) {
-      onSave(updatedRecord, isEdit);
+      try {
+        setSaving(true);
+        await onSave(updatedRecord, isEdit);
+      } catch (err: any) {
+        setNotification({
+          type: "warning",
+          message: err?.message || "Failed to save Master Item to the database.",
+        });
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      } finally {
+        setSaving(false);
+      }
     }
   };
 
@@ -256,15 +660,15 @@ export function ItemForm({ initialRecord, onBack, onSave }: ItemFormProps) {
           <div className="item-form-grid">
             <div className="item-form-group">
               <label htmlFor="classification" className="item-form-label">
-                Classification
+                Classification <span className="required-mark">*</span>
               </label>
               <CustomSelect
                 id="classification"
-                value={classification}
-                onChange={(val) => setClassification(val)}
-                options={itemClassifications
-                  .filter((c) => c !== "All Classifications")
-                  .map((cls) => ({ value: cls, label: cls }))}
+                value={classificationsId ? String(classificationsId) : ""}
+                onChange={(val) => setClassificationsId(val ? Number(val) : undefined)}
+                placeholder={loadingLookups ? "Loading classifications..." : "Select classification..."}
+                disabled={loadingLookups}
+                options={classificationOptions}
               />
             </div>
 
@@ -274,28 +678,25 @@ export function ItemForm({ initialRecord, onBack, onSave }: ItemFormProps) {
               </label>
               <CustomSelect
                 id="category"
-                value={category}
-                onChange={(val) => setCategory(val)}
-                options={itemCategories
-                  .filter((c) => c !== "All Categories")
-                  .map((cat) => ({ value: cat, label: cat }))}
+                value={categoriesId ? String(categoriesId) : ""}
+                onChange={(val) => setCategoriesId(val ? Number(val) : undefined)}
+                placeholder={loadingLookups ? "Loading categories..." : "Select category..."}
+                disabled={loadingLookups}
+                options={categoryOptions}
               />
             </div>
 
             <div className="item-form-group">
               <label htmlFor="facility" className="item-form-label">
-                Facility
+                Facility <span className="required-mark">*</span>
               </label>
               <CustomSelect
                 id="facility"
-                value={facility}
-                onChange={(val) =>
-                  setFacility(val as "FASILITAS" | "NON FASILITAS")
-                }
-                options={[
-                  { value: "FASILITAS", label: "FASILITAS" },
-                  { value: "NON FASILITAS", label: "NON FASILITAS" },
-                ]}
+                value={facilitiesId ? String(facilitiesId) : ""}
+                onChange={(val) => setFacilitiesId(val ? Number(val) : undefined)}
+                placeholder={loadingLookups ? "Loading facilities..." : "Select facility..."}
+                disabled={loadingLookups}
+                options={facilityOptions}
               />
             </div>
 
@@ -303,13 +704,13 @@ export function ItemForm({ initialRecord, onBack, onSave }: ItemFormProps) {
               <label htmlFor="hsCode" className="item-form-label">
                 HS Code
               </label>
-              <input
+              <CustomSelect
                 id="hsCode"
-                type="text"
-                className="item-form-input"
-                placeholder="e.g. 7219.34.00"
-                value={hsCode}
-                onChange={(e) => setHsCode(e.target.value)}
+                value={hsCodeId ? String(hsCodeId) : ""}
+                onChange={(val) => setHsCodeId(val ? Number(val) : undefined)}
+                placeholder={loadingLookups ? "Loading HS codes..." : "Select HS code..."}
+                disabled={loadingLookups}
+                options={hsCodeOptions}
               />
             </div>
 
@@ -319,14 +720,11 @@ export function ItemForm({ initialRecord, onBack, onSave }: ItemFormProps) {
               </label>
               <CustomSelect
                 id="customReport"
-                value={customReport}
-                onChange={(val) => setCustomReport(val)}
-                options={[
-                  { value: "Sesuai Klasifikasi Barang", label: "Sesuai Klasifikasi Barang" },
-                  { value: "Mutasi Bahan Baku dan Penolong", label: "Mutasi Bahan Baku dan Penolong" },
-                  { value: "Mutasi Barang Jadi", label: "Mutasi Barang Jadi" },
-                  { value: "Mutasi Barang Modal", label: "Mutasi Barang Modal" },
-                ]}
+                value={customsReportsId ? String(customsReportsId) : ""}
+                onChange={(val) => setCustomsReportsId(val ? Number(val) : undefined)}
+                placeholder={loadingLookups ? "Loading customs reports..." : "Select customs report..."}
+                disabled={loadingLookups}
+                options={customsReportOptions}
               />
             </div>
 
@@ -336,14 +734,11 @@ export function ItemForm({ initialRecord, onBack, onSave }: ItemFormProps) {
               </label>
               <CustomSelect
                 id="jenisItem"
-                value={jenisItem}
-                onChange={(val) => setJenisItem(val)}
-                options={[
-                  { value: "Raw Material", label: "Raw Material" },
-                  { value: "Finish Good", label: "Finish Good" },
-                  { value: "Scrap", label: "Scrap" },
-                  { value: "Spare Part", label: "Spare Part" },
-                ]}
+                value={itemTypesId ? String(itemTypesId) : ""}
+                onChange={(val) => setItemTypesId(val ? Number(val) : undefined)}
+                placeholder={loadingLookups ? "Loading item types..." : "Select item type..."}
+                disabled={loadingLookups}
+                options={itemTypeOptions}
               />
             </div>
           </div>
@@ -355,28 +750,15 @@ export function ItemForm({ initialRecord, onBack, onSave }: ItemFormProps) {
           <div className="item-form-grid">
             <div className="item-form-group">
               <label htmlFor="smallestUnitCode" className="item-form-label">
-                Usage Unit (Smallest Unit)
+                Usage Unit (Smallest Unit) <span className="required-mark">*</span>
               </label>
               <CustomSelect
                 id="smallestUnitCode"
-                value={smallestUnitCode}
-                onChange={(val) => {
-                  setSmallestUnitCode(val);
-                  if (val === "PCE") setSmallestUnitName("PIECE");
-                  else if (val === "KGM") setSmallestUnitName("KILOGRAM");
-                  else if (val === "LTR") setSmallestUnitName("LITER");
-                  else if (val === "MTR") setSmallestUnitName("METER");
-                  else if (val === "SET") setSmallestUnitName("SET");
-                  else if (val === "ST") setSmallestUnitName("SHEET");
-                }}
-                options={[
-                  { value: "PCE", label: "PCE - PIECE" },
-                  { value: "KGM", label: "KGM - KILOGRAM" },
-                  { value: "LTR", label: "LTR - LITER" },
-                  { value: "MTR", label: "MTR - METER" },
-                  { value: "SET", label: "SET - SET" },
-                  { value: "ST", label: "ST - SHEET" },
-                ]}
+                value={smallestUnitId ? String(smallestUnitId) : ""}
+                onChange={(val) => setSmallestUnitId(val ? Number(val) : undefined)}
+                placeholder={loadingLookups ? "Loading units..." : "Select usage unit..."}
+                disabled={loadingLookups}
+                options={uomOptions}
               />
             </div>
 
@@ -386,24 +768,11 @@ export function ItemForm({ initialRecord, onBack, onSave }: ItemFormProps) {
               </label>
               <CustomSelect
                 id="greatestUnitCode"
-                value={greatestUnitCode}
-                onChange={(val) => {
-                  setGreatestUnitCode(val);
-                  if (val === "PCE") setGreatestUnitName("PIECE");
-                  else if (val === "KGM") setGreatestUnitName("KILOGRAM");
-                  else if (val === "LTR") setGreatestUnitName("LITER");
-                  else if (val === "MTR") setGreatestUnitName("METER");
-                  else if (val === "SET") setGreatestUnitName("SET");
-                  else if (val === "ST") setGreatestUnitName("SHEET");
-                }}
-                options={[
-                  { value: "PCE", label: "PCE - PIECE" },
-                  { value: "KGM", label: "KGM - KILOGRAM" },
-                  { value: "LTR", label: "LTR - LITER" },
-                  { value: "MTR", label: "MTR - METER" },
-                  { value: "SET", label: "SET - SET" },
-                  { value: "ST", label: "ST - SHEET" },
-                ]}
+                value={greatestUnitId ? String(greatestUnitId) : ""}
+                onChange={(val) => setGreatestUnitId(val ? Number(val) : undefined)}
+                placeholder={loadingLookups ? "Loading units..." : "Select purchase unit..."}
+                disabled={loadingLookups}
+                options={optionalUomOptions}
               />
             </div>
 
@@ -447,13 +816,13 @@ export function ItemForm({ initialRecord, onBack, onSave }: ItemFormProps) {
               <label htmlFor="brand" className="item-form-label">
                 Brand
               </label>
-              <input
+              <CustomSelect
                 id="brand"
-                type="text"
-                className="item-form-input"
-                placeholder="e.g. NO BRAND, SANDVIK..."
-                value={brand}
-                onChange={(e) => setBrand(e.target.value)}
+                value={brandsId ? String(brandsId) : ""}
+                onChange={(val) => setBrandsId(val ? Number(val) : undefined)}
+                placeholder={loadingLookups ? "Loading brands..." : "Select brand..."}
+                disabled={loadingLookups}
+                options={brandOptions}
               />
             </div>
 
@@ -461,13 +830,13 @@ export function ItemForm({ initialRecord, onBack, onSave }: ItemFormProps) {
               <label htmlFor="style" className="item-form-label">
                 Style
               </label>
-              <input
+              <CustomSelect
                 id="style"
-                type="text"
-                className="item-form-input"
-                placeholder="e.g. No Style..."
-                value={style}
-                onChange={(e) => setStyle(e.target.value)}
+                value={stylesId ? String(stylesId) : ""}
+                onChange={(val) => setStylesId(val ? Number(val) : undefined)}
+                placeholder={loadingLookups ? "Loading styles..." : "Select style..."}
+                disabled={loadingLookups}
+                options={styleOptions}
               />
             </div>
 
@@ -475,13 +844,13 @@ export function ItemForm({ initialRecord, onBack, onSave }: ItemFormProps) {
               <label htmlFor="colour" className="item-form-label">
                 Colour
               </label>
-              <input
+              <CustomSelect
                 id="colour"
-                type="text"
-                className="item-form-input"
-                placeholder="e.g. Silver, Black..."
-                value={colour}
-                onChange={(e) => setColour(e.target.value)}
+                value={coloursId ? String(coloursId) : ""}
+                onChange={(val) => setColoursId(val ? Number(val) : undefined)}
+                placeholder={loadingLookups ? "Loading colours..." : "Select colour..."}
+                disabled={loadingLookups}
+                options={colourOptions}
               />
             </div>
 
@@ -517,13 +886,13 @@ export function ItemForm({ initialRecord, onBack, onSave }: ItemFormProps) {
               <label htmlFor="origin" className="item-form-label">
                 Origin
               </label>
-              <input
+              <CustomSelect
                 id="origin"
-                type="text"
-                className="item-form-input"
-                placeholder="e.g. Lokal, Impor, Japan..."
-                value={origin}
-                onChange={(e) => setOrigin(e.target.value)}
+                value={originsId ? String(originsId) : ""}
+                onChange={(val) => setOriginsId(val ? Number(val) : undefined)}
+                placeholder={loadingLookups ? "Loading origins..." : "Select origin..."}
+                disabled={loadingLookups}
+                options={originOptions}
               />
             </div>
 
@@ -531,13 +900,13 @@ export function ItemForm({ initialRecord, onBack, onSave }: ItemFormProps) {
               <label htmlFor="groupScrap" className="item-form-label">
                 Group Scrap Item
               </label>
-              <input
+              <CustomSelect
                 id="groupScrap"
-                type="text"
-                className="item-form-input"
-                placeholder="e.g. Scrap Logam..."
-                value={groupScrap}
-                onChange={(e) => setGroupScrap(e.target.value)}
+                value={groupScrapItemsId ? String(groupScrapItemsId) : ""}
+                onChange={(val) => setGroupScrapItemsId(val ? Number(val) : undefined)}
+                placeholder={loadingLookups ? "Loading group scrap..." : "Select group scrap..."}
+                disabled={loadingLookups}
+                options={groupScrapOptions}
               />
             </div>
 
@@ -545,12 +914,13 @@ export function ItemForm({ initialRecord, onBack, onSave }: ItemFormProps) {
               <label htmlFor="specification" className="item-form-label">
                 Specification
               </label>
-              <textarea
+              <CustomSelect
                 id="specification"
-                className="item-form-textarea"
-                placeholder="Detailed material or physical specifications..."
-                value={specification}
-                onChange={(e) => setSpecification(e.target.value)}
+                value={specificationsId ? String(specificationsId) : ""}
+                onChange={(val) => setSpecificationsId(val ? Number(val) : undefined)}
+                placeholder={loadingLookups ? "Loading specifications..." : "Select specification..."}
+                disabled={loadingLookups}
+                options={specificationOptions}
               />
             </div>
           </div>
@@ -558,11 +928,11 @@ export function ItemForm({ initialRecord, onBack, onSave }: ItemFormProps) {
 
         {/* Form Actions */}
         <div className="item-form-actions">
-          <Button type="button" variant="ghost" onClick={onBack}>
+          <Button type="button" variant="ghost" onClick={onBack} disabled={saving}>
             Cancel
           </Button>
-          <Button type="submit" variant="primary" icon="check">
-            Save
+          <Button type="submit" variant="primary" icon="check" disabled={saving || loadingLookups}>
+            {saving ? "Saving..." : "Save"}
           </Button>
         </div>
       </form>

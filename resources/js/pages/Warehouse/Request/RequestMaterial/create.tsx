@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Button } from "../../../../components/ui/Button";
 import { Icon } from "../../../../components/ui/Icon";
 import { ConfirmDialog } from "../../../../components/ui/ConfirmDialog";
@@ -11,6 +11,7 @@ import {
   requestMaterialProjectTypesList,
 } from "./request-material-data";
 import { ItemPickerModal } from "./ItemPickerModal";
+import { fetchMasterLookupsApi, fetchMasterItems } from "../../../../data/masterApi";
 import type {
   RequestMaterialItemRow,
   RequestMaterialRecord,
@@ -18,10 +19,16 @@ import type {
 import type { ItemRecord } from "../../../Exim/Master/Item/item-types";
 
 interface RequestMaterialCreateProps {
-  onSave: (record: RequestMaterialRecord) => void;
+  onSave: (record: RequestMaterialRecord) => void | Promise<any>;
   onCancel: () => void;
   availableTypesOfRequest?: string[];
   availableDestinations?: string[];
+}
+
+interface LookupItem {
+  id: number;
+  code?: string;
+  name: string;
 }
 
 export function RequestMaterialCreate({
@@ -30,18 +37,82 @@ export function RequestMaterialCreate({
   availableTypesOfRequest,
   availableDestinations,
 }: RequestMaterialCreateProps) {
+  // DB Lookups
+  const [lookups, setLookups] = useState<{
+    typeOfRequests: LookupItem[];
+    departments: LookupItem[];
+    warehouses: LookupItem[];
+    destinationLocations: LookupItem[];
+    jobNumbers: LookupItem[];
+  }>({
+    typeOfRequests: [],
+    departments: [],
+    warehouses: [],
+    destinationLocations: [],
+    jobNumbers: [],
+  });
+  const [masterItems, setMasterItems] = useState<ItemRecord[]>([]);
+  const [loadingLookups, setLoadingLookups] = useState(true);
+  const [saving, setSaving] = useState(false);
+
   // Header form states - All empty by default as requested
   const [typeOfRequest, setTypeOfRequest] = useState("");
+  const [typeOfRequestId, setTypeOfRequestId] = useState<number | undefined>();
   const [requestDate, setRequestDate] = useState("");
   const [warehouseDestination, setWarehouseDestination] = useState("");
+  const [warehousesId, setWarehousesId] = useState<number | undefined>();
   const [isInternalWarehouse, setIsInternalWarehouse] = useState(false);
   const [destinationLocation, setDestinationLocation] = useState("");
+  const [destinationLocationId, setDestinationLocationId] = useState<number | undefined>();
   const [isSpecificStation, setIsSpecificStation] = useState(false);
   const [department, setDepartment] = useState("");
+  const [departmentsId, setDepartmentsId] = useState<number | undefined>();
   const [jobNumberHeader, setJobNumberHeader] = useState("");
+  const [jobNumberId, setJobNumberId] = useState<number | undefined>();
+  const [customJobMode, setCustomJobMode] = useState(false);
   const [customer, setCustomer] = useState("");
   const [projectType, setProjectType] = useState("");
   const [requestNote, setRequestNote] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoadingLookups(true);
+
+    Promise.all([fetchMasterLookupsApi(), fetchMasterItems()])
+      .then(([data, itemsData]) => {
+        if (cancelled) return;
+        const d = data || {};
+        setLookups({
+          typeOfRequests: Array.isArray(d.type_of_requests) ? d.type_of_requests : [],
+          departments: Array.isArray(d.departments) ? d.departments : [],
+          warehouses: Array.isArray(d.warehouses) ? d.warehouses : [],
+          destinationLocations: Array.isArray(d.destination_locations) ? d.destination_locations : [],
+          jobNumbers: Array.isArray(d.job_numbers) ? d.job_numbers : [],
+        });
+        if (Array.isArray(itemsData)) {
+          setMasterItems(itemsData);
+        }
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setLoadingLookups(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const itemSelectOptions = useMemo(
+    () => [
+      { value: "", label: "-- Select Master Item --" },
+      ...masterItems.map((m) => ({
+        value: String(m.id),
+        label: m.itemCode ? `${m.itemCode} - ${m.itemName}` : m.itemName,
+      })),
+    ],
+    [masterItems]
+  );
 
   // GeniusOne Custom Notification & Validation State
   const [notification, setNotification] = useState<{
@@ -119,6 +190,7 @@ export function RequestMaterialCreate({
 
       const newRows: RequestMaterialItemRow[] = selected.map((s, idx) => ({
         id: `row-${Date.now()}-${idx}`,
+        items_id: s.id && /^\d+$/.test(String(s.id)) ? Number(s.id) : undefined,
         itemCode: s.itemCode || "",
         externalCode: s.kodeEksternal || "—",
         itemName: s.itemName || "",
@@ -245,11 +317,12 @@ export function RequestMaterialCreate({
   };
 
   // Handle Save
-  const handleSave = (e?: React.FormEvent) => {
+  const handleSave = async (e?: React.FormEvent) => {
     e?.preventDefault();
     setNotification(null);
 
     try {
+      setSaving(true);
       if (!validateForm()) {
         setNotification({
           type: "error",
@@ -287,18 +360,26 @@ export function RequestMaterialCreate({
         lastUpdatedDate: formattedDate,
         createdBy: "SYSTEM USER",
         warehouseDestination,
+        type_of_request_id: typeOfRequestId,
+        departments_id: departmentsId,
+        warehouses_id: warehousesId,
+        destination_location_id: destinationLocationId,
+        job_number_id: jobNumberId,
         approved1At: "—",
         approved2At: "—",
         revisionCount: 0,
         items,
       };
 
-      onSave(newRecord);
+      await onSave(newRecord);
     } catch (err: any) {
       setNotification({
         type: "error",
         message: err?.message || "An unexpected error occurred while saving the request.",
       });
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -413,18 +494,31 @@ export function RequestMaterialCreate({
               Type of Request <span className="required-asterisk">*</span>
             </label>
             <CustomSelect
-              value={typeOfRequest}
+              value={typeOfRequestId ? String(typeOfRequestId) : typeOfRequest}
               onChange={(val) => {
-                setTypeOfRequest(val);
+                const chosen = lookups.typeOfRequests.find((t) => String(t.id) === val);
+                if (chosen) {
+                  setTypeOfRequestId(Number(chosen.id));
+                  setTypeOfRequest(chosen.name);
+                } else {
+                  setTypeOfRequestId(undefined);
+                  setTypeOfRequest(val);
+                }
                 clearFieldError("typeOfRequest");
               }}
-              placeholder="-- Select Type of Request --"
+              placeholder={loadingLookups ? "Loading types..." : "-- Select Type of Request --"}
+              disabled={loadingLookups}
               options={[
                 { value: "", label: "-- Select Type of Request --" },
-                ...(availableTypesOfRequest && availableTypesOfRequest.length > 0
-                  ? availableTypesOfRequest
-                  : requestMaterialTypesList.filter((t) => t !== "All Types")
-                ).map((t) => ({ value: t, label: t })),
+                ...(lookups.typeOfRequests.length > 0
+                  ? lookups.typeOfRequests.map((t) => ({
+                      value: String(t.id),
+                      label: t.name,
+                    }))
+                  : (availableTypesOfRequest && availableTypesOfRequest.length > 0
+                      ? availableTypesOfRequest
+                      : requestMaterialTypesList.filter((t) => t !== "All Types")
+                    ).map((t) => ({ value: t, label: t }))),
               ]}
             />
             {formErrors.typeOfRequest && (
@@ -482,17 +576,30 @@ export function RequestMaterialCreate({
               Department <span className="required-asterisk">*</span>
             </label>
             <CustomSelect
-              value={department}
+              value={departmentsId ? String(departmentsId) : department}
               onChange={(val) => {
-                setDepartment(val);
+                const chosen = lookups.departments.find((d) => String(d.id) === val);
+                if (chosen) {
+                  setDepartmentsId(Number(chosen.id));
+                  setDepartment(chosen.name);
+                } else {
+                  setDepartmentsId(undefined);
+                  setDepartment(val);
+                }
                 clearFieldError("department");
               }}
-              placeholder="-- Select Department --"
+              placeholder={loadingLookups ? "Loading departments..." : "-- Select Department --"}
+              disabled={loadingLookups}
               options={[
                 { value: "", label: "-- Select Department --" },
-                ...requestMaterialDepartmentsList
-                  .filter((d) => d !== "All Departments")
-                  .map((d) => ({ value: d, label: d })),
+                ...(lookups.departments.length > 0
+                  ? lookups.departments.map((d) => ({
+                      value: String(d.id),
+                      label: d.name,
+                    }))
+                  : requestMaterialDepartmentsList
+                      .filter((d) => d !== "All Departments")
+                      .map((d) => ({ value: d, label: d }))),
               ]}
             />
             {formErrors.department && (
@@ -518,22 +625,67 @@ export function RequestMaterialCreate({
             <label className="master-form-label">
               Job Number <span className="required-asterisk">*</span>
             </label>
-            <input
-              type="text"
-              className="master-form-input"
-              value={jobNumberHeader}
-              placeholder="e.g. JOB-2026-8812"
-              style={{
-                borderColor: formErrors.jobNumber ? "var(--danger, #ef4444)" : undefined,
-                boxShadow: formErrors.jobNumber
-                  ? "0 0 0 2px rgba(239, 68, 68, 0.15)"
-                  : undefined,
-              }}
-              onChange={(e) => {
-                setJobNumberHeader(e.target.value);
-                clearFieldError("jobNumber");
-              }}
-            />
+            {lookups.jobNumbers.length > 0 && !customJobMode ? (
+              <CustomSelect
+                value={jobNumberId ? String(jobNumberId) : ""}
+                onChange={(val) => {
+                  if (val === "__CUSTOM__") {
+                    setCustomJobMode(true);
+                    setJobNumberId(undefined);
+                    setJobNumberHeader("");
+                    return;
+                  }
+                  const chosen = lookups.jobNumbers.find((j) => String(j.id) === val);
+                  if (chosen) {
+                    setJobNumberId(Number(chosen.id));
+                    setJobNumberHeader(chosen.name || chosen.code || "");
+                  } else {
+                    setJobNumberId(undefined);
+                    setJobNumberHeader("");
+                  }
+                  clearFieldError("jobNumber");
+                }}
+                placeholder={loadingLookups ? "Loading job numbers..." : "-- Select Job Number --"}
+                disabled={loadingLookups}
+                options={[
+                  { value: "", label: "-- Select Job Number --" },
+                  ...lookups.jobNumbers.map((j) => ({
+                    value: String(j.id),
+                    label: j.code && j.code !== j.name ? `${j.code} - ${j.name}` : j.name,
+                  })),
+                  { value: "__CUSTOM__", label: "+ Enter Custom Job Number..." },
+                ]}
+              />
+            ) : (
+              <div style={{ display: "flex", gap: "6px" }}>
+                <input
+                  type="text"
+                  className="master-form-input"
+                  value={jobNumberHeader}
+                  placeholder="e.g. JOB-2026-8812"
+                  style={{
+                    borderColor: formErrors.jobNumber ? "var(--danger, #ef4444)" : undefined,
+                    boxShadow: formErrors.jobNumber
+                      ? "0 0 0 2px rgba(239, 68, 68, 0.15)"
+                      : undefined,
+                  }}
+                  onChange={(e) => {
+                    setJobNumberId(undefined);
+                    setJobNumberHeader(e.target.value);
+                    clearFieldError("jobNumber");
+                  }}
+                />
+                {lookups.jobNumbers.length > 0 && (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={() => setCustomJobMode(false)}
+                  >
+                    List
+                  </Button>
+                )}
+              </div>
+            )}
             {formErrors.jobNumber && (
               <span
                 style={{
@@ -634,19 +786,26 @@ export function RequestMaterialCreate({
               Warehouse Destination <span className="required-asterisk">*</span>
             </label>
             <CustomSelect
-              value={warehouseDestination}
+              value={warehousesId ? String(warehousesId) : warehouseDestination}
               onChange={(val) => {
-                setWarehouseDestination(val);
+                const chosen = lookups.warehouses.find((w) => String(w.id) === val);
+                if (chosen) {
+                  setWarehousesId(Number(chosen.id));
+                  setWarehouseDestination(chosen.name);
+                } else {
+                  setWarehousesId(undefined);
+                  setWarehouseDestination(val);
+                }
                 clearFieldError("warehouseDestination");
               }}
-              placeholder="-- Select Warehouse Destination --"
+              placeholder={loadingLookups ? "Loading warehouses..." : "-- Select Warehouse Destination --"}
+              disabled={loadingLookups}
               options={[
                 { value: "", label: "-- Select Warehouse Destination --" },
-                { value: "Gudang Raw Material", label: "Gudang Raw Material" },
-                { value: "Gudang Sparepart", label: "Gudang Sparepart" },
-                { value: "Gudang Finish Good", label: "Gudang Finish Good" },
-                { value: "Gudang Bahan Bakar", label: "Gudang Bahan Bakar" },
-                { value: "Gudang Buffer", label: "Gudang Buffer" },
+                ...lookups.warehouses.map((w) => ({
+                  value: String(w.id),
+                  label: w.code ? `${w.code} - ${w.name}` : w.name,
+                })),
               ]}
             />
             {formErrors.warehouseDestination && (
@@ -684,18 +843,31 @@ export function RequestMaterialCreate({
               Destination Location <span className="required-asterisk">*</span>
             </label>
             <CustomSelect
-              value={destinationLocation}
+              value={destinationLocationId ? String(destinationLocationId) : destinationLocation}
               onChange={(val) => {
-                setDestinationLocation(val);
+                const chosen = lookups.destinationLocations.find((d) => String(d.id) === val);
+                if (chosen) {
+                  setDestinationLocationId(Number(chosen.id));
+                  setDestinationLocation(chosen.name);
+                } else {
+                  setDestinationLocationId(undefined);
+                  setDestinationLocation(val);
+                }
                 clearFieldError("destinationLocation");
               }}
-              placeholder="-- Select Destination Location --"
+              placeholder={loadingLookups ? "Loading locations..." : "-- Select Destination Location --"}
+              disabled={loadingLookups}
               options={[
                 { value: "", label: "-- Select Destination Location --" },
-                ...(availableDestinations && availableDestinations.length > 0
-                  ? availableDestinations
-                  : requestMaterialDestinationsList.filter((d) => d !== "All Destinations")
-                ).map((d) => ({ value: d, label: d })),
+                ...(lookups.destinationLocations.length > 0
+                  ? lookups.destinationLocations.map((d) => ({
+                      value: String(d.id),
+                      label: d.name,
+                    }))
+                  : (availableDestinations && availableDestinations.length > 0
+                      ? availableDestinations
+                      : requestMaterialDestinationsList.filter((d) => d !== "All Destinations")
+                    ).map((d) => ({ value: d, label: d }))),
               ]}
             />
             {formErrors.destinationLocation && (
@@ -888,21 +1060,54 @@ export function RequestMaterialCreate({
                               gap: "4px",
                             }}
                           >
-                            <input
-                              type="text"
-                              className="master-form-input"
-                              style={{
-                                padding: "4px 8px",
-                                fontSize: "12px",
-                                fontWeight: 600,
-                                borderColor: rowNameError ? "#ef4444" : undefined,
-                              }}
-                              value={row.itemName}
-                              placeholder="Item name / description *"
-                              onChange={(e) =>
-                                handleUpdateRow(row.id, "itemName", e.target.value)
-                              }
-                            />
+                            {masterItems.length > 0 ? (
+                              <CustomSelect
+                                value={row.items_id ? String(row.items_id) : ""}
+                                onChange={(val) => {
+                                  const picked = masterItems.find((m) => String(m.id) === val);
+                                  if (picked) {
+                                    setItems((prev) =>
+                                      prev.map((r) =>
+                                        r.id === row.id
+                                          ? {
+                                              ...r,
+                                              items_id: Number(picked.id),
+                                              itemCode: picked.itemCode || "",
+                                              externalCode: picked.kodeEksternal || "—",
+                                              itemName: picked.itemName || "",
+                                              unit: picked.smallestUnitCode || picked.smallestUnitName || "PCE",
+                                              size:
+                                                picked.specification && picked.specification !== "-"
+                                                  ? picked.specification
+                                                  : r.size || "Standard",
+                                              stockQty: typeof picked.stock === "number" ? picked.stock : 0.0,
+                                            }
+                                          : r
+                                      )
+                                    );
+                                    clearFieldError(`item_${index}_name`);
+                                  }
+                                }}
+                                placeholder="-- Select Master Item --"
+                                options={itemSelectOptions}
+                              />
+                            ) : (
+                              <input
+                                type="text"
+                                className="master-form-input"
+                                style={{
+                                  padding: "4px 8px",
+                                  fontSize: "12px",
+                                  fontWeight: 600,
+                                  borderColor: rowNameError ? "#ef4444" : undefined,
+                                }}
+                                value={row.itemName}
+                                placeholder="Item name / description *"
+                                onChange={(e) =>
+                                  handleUpdateRow(row.id, "itemName", e.target.value)
+                                }
+                              />
+                            )}
                             {rowNameError && (
                               <span
                                 style={{
@@ -1096,6 +1301,7 @@ export function RequestMaterialCreate({
           type="button"
           variant="secondary"
           onClick={handleCancelClick}
+          disabled={saving}
         >
           Cancel
         </Button>
@@ -1104,8 +1310,9 @@ export function RequestMaterialCreate({
           variant="primary"
           icon="check"
           onClick={handleSave}
+          disabled={saving}
         >
-          Save
+          {saving ? "Saving..." : "Save"}
         </Button>
       </div>
 

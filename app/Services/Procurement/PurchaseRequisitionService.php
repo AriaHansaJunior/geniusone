@@ -36,7 +36,7 @@ class PurchaseRequisitionService
             }
             $secId = $headerData['sections_id'] ?? $headerData['section_id'] ?? null;
             if (! $secId) {
-                $firstSec = Section::where('departments_id', $deptId)->first() ?? Section::first();
+                $firstSec = Section::first();
                 if (! $firstSec) {
                     throw new InvalidArgumentException('Section master data is missing. Cannot create Purchase Requisition.');
                 }

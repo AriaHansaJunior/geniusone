@@ -220,16 +220,28 @@ class SupplierApiController extends Controller
                     continue;
                 }
                 $val = trim((string) $request->input($key));
+                if ($val === '' || $val === '-' || $val === '—' || in_array(strtolower($val), ['none', 'n/a', 'null'], true)) {
+                    continue;
+                }
                 if (is_numeric($val)) {
                     $request->merge([$lookup['fk'] => (int) $val]);
                 } else {
                     $model = $lookup['model'];
                     $lower = strtolower($val);
-                    $found = $model::query()->where(function ($q) use ($lookup, $lower) {
+                    $normalized = str_replace('_', ' ', $lower);
+                    $found = $model::query()->where(function ($q) use ($lookup, $lower, $normalized) {
                         foreach ($lookup['cols'] as $col) {
-                            $q->orWhereRaw("LOWER({$col}) = ?", [$lower]);
+                            $q->orWhereRaw("LOWER({$col}) = ?", [$lower])
+                                ->orWhereRaw("LOWER({$col}) = ?", [$normalized]);
                         }
                     })->first();
+                    if (! $found) {
+                        $found = $model::query()->where(function ($q) use ($lookup, $normalized) {
+                            foreach ($lookup['cols'] as $col) {
+                                $q->orWhereRaw("LOWER({$col}) LIKE ?", ["%{$normalized}%"]);
+                            }
+                        })->first();
+                    }
                     if (! $found) {
                         abort(response()->json([
                             'message' => "Referenced master '{$val}' was not found for {$lookup['fk']}.",

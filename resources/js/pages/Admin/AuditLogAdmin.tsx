@@ -12,6 +12,7 @@ import { Badge, type BadgeTone } from "../../components/ui/Badge";
 import { Icon } from "../../components/ui/Icon";
 import { Button } from "../../components/ui/Button";
 import { useAuthPermission } from "../../context/AuthPermissionContext";
+import { apiFetch } from "../../data/api";
 
 export interface AuditLogItem {
   id: number;
@@ -139,7 +140,6 @@ export function AuditLogAdmin({ onNavigateUsers }: AuditLogAdminProps) {
   // Fetch audit logs from backend API
   const fetchAuditLogs = useCallback(async () => {
     setIsLoading(true);
-    const token = sessionStorage.getItem("geniusone_token") || localStorage.getItem("geniusone_token");
 
     const params = new URLSearchParams();
     params.set("page", String(currentPage));
@@ -150,13 +150,7 @@ export function AuditLogAdmin({ onNavigateUsers }: AuditLogAdminProps) {
     if (dateTo) params.set("to_date", dateTo);
 
     try {
-      const res = await fetch(`/api/admin/audit-logs?${params.toString()}`, {
-        headers: {
-          Accept: "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        credentials: "include",
-      });
+      const res = await apiFetch(`/api/admin/audit-logs?${params.toString()}`);
 
       if (res.ok) {
         const json = await res.json();

@@ -13,6 +13,7 @@ import { StatusToggle } from "../../components/ui/StatusToggle";
 import { ConfirmDialog } from "../../components/ui/ConfirmDialog";
 import { CustomSelect } from "../../components/ui/CustomSelect";
 import { useAuthPermission } from "../../context/AuthPermissionContext";
+import { apiFetch } from "../../data/api";
 import {
   APPROVAL_MODULES,
   PERMISSION_ACTIONS,
@@ -197,15 +198,8 @@ export function UserPermissionAdmin({ onNavigateAudit }: UserPermissionAdminProp
   // Load departments from backend API
   useEffect(() => {
     const fetchDepartments = async () => {
-      const token = sessionStorage.getItem("geniusone_token") || localStorage.getItem("geniusone_token");
       try {
-        const res = await fetch("/api/exim/master/departments?per_page=100", {
-          headers: {
-            Accept: "application/json",
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
-          credentials: "include",
-        });
+        const res = await apiFetch("/api/exim/master/departments?per_page=100");
         if (res.ok) {
           const json = await res.json();
           if (Array.isArray(json?.data) && json.data.length > 0) {
@@ -227,15 +221,8 @@ export function UserPermissionAdmin({ onNavigateAudit }: UserPermissionAdminProp
   // Load users from backend API
   const loadUsers = useCallback(async () => {
     setIsLoading(true);
-    const token = sessionStorage.getItem("geniusone_token") || localStorage.getItem("geniusone_token");
     try {
-      const res = await fetch("/api/admin/users?per_page=100", {
-        headers: {
-          Accept: "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        credentials: "include",
-      });
+      const res = await apiFetch("/api/admin/users?per_page=100");
       if (res.ok) {
         const json = await res.json();
         if (json?.status === "success" && Array.isArray(json.data)) {
@@ -510,16 +497,9 @@ export function UserPermissionAdmin({ onNavigateAudit }: UserPermissionAdminProp
       }
     }
 
-    const token = sessionStorage.getItem("geniusone_token") || localStorage.getItem("geniusone_token");
     try {
-      const res = await fetch(`/api/admin/users/${editingUser.id}/permissions`, {
+      const res = await apiFetch(`/api/admin/users/${editingUser.id}/permissions`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        credentials: "include",
         body: JSON.stringify({
           permissions: permissionStrings,
           sidebar_permissions: sidebarDraft,
@@ -543,15 +523,9 @@ export function UserPermissionAdmin({ onNavigateAudit }: UserPermissionAdminProp
 
   // Toggle user active / inactive status
   const handleToggleStatus = async (user: UserAccount) => {
-    const token = sessionStorage.getItem("geniusone_token") || localStorage.getItem("geniusone_token");
     try {
-      const res = await fetch(`/api/admin/users/${user.id}/toggle-status`, {
+      const res = await apiFetch(`/api/admin/users/${user.id}/toggle-status`, {
         method: "PATCH",
-        headers: {
-          Accept: "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        credentials: "include",
       });
       const data = await res.json();
       if (res.ok && data?.status === "success") {
@@ -582,16 +556,9 @@ export function UserPermissionAdmin({ onNavigateAudit }: UserPermissionAdminProp
       ).map((i) => i.id);
     }
 
-    const token = sessionStorage.getItem("geniusone_token") || localStorage.getItem("geniusone_token");
     try {
-      const res = await fetch("/api/admin/users", {
+      const res = await apiFetch("/api/admin/users", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        credentials: "include",
         body: JSON.stringify({
           name: newUserData.name.trim(),
           username: newUserData.username.trim(),
@@ -687,14 +654,8 @@ export function UserPermissionAdmin({ onNavigateAudit }: UserPermissionAdminProp
         payload.password = trimmedPassword;
       }
 
-      const res = await fetch(`/api/admin/users/${editingUserProfile.id}`, {
+      const res = await apiFetch(`/api/admin/users/${editingUserProfile.id}`, {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        credentials: "include",
         body: JSON.stringify(payload),
       });
 
@@ -711,14 +672,8 @@ export function UserPermissionAdmin({ onNavigateAudit }: UserPermissionAdminProp
             : ALL_SIDEBAR_MENU_ITEMS.map((i) => i.id);
 
           try {
-            await fetch(`/api/admin/users/${editingUserProfile.id}/permissions`, {
+            await apiFetch(`/api/admin/users/${editingUserProfile.id}/permissions`, {
               method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                Accept: "application/json",
-                ...(token ? { Authorization: `Bearer ${token}` } : {}),
-              },
-              credentials: "include",
               body: JSON.stringify({
                 permissions: derivedPermStrings,
                 sidebar_permissions: newSidebarPerms,
@@ -749,15 +704,9 @@ export function UserPermissionAdmin({ onNavigateAudit }: UserPermissionAdminProp
   const handleConfirmDelete = async () => {
     if (!userToDelete) return;
     setIsDeleting(true);
-    const token = sessionStorage.getItem("geniusone_token") || localStorage.getItem("geniusone_token");
     try {
-      const res = await fetch(`/api/admin/users/${userToDelete.id}`, {
+      const res = await apiFetch(`/api/admin/users/${userToDelete.id}`, {
         method: "DELETE",
-        headers: {
-          Accept: "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        credentials: "include",
       });
       const data = await res.json();
       if (res.ok && data?.status === "success") {
@@ -804,16 +753,9 @@ export function UserPermissionAdmin({ onNavigateAudit }: UserPermissionAdminProp
       )
     );
 
-    const token = sessionStorage.getItem("geniusone_token") || localStorage.getItem("geniusone_token");
     try {
-      await fetch(`/api/admin/users/${user.id}`, {
+      await apiFetch(`/api/admin/users/${user.id}`, {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        credentials: "include",
         body: JSON.stringify({
           name: user.name,
           username: user.username,
@@ -823,14 +765,8 @@ export function UserPermissionAdmin({ onNavigateAudit }: UserPermissionAdminProp
           status: user.status === "active" || user.status === 1 ? 1 : 0,
         }),
       });
-      await fetch(`/api/admin/users/${user.id}/permissions`, {
+      await apiFetch(`/api/admin/users/${user.id}/permissions`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        credentials: "include",
         body: JSON.stringify({
           permissions: derivedPermStrings,
           sidebar_permissions: newSidebarPerms,

@@ -125,33 +125,41 @@ export async function fetchMasterSuppliers(): Promise<SupplierRecord[] | null> {
     country: r.country_name || r.country?.name || "-",
     npwp: r.npwp || "-",
     nitku: r.nitku || "-",
-    createdBy: r.created_by_name || r.creator?.name || "-",
+    createdBy: r.created_by_name || r.created_by_user?.name || r.creator?.name || "-",
     createdAt: formatDisplayDate(r.created_at),
     hidden: !isTruthyStatus(r.status),
   }));
 }
 
 export async function saveSupplierApi(data: SupplierFormData, editId?: string): Promise<SupplierRecord | null> {
-  const payload = {
-    code: data.autoGenerateCode ? undefined : data.supplierCode,
+  const cleanOpt = (v?: string) => (v && v.trim() !== "" && v.trim() !== "-" && v.trim() !== "—" ? v.trim() : undefined);
+  const emailClean = cleanOpt(data.email);
+  const payload: Record<string, any> = {
+    code: data.autoGenerateCode ? undefined : cleanOpt(data.supplierCode),
     name: data.supplierName,
-    address: data.address,
-    contact_person: data.contactPerson,
-    city: data.city,
-    state: data.state,
-    country_name: data.country,
-    zipcode: data.zipcode,
-    email: data.email,
-    phone: data.telephoneNumber,
-    payment_term: data.paymentTerm,
-    payment_method: data.paymentMethod,
-    rafaksi_type: data.typeRafaksi,
-    currency: data.currency,
-    port: data.port,
-    npwp: data.npwp,
-    nitku: data.nitku,
-    whatsapp: data.whatsapp,
-    wechat_id: data.wechatId,
+    address: cleanOpt(data.address),
+    contact_person: cleanOpt(data.contactPerson),
+    city: cleanOpt(data.city),
+    state: cleanOpt(data.state),
+    countries_id: data.countries_id || undefined,
+    country: data.countries_id ? undefined : cleanOpt(data.country),
+    zipcode: cleanOpt(data.zipcode),
+    email: emailClean && emailClean.includes("@") ? emailClean : undefined,
+    telephone_number: cleanOpt(data.telephoneNumber),
+    payment_terms_id: data.payment_terms_id || undefined,
+    payment_term: data.payment_terms_id ? undefined : cleanOpt(data.paymentTerm),
+    payment_methods_id: data.payment_methods_id || undefined,
+    payment_method: data.payment_methods_id ? undefined : cleanOpt(data.paymentMethod),
+    rafaksi_types_id: data.rafaksi_types_id || undefined,
+    rafaksi_type: data.rafaksi_types_id ? undefined : cleanOpt(data.typeRafaksi),
+    currencies_id: data.currencies_id || undefined,
+    currency: data.currencies_id ? undefined : cleanOpt(data.currency),
+    ports_id: data.ports_id || undefined,
+    port: data.ports_id ? undefined : cleanOpt(data.port),
+    npwp: cleanOpt(data.npwp),
+    nitku: cleanOpt(data.nitku),
+    whatsapp: cleanOpt(data.whatsapp),
+    wechat_id: cleanOpt(data.wechatId),
     status: 1,
   };
   const res = editId
@@ -168,7 +176,7 @@ export async function saveSupplierApi(data: SupplierFormData, editId?: string): 
     country: r.country_name || r.country?.name || data.country || "-",
     npwp: r.npwp || data.npwp || "-",
     nitku: r.nitku || data.nitku || "-",
-    createdBy: r.created_by_name || r.creator?.name || "-",
+    createdBy: r.created_by_name || r.created_by_user?.name || r.creator?.name || "-",
     createdAt: formatDisplayDate(r.created_at),
     hidden: !isTruthyStatus(r.status ?? 1),
   };
@@ -316,7 +324,7 @@ export async function toggleAdditionalCostStatusApi(id: string, _hidden?: boolea
 }
 
 export async function fetchPphTypesApi(): Promise<Array<{ id: number; name: string }>> {
-  const res = await apiGet<{ data: any[] }>("/api/procurement/master/pph/types");
+  const res = await apiGet<{ data: any[] }>("/api/procurement/master/pph-types");
   return (res?.data || []).map((t: any) => ({ id: Number(t.id), name: t.name || t.nama || "" }));
 }
 
@@ -326,20 +334,20 @@ export async function fetchMasterPph(): Promise<PphRecord[] | null> {
   return res.data.map((r: any) => ({
     id: String(r.id),
     name: r.name || "",
-    rate: Number(r.rates ?? r.rate ?? 0),
-    deduction: r.deduction ? "Yes" : "No",
-    type: r.type_pph?.name || r.type_pph_name || undefined,
-    hidden: !isTruthyStatus(r.status),
+    rate: Number(r.value ?? r.rates ?? r.rate ?? 0),
+    deduction: r.deduction === "yes" || r.deduction === true || r.deduction === 1 ? "Yes" : "No",
+    type: r.type?.nama || r.type?.name || r.type_pph?.name || r.type_pph_name || undefined,
+    hidden: !isTruthyStatus(r.status ?? "active"),
   }));
 }
 
 export async function savePphApi(rec: PphRecord, isEdit?: boolean): Promise<PphRecord | null> {
   const payload = {
     name: rec.name,
-    rates: Number(rec.rate) || 0,
-    type_pph_name: rec.type || rec.name,
-    deduction: rec.deduction === "Yes" || (rec.deduction as any) === true ? 1 : 0,
-    status: rec.hidden ? 0 : 1,
+    value: Number(rec.rate) || 0,
+    pph_type_name: rec.type || undefined,
+    deduction: rec.deduction === "Yes" || (rec.deduction as any) === true ? "yes" : "no",
+    status: rec.hidden ? "inactive" : "active",
   };
   const res = isEdit && rec.id
     ? await apiPut<{ data: any }>(`/api/procurement/master/pph/${toNumericOrCleanId(rec.id)}`, payload)
@@ -349,10 +357,10 @@ export async function savePphApi(rec: PphRecord, isEdit?: boolean): Promise<PphR
   return {
     id: String(r.id),
     name: r.name || rec.name,
-    rate: Number(r.rates ?? rec.rate ?? 0),
-    deduction: r.deduction ? "Yes" : "No",
-    type: r.type_pph?.name || r.type_pph_name || rec.type,
-    hidden: !isTruthyStatus(r.status ?? 1),
+    rate: Number(r.value ?? r.rates ?? rec.rate ?? 0),
+    deduction: r.deduction === "yes" || r.deduction === true || r.deduction === 1 ? "Yes" : "No",
+    type: r.type?.nama || r.type?.name || r.type_pph?.name || r.type_pph_name || rec.type,
+    hidden: !isTruthyStatus(r.status ?? "active"),
   };
 }
 
@@ -787,73 +795,106 @@ export async function toggleColorStatusApi(id: string): Promise<boolean> {
   return Boolean(res);
 }
 
+function mapApiItemToRecord(r: any, idx = 0): ItemRecord {
+  const uom = r.unit_of_measurement || r.unitOfMeasurement || r.unit;
+  const unitCode = uom?.code || uom?.nama || uom?.name || r.unit_name || "";
+  const unitName = uom?.name || uom?.nama || unitCode;
+  const smallest = r.smallest_unit || r.smallestUnit;
+  const greatest = r.greatest_unit || r.greatestUnit;
+  const facVal = r.facility?.name || r.facility_name || "";
+  const hs = r.hs_code || r.hsCode;
+
+  return {
+    id: String(r.id),
+    no: idx + 1,
+    itemCode: r.code || "",
+    kodeEksternal: r.external_code || "-",
+    itemName: r.name || "",
+    classification: r.classification?.name || r.classification_name || "-",
+    category: r.category?.name || r.category_name || "-",
+    hsCode: hs?.code || hs?.name || r.hs_code_name || "-",
+    smallestUnitCode: smallest?.code || smallest?.name || unitCode,
+    smallestUnitName: smallest?.name || unitName,
+    greatestUnitCode: greatest?.code || greatest?.name || r.greatest_unit_name || unitCode,
+    greatestUnitName: greatest?.name || r.greatest_unit_name || unitName,
+    facility: (/non/i.test(facVal) ? "NON FASILITAS" : "FASILITAS") as "FASILITAS" | "NON FASILITAS",
+    groupScrap: r.group_scrap_item?.name || r.groupScrapItem?.name || r.group_scrap || "-",
+    specification: r.specification?.name || (typeof r.specification === "string" ? r.specification : "") || "-",
+    origin: r.origin?.name || r.origin_name || "-",
+    colour: r.colour?.name || r.colour_name || "-",
+    brand: r.brand?.name || r.brand_name || "-",
+    style: r.style?.name || r.style_name || "-",
+    customReport: r.customs_report?.name || r.customsReport?.name || r.custom_report || "-",
+    itemType: r.item_type?.name || r.itemType?.name || undefined,
+    unitConversion: r.unit_conversion !== undefined && r.unit_conversion !== null ? Number(r.unit_conversion) : 1,
+    netto: r.netto !== undefined && r.netto !== null ? Number(r.netto) : 0,
+    size: r.size || "-",
+    traceByLot: Boolean(r.trace_by_lot ?? true),
+    status: isTruthyStatus(r.status) ? "Active" : "Inactive",
+    createdAt: formatDisplayDate(r.created_at),
+    createdBy: r.created_by_user?.name || r.created_by_name || r.creator?.name || "-",
+    updatedAt: formatDisplayDate(r.updated_at || r.created_at),
+    updatedBy: r.updated_by_user?.name || r.updated_by_name || r.created_by_user?.name || r.created_by_name || "-",
+    stock: Number(r.current_stock ?? r.stock ?? 0),
+    stockUnit: unitCode,
+    categories_id: r.categories_id ? Number(r.categories_id) : undefined,
+    classifications_id: r.classifications_id ? Number(r.classifications_id) : undefined,
+    facilities_id: r.facilities_id ? Number(r.facilities_id) : undefined,
+    origins_id: r.origins_id ? Number(r.origins_id) : undefined,
+    item_types_id: r.item_types_id ? Number(r.item_types_id) : undefined,
+    units_of_measurements_id: r.units_of_measurements_id ? Number(r.units_of_measurements_id) : undefined,
+    smallest_unit_id: r.smallest_unit_id ? Number(r.smallest_unit_id) : undefined,
+    greatest_unit_id: r.greatest_unit_id ? Number(r.greatest_unit_id) : undefined,
+    colours_id: r.colours_id ? Number(r.colours_id) : undefined,
+    brands_id: r.brands_id ? Number(r.brands_id) : undefined,
+    styles_id: r.styles_id ? Number(r.styles_id) : undefined,
+    customs_reports_id: r.customs_reports_id ? Number(r.customs_reports_id) : undefined,
+    group_scrap_items_id: r.group_scrap_items_id ? Number(r.group_scrap_items_id) : undefined,
+    specifications_id: r.specifications_id ? Number(r.specifications_id) : undefined,
+    hs_code_id: r.hs_code_id ? Number(r.hs_code_id) : undefined,
+    job_number_id: r.job_number_id ? Number(r.job_number_id) : undefined,
+  };
+}
+
 export async function fetchMasterItems(): Promise<ItemRecord[] | null> {
   const res = await apiGet<{ data: any[] }>("/api/exim/master/items", { per_page: 500 });
   if (!res?.data) return null;
-  return res.data.map((r: any, idx: number) => {
-    const unitCode = r.unit?.unit?.nama || r.unit?.name || r.unit_name || "";
-    const facVal = r.facility?.name || r.facility_name || "";
-    return {
-      id: String(r.id),
-      no: idx + 1,
-      itemCode: r.code || "",
-      kodeEksternal: r.external_code || "-",
-      itemName: r.name || "",
-      classification: r.classification?.name || r.classification_name || "-",
-      category: r.category?.name || r.category_name || "-",
-      hsCode: r.hs_code?.name || r.hs_code_name || "-",
-      smallestUnitCode: unitCode,
-      smallestUnitName: unitCode,
-      greatestUnitCode: r.greatest_unit?.unit?.nama || r.greatest_unit_name || unitCode,
-      greatestUnitName: r.greatest_unit?.unit?.nama || r.greatest_unit_name || unitCode,
-      facility: (/non/i.test(facVal) ? "NON FASILITAS" : "FASILITAS") as "FASILITAS" | "NON FASILITAS",
-      groupScrap: r.group_scrap || "-",
-      specification: r.specification || "-",
-      origin: r.origin?.name || r.origin_name || "-",
-      colour: r.colour?.name || r.colour_name || "-",
-      brand: r.brand?.name || r.brand_name || "-",
-      style: r.style?.name || r.style_name || "-",
-      customReport: r.custom_report || "-",
-      traceByLot: Boolean(r.trace_by_lot ?? true),
-      status: isTruthyStatus(r.status) ? "Active" : "Inactive",
-      createdAt: formatDisplayDate(r.created_at),
-      createdBy: r.created_by_name || r.creator?.name || "-",
-      updatedAt: formatDisplayDate(r.updated_at || r.created_at),
-      updatedBy: r.updated_by_name || r.created_by_name || "-",
-      stock: Number(r.current_stock ?? r.stock ?? 0),
-      stockUnit: unitCode,
-    };
-  });
+  return res.data.map((r: any, idx: number) => mapApiItemToRecord(r, idx));
 }
 
 export async function saveItemApi(record: ItemRecord, isEdit: boolean): Promise<ItemRecord | null> {
-  const payload = {
-    code: record.itemCode,
-    external_code: record.kodeEksternal,
+  const cleanCode = (val?: string) => (val && val.trim() !== "" && val.trim() !== "-" ? val.trim() : undefined);
+  const payload: Record<string, any> = {
+    code: cleanCode(record.itemCode),
+    external_code: cleanCode(record.kodeEksternal),
     name: record.itemName,
-    specification: record.specification,
-    brand_name: record.brand,
-    classification_name: record.classification,
-    category_name: record.category,
-    colour_name: record.colour,
-    style_name: record.style,
-    hs_code_name: record.hsCode,
-    unit_name: record.smallestUnitCode,
-    facility_name: record.facility === "NON FASILITAS" ? "Non Fasilitas" : "Fasilitas",
-    origin_name: record.origin,
+    classifications_id: record.classifications_id ? Number(record.classifications_id) : undefined,
+    categories_id: record.categories_id ? Number(record.categories_id) : undefined,
+    facilities_id: record.facilities_id ? Number(record.facilities_id) : undefined,
+    origins_id: record.origins_id ? Number(record.origins_id) : undefined,
+    item_types_id: record.item_types_id ? Number(record.item_types_id) : undefined,
+    units_of_measurements_id: record.units_of_measurements_id ? Number(record.units_of_measurements_id) : undefined,
+    smallest_unit_id: record.smallest_unit_id ? Number(record.smallest_unit_id) : undefined,
+    greatest_unit_id: record.greatest_unit_id ? Number(record.greatest_unit_id) : undefined,
+    unit_conversion: record.unitConversion !== undefined ? Number(record.unitConversion) : undefined,
+    netto: record.netto !== undefined ? Number(record.netto) : undefined,
+    size: cleanCode(record.size),
+    colours_id: record.colours_id ? Number(record.colours_id) : undefined,
+    brands_id: record.brands_id ? Number(record.brands_id) : undefined,
+    styles_id: record.styles_id ? Number(record.styles_id) : undefined,
+    customs_reports_id: record.customs_reports_id ? Number(record.customs_reports_id) : undefined,
+    group_scrap_items_id: record.group_scrap_items_id ? Number(record.group_scrap_items_id) : undefined,
+    specifications_id: record.specifications_id ? Number(record.specifications_id) : undefined,
+    hs_code_id: record.hs_code_id ? Number(record.hs_code_id) : undefined,
+    job_number_id: record.job_number_id ? Number(record.job_number_id) : undefined,
     trace_by_lot: record.traceByLot ? 1 : 0,
     status: record.status === "Active" ? 1 : 0,
   };
   const res = isEdit
     ? await apiPut<{ data: any }>(`/api/exim/master/items/${toNumericOrCleanId(record.id)}`, payload)
     : await apiPost<{ data: any }>("/api/exim/master/items", payload);
-  const r = res?.data;
-  return {
-    ...record,
-    id: r?.id ? String(r.id) : record.id,
-    itemCode: r?.code || record.itemCode,
-    updatedAt: formatDisplayDate(r?.updated_at || r?.created_at),
-  };
+  if (!res?.data) return null;
+  return mapApiItemToRecord(res.data, (record.no || 1) - 1);
 }
 
 export async function deleteItemApi(id: string): Promise<boolean> {
@@ -870,7 +911,7 @@ export async function toggleItemStatusApi(id: string): Promise<boolean> {
 // =========================================================================
 
 export async function fetchWarehouseTypesApi(): Promise<Array<{ id: number; name: string }>> {
-  const res = await apiGet<{ data: any[] }>("/api/warehouse/master/warehouses/types");
+  const res = await apiGet<{ data: any[] }>("/api/warehouse/master/warehouse-types");
   return (res?.data || []).map((t: any) => ({ id: Number(t.id), name: t.name || t.nama || "" }));
 }
 
@@ -953,7 +994,7 @@ export async function deleteWarehouseCoordinateApi(coordinateId: string): Promis
 }
 
 export async function fetchWarehouseTypesOfRequestApi(): Promise<TypeOfRequestRecord[] | null> {
-  const res = await apiGet<{ data: any[] }>("/api/warehouse/master/types-of-request", { per_page: 500 });
+  const res = await apiGet<{ data: any[] }>("/api/warehouse/master/type-of-requests", { per_page: 500 });
   if (!res?.data) return null;
   return res.data.map((r: any, idx: number) => ({
     id: String(r.id),
@@ -983,8 +1024,8 @@ export async function saveWarehouseTypeOfRequestApi(record: TypeOfRequestRecord,
     status: record.status === "Active" ? 1 : 0,
   };
   const res = isEdit && record.id
-    ? await apiPut<{ data: any }>(`/api/warehouse/master/types-of-request/${toNumericOrCleanId(record.id)}`, payload)
-    : await apiPost<{ data: any }>("/api/warehouse/master/types-of-request", payload);
+    ? await apiPut<{ data: any }>(`/api/warehouse/master/type-of-requests/${toNumericOrCleanId(record.id)}`, payload)
+    : await apiPost<{ data: any }>("/api/warehouse/master/type-of-requests", payload);
   if (!res?.data) return null;
   const r = res.data;
   return {
@@ -1002,11 +1043,11 @@ export async function saveWarehouseTypeOfRequestApi(record: TypeOfRequestRecord,
 }
 
 export async function deleteWarehouseTypeOfRequestApi(id: string): Promise<boolean> {
-  return apiDelete(`/api/warehouse/master/types-of-request/${toNumericOrCleanId(id)}`);
+  return apiDelete(`/api/warehouse/master/type-of-requests/${toNumericOrCleanId(id)}`);
 }
 
 export async function toggleWarehouseTypeOfRequestStatusApi(id: string): Promise<boolean> {
-  const res = await apiPatch(`/api/warehouse/master/types-of-request/${toNumericOrCleanId(id)}/toggle-status`);
+  const res = await apiPatch(`/api/warehouse/master/type-of-requests/${toNumericOrCleanId(id)}/toggle-status`);
   return Boolean(res);
 }
 
@@ -1070,7 +1111,7 @@ export async function toggleDestinationLocationStatusApi(id: string): Promise<bo
 // =========================================================================
 
 export async function fetchMasterCountries(): Promise<CountryRecord[] | null> {
-  const res = await apiGet<{ data: any[] }>("/api/exim/master/countries", { per_page: 500 });
+  const res = await apiGet<{ data: any[] }>("/api/procurement/master/countries", { per_page: 500 });
   if (!res?.data) return null;
   return res.data.map((r: any, idx: number) => ({
     id: String(r.id),
@@ -1078,7 +1119,7 @@ export async function fetchMasterCountries(): Promise<CountryRecord[] | null> {
     code: r.code || "",
     name: r.name || "",
     status: isTruthyStatus(r.status),
-    createdBy: r.created_by_name || r.creator?.name || "-",
+    createdBy: r.created_by_name || r.created_by_user?.name || r.creator?.name || "-",
     createdAt: formatDisplayDate(r.updated_at || r.created_at),
   }));
 }
@@ -1086,8 +1127,8 @@ export async function fetchMasterCountries(): Promise<CountryRecord[] | null> {
 export async function saveCountryApi(data: { code?: string; name: string; status: boolean }, id?: string): Promise<CountryRecord | null> {
   const payload = { code: data.code || "", name: data.name, status: data.status ? 1 : 0 };
   const res = id
-    ? await apiPut<{ data: any }>(`/api/exim/master/countries/${toNumericOrCleanId(id)}`, payload)
-    : await apiPost<{ data: any }>("/api/exim/master/countries", payload);
+    ? await apiPut<{ data: any }>(`/api/procurement/master/countries/${toNumericOrCleanId(id)}`, payload)
+    : await apiPost<{ data: any }>("/api/procurement/master/countries", payload);
   if (!res?.data) return null;
   const r = res.data;
   return {
@@ -1096,17 +1137,17 @@ export async function saveCountryApi(data: { code?: string; name: string; status
     code: r.code || data.code || "",
     name: r.name || data.name,
     status: isTruthyStatus(r.status),
-    createdBy: r.created_by_name || r.creator?.name || "-",
+    createdBy: r.created_by_name || r.created_by_user?.name || r.creator?.name || "-",
     createdAt: formatDisplayDate(r.updated_at || r.created_at),
   };
 }
 
 export async function deleteCountryApi(id: string): Promise<boolean> {
-  return apiDelete(`/api/exim/master/countries/${toNumericOrCleanId(id)}`);
+  return apiDelete(`/api/procurement/master/countries/${toNumericOrCleanId(id)}`);
 }
 
 export async function toggleCountryStatusApi(id: string): Promise<boolean> {
-  const res = await apiPatch(`/api/exim/master/countries/${toNumericOrCleanId(id)}/toggle-status`);
+  const res = await apiPatch(`/api/procurement/master/countries/${toNumericOrCleanId(id)}/toggle-status`);
   return Boolean(res);
 }
 
@@ -1162,7 +1203,7 @@ export async function toggleRafaksiTypeStatusApi(id: string): Promise<boolean> {
 }
 
 export async function fetchMasterCurrencies(): Promise<CurrencyRecord[] | null> {
-  const res = await apiGet<{ data: any[] }>("/api/exim/master/currencies", { per_page: 500 });
+  const res = await apiGet<{ data: any[] }>("/api/procurement/master/currencies", { per_page: 500 });
   if (!res?.data) return null;
   return res.data.map((r: any, idx: number) => ({
     id: String(r.id),
@@ -1172,7 +1213,7 @@ export async function fetchMasterCurrencies(): Promise<CurrencyRecord[] | null> 
     symbol: r.symbol || r.code || "",
     syncStatus: (isTruthyStatus(r.status) ? "Synced" : "Not Synced") as CurrencyRecord["syncStatus"],
     lastSynced: formatDisplayDate(r.updated_at || r.created_at),
-    createdBy: r.created_by_name || r.creator?.name || "-",
+    createdBy: r.created_by_name || r.created_by_user?.name || r.creator?.name || "-",
     createdAt: formatDisplayDate(r.created_at),
   }));
 }
@@ -1188,8 +1229,8 @@ export async function saveCurrencyApi(
     status: data.status === false ? 0 : 1,
   };
   const res = id
-    ? await apiPut<{ data: any }>(`/api/exim/master/currencies/${toNumericOrCleanId(id)}`, payload)
-    : await apiPost<{ data: any }>("/api/exim/master/currencies", payload);
+    ? await apiPut<{ data: any }>(`/api/procurement/master/currencies/${toNumericOrCleanId(id)}`, payload)
+    : await apiPost<{ data: any }>("/api/procurement/master/currencies", payload);
   if (!res?.data) return null;
   const r = res.data;
   return {
@@ -1200,17 +1241,17 @@ export async function saveCurrencyApi(
     symbol: r.symbol || data.symbol || data.currencyCode,
     syncStatus: (isTruthyStatus(r.status ?? 1) ? "Synced" : "Not Synced") as CurrencyRecord["syncStatus"],
     lastSynced: formatDisplayDate(r.updated_at || r.created_at),
-    createdBy: r.created_by_name || r.creator?.name || "-",
+    createdBy: r.created_by_name || r.created_by_user?.name || r.creator?.name || "-",
     createdAt: formatDisplayDate(r.created_at),
   };
 }
 
 export async function deleteCurrencyApi(id: string): Promise<boolean> {
-  return apiDelete(`/api/exim/master/currencies/${toNumericOrCleanId(id)}`);
+  return apiDelete(`/api/procurement/master/currencies/${toNumericOrCleanId(id)}`);
 }
 
 export async function toggleCurrencyStatusApi(id: string): Promise<boolean> {
-  const res = await apiPatch(`/api/exim/master/currencies/${toNumericOrCleanId(id)}/toggle-status`);
+  const res = await apiPatch(`/api/procurement/master/currencies/${toNumericOrCleanId(id)}/toggle-status`);
   return Boolean(res);
 }
 
@@ -1646,83 +1687,90 @@ export async function toggleUnitReferenceStatusApi(id: string | number): Promise
 // =========================================================================
 
 export async function fetchRequestMaterials(): Promise<RequestMaterialRecord[] | null> {
-  const res = await apiGet<{ data: any[] }>("/api/warehouse/requests", { per_page: 200 });
+  const res = await apiGet<{ data: any[] }>("/api/warehouse/request-materials", { per_page: 200 });
   if (!res?.data) return null;
 
   return res.data.map((r: any, index: number) => {
-    const rawStatus = String(r.approval_status || r.status || "Draft");
+    const rawStatus = String(r.approval || r.approval_status || r.status || "Draft");
     let approval: ApprovalStatus = "Draft";
-    if (rawStatus === "Approved 1" || rawStatus === "Waiting Approve 2") approval = "Approved 1";
-    else if (rawStatus === "Approved 2" || rawStatus === "Approved") approval = "Approved 2";
-    else if (rawStatus === "Rejected") approval = "Rejected";
+    if (/reject/i.test(rawStatus)) approval = "Rejected";
+    else if (/approved\s*2|^approved$/i.test(rawStatus)) approval = "Approved 2";
+    else if (/approved\s*1|waiting.*2/i.test(rawStatus)) approval = "Approved 1";
+    else if (/waiting.*1/i.test(rawStatus)) approval = "Waiting Approve 1" as ApprovalStatus;
 
     const items = Array.isArray(r.items)
       ? r.items.map((it: any, iIdx: number) => ({
           id: String(it.id || `item-${iIdx + 1}`),
-          itemCode: it.item_code || it.item?.code || "-",
-          externalCode: it.external_code || it.item?.external_code || "-",
-          itemName: it.item_name || it.item?.name || "-",
-          unit: it.unit || "-",
-          jobNumber: it.job_number || r.job_number || "-",
+          items_id: it.items_id ? Number(it.items_id) : undefined,
+          itemCode: it.itemCode || it.item_code || it.item?.code || "-",
+          externalCode: it.externalCode || it.external_code || it.item?.external_code || "-",
+          itemName: it.itemName || it.item_name || it.item?.name || "-",
+          unit: it.unit || it.item?.unit?.name || "-",
+          jobNumber: it.jobNumber || it.job_number || r.jobNumber || r.job_number || "-",
           size: it.size || "-",
-          stockQty: Number(it.stock_qty ?? 0),
-          pendingQty: Number(it.pending_qty ?? 0),
-          requestQty: Number(it.request_qty ?? it.qty ?? 0),
+          stockQty: Number(it.stockQty ?? it.stock_qty ?? 0),
+          pendingQty: Number(it.pendingQty ?? it.pending_qty ?? 0),
+          requestQty: Number(it.requestQty ?? it.request_qty ?? it.qty ?? 0),
           remark: it.remark || "-",
         }))
       : [];
 
     return {
-      id: String(r.id || r.code),
+      id: String(r.rawId ?? r.id ?? r.requestCode ?? r.code),
       no: index + 1,
-      requestCode: r.code || `REQ-${r.id}`,
-      requestDate: r.date || "-",
-      destinationLocation: r.destination_location || r.warehouse_destination || "-",
+      requestCode: r.requestCode || r.code || `REQ-${r.id}`,
+      requestDate: r.requestDate || r.date || "-",
+      destinationLocation: r.destinationLocation || r.destination_location || r.warehouse_destination || "-",
       department: r.department || "-",
-      typeOfRequest: r.type_of_request || "-",
-      jobNumber: r.job_number || "-",
+      typeOfRequest: r.typeOfRequest || r.type_of_request || "-",
+      jobNumber: r.jobNumber || r.job_number || "-",
       customer: r.customer || "-",
-      requestNote: r.note || "-",
-      totalItems: Number(r.total_items ?? items.length),
+      requestNote: r.requestNote || r.note || "-",
+      totalItems: Number(r.totalItems ?? r.total_items ?? items.length),
       approval,
-      projectType: r.project_type || "-",
-      createdDate: formatDisplayDate(r.created_at),
-      lastUpdatedDate: formatDisplayDate(r.updated_at || r.created_at),
-      createdBy: r.created_by || "-",
+      projectType: r.projectType || r.project_type || "-",
+      createdDate: formatDisplayDate(r.createdDate || r.created_at),
+      lastUpdatedDate: formatDisplayDate(r.lastUpdatedDate || r.updated_at || r.created_at),
+      createdBy: r.createdBy || r.created_by || "-",
       soNumber: r.so_number || "-",
       poBuyer: r.po_buyer || "-",
-      warehouseDestination: r.warehouse_destination || r.destination_location || "-",
-      approved1At: r.approved_1_at || "-",
-      approved2At: r.approved_2_at || "-",
+      warehouseDestination: r.warehouseName || r.warehouse_destination || r.destinationLocation || r.destination_location || "-",
+      approved1At: r.approved1At || r.approved_1_at || "-",
+      approved2At: r.approved2At || r.approved_2_at || "-",
       revisionCount: Number(r.revision_count ?? 0),
       items,
     };
   });
 }
 
-export async function saveRequestMaterialApi(record: RequestMaterialRecord): Promise<any> {
-  return apiPost("/api/warehouse/requests", {
-    code: record.requestCode,
-    date: record.requestDate,
-    type_of_request: record.typeOfRequest,
-    destination_location: record.destinationLocation,
+export async function saveRequestMaterialApi(record: RequestMaterialRecord & Record<string, any>): Promise<any> {
+  return apiPost("/api/warehouse/request-materials", {
+    requestDate: record.requestDate,
+    departments_id: record.departments_id || undefined,
     department: record.department,
-    job_number: record.jobNumber,
+    warehouses_id: record.warehouses_id || undefined,
+    warehouse: record.warehouseDestination || record.warehouse || undefined,
+    type_of_request_id: record.type_of_request_id || undefined,
+    typeOfRequest: record.typeOfRequest,
+    destination_location_id: record.destination_location_id || undefined,
+    destinationLocation: record.destinationLocation,
+    job_number_id: record.job_number_id || undefined,
+    jobNumber: record.jobNumber && record.jobNumber !== "-" ? record.jobNumber : undefined,
     customer: record.customer,
-    project_type: record.projectType,
-    so_number: record.soNumber,
-    po_buyer: record.poBuyer,
+    projectType: record.projectType,
+    is_internal_warehouse: Boolean(record.isInternalWarehouse),
+    is_specific_station: Boolean(record.isSpecificStation),
+    requestNote: record.requestNote,
     note: record.requestNote,
-    items: record.items.map((it) => ({
+    items: (record.items || []).map((it: any) => ({
+      items_id: it.items_id || undefined,
       itemCode: it.itemCode,
       itemName: it.itemName,
       unit: it.unit,
       jobNumber: it.jobNumber,
       size: it.size,
-      stockQty: it.stockQty,
-      pendingQty: it.pendingQty,
-      requestQty: it.requestQty,
-      remark: it.remark,
+      requestQty: Number(it.requestQty ?? it.qty ?? 1),
+      remark: it.remark || "",
     })),
   });
 }
@@ -1734,34 +1782,40 @@ export async function fetchTransferStockReturnsApi(): Promise<TransferStockRetur
     const rawStatus = String(r.status || "Waiting Approve 1");
     let status: TransferStockReturnStatus = "Waiting Approve 1";
     if (/reject/i.test(rawStatus)) status = "Rejected";
-    else if (/^approved$/i.test(rawStatus) || /approve\s*2/i.test(rawStatus)) status = "Approved";
-    else if (/waiting.*2|approve\s*1/i.test(rawStatus)) status = "Waiting Approve 2";
+    else if (/approved\s*1|waiting.*2/i.test(rawStatus)) status = "Waiting Approve 2";
+    else if (/^approved$|approved\s*2/i.test(rawStatus)) status = "Approved";
     else if (/draft/i.test(rawStatus)) status = "Draft";
+    else if (/waiting.*1/i.test(rawStatus)) status = "Waiting Approve 1";
 
     const items = Array.isArray(r.items)
       ? r.items.map((it: any, idx: number) => ({
           id: String(it.id || idx + 1),
+          items_id: it.items_id ? Number(it.items_id) : undefined,
           itemCode: it.itemCode || it.item_code || "-",
           itemName: it.itemName || it.item_name || "-",
           quantity: Number(it.quantity ?? it.return_qty ?? 0),
           unit: it.unit || "-",
           sourceLocation: it.sourceLocation || it.source_location || "-",
           destinationLocation: it.destinationLocation || it.destination_location || "-",
-          reason: it.reason || "-",
+          reason: it.remark || it.reason || "-",
         }))
       : [];
 
     return {
-      id: String(r.id),
-      mutationCode: r.mutationCode || r.mutation_code || "",
+      id: String(r.rawId ?? r.id),
+      warehouses_id: r.warehouses_id ?? r.warehouseId ? Number(r.warehouses_id ?? r.warehouseId) : undefined,
+      warehouseName: r.warehouse || r.warehouseName || "",
+      request_material_id: r.request_material_id ?? r.requestMaterialId ? Number(r.request_material_id ?? r.requestMaterialId) : undefined,
+      job_number_id: r.job_number_id ?? r.jobNumberId ? Number(r.job_number_id ?? r.jobNumberId) : undefined,
+      mutationCode: r.returnNumber || r.mutationCode || r.mutation_code || "",
       productionCode: r.productionCode || r.production_code || "",
       jobNumber: r.jobNumber || r.job_number || "-",
-      transferDate: r.transferDate || r.transfer_date || "-",
-      transferNote: r.transferNote || r.transfer_note || "-",
-      totalItems: Number(r.totalItems ?? items.length),
+      transferDate: r.returnDateFormatted || r.returnDate || r.transferDate || r.transfer_date || "-",
+      transferNote: r.note || r.transferNote || r.transfer_note || "-",
+      totalItems: Number(r.itemCount ?? r.totalItems ?? items.length),
       status,
-      userCreated: r.userCreated || r.created_by || "-",
-      userLastUpdated: formatDisplayDate(r.userLastUpdated || r.updated_at || r.created_at),
+      userCreated: r.createdBy || r.userCreated || r.created_by || "-",
+      userLastUpdated: formatDisplayDate(r.updatedAt || r.createdAt || r.userLastUpdated),
       items,
     };
   });
@@ -1772,7 +1826,10 @@ export async function fetchTransferStockReturnAvailableSourcesApi(): Promise<any
   return res?.data ?? [];
 }
 
-export async function saveTransferStockReturnApi(payload: Record<string, any>): Promise<any> {
+export async function saveTransferStockReturnApi(payload: Record<string, any>, editId?: string | number): Promise<any> {
+  if (editId !== undefined && editId !== null && String(editId).trim() !== "" && /^\d+$/.test(toNumericOrCleanId(editId))) {
+    return apiPut(`/api/warehouse/transfer-stock-returns/${toNumericOrCleanId(editId)}`, payload);
+  }
   return apiPost("/api/warehouse/transfer-stock-returns", payload);
 }
 
@@ -1781,7 +1838,7 @@ export async function approveTransferStockReturnApi(id: string | number, tier?: 
 }
 
 export async function rejectTransferStockReturnApi(id: string | number, reason: string): Promise<any> {
-  return apiPost(`/api/warehouse/transfer-stock-returns/${toNumericOrCleanId(id)}/reject`, { reason });
+  return apiPost(`/api/warehouse/transfer-stock-returns/${toNumericOrCleanId(id)}/reject`, { note: reason, reason });
 }
 
 export async function deleteTransferStockReturnApi(id: string | number): Promise<boolean> {
@@ -1798,26 +1855,44 @@ export async function fetchExchangeRatesApi(params?: {
   start_date?: string;
   end_date?: string;
 }): Promise<ExchangeRateRecord[]> {
-  const res = await apiGet<{ data: any[] }>("/api/dashboard/exchange-rates", { per_page: 200, ...params });
+  const queryParams = params
+    ? {
+        currency: params.currency_code,
+        rateType: params.rate_type,
+        startDate: params.start_date,
+        endDate: params.end_date,
+      }
+    : undefined;
+  const res = await apiGet<{ data: any[] }>("/api/dashboard/exchange-rates", { per_page: 200, ...queryParams });
   if (!res?.data) return [];
-  return res.data.map((r: any, idx: number) => ({
-    id: String(r.id),
-    no: idx + 1,
-    rateDate: r.rate_date ? String(r.rate_date).slice(0, 10) : "-",
-    currencyCode: r.currency_code || "USD",
-    currencyName: r.currency?.name || r.currency_name || r.currency_code || "-",
-    rateType: (["Pajak (KMK)", "Bank Indonesia (BI)", "Commercial Bank (Counter)"].includes(r.rate_type)
-      ? r.rate_type
-      : "Pajak (KMK)") as RateType,
-    buyingRate: r.buying_rate !== null && r.buying_rate !== undefined ? Number(r.buying_rate) : null,
-    sellingRate: r.selling_rate !== null && r.selling_rate !== undefined ? Number(r.selling_rate) : null,
-    rate: r.middle_rate !== null && r.middle_rate !== undefined ? Number(r.middle_rate) : (r.rate !== undefined ? Number(r.rate) : null),
-    flag: r.reference_document || r.flag || "-",
-    availability: (["Available", "Unavailable", "Pending"].includes(r.availability)
-      ? r.availability
-      : "Available") as RateAvailability,
-    note: r.notes || r.note || undefined,
-  }));
+  return res.data.map((r: any, idx: number) => {
+    const rawRateType = String(r.rate_type || "");
+    let rateType: RateType = "Bank Indonesia (BI)";
+    if (/pajak|kmk/i.test(rawRateType)) rateType = "Pajak (KMK)";
+    else if (/commercial|counter|komersial/i.test(rawRateType)) rateType = "Commercial Bank (Counter)";
+    else if (/bi|tengah|indonesia/i.test(rawRateType)) rateType = "Bank Indonesia (BI)";
+
+    const buyingRaw = r.buy_rate ?? r.buying_rate;
+    const sellingRaw = r.sell_rate ?? r.selling_rate;
+    const middleRaw = r.middle_rate ?? r.rate;
+
+    return {
+      id: String(r.id),
+      no: idx + 1,
+      rateDate: r.rate_date ? String(r.rate_date).slice(0, 10) : "-",
+      currencyCode: r.currency_code || "USD",
+      currencyName: r.currency?.name || r.currency_name || r.currency_code || "-",
+      rateType,
+      buyingRate: buyingRaw !== null && buyingRaw !== undefined ? Number(buyingRaw) : null,
+      sellingRate: sellingRaw !== null && sellingRaw !== undefined ? Number(sellingRaw) : null,
+      rate: middleRaw !== null && middleRaw !== undefined ? Number(middleRaw) : null,
+      flag: r.flag || r.reference_document || "-",
+      availability: (["Available", "Unavailable", "Pending"].includes(r.availability)
+        ? r.availability
+        : "Available") as RateAvailability,
+      note: r.notes || r.note || undefined,
+    };
+  });
 }
 
 export async function fetchLatestExchangeRatesApi(): Promise<Record<string, number>> {
@@ -1955,7 +2030,7 @@ export async function toggleStockNotificationStatusApi(id: string): Promise<bool
 // =========================================================================
 
 export async function fetchStockItemsReportApi(params?: Record<string, any>): Promise<WarehouseStockRecord[]> {
-  const res = await apiGet<{ data: any[] }>("/api/warehouse/reports/stock-items", params);
+  const res = await apiGet<{ data: any[] }>("/api/warehouse/reports/stock-item", params);
   if (!Array.isArray(res?.data)) return [];
   return res.data.map((r: any, idx: number) => ({
     id: String(r.id || idx + 1),
@@ -2020,7 +2095,7 @@ export async function fetchStockCardReportApi(params?: Record<string, any>): Pro
 }
 
 export async function fetchPrReportApi(params?: Record<string, any>): Promise<PrReportRecord[]> {
-  const res = await apiGet<{ data?: any[]; rows?: any[] }>("/api/procurement/reports/pr", params);
+  const res = await apiGet<{ data?: any[]; rows?: any[] }>("/api/reporting/pr-report", params);
   const list = res?.data || res?.rows || [];
   if (!Array.isArray(list)) return [];
   return list.map((r: any, idx: number) => ({
@@ -2028,23 +2103,23 @@ export async function fetchPrReportApi(params?: Record<string, any>): Promise<Pr
     prNumber: r.prNumber || r.pr_number || r.code || "-",
     prDate: r.prDate || r.pr_date || r.date || "-",
     prDateRaw: r.prDateRaw || r.pr_date_raw || r.date || "",
-    dateRequired: r.dateRequired || r.date_required || "-",
-    dateRequiredRaw: r.dateRequiredRaw || r.date_required_raw || "",
+    dateRequired: r.dateRequired || r.date_required || r.dueDate || "-",
+    dateRequiredRaw: r.dateRequiredRaw || r.date_required_raw || r.dueDate || "",
     facilityType: r.facilityType || r.facility || "FASILITAS",
-    itemCode: r.itemCode || r.item_code || "-",
-    itemName: r.itemName || r.item_name || "-",
-    unitCode: r.unitCode || r.unit || "-",
-    qtyRequest: Number(r.qtyRequest ?? r.qty_request ?? r.qty ?? 0),
+    itemCode: r.itemCode || r.item_code || r.items?.[0]?.itemCode || "-",
+    itemName: r.itemName || r.item_name || r.items?.[0]?.itemName || "-",
+    unitCode: r.unitCode || r.unit || r.items?.[0]?.unit || "-",
+    qtyRequest: Number(r.qtyRequest ?? r.qty_request ?? r.totalQuantity ?? r.qty ?? 0),
     qtyPurchase: Number(r.qtyPurchase ?? r.qty_purchase ?? 0),
     qtyRemain: Number(r.qtyRemain ?? r.qty_remain ?? 0),
-    status: (r.status === "Completed" ? "Completed" : "Outstanding") as PrReportRecord["status"],
+    status: (r.status === "Completed" || r.status === "Ordered" ? "Completed" : "Outstanding") as PrReportRecord["status"],
     approvalDate1: r.approvalDate1 || r.approval1_at || "-",
     approvalDate2: r.approvalDate2 || r.approval2_at || "-",
     approvalStatus: (["Ready", "Approve 1", "Approve 2", "Closed"].includes(r.approvalStatus)
       ? r.approvalStatus
       : "Approve 2") as PrReportRecord["approvalStatus"],
-    lastUpdatedBy: r.lastUpdatedBy || r.created_by || "-",
-    lastUpdatedAt: r.lastUpdatedAt || r.updated_at || "-",
+    lastUpdatedBy: r.lastUpdatedBy || r.createdBy || r.created_by || "-",
+    lastUpdatedAt: r.lastUpdatedAt || r.updated_at || r.date || "-",
     deptRequest: r.deptRequest || r.department || "-",
     section: r.section || "-",
     poDetails: Array.isArray(r.poDetails) ? r.poDetails : [],
@@ -2052,7 +2127,7 @@ export async function fetchPrReportApi(params?: Record<string, any>): Promise<Pr
 }
 
 export async function fetchPoReportApi(params?: Record<string, any>): Promise<PoReportRecord[]> {
-  const res = await apiGet<{ data?: any[]; rows?: any[] }>("/api/procurement/reports/po", params);
+  const res = await apiGet<{ data?: any[]; rows?: any[] }>("/api/reporting/po-report", params);
   const list = res?.data || res?.rows || [];
   if (!Array.isArray(list)) return [];
   return list.map((r: any, idx: number) => ({
@@ -2062,16 +2137,16 @@ export async function fetchPoReportApi(params?: Record<string, any>): Promise<Po
     purchaseDateRaw: r.purchaseDateRaw || r.purchase_date_raw || r.date || "",
     supplier: r.supplier || r.supplier_name || "-",
     discount: Number(r.discount ?? 0),
-    vat: Number(r.vat ?? r.ppn_amount ?? 0),
-    subtotal: Number(r.subtotal ?? r.grand_total ?? 0),
+    vat: Number(r.vat ?? r.ppn ?? r.ppn_amount ?? 0),
+    subtotal: Number(r.subtotal ?? r.grandTotal ?? r.grand_total ?? 0),
     description: r.description || r.note || "-",
-    poStatus: (["Approved", "Ready", "Draft", "Closed"].includes(r.poStatus)
-      ? r.poStatus
+    poStatus: (["Approved", "Ready", "Draft", "Closed"].includes(r.poStatus || r.status)
+      ? (r.poStatus || r.status)
       : "Approved") as PoReportRecord["poStatus"],
     receivingStatus: (r.receivingStatus === "Complete" ? "Complete" : "Outstanding") as PoReportRecord["receivingStatus"],
     facilityType: (/non/i.test(String(r.facilityType || r.facility || "")) ? "NON FASILITAS" : "FASILITAS") as PoReportRecord["facilityType"],
     createdBy: r.createdBy || r.created_by || "-",
-    createdAt: r.createdAt || r.created_at || "-",
+    createdAt: r.createdAt || r.created_at || r.date || "-",
     items: Array.isArray(r.items) ? r.items : [],
   }));
 }
@@ -2091,11 +2166,11 @@ export async function fetchApprovalHistoriesApi(params?: Record<string, any>): P
 }
 
 export async function fetchUserProfileApi(): Promise<any> {
-  const res = await apiGet<{ data: any }>("/api/profile");
+  const res = await apiGet<{ data: any }>("/api/user/profile");
   return res?.data ?? null;
 }
 
 export async function updateUserProfileApi(payload: Record<string, any>): Promise<any> {
-  const res = await apiPut<{ data: any }>("/api/profile", payload);
+  const res = await apiPut<{ data: any }>("/api/user/profile", payload);
   return res?.data ?? null;
 }

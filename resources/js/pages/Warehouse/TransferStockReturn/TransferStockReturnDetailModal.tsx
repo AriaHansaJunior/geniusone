@@ -8,12 +8,18 @@ interface TransferStockReturnDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
   record: TransferStockReturnRecord | null;
+  onApprove?: (record: TransferStockReturnRecord) => void | Promise<any>;
+  onReject?: (record: TransferStockReturnRecord) => void | Promise<any>;
+  busy?: boolean;
 }
 
 export function TransferStockReturnDetailModal({
   isOpen,
   onClose,
   record,
+  onApprove,
+  onReject,
+  busy = false,
 }: TransferStockReturnDetailModalProps) {
   if (!isOpen || !record) return null;
 
@@ -249,22 +255,53 @@ export function TransferStockReturnDetailModal({
         </div>
 
         {/* Footer Actions */}
-        <div className="master-modal-footer" style={{ padding: "12px 20px" }}>
-          <Button
-            type="button"
-            className="button-refresh-sky"
-            onClick={handlePrint}
-            title="Print Stock Transfer Return"
-          >
-            Print
-          </Button>
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={onClose}
-          >
-            Close
-          </Button>
+        <div className="master-modal-footer" style={{ padding: "12px 20px", justifyContent: "space-between", flexWrap: "wrap", gap: "8px" }}>
+          <div style={{ display: "inline-flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+            {onApprove &&
+              (record.status === "Draft" ||
+                record.status === "Waiting Approve 1" ||
+                record.status === "Waiting Approve 2") && (
+                <Button
+                  type="button"
+                  variant="primary"
+                  icon="check"
+                  disabled={busy}
+                  onClick={() => onApprove(record)}
+                >
+                  {record.status === "Waiting Approve 2" ? "Approve Stage 2" : "Approve Stage 1"}
+                </Button>
+              )}
+            {onReject &&
+              (record.status === "Draft" ||
+                record.status === "Waiting Approve 1" ||
+                record.status === "Waiting Approve 2") && (
+                <Button
+                  type="button"
+                  variant="danger"
+                  disabled={busy}
+                  onClick={() => onReject(record)}
+                >
+                  Reject
+                </Button>
+              )}
+          </div>
+          <div style={{ display: "inline-flex", alignItems: "center", gap: "8px" }}>
+            <Button
+              type="button"
+              className="button-refresh-sky"
+              onClick={handlePrint}
+              title="Print Stock Transfer Return"
+            >
+              Print
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={onClose}
+            >
+              Close
+            </Button>
+          </div>
         </div>
       </div>
     </div>

@@ -2,6 +2,7 @@ import React, { useRef, useState } from "react";
 import * as XLSX from "xlsx";
 import { Button } from "../../../../components/ui/Button";
 import { Icon } from "../../../../components/ui/Icon";
+import { apiFetch } from "../../../../data/api";
 
 interface StyleImportProps {
   onBack: () => void;
@@ -103,9 +104,8 @@ export function StyleImport({ onBack }: StyleImportProps) {
       const formData = new FormData();
       formData.append("file", selectedFile);
 
-      const response = await fetch("/api/exim/master/styles/import", {
+      const response = await apiFetch("/api/exim/master/styles/import", {
         method: "POST",
-        headers: { Accept: "application/json" },
         body: formData,
       });
       const data = await response.json();

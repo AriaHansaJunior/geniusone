@@ -7,6 +7,7 @@ import { Badge } from "../../../../components/ui/Badge";
 import { Pagination } from "../../../../components/ui/Pagination";
 import { CustomDatePicker } from "../../../../components/ui/CustomDatePicker";
 import { CustomSelect } from "../../../../components/ui/CustomSelect";
+import { apiFetch } from "../../../../data/api";
 import {
   stockItemClassificationsList,
   stockItemFacilitiesList,
@@ -64,10 +65,8 @@ export function StockItemIndex() {
     const params = new URLSearchParams();
     if (search.trim()) params.set("search", search.trim());
 
-    fetch(`/api/warehouse/reports/stock-item?${params.toString()}`, {
-      headers: { Accept: "application/json" },
-    })
-      .then((res) => res.json())
+    apiFetch(`/api/warehouse/reports/stock-item?${params.toString()}`)
+      .then((res) => (res.ok ? res.json() : null))
       .then((json) => {
         if (!isMounted) return;
         if (json?.status === "success" && Array.isArray(json.data) && json.data.length > 0) {

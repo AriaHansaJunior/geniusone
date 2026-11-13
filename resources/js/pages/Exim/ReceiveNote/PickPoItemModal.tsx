@@ -4,6 +4,7 @@ import { Button } from "../../../components/ui/Button";
 import { SearchField } from "../../../components/ui/SearchField";
 import { Pagination } from "../../../components/ui/Pagination";
 import { Badge } from "../../../components/ui/Badge";
+import { apiFetch } from "../../../data/api";
 import { availablePoItemsToPick } from "./receive-note-data";
 import type { PoItemToPick } from "./receive-note-types";
 
@@ -43,8 +44,8 @@ export function PickPoItemModal({
   useEffect(() => {
     if (!isOpen) return;
     let isMounted = true;
-    fetch("/api/procurement/po?per_page=100", { headers: { Accept: "application/json" } })
-      .then((r) => r.json())
+    apiFetch("/api/procurement/po?per_page=100")
+      .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
         if (!isMounted) return;
         const pos = d?.data?.data || d?.rows || (Array.isArray(d?.data) ? d.data : []);

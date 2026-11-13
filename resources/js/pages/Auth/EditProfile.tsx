@@ -4,6 +4,7 @@ import { Button } from "../../components/ui/Button";
 import { Badge } from "../../components/ui/Badge";
 import { ConfirmDialog } from "../../components/ui/ConfirmDialog";
 import { CustomSelect } from "../../components/ui/CustomSelect";
+import { apiFetch } from "../../data/api";
 
 interface EditProfileProps {
   onBack: () => void;
@@ -32,8 +33,8 @@ export function EditProfile({ onBack, onSaveConfirmed }: EditProfileProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    fetch("/api/user/profile", { headers: { Accept: "application/json" } })
-      .then((r) => r.json())
+    apiFetch("/api/user/profile")
+      .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         if (data?.status === "success" && data.data) {
           if (data.data.name) setName(data.data.name);
@@ -75,12 +76,14 @@ export function EditProfile({ onBack, onSaveConfirmed }: EditProfileProps) {
     setShowSaveDialog(true);
   };
 
+  const [saveError, setSaveError] = useState<string | null>(null);
+
   const handleConfirmSave = async () => {
     setShowSaveDialog(false);
+    setSaveError(null);
     try {
-      await fetch("/api/user/profile", {
+      const res = await apiFetch("/api/user/profile", {
         method: "POST",
-        headers: { "Content-Type": "application/json", Accept: "application/json" },
         body: JSON.stringify({
           name,
           username,
@@ -89,10 +92,16 @@ export function EditProfile({ onBack, onSaveConfirmed }: EditProfileProps) {
           photo: photoPreview || undefined,
         }),
       });
-    } catch (e) {
+      const json = await res.json().catch(() => ({} as any));
+      if (!res.ok) {
+        setSaveError(json?.message || "Failed to update profile in database.");
+        return;
+      }
+      onSaveConfirmed();
+    } catch (e: any) {
       console.warn("Failed to update profile to database:", e);
+      setSaveError(e?.message || "Failed to update profile in database.");
     }
-    onSaveConfirmed();
   };
 
   const handleCancelDialog = () => {
@@ -130,6 +139,22 @@ export function EditProfile({ onBack, onSaveConfirmed }: EditProfileProps) {
           </span>
         </div>
       </div>
+
+      {saveError && (
+        <div
+          style={{
+            marginBottom: "1rem",
+            padding: "0.75rem 1rem",
+            borderRadius: "8px",
+            backgroundColor: "#FEF2F2",
+            border: "1px solid #FECACA",
+            color: "#991B1B",
+            fontSize: "0.875rem",
+          }}
+        >
+          {saveError}
+        </div>
+      )}
 
       {/* Main Content Layout: Balanced Two-Column Structure */}
       <div className="edit-profile-layout">

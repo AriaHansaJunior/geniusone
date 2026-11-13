@@ -7,6 +7,7 @@ import { CustomDatePicker } from "../../../components/ui/CustomDatePicker";
 import { CustomSelect } from "../../../components/ui/CustomSelect";
 import { ItemPickerModal } from "../../Exim/Master/Item/ItemPickerModal";
 import type { ItemRecord } from "../../Exim/Master/Item/item-types";
+import { apiFetch } from "../../../data/api";
 
 export interface PRItemRow {
   id: string;
@@ -54,8 +55,8 @@ export function PurchaseRequisitionCreate({
   // Load Departments and Sections from API on mount
   useEffect(() => {
     let isMounted = true;
-    fetch("/api/exim/master/departments?per_page=100", { headers: { Accept: "application/json" } })
-      .then((r) => r.json())
+    apiFetch("/api/exim/master/departments?per_page=100")
+      .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
         if (isMounted && d?.data && Array.isArray(d.data)) {
           const names = d.data.map((item: any) => item.name || item.departmentName).filter(Boolean);
@@ -64,8 +65,8 @@ export function PurchaseRequisitionCreate({
       })
       .catch(() => {});
 
-    fetch("/api/exim/master/sections?per_page=100", { headers: { Accept: "application/json" } })
-      .then((r) => r.json())
+    apiFetch("/api/exim/master/sections?per_page=100")
+      .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
         if (isMounted && d?.data && Array.isArray(d.data)) {
           const names = d.data.map((item: any) => item.name || item.sectionName).filter(Boolean);
@@ -416,19 +417,18 @@ export function PurchaseRequisitionCreate({
         formData.append(`items[${idx}][remark]`, it.remark || note || "Purchase Requisition Item");
       });
 
-      const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute("content") || "";
-      const res = await fetch("/api/procurement/pr", {
+      const res = await apiFetch("/api/procurement/pr", {
         method: "POST",
-        headers: {
-          Accept: "application/json",
-          ...(csrfToken ? { "X-CSRF-TOKEN": csrfToken } : {}),
-        },
         body: formData,
       });
 
-      const data = await res.json();
+      const data = await res.json().catch(() => ({} as any));
       if (!res.ok) {
-        throw new Error(data.message || "Failed to create Purchase Requisition.");
+        const firstErr =
+          data?.errors && typeof data.errors === "object"
+            ? (Object.values(data.errors)[0] as string[] | undefined)?.[0]
+            : undefined;
+        throw new Error(data.message || firstErr || `Failed to create Purchase Requisition (HTTP ${res.status}).`);
       }
 
       setShowSaveConfirm(false);

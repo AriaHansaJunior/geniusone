@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Warehouse;
 
 use App\Http\Controllers\Controller;
 use App\Models\Master\Finance\Currency;
+use App\Models\Master\Finance\Valuta;
 use App\Models\Master\Partner\Supplier;
 use App\Models\Procurement\PurchaseOrder\PurchaseOrder;
 use App\Models\Procurement\PurchaseOrder\PurchaseOrderItem;
@@ -427,7 +428,13 @@ class ReceiveNoteApiController extends Controller
 
         $code = $request->input('currency');
         if (! empty($code)) {
-            $foundId = Currency::where('name', $code)->orWhere('code', $code)->value('id');
+            $foundId = Currency::where('name', $code)->value('id');
+            if (! $foundId) {
+                $valutaCode = Valuta::where('code', $code)->orWhere('name', $code)->value('code');
+                if ($valutaCode) {
+                    $foundId = Currency::where('name', $valutaCode)->value('id');
+                }
+            }
             if ($foundId) {
                 return (int) $foundId;
             }
@@ -436,16 +443,16 @@ class ReceiveNoteApiController extends Controller
         $firstPoId = $processedItems[0]['purchase_order_id'] ?? null;
         if ($firstPoId) {
             $po = PurchaseOrder::with('valuta')->find($firstPoId);
-            $valutaName = $po?->valuta?->name;
-            if ($valutaName) {
-                $foundId = Currency::where('name', $valutaName)->orWhere('code', $valutaName)->value('id');
+            $valutaCode = $po?->valuta?->code ?? $po?->valuta?->name;
+            if ($valutaCode) {
+                $foundId = Currency::where('name', $valutaCode)->value('id');
                 if ($foundId) {
                     return (int) $foundId;
                 }
             }
         }
 
-        $fallbackId = Currency::where('code', 'IDR')->orWhere('name', 'IDR')->value('id') ?? Currency::query()->value('id');
+        $fallbackId = Currency::where('name', 'IDR')->value('id') ?? Currency::query()->value('id');
         if (! $fallbackId) {
             throw new InvalidArgumentException('No Currency reference found in database.');
         }

@@ -1,15 +1,42 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Button } from "../../../../components/ui/Button";
 import { Icon } from "../../../../components/ui/Icon";
 import { CustomSelect } from "../../../../components/ui/CustomSelect";
+import { fetchMasterLookupsApi } from "../../../../data/masterApi";
 import type { SupplierFormData } from "./supplier-types";
 
 interface SupplierFormProps {
   onBack: () => void;
-  onSave?: (data: SupplierFormData) => void;
+  onSave?: (data: SupplierFormData) => void | Promise<any>;
+}
+
+interface LookupRow {
+  id: number;
+  code?: string;
+  name: string;
+}
+
+interface SupplierLookupState {
+  countries: LookupRow[];
+  paymentTerms: LookupRow[];
+  paymentMethods: LookupRow[];
+  rafaksiTypes: LookupRow[];
+  currencies: LookupRow[];
+  ports: LookupRow[];
 }
 
 export function SupplierForm({ onBack, onSave }: SupplierFormProps) {
+  const [lookups, setLookups] = useState<SupplierLookupState>({
+    countries: [],
+    paymentTerms: [],
+    paymentMethods: [],
+    rafaksiTypes: [],
+    currencies: [],
+    ports: [],
+  });
+  const [loadingLookups, setLoadingLookups] = useState(true);
+  const [saving, setSaving] = useState(false);
+
   const [formData, setFormData] = useState<SupplierFormData>({
     autoGenerateCode: true,
     supplierCode: "",
@@ -41,20 +68,51 @@ export function SupplierForm({ onBack, onSave }: SupplierFormProps) {
   const [currencySearch, setCurrencySearch] = useState("");
   const [currencyDropdownOpen, setCurrencyDropdownOpen] = useState(false);
 
-  // Available demonstration currency list
-  const currencyOptions = [
-    { code: "IDR", name: "Indonesian Rupiah" },
-    { code: "USD", name: "US Dollar" },
-    { code: "CNY", name: "Chinese Yuan" },
-    { code: "EUR", name: "Euro" },
-    { code: "JPY", name: "Japanese Yen" },
-    { code: "SGD", name: "Singapore Dollar" },
-  ];
+  useEffect(() => {
+    let cancelled = false;
+    setLoadingLookups(true);
 
-  const filteredCurrencies = currencyOptions.filter(
-    (c) =>
-      c.code.toLowerCase().includes(currencySearch.toLowerCase()) ||
-      c.name.toLowerCase().includes(currencySearch.toLowerCase())
+    fetchMasterLookupsApi()
+      .then((data) => {
+        if (cancelled) return;
+        const d = data || {};
+        setLookups({
+          countries: Array.isArray(d.countries) ? d.countries : [],
+          paymentTerms: Array.isArray(d.payment_terms) ? d.payment_terms : [],
+          paymentMethods: Array.isArray(d.payment_methods) ? d.payment_methods : [],
+          rafaksiTypes: Array.isArray(d.rafaksi_types) ? d.rafaksi_types : [],
+          currencies: Array.isArray(d.currencies) ? d.currencies : [],
+          ports: Array.isArray(d.ports) ? d.ports : [],
+        });
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setNotification({
+            type: "warning",
+            message: err?.message || "Failed to load supplier reference options from database.",
+          });
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingLookups(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const filteredCurrencies = useMemo(
+    () =>
+      lookups.currencies.filter((c) => {
+        const term = currencySearch.trim().toLowerCase();
+        if (!term) return true;
+        return (
+          c.name.toLowerCase().includes(term) ||
+          (c.code && c.code.toLowerCase().includes(term))
+        );
+      }),
+    [lookups.currencies, currencySearch]
   );
 
   const handleInputChange = (
@@ -76,7 +134,7 @@ export function SupplierForm({ onBack, onSave }: SupplierFormProps) {
     }));
   };
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!formData.supplierName.trim()) {
@@ -88,13 +146,20 @@ export function SupplierForm({ onBack, onSave }: SupplierFormProps) {
     }
 
     if (onSave) {
-      onSave(formData);
+      try {
+        setSaving(true);
+        setNotification(null);
+        await onSave(formData);
+      } catch (err: any) {
+        setNotification({
+          type: "warning",
+          message: err?.message || "Failed to save supplier to database.",
+        });
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      } finally {
+        setSaving(false);
+      }
     }
-
-    setNotification({
-      type: "info",
-      message: "Supplier record submitted and synchronized with database successfully.",
-    });
   };
 
   return (
@@ -246,18 +311,23 @@ export function SupplierForm({ onBack, onSave }: SupplierFormProps) {
             </label>
             <CustomSelect
               id="country"
-              value={formData.country}
-              onChange={(val) => setFormData((prev) => ({ ...prev, country: val }))}
-              placeholder="Choose Country"
+              value={formData.countries_id ? String(formData.countries_id) : ""}
+              onChange={(val) => {
+                const chosen = lookups.countries.find((c) => String(c.id) === val);
+                setFormData((prev) => ({
+                  ...prev,
+                  countries_id: chosen ? Number(chosen.id) : undefined,
+                  country: chosen ? chosen.name : "",
+                }));
+              }}
+              placeholder={loadingLookups ? "Loading countries..." : "Choose Country"}
+              disabled={loadingLookups}
               options={[
                 { value: "", label: "Choose Country" },
-                { value: "INDONESIA", label: "Indonesia" },
-                { value: "CHINA", label: "China" },
-                { value: "JAPAN", label: "Japan" },
-                { value: "SINGAPORE", label: "Singapore" },
-                { value: "MALAYSIA", label: "Malaysia" },
-                { value: "UNITED STATES", label: "United States" },
-                { value: "GERMANY", label: "Germany" },
+                ...lookups.countries.map((c) => ({
+                  value: String(c.id),
+                  label: c.code ? `${c.code} - ${c.name}` : c.name,
+                })),
               ]}
             />
           </div>
@@ -315,18 +385,23 @@ export function SupplierForm({ onBack, onSave }: SupplierFormProps) {
             </label>
             <CustomSelect
               id="paymentTerm"
-              value={formData.paymentTerm}
-              onChange={(val) => setFormData((prev) => ({ ...prev, paymentTerm: val }))}
-              placeholder="Choose Payment Term"
+              value={formData.payment_terms_id ? String(formData.payment_terms_id) : ""}
+              onChange={(val) => {
+                const chosen = lookups.paymentTerms.find((p) => String(p.id) === val);
+                setFormData((prev) => ({
+                  ...prev,
+                  payment_terms_id: chosen ? Number(chosen.id) : undefined,
+                  paymentTerm: chosen ? chosen.name : "",
+                }));
+              }}
+              placeholder={loadingLookups ? "Loading payment terms..." : "Choose Payment Term"}
+              disabled={loadingLookups}
               options={[
                 { value: "", label: "Choose Payment Term" },
-                { value: "COD", label: "COD - Cash on Delivery" },
-                { value: "CBD", label: "CBD - Cash Before Delivery" },
-                { value: "NET_14", label: "Net 14 Days" },
-                { value: "NET_30", label: "Net 30 Days" },
-                { value: "NET_45", label: "Net 45 Days" },
-                { value: "NET_60", label: "Net 60 Days" },
-                { value: "LC", label: "Letter of Credit (LC)" },
+                ...lookups.paymentTerms.map((p) => ({
+                  value: String(p.id),
+                  label: p.name,
+                })),
               ]}
             />
           </div>
@@ -337,16 +412,23 @@ export function SupplierForm({ onBack, onSave }: SupplierFormProps) {
             </label>
             <CustomSelect
               id="paymentMethod"
-              value={formData.paymentMethod}
-              onChange={(val) => setFormData((prev) => ({ ...prev, paymentMethod: val }))}
-              placeholder="Choose Payment Method"
+              value={formData.payment_methods_id ? String(formData.payment_methods_id) : ""}
+              onChange={(val) => {
+                const chosen = lookups.paymentMethods.find((p) => String(p.id) === val);
+                setFormData((prev) => ({
+                  ...prev,
+                  payment_methods_id: chosen ? Number(chosen.id) : undefined,
+                  paymentMethod: chosen ? chosen.name : "",
+                }));
+              }}
+              placeholder={loadingLookups ? "Loading payment methods..." : "Choose Payment Method"}
+              disabled={loadingLookups}
               options={[
                 { value: "", label: "Choose Payment Method" },
-                { value: "TT", label: "Bank Transfer (TT)" },
-                { value: "LC", label: "Letter of Credit (LC)" },
-                { value: "CASH", label: "Cash" },
-                { value: "CHEQUE", label: "Cheque" },
-                { value: "GIRO", label: "Giro" },
+                ...lookups.paymentMethods.map((p) => ({
+                  value: String(p.id),
+                  label: p.name,
+                })),
               ]}
             />
           </div>
@@ -357,14 +439,23 @@ export function SupplierForm({ onBack, onSave }: SupplierFormProps) {
             </label>
             <CustomSelect
               id="typeRafaksi"
-              value={formData.typeRafaksi}
-              onChange={(val) => setFormData((prev) => ({ ...prev, typeRafaksi: val }))}
+              value={formData.rafaksi_types_id ? String(formData.rafaksi_types_id) : ""}
+              onChange={(val) => {
+                const chosen = lookups.rafaksiTypes.find((r) => String(r.id) === val);
+                setFormData((prev) => ({
+                  ...prev,
+                  rafaksi_types_id: chosen ? Number(chosen.id) : undefined,
+                  typeRafaksi: chosen ? chosen.name : "-",
+                }));
+              }}
+              placeholder={loadingLookups ? "Loading rafaksi types..." : "-"}
+              disabled={loadingLookups}
               options={[
-                { value: "-", label: "-" },
-                { value: "Rafaksi Berat", label: "Rafaksi Berat" },
-                { value: "Rafaksi Kadar Air", label: "Rafaksi Kadar Air" },
-                { value: "Rafaksi Harga", label: "Rafaksi Harga" },
-                { value: "Rafaksi Kualitas", label: "Rafaksi Kualitas" },
+                { value: "", label: "-" },
+                ...lookups.rafaksiTypes.map((r) => ({
+                  value: String(r.id),
+                  label: r.code ? `${r.code} - ${r.name}` : r.name,
+                })),
               ]}
             />
           </div>
@@ -379,12 +470,12 @@ export function SupplierForm({ onBack, onSave }: SupplierFormProps) {
                 id="currency"
                 type="text"
                 className="form-input"
-                placeholder="Find Currency"
+                placeholder={loadingLookups ? "Loading currencies..." : "Find Currency"}
                 value={formData.currency || currencySearch}
                 onFocus={() => setCurrencyDropdownOpen(true)}
                 onChange={(e) => {
                   setCurrencySearch(e.target.value);
-                  setFormData((prev) => ({ ...prev, currency: "" }));
+                  setFormData((prev) => ({ ...prev, currency: "", currencies_id: undefined }));
                   setCurrencyDropdownOpen(true);
                 }}
               />
@@ -403,20 +494,21 @@ export function SupplierForm({ onBack, onSave }: SupplierFormProps) {
                 {filteredCurrencies.length > 0 ? (
                   filteredCurrencies.map((curr) => (
                     <button
-                      key={curr.code}
+                      key={curr.id}
                       type="button"
                       className="currency-option-item"
                       onClick={() => {
                         setFormData((prev) => ({
                           ...prev,
-                          currency: `${curr.code} - ${curr.name}`,
+                          currencies_id: Number(curr.id),
+                          currency: curr.name,
                         }));
                         setCurrencySearch("");
                         setCurrencyDropdownOpen(false);
                       }}
                     >
-                      <strong>{curr.code}</strong>
-                      <span>{curr.name}</span>
+                      <strong>{curr.code || curr.name}</strong>
+                      {curr.code && curr.code !== curr.name && <span>{curr.name}</span>}
                     </button>
                   ))
                 ) : (
@@ -432,16 +524,23 @@ export function SupplierForm({ onBack, onSave }: SupplierFormProps) {
             </label>
             <CustomSelect
               id="port"
-              value={formData.port}
-              onChange={(val) => setFormData((prev) => ({ ...prev, port: val }))}
-              placeholder="Choose Port"
+              value={formData.ports_id ? String(formData.ports_id) : ""}
+              onChange={(val) => {
+                const chosen = lookups.ports.find((p) => String(p.id) === val);
+                setFormData((prev) => ({
+                  ...prev,
+                  ports_id: chosen ? Number(chosen.id) : undefined,
+                  port: chosen ? chosen.name : "",
+                }));
+              }}
+              placeholder={loadingLookups ? "Loading ports..." : "Choose Port"}
+              disabled={loadingLookups}
               options={[
                 { value: "", label: "Choose Port" },
-                { value: "Tanjung Perak, Surabaya", label: "Tanjung Perak, Surabaya" },
-                { value: "Tanjung Priok, Jakarta", label: "Tanjung Priok, Jakarta" },
-                { value: "Belawan, Medan", label: "Belawan, Medan" },
-                { value: "Port of Shanghai, China", label: "Port of Shanghai, China" },
-                { value: "Port of Singapore", label: "Port of Singapore" },
+                ...lookups.ports.map((p) => ({
+                  value: String(p.id),
+                  label: p.name,
+                })),
               ]}
             />
           </div>
@@ -511,11 +610,11 @@ export function SupplierForm({ onBack, onSave }: SupplierFormProps) {
 
         {/* Buttons Action Footer */}
         <div className="supplier-form-actions">
-          <Button type="button" variant="ghost" onClick={onBack}>
+          <Button type="button" variant="ghost" onClick={onBack} disabled={saving}>
             Cancel
           </Button>
-          <Button type="submit" variant="primary" icon="check">
-            Save
+          <Button type="submit" variant="primary" icon="check" disabled={saving}>
+            {saving ? "Saving..." : "Save"}
           </Button>
         </div>
       </form>

@@ -6,7 +6,7 @@ import { CustomDatePicker } from "../../../components/ui/CustomDatePicker";
 import { CustomSelect } from "../../../components/ui/CustomSelect";
 import { type AdditionalCostRecord } from "../PurchaseMaster/AdditionalCosts/additional-costs-types";
 import type { ItemRecord } from "../../Exim/Master/Item/item-types";
-import { fetchList, fetchDetail, createPurchaseOrder } from "../../../data/api";
+import { apiFetch, fetchList, fetchDetail, createPurchaseOrder } from "../../../data/api";
 import { isPrItemClosed } from "../../../services/approvalApi";
 import { PickPrItemModal, type PrItemToPick } from "./PickPrItemModal";
 
@@ -415,8 +415,8 @@ export function PurchaseOrderCreate({
     });
 
     // 2. Fetch master suppliers
-    fetch("/api/procurement/master/suppliers", { headers: { Accept: "application/json" } })
-      .then((r) => r.json())
+    apiFetch("/api/procurement/master/suppliers")
+      .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
         if (isMounted && d?.data && Array.isArray(d.data) && d.data.length > 0) {
           setSuppliers(d.data);
@@ -430,8 +430,8 @@ export function PurchaseOrderCreate({
       .catch(() => { });
 
     // 3. Fetch master payment terms
-    fetch("/api/procurement/master/payment-terms", { headers: { Accept: "application/json" } })
-      .then((r) => r.json())
+    apiFetch("/api/procurement/master/payment-terms")
+      .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
         if (isMounted && d?.data && Array.isArray(d.data) && d.data.length > 0) {
           setPaymentTerms(d.data);
@@ -440,8 +440,8 @@ export function PurchaseOrderCreate({
       .catch(() => { });
 
     // 4. Fetch master delivery terms
-    fetch("/api/procurement/master/delivery-terms", { headers: { Accept: "application/json" } })
-      .then((r) => r.json())
+    apiFetch("/api/procurement/master/delivery-terms")
+      .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
         if (isMounted && d?.data && Array.isArray(d.data) && d.data.length > 0) {
           setDeliveryTerms(d.data);
@@ -450,8 +450,8 @@ export function PurchaseOrderCreate({
       .catch(() => { });
 
     // 5. Fetch master currencies
-    fetch("/api/procurement/master/currencies", { headers: { Accept: "application/json" } })
-      .then((r) => r.json())
+    apiFetch("/api/procurement/master/currencies")
+      .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
         if (isMounted && d?.data && Array.isArray(d.data) && d.data.length > 0) {
           setCurrencies(d.data);
@@ -460,8 +460,8 @@ export function PurchaseOrderCreate({
       .catch(() => { });
 
     // 6. Fetch master additional costs for dropdown (UI-01)
-    fetch("/api/procurement/master/additional-costs?per_page=100", { headers: { Accept: "application/json" } })
-      .then((r) => r.json())
+    apiFetch("/api/procurement/master/additional-costs?per_page=100")
+      .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
         if (isMounted && d?.data && Array.isArray(d.data) && d.data.length > 0) {
           const mapped: AdditionalCostRecord[] = d.data.map((c: any) => ({
@@ -487,8 +487,8 @@ export function PurchaseOrderCreate({
       .catch(() => { });
 
     // 8. Fetch master items for facility resolution
-    fetch("/api/exim/master/items?per_page=100", { headers: { Accept: "application/json" } })
-      .then((r) => r.json())
+    apiFetch("/api/exim/master/items?per_page=100")
+      .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
         if (isMounted && d?.data && Array.isArray(d.data) && d.data.length > 0) {
           setLoadedMasterItems(d.data);

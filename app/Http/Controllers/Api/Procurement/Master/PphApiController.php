@@ -100,7 +100,16 @@ class PphApiController extends Controller
             'deduction' => 'nullable|in:yes,no,-',
             'status' => 'nullable|string|max:45',
             'pph_type_id' => 'nullable|exists:pph_type,id',
+            'pph_type_name' => 'nullable|string|max:100',
         ]);
+
+        if (empty($validated['pph_type_id']) && ! empty($validated['pph_type_name'])) {
+            $type = PphType::whereRaw('LOWER(nama) = ?', [strtolower(trim($validated['pph_type_name']))])->first();
+            if ($type) {
+                $validated['pph_type_id'] = $type->id;
+            }
+        }
+        unset($validated['pph_type_name']);
 
         if (isset($validated['deduction']) && $validated['deduction'] === '-') {
             $validated['deduction'] = 'no';

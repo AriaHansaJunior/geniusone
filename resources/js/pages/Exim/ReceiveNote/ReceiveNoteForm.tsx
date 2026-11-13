@@ -3,6 +3,7 @@ import { Icon } from "../../../components/ui/Icon";
 import { CustomDatePicker } from "../../../components/ui/CustomDatePicker";
 import { CustomSelect } from "../../../components/ui/CustomSelect";
 import { PickPoItemModal } from "./PickPoItemModal";
+import { apiFetch } from "../../../data/api";
 import { suppliersList, docTypesList } from "./receive-note-data";
 import type {
   ReceiveNoteRecord,
@@ -28,8 +29,8 @@ export function ReceiveNoteForm({ onBack, onSave, existingReceiveNotes = [] }: R
   // Load real suppliers on mount
   useEffect(() => {
     let isMounted = true;
-    fetch("/api/procurement/master/suppliers", { headers: { Accept: "application/json" } })
-      .then((r) => r.json())
+    apiFetch("/api/procurement/master/suppliers")
+      .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
         if (!isMounted) return;
         if (d?.data && Array.isArray(d.data) && d.data.length > 0) {

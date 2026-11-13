@@ -33,4 +33,10 @@ export interface SupplierFormData {
   nitku: string;
   whatsapp: string;
   wechatId: string;
+  countries_id?: number;
+  payment_terms_id?: number;
+  payment_methods_id?: number;
+  rafaksi_types_id?: number;
+  currencies_id?: number;
+  ports_id?: number;
 }

@@ -5,6 +5,7 @@
 
 export interface TransferStockReturnItem {
   id: string;
+  items_id?: number;
   itemCode: string;
   itemName: string;
   quantity: number;
@@ -23,6 +24,10 @@ export type TransferStockReturnStatus =
 
 export interface TransferStockReturnRecord {
   id: string;
+  warehouses_id?: number;
+  warehouseName?: string;
+  request_material_id?: number;
+  job_number_id?: number;
   mutationCode: string; // e.g. "MUT-2026-11-001"
   productionCode: string; // e.g. "PRD-2026-088"
   jobNumber: string; // e.g. "JOB-2026-0045"

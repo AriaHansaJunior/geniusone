@@ -129,6 +129,7 @@ import type { PageKey, ViewState, TableRow } from "../types";
 import {
   fetchMasterSuppliers,
   saveSupplierApi,
+  toggleSupplierStatusApi,
   fetchMasterPaymentTerms,
   savePaymentTermApi,
   togglePaymentTermStatusApi,
@@ -1176,6 +1177,20 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
     };
   }, [viewState]);
 
+  // Synchronize shared React state whenever any document approval changes (e.g. Dashboard Quick Approve)
+  useEffect(() => {
+    const handleApprovalChanged = () => {
+      fetchMasterReceiveNotes().then((data) => {
+        if (Array.isArray(data)) setReceiveNoteRecords(data);
+      }).catch(() => {});
+      fetchRequestMaterials().then((data) => {
+        if (Array.isArray(data)) setRequestMaterialRecords(data);
+      }).catch(() => {});
+    };
+    window.addEventListener("geniusone_approval_changed", handleApprovalChanged);
+    return () => window.removeEventListener("geniusone_approval_changed", handleApprovalChanged);
+  }, []);
+
   const handleTogglePphHide = useCallback((id: string) => {
     setPphRecords((prev) => {
       const target = prev.find((r) => r.id === id);
@@ -1187,9 +1202,15 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
   }, []);
 
   const handleToggleSupplierHide = useCallback((id: string) => {
-    setSupplierRecords((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, hidden: !r.hidden } : r))
-    );
+    setSupplierRecords((prev) => {
+      const target = prev.find((r) => r.id === id);
+      if (target) {
+        toggleSupplierStatusApi(id, Boolean(target.hidden)).catch((err) => {
+          console.error("Failed to toggle supplier status:", err);
+        });
+      }
+      return prev.map((r) => (r.id === id ? { ...r, hidden: !r.hidden } : r));
+    });
   }, []);
 
   const handleTogglePaymentTermHide = useCallback((id: string) => {
@@ -1239,10 +1260,11 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
         if (saved) {
           setSupplierRecords((prev) => [saved, ...prev.map((s, idx) => ({ ...s, no: idx + 2 }))]);
         }
+        handleNavigateList("supplier", "/procurement/purchase-master/supplier");
       } catch (err) {
-        console.warn("Failed to persist supplier to backend:", err);
+        console.error("Failed to persist supplier to backend:", err);
+        throw err;
       }
-      handleNavigateList("supplier", "/procurement/purchase-master/supplier");
     },
     [handleNavigateList]
   );
@@ -1254,10 +1276,11 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
         if (saved) {
           setPaymentTermRecords((prev) => [saved, ...prev.map((p, idx) => ({ ...p, no: idx + 2 }))]);
         }
+        handleNavigateList("payment-term", "/procurement/purchase-master/payment-term");
       } catch (err) {
-        console.warn("Failed to persist payment term to backend:", err);
+        console.error("Failed to persist payment term to backend:", err);
+        alert(err instanceof Error ? err.message : "Failed to save Payment Term.");
       }
-      handleNavigateList("payment-term", "/procurement/purchase-master/payment-term");
     },
     [handleNavigateList]
   );
@@ -1269,10 +1292,11 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
         if (saved) {
           setPurchaseCategoryRecords((prev) => [saved, ...prev.map((c, idx) => ({ ...c, no: idx + 2 }))]);
         }
+        handleNavigateList("purchase-category", "/procurement/purchase-master/purchase-category");
       } catch (err) {
-        console.warn("Failed to persist purchase category to backend:", err);
+        console.error("Failed to persist purchase category to backend:", err);
+        alert(err instanceof Error ? err.message : "Failed to save Purchase Category.");
       }
-      handleNavigateList("purchase-category", "/procurement/purchase-master/purchase-category");
     },
     [handleNavigateList]
   );
@@ -1284,10 +1308,11 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
         if (saved) {
           setDeliveryTermRecords((prev) => [saved, ...prev.map((d, idx) => ({ ...d, no: idx + 2 }))]);
         }
+        handleNavigateList("delivery-terms", "/procurement/purchase-master/delivery-terms");
       } catch (err) {
-        console.warn("Failed to persist delivery term to backend:", err);
+        console.error("Failed to persist delivery term to backend:", err);
+        alert(err instanceof Error ? err.message : "Failed to save Delivery Term.");
       }
-      handleNavigateList("delivery-terms", "/procurement/purchase-master/delivery-terms");
     },
     [handleNavigateList]
   );
@@ -1299,10 +1324,11 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
         if (saved) {
           setAdditionalCostRecords((prev) => [saved, ...prev.map((a, idx) => ({ ...a, no: idx + 2 }))]);
         }
+        handleNavigateList("additional-costs", "/procurement/purchase-master/additional-costs");
       } catch (err) {
-        console.warn("Failed to persist additional cost to backend:", err);
+        console.error("Failed to persist additional cost to backend:", err);
+        alert(err instanceof Error ? err.message : "Failed to save Additional Cost.");
       }
-      handleNavigateList("additional-costs", "/procurement/purchase-master/additional-costs");
     },
     [handleNavigateList]
   );
@@ -1374,7 +1400,7 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
       }
     } catch (err) {
       console.error("Failed to save Request Material:", err);
-      alert(err instanceof Error ? err.message : "Failed to save Request Material.");
+      throw err;
     }
   }, []);
 
@@ -2453,7 +2479,7 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
         handleNavigateList("item", "/exim/master/item");
       } catch (err) {
         console.error("Item API sync failed:", err);
-        alert(err instanceof Error ? err.message : "Failed to save Item.");
+        throw err;
       }
     },
     [handleNavigateList]
