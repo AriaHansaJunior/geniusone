@@ -6,6 +6,7 @@ import { Pagination } from "../../../components/ui/Pagination";
 import { Badge } from "../../../components/ui/Badge";
 import { Icon } from "../../../components/ui/Icon";
 import { ConfirmDialog } from "../../../components/ui/ConfirmDialog";
+import { toggleStockNotificationStatusApi } from "../../../data/masterApi";
 import type { StockNotificationRecord, StockNotificationSortField } from "./stock-notification-types";
 
 interface StockNotificationIndexProps {
@@ -115,11 +116,26 @@ export function StockNotificationIndex({
     setRecordToDelete(null);
   };
 
-  const handleToggleStatus = (record: StockNotificationRecord) => {
-    const nextStatus = record.status === "Active" ? "Inactive" : "Active";
-    setLocalRecords((prev) =>
-      prev.map((r) => (r.id === record.id ? { ...r, status: nextStatus } : r))
-    );
+  const handleToggleStatus = async (record: StockNotificationRecord) => {
+    const previousStatus = record.status;
+    const nextStatus = previousStatus === "Active" ? "Inactive" : "Active";
+    const updateRow = (patch: Partial<StockNotificationRecord>) => {
+      setLocalRecords((prev) =>
+        prev.map((r) => (r.id === record.id ? { ...r, ...patch } : r))
+      );
+    };
+
+    updateRow({ status: nextStatus });
+    try {
+      const updated = await toggleStockNotificationStatusApi(record.id);
+      if (updated) {
+        updateRow({ ...updated, no: record.no });
+        return;
+      }
+    } catch {
+      // Revert optimistic toggle below when request fails
+    }
+    updateRow({ status: previousStatus });
   };
 
   const handleExportExcel = () => {

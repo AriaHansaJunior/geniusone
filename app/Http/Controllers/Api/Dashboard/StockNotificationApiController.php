@@ -268,9 +268,17 @@ class StockNotificationApiController extends Controller
 
     private function transformRow(StockNotification $row, $stockByItem = null): array
     {
-        $currentStock = $row->items_id !== null && $stockByItem
-            ? (float) ($stockByItem[$row->items_id] ?? $row->item?->stock ?? 0)
-            : (float) ($row->item?->stock ?? 0);
+        $resolvedStock = null;
+        if ($row->items_id !== null) {
+            $resolvedStock = $stockByItem !== null
+                ? ($stockByItem[$row->items_id] ?? null)
+                : DB::table('warehouse_stocks')
+                    ->where('items_id', $row->items_id)
+                    ->selectRaw('SUM(quantity) as total_qty')
+                    ->value('total_qty');
+        }
+
+        $currentStock = (float) ($resolvedStock ?? $row->item?->stock ?? 0);
 
         return [
             'id' => (string) $row->id,

@@ -651,54 +651,52 @@ export async function deleteExchangeRateApi(id: string): Promise<boolean> {
   return apiDelete(`/api/dashboard/exchange-rates/${toNumericOrCleanId(id)}`);
 }
 
+function mapStockNotificationRecord(
+  r: any,
+  idx: number,
+  defaultLevel: StockNotificationRecord["notificationLevel"] = "Warning"
+): StockNotificationRecord {
+  const triggerRaw = r.triggerCondition ?? r.trigger_condition;
+  const levelRaw = r.notificationLevel ?? r.notification_level ?? r.severity;
+  const lastTriggeredRaw = r.lastTriggered ?? r.lastTriggeredAt ?? r.last_triggered_at;
+  const createdAtRaw = r.createdAt ?? r.created_at;
+  const updatedAtRaw = r.updatedAt ?? r.updated_at;
+
+  return {
+    id: String(r.id),
+    no: idx + 1,
+    itemCode: r.itemCode || r.item_code || r.item?.code || "-",
+    itemName: r.itemName || r.item_name || r.item?.name || "-",
+    category: r.category || r.item?.category?.name || r.item?.classification?.name || "-",
+    unit: r.unit || r.item?.unit?.unit?.nama || r.item?.unit?.nama || "-",
+    currentStock: Number(r.currentStock ?? r.current_stock ?? 0),
+    bufferQuantity: Number(r.bufferQuantity ?? r.buffer_quantity ?? r.minBuffer ?? 0),
+    triggerCondition: (triggerRaw === "Stock < Buffer"
+      ? "Stock < Buffer"
+      : "Stock <= Buffer") as StockNotificationRecord["triggerCondition"],
+    notificationLevel: (["Critical", "Warning", "Standard"].includes(levelRaw)
+      ? levelRaw
+      : defaultLevel) as StockNotificationRecord["notificationLevel"],
+    status: isTruthyStatus(r.status) ? "Active" : "Inactive",
+    lastTriggered: lastTriggeredRaw ? formatDisplayDate(lastTriggeredRaw) : undefined,
+    notes: r.notes || undefined,
+    createdAt: formatDisplayDate(createdAtRaw),
+    createdBy: r.createdBy || r.created_by || r.creator?.name || "-",
+    updatedAt: updatedAtRaw ? formatDisplayDate(updatedAtRaw) : undefined,
+    updatedBy: r.updatedBy || r.updated_by || undefined,
+  };
+}
+
 export async function fetchStockNotificationsApi(): Promise<StockNotificationRecord[] | null> {
   const res = await apiGet<{ data: any[] }>("/api/dashboard/stock-notifications", { per_page: 500 });
   if (!res?.data) return null;
-  return res.data.map((r: any, idx: number) => ({
-    id: String(r.id),
-    no: idx + 1,
-    itemCode: r.item_code || r.item?.code || "-",
-    itemName: r.item_name || r.item?.name || "-",
-    category: r.category || r.item?.category?.name || "-",
-    unit: r.unit || r.item?.unit?.unit?.nama || "-",
-    currentStock: Number(r.current_stock ?? 0),
-    bufferQuantity: Number(r.buffer_quantity ?? 0),
-    triggerCondition: (r.trigger_condition === "Stock < Buffer" ? "Stock < Buffer" : "Stock <= Buffer") as StockNotificationRecord["triggerCondition"],
-    notificationLevel: (["Critical", "Warning", "Standard"].includes(r.notification_level)
-      ? r.notification_level
-      : "Warning") as StockNotificationRecord["notificationLevel"],
-    status: isTruthyStatus(r.status) ? "Active" : "Inactive",
-    lastTriggered: r.last_triggered_at ? formatDisplayDate(r.last_triggered_at) : undefined,
-    notes: r.notes || undefined,
-    createdAt: formatDisplayDate(r.created_at),
-    createdBy: r.created_by || r.creator?.name || "-",
-    updatedAt: r.updated_at ? formatDisplayDate(r.updated_at) : undefined,
-    updatedBy: r.updated_by || undefined,
-  }));
+  return res.data.map((r: any, idx: number) => mapStockNotificationRecord(r, idx, "Warning"));
 }
 
 export async function fetchStockAlertsApi(): Promise<StockNotificationRecord[]> {
   const res = await apiGet<{ data: any[] }>("/api/dashboard/stock-alerts");
   if (!res?.data) return [];
-  return res.data.map((r: any, idx: number) => ({
-    id: String(r.id),
-    no: idx + 1,
-    itemCode: r.item_code || r.item?.code || "-",
-    itemName: r.item_name || r.item?.name || "-",
-    category: r.category || "-",
-    unit: r.unit || "-",
-    currentStock: Number(r.current_stock ?? 0),
-    bufferQuantity: Number(r.buffer_quantity ?? 0),
-    triggerCondition: (r.trigger_condition === "Stock < Buffer" ? "Stock < Buffer" : "Stock <= Buffer") as StockNotificationRecord["triggerCondition"],
-    notificationLevel: (["Critical", "Warning", "Standard"].includes(r.notification_level)
-      ? r.notification_level
-      : "Critical") as StockNotificationRecord["notificationLevel"],
-    status: isTruthyStatus(r.status) ? "Active" : "Inactive",
-    lastTriggered: r.last_triggered_at ? formatDisplayDate(r.last_triggered_at) : undefined,
-    notes: r.notes || undefined,
-    createdAt: formatDisplayDate(r.created_at),
-    createdBy: r.created_by || "-",
-  }));
+  return res.data.map((r: any, idx: number) => mapStockNotificationRecord(r, idx, "Critical"));
 }
 
 export async function saveStockNotificationApi(record: StockNotificationRecord, isEdit?: boolean): Promise<StockNotificationRecord | null> {
@@ -718,15 +716,15 @@ export async function saveStockNotificationApi(record: StockNotificationRecord, 
     ? await apiPut<{ data: any }>(`/api/dashboard/stock-notifications/${toNumericOrCleanId(record.id)}`, payload)
     : await apiPost<{ data: any }>("/api/dashboard/stock-notifications", payload);
   if (!res?.data) return null;
-  const r = res.data;
+  const mapped = mapStockNotificationRecord(res.data, Math.max(0, (record.no || 1) - 1), record.notificationLevel);
   return {
     ...record,
-    id: String(r.id),
-    currentStock: Number(r.current_stock ?? record.currentStock),
-    bufferQuantity: Number(r.buffer_quantity ?? record.bufferQuantity),
-    status: isTruthyStatus(r.status) ? "Active" : "Inactive",
-    createdAt: formatDisplayDate(r.created_at || record.createdAt),
-    createdBy: r.created_by || record.createdBy || "-",
+    ...mapped,
+    itemCode: mapped.itemCode !== "-" ? mapped.itemCode : record.itemCode,
+    itemName: mapped.itemName !== "-" ? mapped.itemName : record.itemName,
+    category: mapped.category !== "-" ? mapped.category : record.category,
+    unit: mapped.unit !== "-" ? mapped.unit : record.unit,
+    createdBy: mapped.createdBy !== "-" ? mapped.createdBy : (record.createdBy || "-"),
   };
 }
 
@@ -734,9 +732,10 @@ export async function deleteStockNotificationApi(id: string): Promise<boolean> {
   return apiDelete(`/api/dashboard/stock-notifications/${toNumericOrCleanId(id)}`);
 }
 
-export async function toggleStockNotificationStatusApi(id: string): Promise<boolean> {
-  const res = await apiPatch(`/api/dashboard/stock-notifications/${toNumericOrCleanId(id)}/toggle-status`);
-  return Boolean(res);
+export async function toggleStockNotificationStatusApi(id: string): Promise<StockNotificationRecord | null> {
+  const res = await apiPatch<{ data: any }>(`/api/dashboard/stock-notifications/${toNumericOrCleanId(id)}/toggle-status`);
+  if (!res?.data) return null;
+  return mapStockNotificationRecord(res.data, 0, "Warning");
 }
 
 // =========================================================================

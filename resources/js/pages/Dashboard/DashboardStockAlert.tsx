@@ -11,39 +11,54 @@ interface DashboardStockAlertProps {
   onNavigatePrCreate?: () => void;
 }
 
+function isRuleTriggered(item: StockNotificationRecord): boolean {
+  if (item.status !== "Active") return false;
+  if (item.itemCode === "-" && item.itemName === "-") return false;
+  return item.triggerCondition === "Stock < Buffer"
+    ? item.currentStock < item.bufferQuantity
+    : item.currentStock <= item.bufferQuantity;
+}
+
+function isRuleCritical(item: StockNotificationRecord): boolean {
+  return item.currentStock <= Math.floor(item.bufferQuantity / 2);
+}
+
 export function DashboardStockAlert({
   onAddNewRule,
   onManageRules,
   onNavigatePrCreate,
 }: DashboardStockAlertProps) {
   const [records, setRecords] = useState<StockNotificationRecord[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
-    fetchStockNotificationsApi().then((data) => {
-      if (isMounted && Array.isArray(data)) {
-        setRecords(data);
-      }
-    });
+    fetchStockNotificationsApi()
+      .then((data) => {
+        if (isMounted && Array.isArray(data)) {
+          setRecords(data);
+        }
+      })
+      .finally(() => {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      });
     return () => {
       isMounted = false;
     };
   }, []);
 
-  // Filter triggered items (active rules where current stock <= buffer quantity)
-  const triggeredItems = records.filter(
-    (item) => item.status === "Active" && item.currentStock <= item.bufferQuantity
-  );
+  const triggeredItems = records.filter(isRuleTriggered);
 
-  const criticalCount = triggeredItems.filter(
-    (item) => item.currentStock <= Math.floor(item.bufferQuantity / 2)
-  ).length;
-
+  const criticalCount = triggeredItems.filter(isRuleCritical).length;
   const warningCount = triggeredItems.length - criticalCount;
   const safeCount = records.filter(
-    (item) => item.status === "Active" && item.currentStock > item.bufferQuantity
+    (item) => item.status === "Active" && !isRuleTriggered(item) && (item.itemCode !== "-" || item.itemName !== "-")
   ).length;
+
+  const hasAlerts = !isLoading && triggeredItems.length > 0;
 
   return (
     <div
@@ -67,8 +82,8 @@ export function DashboardStockAlert({
           alignItems: "center",
           justifyContent: "space-between",
           padding: "12px 18px",
-          background: "#fffbeb",
-          borderBottom: "1px solid #fde68a",
+          background: hasAlerts ? "#fffbeb" : "#f8fafc",
+          borderBottom: hasAlerts ? "1px solid #fde68a" : "1px solid var(--line)",
           flexWrap: "wrap",
           gap: "10px",
           minWidth: 0,
@@ -80,26 +95,41 @@ export function DashboardStockAlert({
               width: "32px",
               height: "32px",
               borderRadius: "6px",
-              background: "#fef3c7",
-              color: "#d97706",
+              background: hasAlerts ? "#fef3c7" : "#ecfdf5",
+              color: hasAlerts ? "#d97706" : "#16a34a",
               display: "grid",
               placeItems: "center",
               flexShrink: 0,
             }}
           >
-            <Icon name="alertTriangle" size={18} />
+            <Icon name={hasAlerts ? "alertTriangle" : "checkCircle"} size={18} />
           </div>
           <div style={{ minWidth: 0 }}>
             <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-              <span style={{ fontSize: "14px", fontWeight: 800, color: "#92400e", whiteSpace: "nowrap" }}>
+              <span
+                style={{
+                  fontSize: "14px",
+                  fontWeight: 800,
+                  color: hasAlerts ? "#92400e" : "var(--ink)",
+                  whiteSpace: "nowrap",
+                }}
+              >
                 Stock Buffer Alerts
               </span>
-              <Badge tone="orange">{triggeredItems.length} Low Stock</Badge>
-              {criticalCount > 0 && (
+              {hasAlerts && (
+                <Badge tone="orange">{triggeredItems.length} Low Stock</Badge>
+              )}
+              {!isLoading && criticalCount > 0 && (
                 <Badge tone="red">{criticalCount} Critical</Badge>
               )}
             </div>
-            <p style={{ margin: "2px 0 0", fontSize: "11.5px", color: "#b45309" }}>
+            <p
+              style={{
+                margin: "2px 0 0",
+                fontSize: "11.5px",
+                color: hasAlerts ? "#b45309" : "var(--muted)",
+              }}
+            >
               Automated reminders triggered when stock falls below buffer thresholds.
             </p>
           </div>
@@ -150,184 +180,202 @@ export function DashboardStockAlert({
             boxSizing: "border-box",
           }}
         >
-          {/* Quick Metrics Bar */}
-          <div
-            style={{
-              display: "flex",
-              gap: "10px",
-              flexWrap: "wrap",
-              alignItems: "center",
-              minWidth: 0,
-            }}
-          >
+          {isLoading ? (
+            <div style={{ textAlign: "center", padding: "18px 16px", color: "var(--muted)", fontSize: "12.5px" }}>
+              Loading stock buffer alerts...
+            </div>
+          ) : triggeredItems.length === 0 ? (
             <div
               style={{
-                display: "inline-flex",
+                display: "flex",
                 alignItems: "center",
-                gap: "6px",
-                padding: "4px 10px",
-                background: "#fef2f2",
-                border: "1px solid #fecaca",
-                borderRadius: "4px",
-                fontSize: "11.5px",
-                fontWeight: 600,
-                color: "#991b1b",
+                justifyContent: "center",
+                gap: "8px",
+                padding: "20px 16px",
+                color: "var(--green-700)",
+                background: "#f8fafc",
+                border: "1px solid var(--line)",
+                borderRadius: "var(--radius-sm)",
               }}
             >
-              <span>Critical Shortage:</span>
-              <strong>{criticalCount} Items</strong>
+              <Icon name="checkCircle" size={16} />
+              <span style={{ fontWeight: 600 }}>No items have critically low stock</span>
             </div>
+          ) : (
+            <>
+              {/* Quick Metrics Bar */}
+              <div
+                style={{
+                  display: "flex",
+                  gap: "10px",
+                  flexWrap: "wrap",
+                  alignItems: "center",
+                  minWidth: 0,
+                }}
+              >
+                {criticalCount > 0 && (
+                  <div
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      padding: "4px 10px",
+                      background: "#fef2f2",
+                      border: "1px solid #fecaca",
+                      borderRadius: "4px",
+                      fontSize: "11.5px",
+                      fontWeight: 600,
+                      color: "#991b1b",
+                    }}
+                  >
+                    <span>Critical Shortage:</span>
+                    <strong>{criticalCount} Items</strong>
+                  </div>
+                )}
 
-            <div
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "6px",
-                padding: "4px 10px",
-                background: "#fffbeb",
-                border: "1px solid #fde68a",
-                borderRadius: "4px",
-                fontSize: "11.5px",
-                fontWeight: 600,
-                color: "#92400e",
-              }}
-            >
-              <span>Low Buffer:</span>
-              <strong>{warningCount} Items</strong>
-            </div>
+                {warningCount > 0 && (
+                  <div
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      padding: "4px 10px",
+                      background: "#fffbeb",
+                      border: "1px solid #fde68a",
+                      borderRadius: "4px",
+                      fontSize: "11.5px",
+                      fontWeight: 600,
+                      color: "#92400e",
+                    }}
+                  >
+                    <span>Low Buffer:</span>
+                    <strong>{warningCount} Items</strong>
+                  </div>
+                )}
 
-            <div
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "6px",
-                padding: "4px 10px",
-                background: "#f0fdf4",
-                border: "1px solid #bbf7d0",
-                borderRadius: "4px",
-                fontSize: "11.5px",
-                fontWeight: 600,
-                color: "#166534",
-              }}
-            >
-              <span>Safe Stock:</span>
-              <strong>{safeCount} Items</strong>
-            </div>
-          </div>
+                <div
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "6px",
+                    padding: "4px 10px",
+                    background: "#f0fdf4",
+                    border: "1px solid #bbf7d0",
+                    borderRadius: "4px",
+                    fontSize: "11.5px",
+                    fontWeight: 600,
+                    color: "#166534",
+                  }}
+                >
+                  <span>Safe Stock:</span>
+                  <strong>{safeCount} Items</strong>
+                </div>
+              </div>
 
-          {/* Low Stock Table */}
-          <div
-            className="table-frame"
-            style={{
-              border: "1px solid var(--line)",
-              borderRadius: "var(--radius-sm)",
-              overflow: "hidden",
-              width: "100%",
-              minWidth: 0,
-            }}
-          >
-            <div className="table-scroll">
-              <table className="data-table" style={{ width: "100%", minWidth: "960px", margin: 0 }}>
-                <thead>
-                  <tr style={{ background: "#f8fafc" }}>
-                    <th style={{ width: "45px", textAlign: "center" }}>No</th>
-                    <th style={{ width: "120px" }}>Item Code</th>
-                    <th style={{ minWidth: "160px" }}>Item Description</th>
-                    <th style={{ width: "120px" }}>Category</th>
-                    <th style={{ width: "95px", textAlign: "right" }}>Current Stock</th>
-                    <th style={{ width: "105px", textAlign: "right" }}>Buffer Threshold</th>
-                    <th style={{ width: "80px", textAlign: "right" }}>Deficit</th>
-                    <th style={{ width: "95px", textAlign: "center" }}>Severity</th>
-                    <th style={{ width: "95px", textAlign: "center" }}>Action</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {triggeredItems.length > 0 ? (
-                    triggeredItems.map((item, idx) => {
-                      const deficit = item.bufferQuantity - item.currentStock;
-                      const isCritical = item.currentStock <= Math.floor(item.bufferQuantity / 2);
+              {/* Low Stock Table */}
+              <div
+                className="table-frame"
+                style={{
+                  border: "1px solid var(--line)",
+                  borderRadius: "var(--radius-sm)",
+                  overflow: "hidden",
+                  width: "100%",
+                  minWidth: 0,
+                }}
+              >
+                <div className="table-scroll">
+                  <table className="data-table" style={{ width: "100%", minWidth: "960px", margin: 0 }}>
+                    <thead>
+                      <tr style={{ background: "#f8fafc" }}>
+                        <th style={{ width: "45px", textAlign: "center" }}>No</th>
+                        <th style={{ width: "120px" }}>Item Code</th>
+                        <th style={{ minWidth: "160px" }}>Item Description</th>
+                        <th style={{ width: "120px" }}>Category</th>
+                        <th style={{ width: "95px", textAlign: "right" }}>Current Stock</th>
+                        <th style={{ width: "105px", textAlign: "right" }}>Buffer Threshold</th>
+                        <th style={{ width: "80px", textAlign: "right" }}>Deficit</th>
+                        <th style={{ width: "95px", textAlign: "center" }}>Severity</th>
+                        <th style={{ width: "95px", textAlign: "center" }}>Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {triggeredItems.map((item, idx) => {
+                        const deficit = Math.max(0, item.bufferQuantity - item.currentStock);
+                        const isCritical = isRuleCritical(item);
 
-                      return (
-                        <tr key={item.id}>
-                          <td style={{ textAlign: "center", color: "var(--muted)", fontWeight: 600 }}>
-                            {idx + 1}
-                          </td>
-                          <td>
-                            <span className="code-pill">{item.itemCode}</span>
-                          </td>
-                          <td>
-                            <strong style={{ fontSize: "12.5px" }}>{item.itemName}</strong>
-                            {item.notes && (
-                              <div style={{ fontSize: "11px", color: "var(--muted)" }}>
-                                {item.notes}
-                              </div>
-                            )}
-                          </td>
-                          <td>
-                            <span style={{ fontSize: "11.5px", color: "var(--ink-soft)" }}>
-                              {item.category}
-                            </span>
-                          </td>
-                          <td style={{ textAlign: "right", fontWeight: 700, color: "#dc2626" }}>
-                            {item.currentStock.toLocaleString("en-US")} {item.unit}
-                          </td>
-                          <td style={{ textAlign: "right", fontWeight: 700, color: "var(--blue-600)" }}>
-                            {item.bufferQuantity.toLocaleString("en-US")} {item.unit}
-                          </td>
-                          <td style={{ textAlign: "right", fontWeight: 600, color: "#b91c1c" }}>
-                            {deficit > 0 ? `-${deficit} ${item.unit}` : `0 ${item.unit}`}
-                          </td>
-                          <td style={{ textAlign: "center" }}>
-                            <Badge tone={isCritical ? "red" : "orange"}>
-                              {isCritical ? "Critical" : "Low Stock"}
-                            </Badge>
-                          </td>
-                          <td style={{ textAlign: "center" }}>
-                            {onNavigatePrCreate ? (
-                              <button
-                                type="button"
-                                onClick={onNavigatePrCreate}
-                                style={{
-                                  border: "1px solid var(--line)",
-                                  background: "var(--white)",
-                                  borderRadius: "4px",
-                                  padding: "3px 8px",
-                                  fontSize: "11.5px",
-                                  fontWeight: 600,
-                                  color: "var(--blue-600)",
-                                  cursor: "pointer",
-                                  display: "inline-flex",
-                                  alignItems: "center",
-                                  gap: "4px",
-                                  whiteSpace: "nowrap",
-                                }}
-                                title="Create Purchase Requisition for this item"
-                              >
-                                <span>Reorder</span>
-                              </button>
-                            ) : (
-                              <span style={{ fontSize: "11px", color: "var(--muted)" }}>
-                                Pending PR
+                        return (
+                          <tr key={item.id}>
+                            <td style={{ textAlign: "center", color: "var(--muted)", fontWeight: 600 }}>
+                              {idx + 1}
+                            </td>
+                            <td>
+                              <span className="code-pill">{item.itemCode}</span>
+                            </td>
+                            <td>
+                              <strong style={{ fontSize: "12.5px" }}>{item.itemName}</strong>
+                              {item.notes && (
+                                <div style={{ fontSize: "11px", color: "var(--muted)" }}>
+                                  {item.notes}
+                                </div>
+                              )}
+                            </td>
+                            <td>
+                              <span style={{ fontSize: "11.5px", color: "var(--ink-soft)" }}>
+                                {item.category}
                               </span>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })
-                  ) : (
-                    <tr>
-                      <td colSpan={9} style={{ textAlign: "center", padding: "24px 16px" }}>
-                        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", color: "var(--green-700)" }}>
-                          <Icon name="checkCircle" size={16} />
-                          <span style={{ fontWeight: 600 }}>All items are within safe stock buffer levels!</span>
-                        </div>
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
+                            </td>
+                            <td style={{ textAlign: "right", fontWeight: 700, color: "#dc2626" }}>
+                              {item.currentStock.toLocaleString("en-US")} {item.unit}
+                            </td>
+                            <td style={{ textAlign: "right", fontWeight: 700, color: "var(--blue-600)" }}>
+                              {item.bufferQuantity.toLocaleString("en-US")} {item.unit}
+                            </td>
+                            <td style={{ textAlign: "right", fontWeight: 600, color: "#b91c1c" }}>
+                              {deficit > 0 ? `-${deficit} ${item.unit}` : `0 ${item.unit}`}
+                            </td>
+                            <td style={{ textAlign: "center" }}>
+                              <Badge tone={isCritical ? "red" : "orange"}>
+                                {isCritical ? "Critical" : "Low Stock"}
+                              </Badge>
+                            </td>
+                            <td style={{ textAlign: "center" }}>
+                              {onNavigatePrCreate ? (
+                                <button
+                                  type="button"
+                                  onClick={onNavigatePrCreate}
+                                  style={{
+                                    border: "1px solid var(--line)",
+                                    background: "var(--white)",
+                                    borderRadius: "4px",
+                                    padding: "3px 8px",
+                                    fontSize: "11.5px",
+                                    fontWeight: 600,
+                                    color: "var(--blue-600)",
+                                    cursor: "pointer",
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: "4px",
+                                    whiteSpace: "nowrap",
+                                  }}
+                                  title="Create Purchase Requisition for this item"
+                                >
+                                  <span>Reorder</span>
+                                </button>
+                              ) : (
+                                <span style={{ fontSize: "11px", color: "var(--muted)" }}>
+                                  Pending PR
+                                </span>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </>
+          )}
         </div>
       )}
     </div>
