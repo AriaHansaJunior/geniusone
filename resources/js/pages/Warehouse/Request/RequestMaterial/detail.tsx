@@ -10,6 +10,7 @@ import { ApprovalStatusBadge } from "../../../../components/approval/ApprovalSta
 import { getLocalApprovalState } from "../../../../services/approvalApi";
 import { normalizeApprovalStatus, type DocumentApprovalState } from "../../../../types/approval";
 import { KwtPrintModal, KwtPrintTemplateNpb } from "../../../../components/print";
+import { fetchRequestMaterials } from "../../../../data/masterApi";
 
 interface RequestMaterialDetailProps {
   id: string;
@@ -17,19 +18,48 @@ interface RequestMaterialDetailProps {
   onBack: () => void;
 }
 
+function toDocSlug(val: string): string {
+  return String(val || "")
+    .trim()
+    .replace(/^details?\//i, "")
+    .replace(/[\/\\]/g, "-")
+    .toLowerCase();
+}
+
 export function RequestMaterialDetail({
   id,
   records = initialRequestMaterialRecords,
   onBack,
 }: RequestMaterialDetailProps) {
-  // Find record by id or requestCode
+  const [fetchedRecords, setFetchedRecords] = useState<RequestMaterialRecord[] | null>(null);
+
+  const effectiveRecords = fetchedRecords && fetchedRecords.length > 0 ? fetchedRecords : records;
+
+  // Find record by id, requestCode, or URL-safe slug
   const record = useMemo(() => {
-    return records.find(
+    const cleanId = id.replace(/^details?\//i, "").trim().toLowerCase();
+    const targetSlug = toDocSlug(id);
+    return effectiveRecords.find(
       (r) =>
-        r.id.toLowerCase() === id.toLowerCase() ||
-        r.requestCode.toLowerCase() === id.toLowerCase()
+        r.id.toLowerCase() === cleanId ||
+        r.requestCode.toLowerCase() === cleanId ||
+        toDocSlug(r.requestCode) === targetSlug
     );
-  }, [id, records]);
+  }, [id, effectiveRecords]);
+
+  useEffect(() => {
+    let active = true;
+    fetchRequestMaterials()
+      .then((list) => {
+        if (active && Array.isArray(list) && list.length > 0) {
+          setFetchedRecords(list);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [id]);
 
   // Graceful Handling for Invalid Record ID
   if (!record) {

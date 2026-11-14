@@ -14,6 +14,7 @@ export interface WarehouseCoordinateRecord {
 
 export interface WarehouseMasterRecord {
   id: string;
+  code?: string;
   no: number;
   name: string;
   type: WarehouseType;

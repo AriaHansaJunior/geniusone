@@ -48,12 +48,12 @@ Route::get('/purchase-requisitions/create', fn () => view('app', ['page' => 'pr-
 Route::get('/procurement/transactions/purchase-requisition/create', fn () => view('app', ['page' => 'pr-create']))->name('procurement.transactions.pr.create');
 Route::get('/procurement/transactions/purchase-requisition/add', fn () => view('app', ['page' => 'pr-create']));
 
-Route::get('/pr/detail/{code}', [PurchaseRequisitionController::class, 'show'])->name('pr.detail');
-Route::get('/pr/details/{code}', [PurchaseRequisitionController::class, 'show']);
-Route::get('/purchase-requisition/detail/{code}', [PurchaseRequisitionController::class, 'show']);
-Route::get('/purchase-requisitions/detail/{code}', [PurchaseRequisitionController::class, 'show']);
-Route::get('/procurement/transactions/purchase-requisition/detail/{code}', [PurchaseRequisitionController::class, 'show']);
-Route::get('/procurement/transactions/purchase-requisition/details/{code}', [PurchaseRequisitionController::class, 'show']);
+Route::get('/pr/detail/{code}', [PurchaseRequisitionController::class, 'show'])->where('code', '.*')->name('pr.detail');
+Route::get('/pr/details/{code}', [PurchaseRequisitionController::class, 'show'])->where('code', '.*');
+Route::get('/purchase-requisition/detail/{code}', [PurchaseRequisitionController::class, 'show'])->where('code', '.*');
+Route::get('/purchase-requisitions/detail/{code}', [PurchaseRequisitionController::class, 'show'])->where('code', '.*');
+Route::get('/procurement/transactions/purchase-requisition/detail/{code}', [PurchaseRequisitionController::class, 'show'])->where('code', '.*');
+Route::get('/procurement/transactions/purchase-requisition/details/{code}', [PurchaseRequisitionController::class, 'show'])->where('code', '.*');
 
 // Purchase Order (PO)
 Route::get('/po', [PurchaseOrderController::class, 'index'])->name('po.index');
@@ -67,20 +67,20 @@ Route::get('/purchase-orders/create', fn () => view('app', ['page' => 'po-create
 Route::get('/procurement/transactions/purchase-order/create', fn () => view('app', ['page' => 'po-create']))->name('procurement.transactions.po.create');
 Route::get('/procurement/transactions/purchase-order/add', fn () => view('app', ['page' => 'po-create']));
 
-Route::get('/po/detail/{code}', [PurchaseOrderController::class, 'show'])->name('po.detail');
-Route::get('/po/details/{code}', [PurchaseOrderController::class, 'show']);
-Route::get('/procurement/transactions/purchase-order/detail/{code}', [PurchaseOrderController::class, 'show']);
-Route::get('/procurement/transactions/purchase-order/details/{code}', [PurchaseOrderController::class, 'show']);
+Route::get('/po/detail/{code}', [PurchaseOrderController::class, 'show'])->where('code', '.*')->name('po.detail');
+Route::get('/po/details/{code}', [PurchaseOrderController::class, 'show'])->where('code', '.*');
+Route::get('/procurement/transactions/purchase-order/detail/{code}', [PurchaseOrderController::class, 'show'])->where('code', '.*');
+Route::get('/procurement/transactions/purchase-order/details/{code}', [PurchaseOrderController::class, 'show'])->where('code', '.*');
 
 // Combined PR-PO Report
 Route::get('/report', [ReportController::class, 'index'])->name('report.index');
 Route::get('/pr-po-report', [ReportController::class, 'index'])->name('pr-po-report.index');
 Route::get('/procurement/reports/report-pr-po', [ReportController::class, 'index'])->name('procurement.reports.report-pr-po');
 
-Route::get('/report/detail/{code}', [ReportController::class, 'show'])->name('report.detail');
-Route::get('/report/details/{code}', [ReportController::class, 'show']);
-Route::get('/procurement/reports/report-pr-po/detail/{code}', [ReportController::class, 'show']);
-Route::get('/procurement/reports/report-pr-po/details/{code}', [ReportController::class, 'show']);
+Route::get('/report/detail/{code}', [ReportController::class, 'show'])->where('code', '.*')->name('report.detail');
+Route::get('/report/details/{code}', [ReportController::class, 'show'])->where('code', '.*');
+Route::get('/procurement/reports/report-pr-po/detail/{code}', [ReportController::class, 'show'])->where('code', '.*');
+Route::get('/procurement/reports/report-pr-po/details/{code}', [ReportController::class, 'show'])->where('code', '.*');
 
 // Warehouse / BPB (Short & Hierarchical)
 Route::get('/warehouse', [WarehouseController::class, 'index'])->name('warehouse.index');
@@ -99,10 +99,10 @@ Route::post('/warehouse/create', [WarehouseController::class, 'store']);
 Route::post('/warehouse/store', [WarehouseController::class, 'store']);
 Route::post('/warehouse/incoming/receive-material-bpb/create', [WarehouseController::class, 'store']);
 
-Route::get('/warehouse/detail/{code}', [WarehouseController::class, 'show'])->name('warehouse.detail');
-Route::get('/warehouse/details/{code}', [WarehouseController::class, 'show']);
-Route::get('/warehouse/incoming/receive-material-bpb/detail/{code}', [WarehouseController::class, 'show']);
-Route::get('/warehouse/incoming/receive-material-bpb/details/{code}', [WarehouseController::class, 'show']);
+Route::get('/warehouse/detail/{code}', [WarehouseController::class, 'show'])->where('code', '.*')->name('warehouse.detail');
+Route::get('/warehouse/details/{code}', [WarehouseController::class, 'show'])->where('code', '.*');
+Route::get('/warehouse/incoming/receive-material-bpb/detail/{code}', [WarehouseController::class, 'show'])->where('code', '.*');
+Route::get('/warehouse/incoming/receive-material-bpb/details/{code}', [WarehouseController::class, 'show'])->where('code', '.*');
 
 // Procurement - Purchase Master Routes
 Route::get('/procurement/supplier', fn () => view('app', ['page' => 'supplier']))->name('procurement.supplier');
@@ -271,14 +271,14 @@ Route::get('/procurement/purchase-master/account', fn () => view('app', ['page' 
 Route::get('/exim/receive-note', fn () => view('app', ['page' => 'receive-note']))->name('exim.receive-note');
 Route::get('/exim/receive-note/create', fn () => view('app', ['page' => 'receive-note-create']))->name('exim.receive-note.create');
 Route::get('/exim/receive-note/add', fn () => view('app', ['page' => 'receive-note-create']));
-Route::get('/exim/receive-note/detail/{code}', fn ($code) => view('app', ['page' => 'receive-note-detail', 'code' => $code]))->name('exim.receive-note.detail');
+Route::get('/exim/receive-note/detail/{code}', fn ($code) => view('app', ['page' => 'receive-note-detail', 'code' => $code]))->where('code', '.*')->name('exim.receive-note.detail');
 Route::get('/exim/receive-note-return', fn () => view('app', ['page' => 'receive-note-return']))->name('exim.receive-note-return');
 Route::get('/exim/receive-note-return/create', fn () => view('app', ['page' => 'receive-note-return-create']))->name('exim.receive-note-return.create');
 Route::get('/exim/receive-note-return/add', fn () => view('app', ['page' => 'receive-note-return-create']));
-Route::get('/exim/receive-note-return/detail/{code}', fn ($code) => view('app', ['page' => 'receive-note-return-detail', 'code' => $code]))->name('exim.receive-note-return.detail');
+Route::get('/exim/receive-note-return/detail/{code}', fn ($code) => view('app', ['page' => 'receive-note-return-detail', 'code' => $code]))->where('code', '.*')->name('exim.receive-note-return.detail');
 Route::get('/exim/document-history', fn () => view('app', ['page' => 'document-history']))->name('exim.document-history');
-Route::get('/exim/document-history/detail/{code}', fn ($code) => view('app', ['page' => 'document-history-detail', 'code' => $code]))->name('exim.document-history.detail');
-Route::get('/exim/document-history/details/{code}', fn ($code) => view('app', ['page' => 'document-history-detail', 'code' => $code]));
+Route::get('/exim/document-history/detail/{code}', fn ($code) => view('app', ['page' => 'document-history-detail', 'code' => $code]))->where('code', '.*')->name('exim.document-history.detail');
+Route::get('/exim/document-history/details/{code}', fn ($code) => view('app', ['page' => 'document-history-detail', 'code' => $code]))->where('code', '.*');
 
 // Warehouse Master Routes
 Route::get('/warehouse/master', fn () => view('app', ['page' => 'warehouse-master']))->name('warehouse.master');
@@ -332,8 +332,8 @@ Route::get('/warehouse/request/weight-note', fn () => view('app', ['page' => 'wh
 Route::get('/warehouse/request/request-material', fn () => view('app', ['page' => 'wh-req-material']));
 Route::get('/warehouse/request/request-material/create', fn () => view('app', ['page' => 'wh-req-material-create']));
 Route::get('/warehouse/request/request-material/add', fn () => view('app', ['page' => 'wh-req-material-create']));
-Route::get('/warehouse/request/request-material/{id}', fn ($id) => view('app', ['page' => 'wh-req-material-detail', 'code' => $id]));
-Route::get('/warehouse/request/request-material/detail/{id}', fn ($id) => view('app', ['page' => 'wh-req-material-detail', 'code' => $id]));
+Route::get('/warehouse/request/request-material/detail/{id}', fn ($id) => view('app', ['page' => 'wh-req-material-detail', 'code' => $id]))->where('id', '.*');
+Route::get('/warehouse/request/request-material/{id}', fn ($id) => view('app', ['page' => 'wh-req-material-detail', 'code' => $id]))->where('id', '.*');
 Route::get('/warehouse/request/weight-note-multiple-fg', fn () => view('app', ['page' => 'wh-req-weight-note-fg']));
 Route::get('/warehouse/request/shipping-instruction', fn () => view('app', ['page' => 'wh-req-shipping']));
 

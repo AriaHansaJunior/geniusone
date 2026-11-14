@@ -23,4 +23,28 @@ export default defineConfig({
             ignored: ['**/storage/framework/views/**'],
         },
     },
+    build: {
+        chunkSizeWarningLimit: 900,
+        rollupOptions: {
+            output: {
+                manualChunks(id) {
+                    if (id.includes('node_modules')) {
+                        return 'vendor';
+                    }
+                    if (id.includes('/resources/js/pages/Procurement/')) {
+                        return 'pages-procurement';
+                    }
+                    if (id.includes('/resources/js/pages/Exim/')) {
+                        return 'pages-exim';
+                    }
+                    if (id.includes('/resources/js/pages/Warehouse/')) {
+                        return 'pages-warehouse';
+                    }
+                    if (id.includes('/resources/js/pages/Admin/')) {
+                        return 'pages-admin';
+                    }
+                },
+            },
+        },
+    },
 });

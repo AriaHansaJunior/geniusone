@@ -155,7 +155,6 @@ export function AppLayout({
                           onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")}
                           onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                         >
-                          <Icon name="print" size={13} style={{ color: "var(--ink-soft)" }} />
                           <span>Print Page</span>
                         </button>
                         <button
@@ -187,7 +186,6 @@ export function AppLayout({
                           onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")}
                           onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                         >
-                          <Icon name="download" size={13} style={{ color: "#16a34a" }} />
                           <span>Export to Excel</span>
                         </button>
                         <button
@@ -213,7 +211,6 @@ export function AppLayout({
                           onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")}
                           onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                         >
-                          <Icon name="refresh" size={13} style={{ color: "#2563eb" }} />
                           <span>Refresh View</span>
                         </button>
                       </div>

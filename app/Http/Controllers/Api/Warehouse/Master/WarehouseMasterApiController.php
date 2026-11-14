@@ -156,16 +156,36 @@ class WarehouseMasterApiController extends Controller
     // COORDINATES CRUD
     // =========================================================================
 
-    public function listCoordinates(int $warehouseId): JsonResponse
+    private function resolveWarehouse(string|int $identifier): Warehouse
     {
-        $coordinates = WarehouseCoordinate::where('warehouses_id', $warehouseId)->get();
+        if (is_numeric($identifier)) {
+            $byId = Warehouse::find((int) $identifier);
+            if ($byId) {
+                return $byId;
+            }
+        }
+
+        $decoded = trim(urldecode((string) $identifier));
+        $normalized = str_replace('-', '/', $decoded);
+
+        return Warehouse::where('code', $decoded)
+            ->orWhere('code', $normalized)
+            ->orWhere('name', $decoded)
+            ->orWhere('name', str_replace('-', ' ', $decoded))
+            ->firstOrFail();
+    }
+
+    public function listCoordinates(string|int $warehouseId): JsonResponse
+    {
+        $warehouse = $this->resolveWarehouse($warehouseId);
+        $coordinates = WarehouseCoordinate::where('warehouses_id', $warehouse->id)->get();
 
         return response()->json(['data' => $coordinates]);
     }
 
-    public function storeCoordinate(Request $request, int $warehouseId): JsonResponse
+    public function storeCoordinate(Request $request, string|int $warehouseId): JsonResponse
     {
-        $warehouse = Warehouse::findOrFail($warehouseId);
+        $warehouse = $this->resolveWarehouse($warehouseId);
 
         $validated = $request->validate([
             'code' => 'nullable|string|max:45',

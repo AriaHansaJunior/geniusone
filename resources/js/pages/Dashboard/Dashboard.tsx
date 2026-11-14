@@ -27,6 +27,7 @@ interface DashboardProps {
   onNavigateDetail?: (module: "pr" | "po" | "report" | "warehouse", identifier: string) => void;
   onNavigateReceiveNoteDetail?: (rnNumber: string) => void;
   onNavigateRequestMaterialDetail?: (id: string) => void;
+  onNavigateTransferStockReturnDetail?: (code: string) => void;
   receiveNoteRecords?: ReceiveNoteRecord[];
   requestMaterialRecords?: RequestMaterialRecord[];
   onReceiveNotesUpdate?: React.Dispatch<React.SetStateAction<ReceiveNoteRecord[]>>;
@@ -67,6 +68,7 @@ export function Dashboard({
   onNavigateDetail,
   onNavigateReceiveNoteDetail,
   onNavigateRequestMaterialDetail,
+  onNavigateTransferStockReturnDetail,
   receiveNoteRecords,
   requestMaterialRecords,
   onReceiveNotesUpdate,
@@ -358,6 +360,7 @@ export function Dashboard({
         onNavigateDetail={onNavigateDetail}
         onNavigateReceiveNoteDetail={onNavigateReceiveNoteDetail}
         onNavigateRequestMaterialDetail={onNavigateRequestMaterialDetail}
+        onNavigateTransferStockReturnDetail={onNavigateTransferStockReturnDetail}
         receiveNoteRecords={receiveNoteRecords}
         requestMaterialRecords={requestMaterialRecords}
         onReceiveNotesUpdate={onReceiveNotesUpdate}

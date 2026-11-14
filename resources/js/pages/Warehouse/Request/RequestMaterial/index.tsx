@@ -484,7 +484,7 @@ export function RequestMaterialIndex({
                     return (
                       <tr
                         key={item.id}
-                        onClick={() => handleOpenDetailSafe(item.id)}
+                        onClick={() => handleOpenDetailSafe(item.requestCode || item.id)}
                         style={{ cursor: "pointer" }}
                         title="Click row to open request material details"
                       >
@@ -496,7 +496,7 @@ export function RequestMaterialIndex({
                             type="button"
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleOpenDetailSafe(item.id);
+                              handleOpenDetailSafe(item.requestCode || item.id);
                             }}
                             style={{
                               background: "none",

@@ -31,8 +31,13 @@ export function Button({
   "aria-label": ariaLabel,
   title,
 }: ButtonProps) {
-  // Render icon only when explicitly provided (User rule: text buttons should be pure text without icons)
-  const resolvedIcon = icon;
+  // User rule: buttons must be either pure text OR pure icon (never both)
+  const hasTextChildren =
+    children !== undefined &&
+    children !== null &&
+    children !== false &&
+    !(typeof children === "string" && children.trim() === "");
+  const resolvedIcon = hasTextChildren ? undefined : icon;
 
   const sizeClass = size ? `button--${size}` : "";
   const loadingClass = loading ? "button--loading" : "";

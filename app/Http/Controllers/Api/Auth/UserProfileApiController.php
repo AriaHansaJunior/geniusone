@@ -93,21 +93,38 @@ class UserProfileApiController extends Controller
             $user->password = Hash::make($validated['password']);
         }
 
-        // Handle avatar photo upload if provided as file or data URL
-        if ($request->hasFile('photo')) {
-            $path = $request->file('photo')->store('avatars', 'public');
-            $user->photo = Storage::url($path);
+        // Handle avatar photo removal or upload (file or cropped base64 data URL)
+        if ($request->boolean('remove_photo') || (array_key_exists('photo', $validated) && ($validated['photo'] === null || $validated['photo'] === ''))) {
+            $user->photo = null;
+        } elseif ($request->hasFile('photo')) {
+            $dir = public_path('uploads/avatars');
+            if (! is_dir($dir)) {
+                mkdir($dir, 0755, true);
+            }
+            $ext = strtolower($request->file('photo')->getClientOriginalExtension() ?: 'png');
+            if (! in_array($ext, ['jpg', 'jpeg', 'png', 'webp'], true)) {
+                $ext = 'png';
+            }
+            $fileName = 'avatar_'.$user->id.'_'.Str::uuid().'.'.$ext;
+            $request->file('photo')->move($dir, $fileName);
+            $user->photo = '/uploads/avatars/'.$fileName;
         } elseif (! empty($validated['photo']) && is_string($validated['photo'])) {
             $photoStr = $validated['photo'];
             if (str_starts_with($photoStr, 'data:image')) {
-                // Save data URL to storage
                 @[$type, $data] = explode(';', $photoStr);
                 @[, $data] = explode(',', $data);
                 if ($data) {
                     $decoded = base64_decode($data);
-                    $fileName = 'avatars/'.Str::uuid().'.png';
-                    Storage::disk('public')->put($fileName, $decoded);
-                    $user->photo = Storage::url($fileName);
+                    if ($decoded !== false) {
+                        $dir = public_path('uploads/avatars');
+                        if (! is_dir($dir)) {
+                            mkdir($dir, 0755, true);
+                        }
+                        $ext = (str_contains((string) $type, 'jpeg') || str_contains((string) $type, 'jpg')) ? 'jpg' : 'png';
+                        $fileName = 'avatar_'.$user->id.'_'.Str::uuid().'.'.$ext;
+                        file_put_contents($dir.DIRECTORY_SEPARATOR.$fileName, $decoded);
+                        $user->photo = '/uploads/avatars/'.$fileName;
+                    }
                 }
             } else {
                 $user->photo = $photoStr;

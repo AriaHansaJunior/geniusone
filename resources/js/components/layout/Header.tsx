@@ -27,7 +27,12 @@ export function Header({
   const { currentUser, isSuperAdmin } = useAuthPermission();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [companyName, setCompanyName] = useState<string>(propCompanyName || "");
+  const [avatarLoadError, setAvatarLoadError] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setAvatarLoadError(false);
+  }, [currentUser?.photo]);
 
   useEffect(() => {
     if (propCompanyName) {
@@ -220,7 +225,16 @@ export function Header({
             }
           }}
         >
-          <span>{initials}</span>
+          {currentUser?.photo && !avatarLoadError ? (
+            <img
+              src={currentUser.photo}
+              alt={currentUser.name || "User"}
+              className="user__avatar-img"
+              onError={() => setAvatarLoadError(true)}
+            />
+          ) : (
+            <span>{initials}</span>
+          )}
           <div>
             <strong>{currentUser?.name || "—"}</strong>
             <small>{currentUser?.role || "—"}</small>
@@ -240,7 +254,18 @@ export function Header({
               aria-label="User options"
             >
               <div className="user-dropdown__header">
-                <div className="user-dropdown__avatar">{initials}</div>
+                <div className="user-dropdown__avatar">
+                  {currentUser?.photo && !avatarLoadError ? (
+                    <img
+                      src={currentUser.photo}
+                      alt={currentUser.name || "User"}
+                      className="user-dropdown__avatar-img"
+                      onError={() => setAvatarLoadError(true)}
+                    />
+                  ) : (
+                    initials
+                  )}
+                </div>
                 <div className="user-dropdown__info">
                   <strong>{currentUser?.name || "—"}</strong>
                   <span className="user-dropdown__role">{currentUser?.role || "—"}</span>

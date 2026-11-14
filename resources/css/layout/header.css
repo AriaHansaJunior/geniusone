@@ -399,7 +399,8 @@
   background: rgba(0, 113, 227, 0.08);
 }
 
-.user>span {
+.user>span,
+.user__avatar-img {
   width: 32px;
   height: 32px;
   border-radius: 50%;
@@ -411,6 +412,12 @@
   font-weight: 800;
   flex-shrink: 0;
   box-shadow: 0 2px 6px rgba(0, 113, 227, 0.22);
+}
+
+.user__avatar-img {
+  object-fit: cover;
+  display: block;
+  border: 1.5px solid #ffffff;
 }
 
 .user>div:not(.user-dropdown) {
@@ -497,6 +504,15 @@
   font-weight: 800;
   flex-shrink: 0;
   box-shadow: 0 2px 6px rgba(0, 113, 227, 0.25);
+  overflow: hidden;
+}
+
+.user-dropdown__avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+  display: block;
 }
 
 .user-dropdown__info {

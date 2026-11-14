@@ -27,8 +27,10 @@ export type ApprovalModule =
   | "purchase_requisition"
   | "purchase_order"
   | "receive_note"
+  | "receive_note_return"
   | "bpb"
-  | "request_material";
+  | "request_material"
+  | "transfer_stock_return";
 
 export type ApprovalHistoryAction =
   | "created"

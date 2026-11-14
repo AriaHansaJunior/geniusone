@@ -44,7 +44,10 @@ main {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
+  flex-wrap: wrap;
+  gap: 12px 16px;
+  min-width: 0;
+  max-width: 100%;
   box-sizing: border-box;
 }
 
@@ -82,11 +85,23 @@ main {
 .content {
   flex: 1;
   padding: 20px 24px 28px;
-  max-width: 2400px;
+  max-width: 100%;
   margin: 0;
   width: 100%;
   box-sizing: border-box;
   min-width: 0;
+}
+
+.content > *,
+.panel,
+.table-panel,
+.wh-table-card,
+.tx-panel,
+.full-page-detail,
+.dashboard-view {
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 /* ==========================================================================

@@ -114,7 +114,7 @@ class AuthApiController extends Controller
                     'preferred_language' => $user->preferred_language ?? 'EN',
                     'is_super_admin' => $user->isSuperAdmin(),
                     'permissions' => $user->getAllPermissions(),
-                    'sidebar_permissions' => $user->sidebar_permissions ?? $user->roleModel?->sidebar_permissions ?? ($user->isSuperAdmin() ? ['*'] : []),
+                    'sidebar_permissions' => $user->sidebar_permissions ?? $user->roleModel?->sidebar_permissions ?? ['*'],
                     'photo' => $user->photo,
                 ],
             ],
@@ -187,7 +187,7 @@ class AuthApiController extends Controller
                 'preferred_language' => $user->preferred_language ?? 'EN',
                 'is_super_admin' => $user->isSuperAdmin(),
                 'permissions' => $user->getAllPermissions(),
-                'sidebar_permissions' => $user->sidebar_permissions ?? $user->roleModel?->sidebar_permissions ?? ($user->isSuperAdmin() ? ['*'] : []),
+                'sidebar_permissions' => $user->sidebar_permissions ?? $user->roleModel?->sidebar_permissions ?? ['*'],
                 'photo' => $user->photo,
             ],
         ]);

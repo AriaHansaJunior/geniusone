@@ -26,6 +26,8 @@ interface AuthPermissionContextValue {
   canAccessSidebarItem: (itemId: string) => boolean;
   loginUser: (token: string, user: UserAccount) => void;
   logoutUser: () => Promise<void>;
+  updateCurrentUser: (patch: Partial<UserAccount>) => void;
+  refreshCurrentUser: () => Promise<void>;
   refreshUsers: () => void;
   refreshRoles: () => Promise<RoleDefinition[]>;
 }
@@ -218,6 +220,58 @@ export function AuthPermissionProvider({ children }: { children: React.ReactNode
     setUsers([]);
   }, []);
 
+  const updateCurrentUser = useCallback((patch: Partial<UserAccount>) => {
+    setCurrentUserState((prev) => {
+      if (!prev) return prev;
+      const next = { ...prev, ...patch };
+      try {
+        sessionStorage.setItem("geniusone_user", JSON.stringify(next));
+        localStorage.setItem("geniusone_user", JSON.stringify(next));
+      } catch {
+        // ignore
+      }
+      return next;
+    });
+  }, []);
+
+  const refreshCurrentUser = useCallback(async () => {
+    try {
+      const res = await apiFetch("/api/auth/me");
+      if (!res.ok) return;
+      const json = await res.json();
+      if (json?.status === "success" && json.data) {
+        const u: UserAccount = {
+          id: json.data.id,
+          name: json.data.name,
+          username: json.data.username,
+          email: json.data.email,
+          role: json.data.role,
+          role_label: json.data.role_label,
+          department: json.data.department_name || "-",
+          department_id: json.data.department_id,
+          departments_id: json.data.department_id,
+          job_title: json.data.job_title,
+          employee_id: json.data.employee_id,
+          preferred_language: json.data.preferred_language,
+          photo: json.data.photo || null,
+          isSuperAdmin: Boolean(json.data.is_super_admin),
+          is_super_admin: Boolean(json.data.is_super_admin),
+          permissions: json.data.permissions || [],
+          sidebar_permissions: json.data.sidebar_permissions || null,
+        };
+        setCurrentUserState(u);
+        try {
+          sessionStorage.setItem("geniusone_user", JSON.stringify(u));
+          localStorage.setItem("geniusone_user", JSON.stringify(u));
+        } catch {
+          // ignore
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
+
   const can = useCallback(
     (module: ApprovalModule, action: PermissionAction): boolean => {
       if (!currentUser) return false;
@@ -232,8 +286,10 @@ export function AuthPermissionProvider({ children }: { children: React.ReactNode
           purchase_requisition: "pr",
           purchase_order: "po",
           receive_note: "rn",
+          receive_note_return: "return",
           bpb: "rn",
           request_material: "rm",
+          transfer_stock_return: "rm",
         };
         const prefix = prefixMap[module] || module;
 
@@ -296,8 +352,8 @@ export function AuthPermissionProvider({ children }: { children: React.ReactNode
         return roleDef.sidebarPermissions.includes(itemId);
       }
 
-      // Always allow dashboard when authenticated if no explicit sidebar restriction array is populated yet
-      return itemId === "dashboard";
+      // Allow all sidebar navigation items by default when no explicit restriction array is set
+      return true;
     },
     [currentUser, isSuperAdmin, roles]
   );
@@ -315,6 +371,8 @@ export function AuthPermissionProvider({ children }: { children: React.ReactNode
         canAccessSidebarItem,
         loginUser,
         logoutUser,
+        updateCurrentUser,
+        refreshCurrentUser,
         refreshUsers,
         refreshRoles,
       }}

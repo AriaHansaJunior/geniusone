@@ -28,6 +28,7 @@ const MODULE_SLUG: Partial<Record<ApprovalModule, string>> = {
   purchase_requisition: "pr",
   purchase_order: "po",
   receive_note: "rn",
+  receive_note_return: "returns",
   bpb: "bpb",
   request_material: "request-materials",
 };

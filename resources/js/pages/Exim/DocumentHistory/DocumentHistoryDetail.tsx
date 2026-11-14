@@ -5,6 +5,7 @@ import { Button } from "../../../components/ui/Button";
 import { ExpandedHistoryTable } from "./ExpandedHistoryTable";
 import { initialDocumentHistoryRecords } from "./document-history-data";
 import type { DocumentHistoryRecord } from "./document-history-types";
+import { fetchDocumentHistories } from "../../../data/masterApi";
 
 interface DocumentHistoryDetailProps {
   code: string;
@@ -18,11 +19,33 @@ export function DocumentHistoryDetail({
   record,
 }: DocumentHistoryDetailProps) {
   const [generateMenuOpen, setGenerateMenuOpen] = useState(false);
+  const [fetchedRecord, setFetchedRecord] = useState<DocumentHistoryRecord | null>(null);
   const [expandedRowIds, setExpandedRowIds] = useState<Set<string>>(new Set());
   const [notice, setNotice] = useState<{
     type: "info" | "success" | "warning";
     message: string;
   } | null>(null);
+
+  useEffect(() => {
+    if (record) return;
+    let active = true;
+    const cleanCode = code.replace(/^details?\//i, "").trim();
+    fetchDocumentHistories()
+      .then((list) => {
+        if (!active || !Array.isArray(list)) return;
+        const found = list.find(
+          (r) =>
+            r.id === cleanCode ||
+            r.invoiceNumber === cleanCode ||
+            (typeof r.invoiceNumber === "string" && r.invoiceNumber.replace(/[\/\\]/g, "-") === cleanCode.replace(/[\/\\]/g, "-"))
+        );
+        if (found) setFetchedRecord(found);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [code, record]);
 
   const generateMenuRef = useRef<HTMLDivElement>(null);
 
@@ -45,6 +68,7 @@ export function DocumentHistoryDetail({
   // Find record by code/id/invoiceNumber
   const dhData: DocumentHistoryRecord =
     record ||
+    fetchedRecord ||
     initialDocumentHistoryRecords.find(
       (r) =>
         r.id === code ||

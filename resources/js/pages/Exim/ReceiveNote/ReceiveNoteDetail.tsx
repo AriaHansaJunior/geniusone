@@ -718,7 +718,6 @@ export function ReceiveNoteDetail({
               aria-haspopup="true"
               aria-expanded={printMenuOpen}
             >
-              <Icon name="print" size={14} />
               <span>Print Options ▾</span>
             </button>
 

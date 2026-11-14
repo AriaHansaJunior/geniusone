@@ -16,13 +16,26 @@ import {
   type ApprovalStatus,
 } from "../../types/approval";
 import { fetchList } from "../../data/api";
+import {
+  fetchTransferStockReturnsApi,
+  approveTransferStockReturnApi,
+  fetchReceiveNotes,
+  fetchRequestMaterials,
+} from "../../data/masterApi";
 import type { ReceiveNoteRecord } from "../Exim/ReceiveNote/receive-note-types";
 import type { RequestMaterialRecord } from "../Warehouse/Request/RequestMaterial/request-material-types";
 
 export interface PendingApprovalItem {
   id: string;
+  rawId?: string;
   module: ApprovalModule;
-  docType: "PR" | "PO" | "Receive Note" | "Receive Material (BPB)" | "Request Material";
+  docType:
+    | "PR"
+    | "PO"
+    | "Receive Note"
+    | "Receive Material (BPB)"
+    | "Request Material"
+    | "Transfer Stock Return";
   docNumber: string;
   date: string;
   party: string;
@@ -38,6 +51,7 @@ interface DashboardPendingApprovalsProps {
   onNavigateDetail?: (module: "pr" | "po" | "report" | "warehouse", identifier: string) => void;
   onNavigateReceiveNoteDetail?: (rnNumber: string) => void;
   onNavigateRequestMaterialDetail?: (id: string) => void;
+  onNavigateTransferStockReturnDetail?: (code: string) => void;
   receiveNoteRecords?: ReceiveNoteRecord[];
   requestMaterialRecords?: RequestMaterialRecord[];
   onReceiveNotesUpdate?: React.Dispatch<React.SetStateAction<ReceiveNoteRecord[]>>;
@@ -87,6 +101,7 @@ export function DashboardPendingApprovals({
   onNavigateDetail,
   onNavigateReceiveNoteDetail,
   onNavigateRequestMaterialDetail,
+  onNavigateTransferStockReturnDetail,
   receiveNoteRecords,
   requestMaterialRecords,
   onReceiveNotesUpdate,
@@ -182,7 +197,9 @@ export function DashboardPendingApprovals({
     // 3. Receive Notes (RN)
     try {
       const rnList =
-        receiveNoteRecords || [];
+        receiveNoteRecords && receiveNoteRecords.length > 0
+          ? receiveNoteRecords
+          : (await fetchReceiveNotes()) || [];
       for (const rn of rnList) {
         const docNum = String(rn.rnNumber || rn.id || "").trim();
         if (!docNum) continue;
@@ -246,7 +263,9 @@ export function DashboardPendingApprovals({
     // 5. Request Material
     try {
       const reqList =
-        requestMaterialRecords || [];
+        requestMaterialRecords && requestMaterialRecords.length > 0
+          ? requestMaterialRecords
+          : (await fetchRequestMaterials()) || [];
       for (const req of reqList) {
         const docNum = String(req.requestCode || req.id || "").trim();
         if (!docNum) continue;
@@ -276,6 +295,35 @@ export function DashboardPendingApprovals({
       console.warn("Dashboard approvals: Failed to load Request Material:", err);
     }
 
+    // 6. Transfer Stock Return
+    try {
+      const tsrList = (await fetchTransferStockReturnsApi()) || [];
+      for (const tsr of tsrList) {
+        const docNum = String(tsr.mutationCode || tsr.id || "").trim();
+        if (!docNum) continue;
+        const norm = normalizeApprovalStatus(tsr.status || (tsr as any).approvalStatus);
+        if (norm === "WAITING_APPROVE_1" || norm === "WAITING_APPROVE_2") {
+          collected.push({
+            id: `tsr-${docNum}`,
+            rawId: String(tsr.id),
+            module: "transfer_stock_return",
+            docType: "Transfer Stock Return",
+            docNumber: docNum,
+            date: toSafeText(tsr.transferDate, "-"),
+            party: toSafeText(tsr.userCreated, "—"),
+            amountFormatted: "—",
+            amountNumeric: 0,
+            itemsSummary: `${tsr.totalItems || tsr.items?.length || 0} returned items`,
+            status: norm,
+            currentTier: norm === "WAITING_APPROVE_1" ? 1 : 2,
+            createdAtRaw: parseDateToTimestamp(tsr.transferDate || ""),
+          });
+        }
+      }
+    } catch (err) {
+      console.warn("Dashboard approvals: Failed to load Transfer Stock Return:", err);
+    }
+
     setItems(collected);
     setIsLoading(false);
   }, [receiveNoteRecords, requestMaterialRecords]);
@@ -302,6 +350,38 @@ export function DashboardPendingApprovals({
   const handleQuickApprove = async (item: PendingApprovalItem, tier: 1 | 2) => {
     setApprovingId(item.id);
     try {
+      if (item.module === "transfer_stock_return") {
+        const targetId = item.rawId || item.docNumber;
+        const updated = await approveTransferStockReturnApi(targetId, tier);
+        const nextStatus = normalizeApprovalStatus(
+          updated?.data?.status || updated?.status || updated?.approvalStatus
+        );
+        setNotification({
+          type: "success",
+          message: `${item.docType} "${item.docNumber}" successfully approved for Stage ${tier}! (${
+            nextStatus === "APPROVED"
+              ? "Fully Approved ✓"
+              : "Advanced to Waiting Approve 2"
+          })`,
+        });
+        setItems((prev) => {
+          if (nextStatus === "APPROVED") {
+            return prev.filter((i) => i.id !== item.id);
+          }
+          return prev.map((i) =>
+            i.id === item.id
+              ? {
+                  ...i,
+                  status: "WAITING_APPROVE_2",
+                  currentTier: 2,
+                }
+              : i
+          );
+        });
+        setTimeout(() => setNotification(null), 4500);
+        return;
+      }
+
       const res = await executeApprove({
         module: item.module,
         documentId: item.docNumber,
@@ -391,6 +471,8 @@ export function DashboardPendingApprovals({
       onNavigateReceiveNoteDetail(item.docNumber);
     } else if (item.module === "request_material" && onNavigateRequestMaterialDetail) {
       onNavigateRequestMaterialDetail(item.docNumber);
+    } else if (item.module === "transfer_stock_return" && onNavigateTransferStockReturnDetail) {
+      onNavigateTransferStockReturnDetail(item.docNumber);
     }
   };
 
@@ -411,6 +493,7 @@ export function DashboardPendingApprovals({
         if (docTypeFilter === "rn") return i.docType === "Receive Note";
         if (docTypeFilter === "bpb") return i.docType === "Receive Material (BPB)";
         if (docTypeFilter === "req") return i.docType === "Request Material";
+        if (docTypeFilter === "tsr") return i.docType === "Transfer Stock Return";
         return true;
       });
     }
@@ -677,6 +760,7 @@ export function DashboardPendingApprovals({
                     { value: "rn", label: "Receive Note (RN)" },
                     { value: "bpb", label: "Receive Material (BPB)" },
                     { value: "req", label: "Request Material" },
+                    { value: "tsr", label: "Transfer Stock Return" },
                   ]}
                 />
               </div>

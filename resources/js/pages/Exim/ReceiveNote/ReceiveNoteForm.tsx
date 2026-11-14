@@ -719,7 +719,6 @@ export function ReceiveNoteForm({ onBack, onSave, existingReceiveNotes = [] }: R
                   whiteSpace: "nowrap",
                 }}
               >
-                <Icon name="plus" size={14} />
                 <span>Add Items from PO</span>
               </button>
 
@@ -741,7 +740,6 @@ export function ReceiveNoteForm({ onBack, onSave, existingReceiveNotes = [] }: R
                   whiteSpace: "nowrap",
                 }}
               >
-                <Icon name="plus" size={14} />
                 <span>Add Blank Item</span>
               </button>
             </div>

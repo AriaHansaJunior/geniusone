@@ -669,8 +669,7 @@ export function PurchaseRequisitionCreate({
                     }}
                     title="Upload items via Excel template"
                   >
-                    <span>Upload From Master Item</span>
-                    <Icon name={isUploadDropdownOpen ? "chevronUp" : "chevronDown"} size={12} />
+                    <span>Upload From Master Item {isUploadDropdownOpen ? "▴" : "▾"}</span>
                   </button>
 
                   {isUploadDropdownOpen && (
@@ -709,7 +708,6 @@ export function PurchaseRequisitionCreate({
                         onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")}
                         onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                       >
-                        <Icon name="download" size={13} style={{ color: "#16a34a" }} />
                         <span>Download Template</span>
                       </button>
 
@@ -733,7 +731,6 @@ export function PurchaseRequisitionCreate({
                         onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")}
                         onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                       >
-                        <Icon name="file" size={13} style={{ color: "#2563eb" }} />
                         <span>Upload File</span>
                       </button>
                     </div>

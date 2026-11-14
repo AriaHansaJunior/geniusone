@@ -62,13 +62,24 @@ class GeniusOneDemoSeeder extends Seeder
         $this->command->info('Seeding Master Data for GeniusOne...');
 
         // 1. Users
+        User::updateOrCreate(
+            ['username' => 'superadmin'],
+            [
+                'email' => 'superadmin@geniusone.internal',
+                'name' => 'Super Administrator GeniusOne',
+                'password' => Hash::make('secret123'),
+                'role' => User::ROLE_SUPERADMIN,
+                'status' => 1,
+            ]
+        );
+
         $admin = User::updateOrCreate(
             ['username' => 'admin'],
             [
-                'email' => 'admin@geniusone.test',
+                'email' => 'admin@geniusone.internal',
                 'name' => 'Administrator GeniusOne',
                 'password' => Hash::make('secret123'),
-                'role' => User::ROLE_ADMIN,
+                'role' => User::ROLE_SUPERADMIN,
                 'status' => 1,
             ]
         );

@@ -305,7 +305,6 @@ export function AuditLogAdmin({ onNavigateUsers }: AuditLogAdminProps) {
           }}
           title="Manage Enterprise Users & Permissions"
         >
-          <Icon name="user" size={14} />
           <span>User & Permission Management</span>
         </button>
         <button
@@ -313,7 +312,6 @@ export function AuditLogAdmin({ onNavigateUsers }: AuditLogAdminProps) {
           className="gov-admin-tab gov-admin-tab--active"
           title="System Audit Trail & History"
         >
-          <Icon name="history" size={14} />
           <span>System Audit Trail & History</span>
           <span className="gov-admin-tab__pill">SuperAdmin Only</span>
         </button>
@@ -519,7 +517,6 @@ export function AuditLogAdmin({ onNavigateUsers }: AuditLogAdminProps) {
                             onClick={() => setInspectingLog(item)}
                             title={`Inspect technical audit payload for #${item.id}`}
                           >
-                            <Icon name="eye" size={13} />
                             <span>Inspect</span>
                           </button>
                         </td>
@@ -854,7 +851,6 @@ export function AuditLogAdmin({ onNavigateUsers }: AuditLogAdminProps) {
                       }}
                       title="Copy full JSON payload to clipboard"
                     >
-                      <Icon name={copiedRaw ? "check" : "copy"} size={12} />
                       <span>{copiedRaw ? "Copied!" : "Copy JSON"}</span>
                     </button>
                     <Icon name={isRawOpen ? "chevronDown" : "chevronRight"} size={14} />

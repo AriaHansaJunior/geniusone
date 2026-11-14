@@ -8,6 +8,7 @@ import { ApprovalTimeline } from "../../../components/approval/ApprovalTimeline"
 import { ApprovalStatusBadge } from "../../../components/approval/ApprovalStatusBadge";
 import { getLocalApprovalState } from "../../../services/approvalApi";
 import { normalizeApprovalStatus, type DocumentApprovalState } from "../../../types/approval";
+import { fetchReceiveNoteReturns } from "../../../data/masterApi";
 
 interface ReceiveNoteReturnDetailProps {
   code: string;
@@ -21,7 +22,29 @@ export function ReceiveNoteReturnDetail({
   record,
 }: ReceiveNoteReturnDetailProps) {
   const [printMenuOpen, setPrintMenuOpen] = useState(false);
+  const [fetchedRecord, setFetchedRecord] = useState<ReceiveNoteReturnRecord | null>(null);
   const printMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (record) return;
+    let active = true;
+    const cleanCode = code.replace(/^details?\//i, "").trim();
+    fetchReceiveNoteReturns()
+      .then((list) => {
+        if (!active || !Array.isArray(list)) return;
+        const found = list.find(
+          (r) =>
+            r.id === cleanCode ||
+            r.rnNumber === cleanCode ||
+            (typeof r.rnNumber === "string" && r.rnNumber.replace(/[\/\\]/g, "-") === cleanCode.replace(/[\/\\]/g, "-"))
+        );
+        if (found) setFetchedRecord(found);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [code, record]);
 
   // Close print menu on click outside
   useEffect(() => {
@@ -42,6 +65,7 @@ export function ReceiveNoteReturnDetail({
   // Find record by code/id/rnNumber
   const rnrData: ReceiveNoteReturnRecord =
     record ||
+    fetchedRecord ||
     initialReceiveNoteReturnRecords.find(
       (r) =>
         r.id === code ||
@@ -86,12 +110,12 @@ export function ReceiveNoteReturnDetail({
     };
 
   const [approvalState, setApprovalState] = useState<DocumentApprovalState>(() =>
-    getLocalApprovalState("receive_note", rnrData.rnNumber, normalizeApprovalStatus(rnrData.approvalStatus))
+    getLocalApprovalState("receive_note_return", rnrData.rnNumber, normalizeApprovalStatus(rnrData.approvalStatus))
   );
 
   useEffect(() => {
     setApprovalState(
-      getLocalApprovalState("receive_note", rnrData.rnNumber, normalizeApprovalStatus(rnrData.approvalStatus))
+      getLocalApprovalState("receive_note_return", rnrData.rnNumber, normalizeApprovalStatus(rnrData.approvalStatus))
     );
   }, [rnrData.rnNumber, rnrData.approvalStatus]);
 
@@ -130,7 +154,7 @@ export function ReceiveNoteReturnDetail({
         {/* Dynamic Two-Stage Approval Action Bar & Timeline */}
         <div className="rnr-detail-status-bar">
           <ApprovalActionBar
-            module="receive_note"
+            module="receive_note_return"
             documentId={rnrData.rnNumber}
             documentNumber={rnrData.rnNumber}
             state={approvalState}
@@ -369,7 +393,6 @@ export function ReceiveNoteReturnDetail({
               aria-haspopup="true"
               aria-expanded={printMenuOpen}
             >
-              <Icon name="print" size={14} />
               <span>Print Options ▾</span>
             </button>
 

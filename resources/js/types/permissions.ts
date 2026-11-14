@@ -224,7 +224,7 @@ export function mapBackendRoleToDefinition(r: any): RoleDefinition {
       ? r.sidebar_permissions
       : Array.isArray(r.sidebarPermissions)
         ? r.sidebarPermissions
-        : [];
+        : ["*"];
 
   return {
     id: String(r.id ?? code),
