@@ -1,23 +1,27 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
+  fetchMasterItems,
   fetchMasterLookupsApi,
   fetchTransferStockReturnAvailableSourcesApi,
-  fetchMasterItems,
+  fetchTransferStockReturnDetailApi,
+  saveTransferStockReturnApi,
 } from "../../../data/masterApi";
 import { Button } from "../../../components/ui/Button";
 import { CustomDatePicker } from "../../../components/ui/CustomDatePicker";
 import { CustomSelect } from "../../../components/ui/CustomSelect";
 import { Icon } from "../../../components/ui/Icon";
 import type {
-  TransferStockReturnRecord,
   TransferStockReturnItem,
+  TransferStockReturnRecord,
 } from "./transfer-stock-return-types";
 
-interface TransferStockReturnFormProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onSave: (record: TransferStockReturnRecord) => void | Promise<any>;
-  existingRecord?: TransferStockReturnRecord | null;
+export interface TransferStockReturnFormProps {
+  mode: "create" | "edit";
+  recordCode?: string;
+  initialRecord?: TransferStockReturnRecord | null;
+  records?: TransferStockReturnRecord[];
+  onBack: () => void;
+  onSaved?: (saved?: any) => void | Promise<void>;
 }
 
 interface WarehouseOption {
@@ -44,20 +48,104 @@ interface MasterItemOption {
   unit: string;
 }
 
-function getTodayDmy(): string {
+function getTodayIso(): string {
   const now = new Date();
-  return `${String(now.getDate()).padStart(2, "0")}-${String(now.getMonth() + 1).padStart(
-    2,
-    "0"
-  )}-${now.getFullYear()}`;
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+const MONTH_INDEX_MAP: Record<string, string> = {
+  jan: "01", january: "01",
+  feb: "02", february: "02",
+  mar: "03", march: "03",
+  apr: "04", april: "04",
+  may: "05",
+  jun: "06", june: "06",
+  jul: "07", july: "07",
+  aug: "08", august: "08",
+  sep: "09", sept: "09", september: "09",
+  oct: "10", october: "10",
+  nov: "11", november: "11",
+  dec: "12", december: "12",
+};
+
+function normalizeToIsoDate(dateStr?: string | null): string {
+  const clean = (dateStr || "").trim();
+  if (!clean) return getTodayIso();
+
+  const isoPrefix = clean.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (isoPrefix) return `${isoPrefix[1]}-${isoPrefix[2]}-${isoPrefix[3]}`;
+
+  const dmy = clean.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})$/);
+  if (dmy) {
+    return `${dmy[3]}-${dmy[2].padStart(2, "0")}-${dmy[1].padStart(2, "0")}`;
+  }
+
+  const named = clean.match(/^(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})$/);
+  if (named) {
+    const mon = MONTH_INDEX_MAP[named[2].toLowerCase()];
+    if (mon) return `${named[3]}-${mon}-${named[1].padStart(2, "0")}`;
+  }
+
+  const parsed = new Date(clean);
+  if (!Number.isNaN(parsed.getTime())) {
+    const y = parsed.getFullYear();
+    const m = String(parsed.getMonth() + 1).padStart(2, "0");
+    const d = String(parsed.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+  }
+
+  return getTodayIso();
+}
+
+function toIsoDate(dateStr: string): string {
+  return normalizeToIsoDate(dateStr);
+}
+
+function createBlankItemRow(defaultDest = ""): TransferStockReturnItem {
+  return {
+    id: `new-item-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    itemCode: "",
+    itemName: "",
+    quantity: 1,
+    unit: "PCE",
+    sourceLocation: "Production Line",
+    destinationLocation: defaultDest,
+    reason: "Surplus production material return",
+  };
 }
 
 export function TransferStockReturnForm({
-  isOpen,
-  onClose,
-  onSave,
-  existingRecord,
+  mode,
+  recordCode,
+  initialRecord,
+  records = [],
+  onBack,
+  onSaved,
 }: TransferStockReturnFormProps) {
+  const matchedFromProps = useMemo(() => {
+    if (initialRecord) return initialRecord;
+    if (mode !== "edit" || !recordCode || !records.length) return null;
+    const cleanTarget = recordCode.replace(/[^A-Za-z0-9]/g, "").toLowerCase();
+    return (
+      records.find(
+        (r) =>
+          String(r.id).toLowerCase() === recordCode.toLowerCase() ||
+          r.mutationCode.toLowerCase() === recordCode.toLowerCase() ||
+          r.mutationCode.replace(/[^A-Za-z0-9]/g, "").toLowerCase() === cleanTarget
+      ) || null
+    );
+  }, [initialRecord, mode, recordCode, records]);
+
+  const [existingRecord, setExistingRecord] = useState<TransferStockReturnRecord | null>(
+    mode === "edit" ? matchedFromProps : null
+  );
+  const [loadingRecord, setLoadingRecord] = useState<boolean>(
+    mode === "edit" && Boolean(recordCode) && !matchedFromProps
+  );
+
   const [warehouses, setWarehouses] = useState<WarehouseOption[]>([]);
   const [jobNumbers, setJobNumbers] = useState<JobNumberOption[]>([]);
   const [destinationLocations, setDestinationLocations] = useState<DestinationOption[]>([]);
@@ -65,79 +153,111 @@ export function TransferStockReturnForm({
   const [availableSources, setAvailableSources] = useState<any[]>([]);
   const [loadingLookups, setLoadingLookups] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const [selectedSourceId, setSelectedSourceId] = useState<string>("");
   const [warehousesId, setWarehousesId] = useState<number | undefined>(
-    existingRecord?.warehouses_id
+    matchedFromProps?.warehouses_id
   );
   const [mutationCode, setMutationCode] = useState(
-    existingRecord?.mutationCode || `MUT-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 9000) + 1000)}`
+    matchedFromProps?.mutationCode ||
+      `MUT-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 9000) + 1000)}`
   );
-  const [productionCode, setProductionCode] = useState(existingRecord?.productionCode || "");
+  const [productionCode, setProductionCode] = useState(
+    matchedFromProps?.productionCode && matchedFromProps.productionCode !== "-"
+      ? matchedFromProps.productionCode
+      : ""
+  );
   const [jobNumberId, setJobNumberId] = useState<number | undefined>(
-    existingRecord?.job_number_id
+    matchedFromProps?.job_number_id
   );
-  const [jobNumber, setJobNumber] = useState(existingRecord?.jobNumber || "");
+  const [jobNumber, setJobNumber] = useState(
+    matchedFromProps?.jobNumber && matchedFromProps.jobNumber !== "-"
+      ? matchedFromProps.jobNumber
+      : ""
+  );
   const [transferDate, setTransferDate] = useState(
-    existingRecord?.transferDate || getTodayDmy()
+    normalizeToIsoDate(matchedFromProps?.transferDate)
   );
-  const [transferNote, setTransferNote] = useState(existingRecord?.transferNote || "");
-
+  const [transferNote, setTransferNote] = useState(matchedFromProps?.transferNote || "");
   const [items, setItems] = useState<TransferStockReturnItem[]>(
-    existingRecord?.items || [
-      {
-        id: "new-item-1",
-        itemCode: "",
-        itemName: "",
-        quantity: 1,
-        unit: "PCE",
-        sourceLocation: "Production Line",
-        destinationLocation: "",
-        reason: "Surplus production material return",
-      },
-    ]
+    matchedFromProps?.items?.length ? matchedFromProps.items : [createBlankItemRow()]
   );
 
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-
-  // Sync form fields whenever modal opens or existingRecord switches
+  // Hydrate existing record when navigating directly to /edit/{code}
   useEffect(() => {
-    if (!isOpen) return;
+    if (mode !== "edit") {
+      setExistingRecord(null);
+      setLoadingRecord(false);
+      return;
+    }
+
+    if (matchedFromProps) {
+      setExistingRecord(matchedFromProps);
+      setLoadingRecord(false);
+      return;
+    }
+
+    if (!recordCode) {
+      setLoadingRecord(false);
+      return;
+    }
+
+    let cancelled = false;
+    setLoadingRecord(true);
+    fetchTransferStockReturnDetailApi(recordCode)
+      .then((fetched) => {
+        if (!cancelled) setExistingRecord(fetched);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingRecord(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [mode, recordCode, matchedFromProps]);
+
+  // Synchronize form inputs when existingRecord changes or switching modes
+  useEffect(() => {
     setErrorMessage(null);
-    setSelectedSourceId(
-      existingRecord?.request_material_id ? String(existingRecord.request_material_id) : ""
-    );
-    setWarehousesId(existingRecord?.warehouses_id);
-    setMutationCode(
-      existingRecord?.mutationCode ||
+    if (mode === "edit" && existingRecord) {
+      setSelectedSourceId(
+        existingRecord.request_material_id ? String(existingRecord.request_material_id) : ""
+      );
+      setWarehousesId(existingRecord.warehouses_id);
+      setMutationCode(existingRecord.mutationCode || "");
+      setProductionCode(
+        existingRecord.productionCode && existingRecord.productionCode !== "-"
+          ? existingRecord.productionCode
+          : ""
+      );
+      setJobNumberId(existingRecord.job_number_id);
+      setJobNumber(
+        existingRecord.jobNumber && existingRecord.jobNumber !== "-" ? existingRecord.jobNumber : ""
+      );
+      setTransferDate(normalizeToIsoDate(existingRecord.transferDate));
+      setTransferNote(existingRecord.transferNote || "");
+      setItems(
+        existingRecord.items?.length ? existingRecord.items : [createBlankItemRow()]
+      );
+    } else if (mode === "create") {
+      setSelectedSourceId("");
+      setWarehousesId(undefined);
+      setMutationCode(
         `MUT-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 9000) + 1000)}`
-    );
-    setProductionCode(existingRecord?.productionCode && existingRecord.productionCode !== "-" ? existingRecord.productionCode : "");
-    setJobNumberId(existingRecord?.job_number_id);
-    setJobNumber(existingRecord?.jobNumber && existingRecord.jobNumber !== "-" ? existingRecord.jobNumber : "");
-    setTransferDate(existingRecord?.transferDate || getTodayDmy());
-    setTransferNote(existingRecord?.transferNote || "");
-    setItems(
-      existingRecord?.items?.length
-        ? existingRecord.items
-        : [
-            {
-              id: `new-item-${Date.now()}`,
-              itemCode: "",
-              itemName: "",
-              quantity: 1,
-              unit: "PCE",
-              sourceLocation: "Production Line",
-              destinationLocation: "",
-              reason: "Return excess stock",
-            },
-          ]
-    );
-  }, [isOpen, existingRecord]);
+      );
+      setProductionCode("");
+      setJobNumberId(undefined);
+      setJobNumber("");
+      setTransferDate(getTodayIso());
+      setTransferNote("");
+      setItems([createBlankItemRow()]);
+    }
+  }, [mode, existingRecord]);
 
   // Load real DB lookups, available RM sources, and master items
   useEffect(() => {
-    if (!isOpen) return;
     let cancelled = false;
     setLoadingLookups(true);
 
@@ -169,8 +289,7 @@ export function TransferStockReturnForm({
         setMasterItems(mItems);
         setAvailableSources(Array.isArray(sourcesData) ? sourcesData : []);
 
-        // Default warehouse on create if none selected yet
-        if (!existingRecord?.warehouses_id && whList.length > 0) {
+        if (mode === "create" && whList.length > 0) {
           setWarehousesId((prev) => prev ?? Number(whList[0].id));
         }
 
@@ -181,7 +300,7 @@ export function TransferStockReturnForm({
               const matched =
                 (row.items_id ? mItems.find((m) => m.id === row.items_id) : undefined) ||
                 (row.itemCode ? mItems.find((m) => m.code === row.itemCode) : undefined) ||
-                (!existingRecord ? mItems[0] : undefined);
+                (mode === "create" ? mItems[0] : undefined);
               return {
                 ...row,
                 items_id: row.items_id ?? (matched ? matched.id : undefined),
@@ -208,7 +327,7 @@ export function TransferStockReturnForm({
     return () => {
       cancelled = true;
     };
-  }, [isOpen, existingRecord]);
+  }, [mode]);
 
   const itemSelectOptions = useMemo(
     () => [
@@ -229,10 +348,21 @@ export function TransferStockReturnForm({
     warehouses.forEach((w) => {
       if (w.name) names.add(w.name);
     });
+    items.forEach((it) => {
+      if (it.destinationLocation) names.add(it.destinationLocation);
+    });
     return Array.from(names);
-  }, [destinationLocations, warehouses]);
+  }, [destinationLocations, warehouses, items]);
 
-  if (!isOpen) return null;
+  const rawStatus = String(existingRecord?.status || "");
+  const isLocked =
+    mode === "edit" &&
+    Boolean(
+      existingRecord &&
+        (rawStatus === "Approved" ||
+          rawStatus === "Approved 1" ||
+          rawStatus === "Approved 2")
+    );
 
   const handleSelectSourceRm = (sourceIdStr: string) => {
     setSelectedSourceId(sourceIdStr);
@@ -314,6 +444,7 @@ export function TransferStockReturnForm({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isLocked) return;
     setErrorMessage(null);
 
     if (!mutationCode.trim()) {
@@ -338,364 +469,344 @@ export function TransferStockReturnForm({
       return;
     }
 
-    const whObj = warehouses.find((w) => Number(w.id) === Number(warehousesId));
-    const newRecord: TransferStockReturnRecord = {
-      id: existingRecord?.id || `tsr-${Date.now()}`,
+    const payload = {
+      return_number: mutationCode.trim(),
+      production_code: productionCode.trim() && productionCode.trim() !== "-" ? productionCode.trim() : null,
+      request_material_id: selectedSourceId ? Number(selectedSourceId) : existingRecord?.request_material_id || null,
       warehouses_id: warehousesId,
-      warehouseName: whObj?.name || existingRecord?.warehouseName || "",
-      request_material_id: selectedSourceId ? Number(selectedSourceId) : existingRecord?.request_material_id,
-      job_number_id: jobNumberId,
-      mutationCode: mutationCode.trim(),
-      productionCode: productionCode.trim() || "-",
-      jobNumber: jobNumber.trim() || "-",
-      transferDate,
-      transferNote: transferNote.trim(),
-      totalItems: items.length,
-      status: existingRecord?.status || "Waiting Approve 1",
-      userCreated: existingRecord?.userCreated || "Administrator GeniusOne",
-      userLastUpdated: getTodayDmy(),
-      items,
+      job_number_id: jobNumberId || null,
+      job_number: jobNumber.trim() && jobNumber.trim() !== "-" ? jobNumber.trim() : null,
+      return_date: toIsoDate(transferDate),
+      note: transferNote.trim(),
+      items: items.map((it) => ({
+        items_id: it.items_id,
+        quantity: Number(it.quantity),
+        unit: it.unit,
+        source_location: it.sourceLocation,
+        destination_location: it.destinationLocation,
+        remark: it.reason,
+      })),
     };
 
     try {
       setSaving(true);
-      await onSave(newRecord);
-      onClose();
+      const savedRes = await saveTransferStockReturnApi(
+        payload,
+        mode === "edit" ? existingRecord?.id : undefined
+      );
+      if (onSaved) {
+        await onSaved(savedRes);
+      } else {
+        onBack();
+      }
     } catch (err: any) {
       setErrorMessage(err?.message || "Failed to save Stock Transfer Return to database.");
-    } finally {
       setSaving(false);
     }
   };
 
-  return (
-    <div
-      className="master-modal-backdrop"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="tsr-form-title"
-    >
-      <div
-        className="master-modal-content"
-        style={{
-          width: "min(920px, 95vw)",
-          maxWidth: "100%",
-          maxHeight: "92vh",
-          display: "flex",
-          flexDirection: "column",
-        }}
-      >
-        {/* Header */}
-        <div className="master-modal-header" style={{ padding: "14px 20px" }}>
-          <h3 id="tsr-form-title" className="master-modal-title">
-            {existingRecord ? "Edit Stock Transfer Return" : "Create Stock Transfer Return"}
-          </h3>
-          <button
-            type="button"
-            className="master-modal-close"
-            onClick={onClose}
-            aria-label="Close modal"
-          >
-            &times;
-          </button>
+  if (mode === "edit" && loadingRecord && !existingRecord) {
+    return (
+      <div className="tsr-form-page">
+        <div className="tsr-form-card tsr-empty-panel">
+          <strong className="tsr-loading-text">Loading Stock Transfer Return data...</strong>
         </div>
+      </div>
+    );
+  }
 
-        {/* Form Body */}
-        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0 }}>
-          <div className="master-modal-body" style={{ padding: "18px 20px", overflowY: "auto", flex: 1 }}>
-            {errorMessage && (
-              <div
-                style={{
-                  padding: "8px 12px",
-                  background: "#fef2f2",
-                  border: "1px solid #fecaca",
-                  borderRadius: "4px",
-                  color: "#991b1b",
-                  fontSize: "12px",
-                  fontWeight: 600,
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  marginBottom: "12px",
-                }}
-              >
-                <Icon name="alertTriangle" size={14} />
-                <span>{errorMessage}</span>
+  if (mode === "edit" && !loadingRecord && recordCode && !existingRecord) {
+    return (
+      <div className="tsr-form-page">
+        <div className="tsr-form-card tsr-empty-panel">
+          <div className="tsr-empty-badge-icon">
+            <Icon name="alertTriangle" size={28} />
+          </div>
+          <h3 className="tsr-empty-heading">Stock Transfer Return Not Found</h3>
+          <p className="tsr-empty-text">
+            The requested Stock Transfer Return &ldquo;<strong>{recordCode}</strong>&rdquo; could not
+            be located in the database.
+          </p>
+          <Button type="button" variant="ghost" onClick={onBack}>
+            Back to List
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="tsr-form-page">
+      <form onSubmit={handleSubmit} className="tsr-form-page">
+        {errorMessage && (
+          <div className="tsr-notice tsr-notice--error">
+            <span>{errorMessage}</span>
+            <button
+              type="button"
+              className="tsr-notice__close"
+              onClick={() => setErrorMessage(null)}
+              aria-label="Dismiss error"
+            >
+              ×
+            </button>
+          </div>
+        )}
+
+        {isLocked && (
+          <div className="tsr-notice tsr-notice--warning">
+            <span>This Stock Transfer Return has been approved and is locked from editing.</span>
+          </div>
+        )}
+
+        {/* Header Fields Card */}
+        <div className="tsr-form-card">
+          <div className="tsr-form-card-header">
+            <h3 className="tsr-form-card-title">
+              {mode === "edit"
+                ? `Edit Stock Transfer Return (${existingRecord?.mutationCode || recordCode})`
+                : "Create Stock Transfer Return"}
+            </h3>
+          </div>
+
+          <div className="tsr-form-grid-3">
+            <div className="master-form-group">
+              <label htmlFor="tsrMutationCode" className="master-form-label">
+                Mutation Code <span className="master-required-star">*</span>
+              </label>
+              <input
+                id="tsrMutationCode"
+                type="text"
+                className="master-form-input"
+                value={mutationCode}
+                onChange={(e) => setMutationCode(e.target.value)}
+                placeholder="e.g. MUT-2026-11-001"
+                disabled={isLocked}
+                required
+              />
+            </div>
+
+            <div className="master-form-group">
+              <label className="master-form-label">
+                Transfer Date <span className="master-required-star">*</span>
+              </label>
+              <CustomDatePicker
+                value={transferDate}
+                onChange={(val: string) => setTransferDate(val)}
+                placeholder="DD-MM-YYYY"
+              />
+            </div>
+
+            <div className="master-form-group">
+              <label className="master-form-label">
+                Warehouse <span className="master-required-star">*</span>
+              </label>
+              <CustomSelect
+                searchable
+                value={warehousesId ? String(warehousesId) : ""}
+                onChange={(val: string) => setWarehousesId(val ? Number(val) : undefined)}
+                placeholder={loadingLookups ? "Loading warehouses..." : "-- Select Warehouse --"}
+                disabled={loadingLookups || isLocked}
+                options={[
+                  { value: "", label: "-- Select Warehouse --" },
+                  ...warehouses.map((w) => ({
+                    value: String(w.id),
+                    label: w.code ? `${w.code} - ${w.name}` : w.name,
+                  })),
+                ]}
+              />
+            </div>
+          </div>
+
+          <div
+            className={
+              mode === "create" && availableSources.length > 0
+                ? "tsr-form-grid-3"
+                : "tsr-form-grid-2"
+            }
+          >
+            {mode === "create" && availableSources.length > 0 && (
+              <div className="master-form-group">
+                <label className="master-form-label">Source Request Material</label>
+                <CustomSelect
+                  searchable
+                  value={selectedSourceId}
+                  onChange={handleSelectSourceRm}
+                  placeholder="-- Optional: Populate from Approved RM --"
+                  options={[
+                    { value: "", label: "-- Direct / Manual Entry --" },
+                    ...availableSources.map((src) => ({
+                      value: String(src.id),
+                      label: `${src.request_number || src.requestNumber || `RM-${src.id}`}${src.warehouseName ? ` (${src.warehouseName})` : ""}`,
+                    })),
+                  ]}
+                />
               </div>
             )}
 
-            {/* Form Fields Grid */}
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))",
-                gap: "14px",
-                marginBottom: "18px",
-              }}
-            >
-              <div className="master-form-group">
-                <label className="master-form-label">
-                  Mutation Code <span style={{ color: "var(--red-600)" }}>*</span>
-                </label>
-                <input
-                  type="text"
-                  className="master-form-input font-mono font-bold"
-                  value={mutationCode}
-                  onChange={(e) => setMutationCode(e.target.value)}
-                  placeholder="e.g. MUT-2026-11-001"
-                  required
-                />
-              </div>
-
-              <div className="master-form-group">
-                <label className="master-form-label">
-                  Transfer Date <span style={{ color: "var(--red-600)" }}>*</span>
-                </label>
-                <CustomDatePicker
-                  value={transferDate}
-                  onChange={(val: string) => setTransferDate(val)}
-                  placeholder="DD-MM-YYYY"
-                />
-              </div>
-
-              <div className="master-form-group">
-                <label className="master-form-label">
-                  Warehouse <span style={{ color: "var(--red-600)" }}>*</span>
-                </label>
-                <CustomSelect
-                  value={warehousesId ? String(warehousesId) : ""}
-                  onChange={(val: string) => setWarehousesId(val ? Number(val) : undefined)}
-                  placeholder={loadingLookups ? "Loading warehouses..." : "-- Select Warehouse --"}
-                  disabled={loadingLookups}
-                  options={[
-                    { value: "", label: "-- Select Warehouse --" },
-                    ...warehouses.map((w) => ({
-                      value: String(w.id),
-                      label: w.code ? `${w.code} - ${w.name}` : w.name,
-                    })),
-                  ]}
-                />
-              </div>
-
-              {!existingRecord && availableSources.length > 0 && (
-                <div className="master-form-group">
-                  <label className="master-form-label">Source Request Material</label>
-                  <CustomSelect
-                    value={selectedSourceId}
-                    onChange={handleSelectSourceRm}
-                    placeholder="-- Optional: Populate from Approved RM --"
-                    options={[
-                      { value: "", label: "-- Direct / Manual Entry --" },
-                      ...availableSources.map((src) => ({
-                        value: String(src.id),
-                        label: `${src.request_number || src.requestNumber || `RM-${src.id}`}${src.warehouseName ? ` (${src.warehouseName})` : ""}`,
-                      })),
-                    ]}
-                  />
-                </div>
-              )}
-
-              <div className="master-form-group">
-                <label className="master-form-label">Job Number</label>
-                <CustomSelect
-                  value={jobNumberId ? String(jobNumberId) : ""}
-                  onChange={(val: string) => {
-                    const matched = jobNumbers.find((j) => String(j.id) === val);
-                    setJobNumberId(matched ? Number(matched.id) : undefined);
-                    setJobNumber(matched ? matched.name : "");
-                  }}
-                  placeholder={loadingLookups ? "Loading job numbers..." : "-- Select Job Number --"}
-                  disabled={loadingLookups}
-                  options={[
-                    { value: "", label: "-- None / Optional --" },
-                    ...jobNumbers.map((j) => ({
-                      value: String(j.id),
-                      label: j.code && j.code !== j.name ? `${j.code} - ${j.name}` : j.name,
-                    })),
-                  ]}
-                />
-              </div>
-
-              <div className="master-form-group">
-                <label className="master-form-label">Production Code</label>
-                <input
-                  type="text"
-                  className="master-form-input"
-                  value={productionCode}
-                  onChange={(e) => setProductionCode(e.target.value)}
-                  placeholder="e.g. PRD-2026-088"
-                />
-              </div>
-
-              <div className="master-form-group" style={{ gridColumn: "1 / -1" }}>
-                <label className="master-form-label">Transfer Note / Remarks</label>
-                <textarea
-                  className="master-form-input"
-                  rows={2}
-                  value={transferNote}
-                  onChange={(e) => setTransferNote(e.target.value)}
-                  placeholder="Explain why materials are being returned to warehouse..."
-                  style={{ resize: "vertical" }}
-                />
-              </div>
+            <div className="master-form-group">
+              <label className="master-form-label">Job Number</label>
+              <CustomSelect
+                searchable
+                value={jobNumberId ? String(jobNumberId) : ""}
+                onChange={(val: string) => {
+                  const matched = jobNumbers.find((j) => String(j.id) === val);
+                  setJobNumberId(matched ? Number(matched.id) : undefined);
+                  setJobNumber(matched ? matched.name : "");
+                }}
+                placeholder={loadingLookups ? "Loading job numbers..." : "-- Select Job Number --"}
+                disabled={loadingLookups || isLocked}
+                options={[
+                  { value: "", label: "-- None / Optional --" },
+                  ...jobNumbers.map((j) => ({
+                    value: String(j.id),
+                    label: j.code && j.code !== j.name ? `${j.code} - ${j.name}` : j.name,
+                  })),
+                ]}
+              />
             </div>
 
-            {/* Dynamic Items Table */}
-            <div style={{ marginTop: "10px" }}>
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  marginBottom: "8px",
-                  flexWrap: "wrap",
-                  gap: "8px",
-                }}
-              >
-                <h4 style={{ margin: 0, fontSize: "13px", fontWeight: 800, color: "var(--ink)" }}>
-                  Return Items List ({items.length})
-                </h4>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={handleAddItemRow}
-                >
-                  Add Row
-                </Button>
-              </div>
-
-              <div
-                className="table-scroll"
-                style={{
-                  border: "1px solid var(--line)",
-                  borderRadius: "var(--radius-sm)",
-                  overflowX: "auto",
-                  WebkitOverflowScrolling: "touch",
-                }}
-              >
-                <table style={{ width: "100%", minWidth: "780px", borderCollapse: "collapse", fontSize: "12px" }}>
-                  <thead>
-                    <tr style={{ background: "#f8fafc", borderBottom: "1px solid var(--line)" }}>
-                      <th style={{ width: "35px", padding: "8px 10px", textAlign: "center", fontSize: "10.5px", fontWeight: 800 }}>
-                        No
-                      </th>
-                      <th style={{ minWidth: "220px", padding: "8px 10px", textAlign: "left", fontSize: "10.5px", fontWeight: 800 }}>
-                        Item Material
-                      </th>
-                      <th style={{ width: "90px", padding: "8px 10px", textAlign: "right", fontSize: "10.5px", fontWeight: 800 }}>
-                        Qty
-                      </th>
-                      <th style={{ width: "75px", padding: "8px 10px", textAlign: "center", fontSize: "10.5px", fontWeight: 800 }}>
-                        Unit
-                      </th>
-                      <th style={{ minWidth: "180px", padding: "8px 10px", textAlign: "left", fontSize: "10.5px", fontWeight: 800 }}>
-                        Destination Location
-                      </th>
-                      <th style={{ minWidth: "150px", padding: "8px 10px", textAlign: "left", fontSize: "10.5px", fontWeight: 800 }}>
-                        Return Reason
-                      </th>
-                      <th style={{ width: "45px", padding: "8px 10px", textAlign: "center", fontSize: "10.5px", fontWeight: 800 }}>
-                        Action
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {items.map((it, idx) => (
-                      <tr
-                        key={it.id}
-                        style={{
-                          borderBottom: idx === items.length - 1 ? "none" : "1px solid var(--line)",
-                          background: "#ffffff",
-                        }}
-                      >
-                        <td style={{ padding: "8px 10px", textAlign: "center", color: "var(--slate-500)" }}>
-                          {idx + 1}
-                        </td>
-                        <td style={{ padding: "8px 10px" }}>
-                          <CustomSelect
-                            value={it.items_id ? String(it.items_id) : ""}
-                            onChange={(val: string) => handleItemChange(idx, "items_id", val)}
-                            placeholder={loadingLookups ? "Loading items..." : "-- Select Item --"}
-                            disabled={loadingLookups}
-                            options={itemSelectOptions}
-                          />
-                        </td>
-                        <td style={{ padding: "8px 10px" }}>
-                          <input
-                            type="number"
-                            min="1"
-                            step="any"
-                            className="master-form-input font-bold"
-                            style={{ textAlign: "right" }}
-                            value={it.quantity}
-                            onChange={(e) =>
-                              handleItemChange(idx, "quantity", Math.max(1, Number(e.target.value) || 1))
-                            }
-                          />
-                        </td>
-                        <td style={{ padding: "8px 10px", textAlign: "center", fontWeight: 600 }}>
-                          {it.unit}
-                        </td>
-                        <td style={{ padding: "8px 10px" }}>
-                          <CustomSelect
-                            value={it.destinationLocation}
-                            onChange={(val: string) => handleItemChange(idx, "destinationLocation", val)}
-                            placeholder="-- Select Destination --"
-                            options={destinationSelectOptions.map((name) => ({
-                              value: name,
-                              label: name,
-                            }))}
-                          />
-                        </td>
-                        <td style={{ padding: "8px 10px" }}>
-                          <input
-                            type="text"
-                            className="master-form-input"
-                            value={it.reason}
-                            onChange={(e) => handleItemChange(idx, "reason", e.target.value)}
-                            placeholder="Reason for return..."
-                          />
-                        </td>
-                        <td style={{ padding: "8px 10px", textAlign: "center" }}>
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveItemRow(idx)}
-                            style={{
-                              border: "none",
-                              background: "transparent",
-                              color: "var(--red-600)",
-                              cursor: "pointer",
-                              padding: "4px",
-                              borderRadius: "4px",
-                            }}
-                            title="Delete item row"
-                          >
-                            <Icon name="trash" size={14} />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+            <div className="master-form-group">
+              <label htmlFor="tsrProductionCode" className="master-form-label">
+                Production Code
+              </label>
+              <input
+                id="tsrProductionCode"
+                type="text"
+                className="master-form-input"
+                value={productionCode}
+                onChange={(e) => setProductionCode(e.target.value)}
+                placeholder="e.g. PRD-2026-088"
+                disabled={isLocked}
+              />
             </div>
           </div>
 
-          {/* Form Actions Footer */}
-          <div className="master-modal-footer" style={{ padding: "12px 20px" }}>
-            <Button type="button" variant="secondary" onClick={onClose} disabled={saving}>
-              Cancel
-            </Button>
+          <div className="master-form-group tsr-col-span-full">
+            <label htmlFor="tsrTransferNote" className="master-form-label">
+              Transfer Note / Remarks
+            </label>
+            <textarea
+              id="tsrTransferNote"
+              className="master-form-textarea"
+              rows={2}
+              value={transferNote}
+              onChange={(e) => setTransferNote(e.target.value)}
+              placeholder="Explain why materials are being returned to warehouse..."
+              disabled={isLocked}
+            />
+          </div>
+        </div>
+
+        {/* Returned Items Panel */}
+        <div className="tsr-items-panel">
+          <div className="tsr-items-header">
+            <h4 className="tsr-items-title">Return Items List ({items.length})</h4>
+            {!isLocked && (
+              <Button type="button" variant="outline" size="sm" onClick={handleAddItemRow}>
+                Add Row
+              </Button>
+            )}
+          </div>
+
+          <div className="tsr-edit-table-scroll">
+            <table className="tsr-edit-table">
+              <thead>
+                <tr>
+                  <th className="tsr-th--center tsr-item-col-no">No</th>
+                  <th className="tsr-item-col-select">Item Material</th>
+                  <th className="tsr-th--right tsr-item-col-qty">Qty</th>
+                  <th className="tsr-th--center tsr-item-col-unit">Unit</th>
+                  <th className="tsr-item-col-loc">Destination Location</th>
+                  <th className="tsr-item-col-reason">Return Reason</th>
+                  <th className="tsr-th--center tsr-item-col-action">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {items.map((it, idx) => (
+                  <tr key={it.id}>
+                    <td className="tsr-row-no">{idx + 1}</td>
+                    <td>
+                      <CustomSelect
+                        searchable
+                        value={it.items_id ? String(it.items_id) : ""}
+                        onChange={(val: string) => handleItemChange(idx, "items_id", val)}
+                        placeholder={loadingLookups ? "Loading items..." : "-- Select Item --"}
+                        disabled={loadingLookups || isLocked}
+                        options={itemSelectOptions}
+                      />
+                    </td>
+                    <td>
+                      <input
+                        type="number"
+                        min="1"
+                        step="any"
+                        className="tsr-inline-input tsr-inline-qty"
+                        value={it.quantity}
+                        disabled={isLocked}
+                        onChange={(e) =>
+                          handleItemChange(idx, "quantity", Math.max(1, Number(e.target.value) || 1))
+                        }
+                      />
+                    </td>
+                    <td className="tsr-row-unit">{it.unit}</td>
+                    <td>
+                      <CustomSelect
+                        searchable
+                        value={it.destinationLocation}
+                        onChange={(val: string) =>
+                          handleItemChange(idx, "destinationLocation", val)
+                        }
+                        placeholder="-- Select Destination --"
+                        disabled={isLocked}
+                        options={destinationSelectOptions.map((name) => ({
+                          value: name,
+                          label: name,
+                        }))}
+                      />
+                    </td>
+                    <td>
+                      <input
+                        type="text"
+                        className="tsr-inline-input"
+                        value={it.reason}
+                        disabled={isLocked}
+                        onChange={(e) => handleItemChange(idx, "reason", e.target.value)}
+                        placeholder="Reason for return..."
+                      />
+                    </td>
+                    <td className="master-cell-center">
+                      <button
+                        type="button"
+                        className="btn-action-delete"
+                        disabled={isLocked}
+                        onClick={() => handleRemoveItemRow(idx)}
+                        title="Delete item row"
+                        aria-label="Delete item row"
+                      >
+                        <Icon name="trash" size={13} />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Actions Footer */}
+        <div className="tsr-form-footer">
+          <Button type="button" variant="ghost" onClick={onBack} disabled={saving}>
+            Cancel
+          </Button>
+          {!isLocked && (
             <Button type="submit" variant="primary" disabled={saving || loadingLookups}>
               {saving ? "Saving..." : "Save"}
             </Button>
-          </div>
-        </form>
-      </div>
+          )}
+        </div>
+      </form>
     </div>
   );
 }
+
+export default TransferStockReturnForm;

@@ -1374,12 +1374,13 @@ return (
           </div>
 
           {/* Row 2: Supplier (span 2) | Currency | Exchange Rate */}
-          <div className="master-form-group" style={{ gridColumn: "span 2" }}>
+          <div className="master-form-group tx-col-span-2">
             <label htmlFor="poSupplier" className="master-form-label">
               Supplier <span className="required-asterisk">*</span>
             </label>
             <CustomSelect
               id="poSupplier"
+              searchable
               value={selectedSupplierId}
               onChange={(val) => handleSupplierChange(val)}
               placeholder="Find Supplier"
@@ -1400,6 +1401,7 @@ return (
             </label>
             <CustomSelect
               id="poValuta"
+              searchable
               value={currency}
               onChange={(val) => {
                 setCurrency(val);
@@ -1432,7 +1434,7 @@ return (
           </div>
 
           {/* Row 3: Supplier Address (span 2) | Payment Term | Payment Method */}
-          <div className="master-form-group" style={{ gridColumn: "span 2" }}>
+          <div className="master-form-group tx-col-span-2">
             <label htmlFor="poAddress" className="master-form-label">
               Supplier Address
             </label>
@@ -1452,6 +1454,7 @@ return (
             </label>
             <CustomSelect
               id="poPaymentTerm"
+              searchable
               value={paymentTerm}
               onChange={(val) => setPaymentTerm(val)}
               placeholder="Choose Payment Term"
@@ -1488,6 +1491,7 @@ return (
             </label>
             <CustomSelect
               id="poDeliveryTerm"
+              searchable
               value={deliveryTerm}
               onChange={(val) => setDeliveryTerm(val)}
               placeholder="Choose Delivery Term"

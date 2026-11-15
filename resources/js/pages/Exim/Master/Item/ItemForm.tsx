@@ -606,15 +606,11 @@ export function ItemForm({ initialRecord, onBack, onSave }: ItemFormProps) {
               <label className="item-form-label">Item Code</label>
               <input
                 type="text"
-                className="item-form-input"
+                className={`item-form-input font-mono ${autoCode ? "item-form-input--code-preview" : ""}`}
                 placeholder={autoCode ? "Auto Generated" : "Enter item code..."}
                 value={autoCode ? "AUTO GENERATE" : itemCode}
                 onChange={(e) => setItemCode(e.target.value)}
                 disabled={autoCode}
-                style={{
-                  background: autoCode ? "#f8fafc" : "#ffffff",
-                  fontFamily: "var(--font-mono, monospace)",
-                }}
               />
               <label className="item-form-checkbox-label">
                 <input
@@ -642,7 +638,7 @@ export function ItemForm({ initialRecord, onBack, onSave }: ItemFormProps) {
 
             <div className="item-form-group">
               <label className="item-form-label">Inventory Tracking</label>
-              <label className="item-form-checkbox-label" style={{ marginTop: "10px" }}>
+              <label className="item-form-checkbox-label master-form-switch-box">
                 <input
                   type="checkbox"
                   checked={traceByLot}
@@ -664,6 +660,7 @@ export function ItemForm({ initialRecord, onBack, onSave }: ItemFormProps) {
               </label>
               <CustomSelect
                 id="classification"
+                searchable
                 value={classificationsId ? String(classificationsId) : ""}
                 onChange={(val) => setClassificationsId(val ? Number(val) : undefined)}
                 placeholder={loadingLookups ? "Loading classifications..." : "Select classification..."}
@@ -678,6 +675,7 @@ export function ItemForm({ initialRecord, onBack, onSave }: ItemFormProps) {
               </label>
               <CustomSelect
                 id="category"
+                searchable
                 value={categoriesId ? String(categoriesId) : ""}
                 onChange={(val) => setCategoriesId(val ? Number(val) : undefined)}
                 placeholder={loadingLookups ? "Loading categories..." : "Select category..."}
@@ -692,6 +690,7 @@ export function ItemForm({ initialRecord, onBack, onSave }: ItemFormProps) {
               </label>
               <CustomSelect
                 id="facility"
+                searchable
                 value={facilitiesId ? String(facilitiesId) : ""}
                 onChange={(val) => setFacilitiesId(val ? Number(val) : undefined)}
                 placeholder={loadingLookups ? "Loading facilities..." : "Select facility..."}
@@ -706,6 +705,7 @@ export function ItemForm({ initialRecord, onBack, onSave }: ItemFormProps) {
               </label>
               <CustomSelect
                 id="hsCode"
+                searchable
                 value={hsCodeId ? String(hsCodeId) : ""}
                 onChange={(val) => setHsCodeId(val ? Number(val) : undefined)}
                 placeholder={loadingLookups ? "Loading HS codes..." : "Select HS code..."}
@@ -720,6 +720,7 @@ export function ItemForm({ initialRecord, onBack, onSave }: ItemFormProps) {
               </label>
               <CustomSelect
                 id="customReport"
+                searchable
                 value={customsReportsId ? String(customsReportsId) : ""}
                 onChange={(val) => setCustomsReportsId(val ? Number(val) : undefined)}
                 placeholder={loadingLookups ? "Loading customs reports..." : "Select customs report..."}
@@ -734,6 +735,7 @@ export function ItemForm({ initialRecord, onBack, onSave }: ItemFormProps) {
               </label>
               <CustomSelect
                 id="jenisItem"
+                searchable
                 value={itemTypesId ? String(itemTypesId) : ""}
                 onChange={(val) => setItemTypesId(val ? Number(val) : undefined)}
                 placeholder={loadingLookups ? "Loading item types..." : "Select item type..."}
@@ -746,14 +748,15 @@ export function ItemForm({ initialRecord, onBack, onSave }: ItemFormProps) {
 
         {/* Section 3: Units of Measure & Conversions */}
         <div>
-          <h3 className="item-form-section-title">Units & Measurement</h3>
-          <div className="item-form-grid">
+          <h3 className="item-form-section-title">Units &amp; Measurement</h3>
+          <div className="item-form-grid item-form-grid--4col">
             <div className="item-form-group">
               <label htmlFor="smallestUnitCode" className="item-form-label">
                 Usage Unit (Smallest Unit) <span className="required-mark">*</span>
               </label>
               <CustomSelect
                 id="smallestUnitCode"
+                searchable
                 value={smallestUnitId ? String(smallestUnitId) : ""}
                 onChange={(val) => setSmallestUnitId(val ? Number(val) : undefined)}
                 placeholder={loadingLookups ? "Loading units..." : "Select usage unit..."}
@@ -768,6 +771,7 @@ export function ItemForm({ initialRecord, onBack, onSave }: ItemFormProps) {
               </label>
               <CustomSelect
                 id="greatestUnitCode"
+                searchable
                 value={greatestUnitId ? String(greatestUnitId) : ""}
                 onChange={(val) => setGreatestUnitId(val ? Number(val) : undefined)}
                 placeholder={loadingLookups ? "Loading units..." : "Select purchase unit..."}
@@ -818,6 +822,7 @@ export function ItemForm({ initialRecord, onBack, onSave }: ItemFormProps) {
               </label>
               <CustomSelect
                 id="brand"
+                searchable
                 value={brandsId ? String(brandsId) : ""}
                 onChange={(val) => setBrandsId(val ? Number(val) : undefined)}
                 placeholder={loadingLookups ? "Loading brands..." : "Select brand..."}
@@ -832,6 +837,7 @@ export function ItemForm({ initialRecord, onBack, onSave }: ItemFormProps) {
               </label>
               <CustomSelect
                 id="style"
+                searchable
                 value={stylesId ? String(stylesId) : ""}
                 onChange={(val) => setStylesId(val ? Number(val) : undefined)}
                 placeholder={loadingLookups ? "Loading styles..." : "Select style..."}
@@ -846,6 +852,7 @@ export function ItemForm({ initialRecord, onBack, onSave }: ItemFormProps) {
               </label>
               <CustomSelect
                 id="colour"
+                searchable
                 value={coloursId ? String(coloursId) : ""}
                 onChange={(val) => setColoursId(val ? Number(val) : undefined)}
                 placeholder={loadingLookups ? "Loading colours..." : "Select colour..."}
@@ -888,6 +895,7 @@ export function ItemForm({ initialRecord, onBack, onSave }: ItemFormProps) {
               </label>
               <CustomSelect
                 id="origin"
+                searchable
                 value={originsId ? String(originsId) : ""}
                 onChange={(val) => setOriginsId(val ? Number(val) : undefined)}
                 placeholder={loadingLookups ? "Loading origins..." : "Select origin..."}
@@ -902,6 +910,7 @@ export function ItemForm({ initialRecord, onBack, onSave }: ItemFormProps) {
               </label>
               <CustomSelect
                 id="groupScrap"
+                searchable
                 value={groupScrapItemsId ? String(groupScrapItemsId) : ""}
                 onChange={(val) => setGroupScrapItemsId(val ? Number(val) : undefined)}
                 placeholder={loadingLookups ? "Loading group scrap..." : "Select group scrap..."}
@@ -910,12 +919,13 @@ export function ItemForm({ initialRecord, onBack, onSave }: ItemFormProps) {
               />
             </div>
 
-            <div className="item-form-group item-form-group--full">
+            <div className="item-form-group item-form-group--span-2">
               <label htmlFor="specification" className="item-form-label">
                 Specification
               </label>
               <CustomSelect
                 id="specification"
+                searchable
                 value={specificationsId ? String(specificationsId) : ""}
                 onChange={(val) => setSpecificationsId(val ? Number(val) : undefined)}
                 placeholder={loadingLookups ? "Loading specifications..." : "Select specification..."}

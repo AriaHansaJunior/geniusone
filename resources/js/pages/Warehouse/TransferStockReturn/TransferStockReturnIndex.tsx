@@ -8,13 +8,10 @@ import { Icon } from "../../../components/ui/Icon";
 import { CustomDatePicker } from "../../../components/ui/CustomDatePicker";
 import { ConfirmDialog } from "../../../components/ui/ConfirmDialog";
 import { TransferStockReturnDetail } from "./TransferStockReturnDetail";
-import { TransferStockReturnForm } from "./TransferStockReturnForm";
 import {
   fetchTransferStockReturnsApi,
-  saveTransferStockReturnApi,
   deleteTransferStockReturnApi,
   approveTransferStockReturnApi,
-  rejectTransferStockReturnApi,
 } from "../../../data/masterApi";
 import type {
   TransferStockReturnRecord,
@@ -24,6 +21,7 @@ import type {
 interface TransferStockReturnIndexProps {
   records?: TransferStockReturnRecord[];
   onAddNew?: () => void;
+  onEdit?: (record: TransferStockReturnRecord) => void;
   onOpenDetail?: (id: string) => void;
 }
 
@@ -31,6 +29,8 @@ type SortDirection = "none" | "asc" | "desc";
 
 export function TransferStockReturnIndex({
   records,
+  onAddNew,
+  onEdit,
   onOpenDetail,
 }: TransferStockReturnIndexProps) {
   const [localRecords, setLocalRecords] = useState<TransferStockReturnRecord[]>(records || []);
@@ -45,11 +45,9 @@ export function TransferStockReturnIndex({
   const [sortField, setSortField] = useState<TransferStockReturnSortField>("mutationCode");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
 
-  // Detail & Form state
+  // Detail & Delete state
   const [selectedRecord, setSelectedRecord] = useState<TransferStockReturnRecord | null>(null);
   const [activeDetailCode, setActiveDetailCode] = useState<string | null>(null);
-  const [isFormModalOpen, setIsFormModalOpen] = useState(false);
-  const [editingRecord, setEditingRecord] = useState<TransferStockReturnRecord | null>(null);
   const [recordToDelete, setRecordToDelete] = useState<TransferStockReturnRecord | null>(null);
 
   const [notification, setNotification] = useState<{
@@ -64,7 +62,9 @@ export function TransferStockReturnIndex({
       if (Array.isArray(apiRows)) {
         setLocalRecords(apiRows);
         setSelectedRecord((prev) =>
-          prev ? apiRows.find((r) => r.id === prev.id || r.mutationCode === prev.mutationCode) || null : null
+          prev
+            ? apiRows.find((r) => r.id === prev.id || r.mutationCode === prev.mutationCode) || null
+            : null
         );
       }
     } catch (err: any) {
@@ -99,7 +99,6 @@ export function TransferStockReturnIndex({
   // Filter records
   const filteredRecords = useMemo(() => {
     return localRecords.filter((rec) => {
-      // Search
       if (search.trim()) {
         const q = search.toLowerCase().trim();
         const matchesMutation = rec.mutationCode.toLowerCase().includes(q);
@@ -120,7 +119,6 @@ export function TransferStockReturnIndex({
         }
       }
 
-      // Date range filter
       if (startDate) {
         const startTs = parseDate(startDate);
         const recTs = parseDate(rec.transferDate);
@@ -182,14 +180,7 @@ export function TransferStockReturnIndex({
   const renderSortIndicator = (field: TransferStockReturnSortField) => {
     const isActive = sortField === field && sortDirection !== "none";
     return (
-      <span
-        style={{
-          marginLeft: "6px",
-          display: "inline-flex",
-          alignItems: "center",
-          color: isActive ? "var(--blue-600)" : "var(--slate-400)",
-        }}
-      >
+      <span className={`tsr-sort-icon ${isActive ? "tsr-sort-icon--active" : ""}`}>
         {isActive ? (
           sortDirection === "asc" ? (
             <Icon name="arrowUp" size={12} />
@@ -221,7 +212,7 @@ export function TransferStockReturnIndex({
   };
 
   // Open full detail page
-  const handleOpenDetailModal = (record: TransferStockReturnRecord) => {
+  const handleOpenDetailPage = (record: TransferStockReturnRecord) => {
     setSelectedRecord(record);
     const code = record.mutationCode || record.id;
     if (onOpenDetail) {
@@ -231,24 +222,16 @@ export function TransferStockReturnIndex({
     setActiveDetailCode(code);
   };
 
-  // Open edit
+  // Navigate to dedicated edit page
   const handleOpenEdit = (record: TransferStockReturnRecord, e: React.MouseEvent) => {
     e.stopPropagation();
-    setEditingRecord(record);
-    setIsFormModalOpen(true);
+    onEdit?.(record);
   };
 
   // Open delete confirm
   const handleOpenDelete = (record: TransferStockReturnRecord, e: React.MouseEvent) => {
     e.stopPropagation();
     setRecordToDelete(record);
-  };
-
-  const toIsoDate = (dateStr: string): string => {
-    const clean = (dateStr || "").trim();
-    const dmy = clean.match(/^(\d{2})-(\d{2})-(\d{4})$/);
-    if (dmy) return `${dmy[3]}-${dmy[2]}-${dmy[1]}`;
-    return clean || new Date().toISOString().slice(0, 10);
   };
 
   const handleConfirmDelete = async () => {
@@ -272,39 +255,6 @@ export function TransferStockReturnIndex({
       setActionBusy(false);
       setTimeout(() => setNotification(null), 4000);
     }
-  };
-
-  // Save from form (Create or Edit)
-  const handleSaveRecord = async (record: TransferStockReturnRecord) => {
-    const payload = {
-      return_number: record.mutationCode,
-      production_code:
-        record.productionCode && record.productionCode !== "-" ? record.productionCode : null,
-      request_material_id: record.request_material_id || null,
-      warehouses_id: record.warehouses_id,
-      job_number_id: record.job_number_id || null,
-      job_number: record.jobNumber && record.jobNumber !== "-" ? record.jobNumber : null,
-      return_date: toIsoDate(record.transferDate),
-      note: record.transferNote,
-      items: record.items.map((it) => ({
-        items_id: it.items_id,
-        quantity: Number(it.quantity),
-        unit: it.unit,
-        source_location: it.sourceLocation,
-        destination_location: it.destinationLocation,
-        remark: it.reason,
-      })),
-    };
-
-    const isEditing = Boolean(editingRecord?.id);
-    await saveTransferStockReturnApi(payload, isEditing ? editingRecord?.id : undefined);
-    await loadRecords();
-    setEditingRecord(null);
-    setNotification({
-      type: "success",
-      message: `Stock Transfer Return ${record.mutationCode} saved to database successfully.`,
-    });
-    setTimeout(() => setNotification(null), 4000);
   };
 
   const handleApproveRecord = async (rec: TransferStockReturnRecord, e?: React.MouseEvent) => {
@@ -405,31 +355,18 @@ export function TransferStockReturnIndex({
         record={selectedRecord}
         records={localRecords}
         onBack={() => setActiveDetailCode(null)}
+        onEdit={onEdit}
         onUpdated={loadRecords}
       />
     );
   }
 
   return (
-    <div className="wh-page">
+    <div className="wh-page tsr-page">
       {/* Toast Notification */}
       {notification && (
-        <div
-          style={{
-            padding: "10px 16px",
-            borderRadius: "var(--radius-sm, 6px)",
-            marginBottom: "14px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            background: notification.type === "success" ? "#ecfdf5" : "#fffbeb",
-            border: `1px solid ${notification.type === "success" ? "#a7f3d0" : "#fde68a"}`,
-            color: notification.type === "success" ? "#065f46" : "#92400e",
-            fontSize: "12.5px",
-            fontWeight: 600,
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+        <div className={`tsr-notice tsr-notice--${notification.type}`}>
+          <div className="tsr-detail-action-left">
             <Icon
               name={notification.type === "success" ? "checkCircle" : "alertTriangle"}
               size={16}
@@ -438,15 +375,9 @@ export function TransferStockReturnIndex({
           </div>
           <button
             type="button"
+            className="tsr-notice__close"
             onClick={() => setNotification(null)}
-            style={{
-              background: "transparent",
-              border: 0,
-              cursor: "pointer",
-              fontSize: "16px",
-              color: "inherit",
-              lineHeight: 1,
-            }}
+            aria-label="Dismiss notification"
           >
             &times;
           </button>
@@ -454,78 +385,29 @@ export function TransferStockReturnIndex({
       )}
 
       {/* Main Content Card */}
-      <div
-        className="wh-table-card"
-        style={{
-          background: "#ffffff",
-          border: "1px solid var(--line, #e2e8f0)",
-          borderRadius: "var(--radius-md, 8px)",
-          boxShadow: "0 4px 20px -2px rgba(15, 23, 42, 0.08)",
-          overflow: "hidden",
-        }}
-      >
-        {/* Top Action Bar (Clean without redundant page title) */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "flex-end",
-            padding: "12px 20px",
-            background: "linear-gradient(180deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.8) 100%)",
-            borderBottom: "1px solid var(--line, #e2e8f0)",
-            flexWrap: "wrap",
-            gap: "10px",
-          }}
-        >
-          <Button
-            type="button"
-            variant="primary"
-            onClick={() => {
-              setEditingRecord(null);
-              setIsFormModalOpen(true);
-            }}
-          >
-            Add New
-          </Button>
+      <div className="wh-table-card">
+        {/* Top Action Bar (strictly text-only buttons) */}
+        <div className="tsr-table-toolbar tsr-table-toolbar--end">
+          <div className="tsr-toolbar-actions">
+            <Button type="button" variant="primary" onClick={() => onAddNew?.()}>
+              Add New
+            </Button>
 
-          <Button
-            type="button"
-            variant="excel"
-            onClick={handleExportExcel}
-            title="Export Stock Transfer Return to Excel (.xlsx)"
-          >
-            Export To Excel
-          </Button>
+            <Button
+              type="button"
+              variant="excel"
+              onClick={handleExportExcel}
+              title="Export Stock Transfer Return to Excel (.xlsx)"
+            >
+              Export To Excel
+            </Button>
+          </div>
         </div>
 
-        {/* Filter Controls Bar matching SmartOne */}
-        <div
-          style={{
-            padding: "12px 20px",
-            background: "#fafafa",
-            borderBottom: "1px solid var(--line, #e2e8f0)",
-            display: "flex",
-            alignItems: "flex-end",
-            justifyContent: "space-between",
-            flexWrap: "wrap",
-            gap: "14px",
-          }}
-        >
-          {/* Left: Search input */}
-          <div style={{ minWidth: "240px", flex: "1 1 240px", maxWidth: "340px" }}>
-            <label
-              style={{
-                display: "block",
-                fontSize: "11px",
-                fontWeight: 700,
-                color: "var(--slate-700)",
-                textTransform: "uppercase",
-                marginBottom: "4px",
-                letterSpacing: "0.3px",
-              }}
-            >
-              Search
-            </label>
+        {/* Filter Controls Bar */}
+        <div className="tsr-index-filter-bar">
+          <div className="tsr-filter-search-wrap">
+            <label className="tsr-filter-label">Search</label>
             <SearchField
               value={search}
               onChange={(val: string) => {
@@ -536,30 +418,9 @@ export function TransferStockReturnIndex({
             />
           </div>
 
-          {/* Middle: Transfer Date Range (From & To) */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "flex-end",
-              gap: "10px",
-              flexWrap: "wrap",
-              flex: "2 1 340px",
-            }}
-          >
-            <div style={{ minWidth: "155px", flex: "1 1 155px" }}>
-              <label
-                style={{
-                  display: "block",
-                  fontSize: "11px",
-                  fontWeight: 700,
-                  color: "var(--slate-700)",
-                  textTransform: "uppercase",
-                  marginBottom: "4px",
-                  letterSpacing: "0.3px",
-                }}
-              >
-                Transfer Date (From)
-              </label>
+          <div className="tsr-filter-dates-group">
+            <div className="tsr-filter-date-item">
+              <label className="tsr-filter-label">Transfer Date (From)</label>
               <CustomDatePicker
                 value={startDate}
                 onChange={(val: string) => {
@@ -570,20 +431,8 @@ export function TransferStockReturnIndex({
               />
             </div>
 
-            <div style={{ minWidth: "155px", flex: "1 1 155px" }}>
-              <label
-                style={{
-                  display: "block",
-                  fontSize: "11px",
-                  fontWeight: 700,
-                  color: "var(--slate-700)",
-                  textTransform: "uppercase",
-                  marginBottom: "4px",
-                  letterSpacing: "0.3px",
-                }}
-              >
-                To
-              </label>
+            <div className="tsr-filter-date-item">
+              <label className="tsr-filter-label">To</label>
               <CustomDatePicker
                 value={endDate}
                 onChange={(val: string) => {
@@ -595,71 +444,27 @@ export function TransferStockReturnIndex({
             </div>
 
             {(search || startDate || endDate) && (
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={handleResetFilters}
-                style={{ height: "38px" }}
-              >
+              <Button type="button" variant="ghost" onClick={handleResetFilters}>
                 Reset
               </Button>
             )}
           </div>
         </div>
 
-        {/* 10-Column Data Table matching SmartOne */}
-        <div
-          className="table-scroll"
-          style={{
-            overflowX: "auto",
-            WebkitOverflowScrolling: "touch",
-            width: "100%",
-            background: "#ffffff",
-          }}
-        >
-          <table
-            style={{
-              width: "100%",
-              minWidth: "1100px",
-              borderCollapse: "collapse",
-              fontSize: "12px",
-            }}
-          >
+        {/* 10-Column Data Table */}
+        <div className="table-scroll tsr-index-table-scroll">
+          <table className="tsr-index-table">
             <thead>
-              <tr style={{ background: "#f8fafc", borderBottom: "1px solid var(--line, #e2e8f0)" }}>
+              <tr>
                 {/* 1. Number */}
-                <th
-                  style={{
-                    width: "48px",
-                    padding: "11px 12px",
-                    textAlign: "center",
-                    fontSize: "10.5px",
-                    fontWeight: 800,
-                    color: "var(--slate-600)",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.5px",
-                  }}
-                >
-                  Number
-                </th>
+                <th className="tsr-th-col-no tsr-th--center">Number</th>
 
                 {/* 2. Mutation Code */}
                 <th
+                  className="tsr-th-col-mutation tsr-th--sortable"
                   onClick={() => handleToggleSort("mutationCode")}
-                  style={{
-                    width: "155px",
-                    padding: "11px 14px",
-                    textAlign: "left",
-                    fontSize: "10.5px",
-                    fontWeight: 800,
-                    color: "var(--slate-600)",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.5px",
-                    cursor: "pointer",
-                    userSelect: "none",
-                  }}
                 >
-                  <div style={{ display: "flex", alignItems: "center" }}>
+                  <div className="tsr-th-content">
                     <span>Mutation Code</span>
                     {renderSortIndicator("mutationCode")}
                   </div>
@@ -667,21 +472,10 @@ export function TransferStockReturnIndex({
 
                 {/* 3. Production Code */}
                 <th
+                  className="tsr-th-col-prod tsr-th--sortable"
                   onClick={() => handleToggleSort("productionCode")}
-                  style={{
-                    width: "135px",
-                    padding: "11px 14px",
-                    textAlign: "left",
-                    fontSize: "10.5px",
-                    fontWeight: 800,
-                    color: "var(--slate-600)",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.5px",
-                    cursor: "pointer",
-                    userSelect: "none",
-                  }}
                 >
-                  <div style={{ display: "flex", alignItems: "center" }}>
+                  <div className="tsr-th-content">
                     <span>Production Code</span>
                     {renderSortIndicator("productionCode")}
                   </div>
@@ -689,21 +483,10 @@ export function TransferStockReturnIndex({
 
                 {/* 4. Job Number */}
                 <th
+                  className="tsr-th-col-job tsr-th--sortable"
                   onClick={() => handleToggleSort("jobNumber")}
-                  style={{
-                    width: "135px",
-                    padding: "11px 14px",
-                    textAlign: "left",
-                    fontSize: "10.5px",
-                    fontWeight: 800,
-                    color: "var(--slate-600)",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.5px",
-                    cursor: "pointer",
-                    userSelect: "none",
-                  }}
                 >
-                  <div style={{ display: "flex", alignItems: "center" }}>
+                  <div className="tsr-th-content">
                     <span>Job Number</span>
                     {renderSortIndicator("jobNumber")}
                   </div>
@@ -711,21 +494,10 @@ export function TransferStockReturnIndex({
 
                 {/* 5. Transfer Note */}
                 <th
+                  className="tsr-th-col-note tsr-th--sortable"
                   onClick={() => handleToggleSort("transferNote")}
-                  style={{
-                    minWidth: "220px",
-                    padding: "11px 14px",
-                    textAlign: "left",
-                    fontSize: "10.5px",
-                    fontWeight: 800,
-                    color: "var(--slate-600)",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.5px",
-                    cursor: "pointer",
-                    userSelect: "none",
-                  }}
                 >
-                  <div style={{ display: "flex", alignItems: "center" }}>
+                  <div className="tsr-th-content">
                     <span>Transfer Note</span>
                     {renderSortIndicator("transferNote")}
                   </div>
@@ -733,21 +505,10 @@ export function TransferStockReturnIndex({
 
                 {/* 6. Total Items */}
                 <th
+                  className="tsr-th-col-total tsr-th--right tsr-th--sortable"
                   onClick={() => handleToggleSort("totalItems")}
-                  style={{
-                    width: "105px",
-                    padding: "11px 14px",
-                    textAlign: "right",
-                    fontSize: "10.5px",
-                    fontWeight: 800,
-                    color: "var(--slate-600)",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.5px",
-                    cursor: "pointer",
-                    userSelect: "none",
-                  }}
                 >
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end" }}>
+                  <div className="tsr-th-content tsr-th-content--right">
                     <span>Total Items</span>
                     {renderSortIndicator("totalItems")}
                   </div>
@@ -755,21 +516,10 @@ export function TransferStockReturnIndex({
 
                 {/* 7. Approval Status */}
                 <th
+                  className="tsr-th-col-status tsr-th--center tsr-th--sortable"
                   onClick={() => handleToggleSort("status")}
-                  style={{
-                    width: "145px",
-                    padding: "11px 14px",
-                    textAlign: "center",
-                    fontSize: "10.5px",
-                    fontWeight: 800,
-                    color: "var(--slate-600)",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.5px",
-                    cursor: "pointer",
-                    userSelect: "none",
-                  }}
                 >
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <div className="tsr-th-content tsr-th-content--center">
                     <span>Approval Status</span>
                     {renderSortIndicator("status")}
                   </div>
@@ -777,21 +527,10 @@ export function TransferStockReturnIndex({
 
                 {/* 8. User Created */}
                 <th
+                  className="tsr-th-col-user tsr-th--sortable"
                   onClick={() => handleToggleSort("userCreated")}
-                  style={{
-                    width: "165px",
-                    padding: "11px 14px",
-                    textAlign: "left",
-                    fontSize: "10.5px",
-                    fontWeight: 800,
-                    color: "var(--slate-600)",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.5px",
-                    cursor: "pointer",
-                    userSelect: "none",
-                  }}
                 >
-                  <div style={{ display: "flex", alignItems: "center" }}>
+                  <div className="tsr-th-content">
                     <span>User Created</span>
                     {renderSortIndicator("userCreated")}
                   </div>
@@ -799,74 +538,32 @@ export function TransferStockReturnIndex({
 
                 {/* 9. User Last Updated */}
                 <th
+                  className="tsr-th-col-updated tsr-th--sortable"
                   onClick={() => handleToggleSort("userLastUpdated")}
-                  style={{
-                    width: "145px",
-                    padding: "11px 14px",
-                    textAlign: "left",
-                    fontSize: "10.5px",
-                    fontWeight: 800,
-                    color: "var(--slate-600)",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.5px",
-                    cursor: "pointer",
-                    userSelect: "none",
-                  }}
                 >
-                  <div style={{ display: "flex", alignItems: "center" }}>
+                  <div className="tsr-th-content">
                     <span>User Last Updated</span>
                     {renderSortIndicator("userLastUpdated")}
                   </div>
                 </th>
 
                 {/* 10. Option */}
-                <th
-                  style={{
-                    width: "110px",
-                    padding: "11px 14px",
-                    textAlign: "center",
-                    fontSize: "10.5px",
-                    fontWeight: 800,
-                    color: "var(--slate-600)",
-                    textTransform: "uppercase",
-                    letterSpacing: "0.5px",
-                  }}
-                >
-                  Option
-                </th>
+                <th className="tsr-th-col-options tsr-th--center">Option</th>
               </tr>
             </thead>
 
             <tbody>
               {paginatedRecords.length === 0 ? (
                 <tr>
-                  <td
-                    colSpan={10}
-                    style={{
-                      padding: "48px 20px",
-                      textAlign: "center",
-                      color: "var(--slate-500)",
-                      fontSize: "13px",
-                    }}
-                  >
-                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "8px" }}>
-                      <div
-                        style={{
-                          width: "42px",
-                          height: "42px",
-                          borderRadius: "50%",
-                          background: "#f1f5f9",
-                          color: "var(--slate-400)",
-                          display: "grid",
-                          placeItems: "center",
-                        }}
-                      >
+                  <td colSpan={10}>
+                    <div className="tsr-empty-box">
+                      <div className="tsr-empty-circle">
                         <Icon name="box" size={20} />
                       </div>
-                      <strong style={{ color: "var(--ink)" }}>
+                      <strong className="tsr-empty-title">
                         {loading ? "Loading Stock Transfer Returns..." : "No data available in table"}
                       </strong>
-                      <span style={{ fontSize: "12px", color: "var(--slate-500)" }}>
+                      <span className="tsr-empty-subtitle">
                         Click &ldquo;Add New&rdquo; above to record a new stock transfer return.
                       </span>
                     </div>
@@ -878,118 +575,61 @@ export function TransferStockReturnIndex({
                   return (
                     <tr
                       key={rec.id}
-                      onClick={() => handleOpenDetailModal(rec)}
-                      style={{
-                        cursor: "pointer",
-                        borderBottom: "1px solid var(--line, #e2e8f0)",
-                        transition: "background 0.12s ease",
-                      }}
-                      className="wh-table-row"
+                      onClick={() => handleOpenDetailPage(rec)}
+                      className="wh-table-row tsr-index-row"
                     >
                       {/* 1. Sequential Number (Always sequential regardless of sorting) */}
-                      <td
-                        style={{
-                          padding: "12px 14px",
-                          textAlign: "center",
-                          color: "var(--slate-500)",
-                          fontWeight: 600,
-                        }}
-                      >
-                        {sequentialNumber}
-                      </td>
+                      <td className="tsr-td-no">{sequentialNumber}</td>
 
                       {/* 2. Mutation Code */}
-                      <td style={{ padding: "12px 14px" }}>
-                        <span
-                          style={{
-                            fontFamily: "ui-monospace, monospace",
-                            fontWeight: 700,
-                            color: "var(--blue-700)",
+                      <td>
+                        <button
+                          type="button"
+                          className="tsr-mutation-link"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenDetailPage(rec);
                           }}
                         >
                           {rec.mutationCode}
-                        </span>
+                        </button>
                       </td>
 
                       {/* 3. Production Code */}
-                      <td style={{ padding: "12px 14px", color: "var(--ink)", fontWeight: 500 }}>
-                        {rec.productionCode}
-                      </td>
+                      <td className="tsr-primary-text">{rec.productionCode}</td>
 
                       {/* 4. Job Number */}
-                      <td style={{ padding: "12px 14px" }}>
-                        <span
-                          style={{
-                            fontWeight: 700,
-                            color: "var(--ink)",
-                          }}
-                        >
-                          {rec.jobNumber}
-                        </span>
-                      </td>
+                      <td className="tsr-primary-text">{rec.jobNumber}</td>
 
                       {/* 5. Transfer Note */}
-                      <td
-                        style={{
-                          padding: "12px 14px",
-                          color: "var(--ink-soft)",
-                          maxWidth: "320px",
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          whiteSpace: "nowrap",
-                        }}
-                        title={rec.transferNote}
-                      >
+                      <td className="tsr-note-cell" title={rec.transferNote}>
                         {rec.transferNote}
                       </td>
 
                       {/* 6. Total Items */}
-                      <td
-                        style={{
-                          padding: "12px 14px",
-                          textAlign: "right",
-                          fontWeight: 700,
-                          color: "var(--ink)",
-                        }}
-                      >
+                      <td className="tsr-td--right tsr-primary-text">
                         {rec.totalItems} {rec.totalItems === 1 ? "Item" : "Items"}
                       </td>
 
                       {/* 7. Approval Status */}
-                      <td style={{ padding: "12px 14px", textAlign: "center" }}>
+                      <td className="tsr-td--center">
                         <Badge tone={getStatusBadgeTone(rec.status)}>{rec.status}</Badge>
                       </td>
 
                       {/* 8. User Created */}
-                      <td style={{ padding: "12px 14px", color: "var(--ink)", fontWeight: 500 }}>
-                        {rec.userCreated}
-                      </td>
+                      <td className="tsr-primary-text">{rec.userCreated}</td>
 
                       {/* 9. User Last Updated */}
-                      <td style={{ padding: "12px 14px", color: "var(--slate-600)", fontSize: "11.5px" }}>
-                        {rec.userLastUpdated}
-                      </td>
+                      <td className="tsr-muted-text">{rec.userLastUpdated}</td>
 
-                      {/* 10. Option (Action buttons) */}
-                      <td
-                        style={{ padding: "12px 14px", textAlign: "center" }}
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <div style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}>
+                      {/* 10. Option (Strictly icon-only or text-only actions) */}
+                      <td className="tsr-td--center" onClick={(e) => e.stopPropagation()}>
+                        <div className="tsr-actions-cell">
                           <button
                             type="button"
-                            onClick={() => handleOpenDetailModal(rec)}
+                            className="btn-action-detail"
+                            onClick={() => handleOpenDetailPage(rec)}
                             title="View details"
-                            style={{
-                              border: "1px solid var(--line)",
-                              background: "#ffffff",
-                              borderRadius: "4px",
-                              padding: "4px 8px",
-                              cursor: "pointer",
-                              fontSize: "11px",
-                              fontWeight: 600,
-                              color: "var(--blue-700)",
-                            }}
                           >
                             Detail
                           </button>
@@ -999,21 +639,15 @@ export function TransferStockReturnIndex({
                             rec.status === "Waiting Approve 2") && (
                             <button
                               type="button"
+                              className="btn-action-approve"
                               disabled={actionBusy}
                               onClick={(e) => handleApproveRecord(rec, e)}
+                              aria-label="Approve Stock Transfer Return"
                               title={
                                 rec.status === "Waiting Approve 2"
                                   ? "Approve Stage 2"
                                   : "Approve Stage 1"
                               }
-                              style={{
-                                border: "1px solid #bbf7d0",
-                                background: "#f0fdf4",
-                                borderRadius: "4px",
-                                padding: "4px 6px",
-                                cursor: actionBusy ? "not-allowed" : "pointer",
-                                color: "#15803d",
-                              }}
                             >
                               <Icon name="check" size={13} />
                             </button>
@@ -1021,32 +655,20 @@ export function TransferStockReturnIndex({
 
                           <button
                             type="button"
+                            className="btn-action-edit"
                             onClick={(e) => handleOpenEdit(rec, e)}
+                            aria-label="Edit Stock Transfer Return"
                             title="Edit record"
-                            style={{
-                              border: "1px solid var(--line)",
-                              background: "#ffffff",
-                              borderRadius: "4px",
-                              padding: "4px 6px",
-                              cursor: "pointer",
-                              color: "var(--slate-600)",
-                            }}
                           >
                             <Icon name="edit" size={13} />
                           </button>
 
                           <button
                             type="button"
+                            className="btn-action-delete"
                             onClick={(e) => handleOpenDelete(rec, e)}
+                            aria-label="Delete Stock Transfer Return"
                             title="Delete record"
-                            style={{
-                              border: "1px solid var(--line)",
-                              background: "#ffffff",
-                              borderRadius: "4px",
-                              padding: "4px 6px",
-                              cursor: "pointer",
-                              color: "var(--red-600)",
-                            }}
                           >
                             <Icon name="trash" size={13} />
                           </button>
@@ -1074,17 +696,6 @@ export function TransferStockReturnIndex({
         />
       </div>
 
-      {/* Form Modal (Create / Edit) */}
-      <TransferStockReturnForm
-        isOpen={isFormModalOpen}
-        onClose={() => {
-          setIsFormModalOpen(false);
-          setEditingRecord(null);
-        }}
-        onSave={handleSaveRecord}
-        existingRecord={editingRecord}
-      />
-
       {/* Delete Confirmation Dialog */}
       <ConfirmDialog
         isOpen={!!recordToDelete}
@@ -1099,4 +710,3 @@ export function TransferStockReturnIndex({
     </div>
   );
 }
-

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "../../../../components/ui/Button";
 import { Icon } from "../../../../components/ui/Icon";
 import { CustomSelect } from "../../../../components/ui/CustomSelect";
@@ -65,9 +65,6 @@ export function SupplierForm({ onBack, onSave }: SupplierFormProps) {
     message: string;
   } | null>(null);
 
-  const [currencySearch, setCurrencySearch] = useState("");
-  const [currencyDropdownOpen, setCurrencyDropdownOpen] = useState(false);
-
   useEffect(() => {
     let cancelled = false;
     setLoadingLookups(true);
@@ -101,19 +98,6 @@ export function SupplierForm({ onBack, onSave }: SupplierFormProps) {
       cancelled = true;
     };
   }, []);
-
-  const filteredCurrencies = useMemo(
-    () =>
-      lookups.currencies.filter((c) => {
-        const term = currencySearch.trim().toLowerCase();
-        if (!term) return true;
-        return (
-          c.name.toLowerCase().includes(term) ||
-          (c.code && c.code.toLowerCase().includes(term))
-        );
-      }),
-    [lookups.currencies, currencySearch]
-  );
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
@@ -311,6 +295,7 @@ export function SupplierForm({ onBack, onSave }: SupplierFormProps) {
             </label>
             <CustomSelect
               id="country"
+              searchable
               value={formData.countries_id ? String(formData.countries_id) : ""}
               onChange={(val) => {
                 const chosen = lookups.countries.find((c) => String(c.id) === val);
@@ -385,6 +370,7 @@ export function SupplierForm({ onBack, onSave }: SupplierFormProps) {
             </label>
             <CustomSelect
               id="paymentTerm"
+              searchable
               value={formData.payment_terms_id ? String(formData.payment_terms_id) : ""}
               onChange={(val) => {
                 const chosen = lookups.paymentTerms.find((p) => String(p.id) === val);
@@ -412,6 +398,7 @@ export function SupplierForm({ onBack, onSave }: SupplierFormProps) {
             </label>
             <CustomSelect
               id="paymentMethod"
+              searchable
               value={formData.payment_methods_id ? String(formData.payment_methods_id) : ""}
               onChange={(val) => {
                 const chosen = lookups.paymentMethods.find((p) => String(p.id) === val);
@@ -439,6 +426,7 @@ export function SupplierForm({ onBack, onSave }: SupplierFormProps) {
             </label>
             <CustomSelect
               id="typeRafaksi"
+              searchable
               value={formData.rafaksi_types_id ? String(formData.rafaksi_types_id) : ""}
               onChange={(val) => {
                 const chosen = lookups.rafaksiTypes.find((r) => String(r.id) === val);
@@ -461,61 +449,32 @@ export function SupplierForm({ onBack, onSave }: SupplierFormProps) {
           </div>
 
           {/* Row 6: Currency & Port */}
-          <div className="form-field-group col-span-1 relative">
+          <div className="form-field-group col-span-1">
             <label htmlFor="currency" className="field-label">
               Currency
             </label>
-            <div className="searchable-currency-container">
-              <input
-                id="currency"
-                type="text"
-                className="form-input"
-                placeholder={loadingLookups ? "Loading currencies..." : "Find Currency"}
-                value={formData.currency || currencySearch}
-                onFocus={() => setCurrencyDropdownOpen(true)}
-                onChange={(e) => {
-                  setCurrencySearch(e.target.value);
-                  setFormData((prev) => ({ ...prev, currency: "", currencies_id: undefined }));
-                  setCurrencyDropdownOpen(true);
-                }}
-              />
-              <button
-                type="button"
-                className="currency-dropdown-toggle"
-                onClick={() => setCurrencyDropdownOpen((prev) => !prev)}
-                tabIndex={-1}
-              >
-                <Icon name="chevronDown" size={14} />
-              </button>
-            </div>
-
-            {currencyDropdownOpen && (
-              <div className="currency-options-dropdown">
-                {filteredCurrencies.length > 0 ? (
-                  filteredCurrencies.map((curr) => (
-                    <button
-                      key={curr.id}
-                      type="button"
-                      className="currency-option-item"
-                      onClick={() => {
-                        setFormData((prev) => ({
-                          ...prev,
-                          currencies_id: Number(curr.id),
-                          currency: curr.name,
-                        }));
-                        setCurrencySearch("");
-                        setCurrencyDropdownOpen(false);
-                      }}
-                    >
-                      <strong>{curr.code || curr.name}</strong>
-                      {curr.code && curr.code !== curr.name && <span>{curr.name}</span>}
-                    </button>
-                  ))
-                ) : (
-                  <div className="currency-option-empty">No currency found</div>
-                )}
-              </div>
-            )}
+            <CustomSelect
+              id="currency"
+              searchable
+              value={formData.currencies_id ? String(formData.currencies_id) : ""}
+              onChange={(val) => {
+                const chosen = lookups.currencies.find((c) => String(c.id) === val);
+                setFormData((prev) => ({
+                  ...prev,
+                  currencies_id: chosen ? Number(chosen.id) : undefined,
+                  currency: chosen ? chosen.name : "",
+                }));
+              }}
+              placeholder={loadingLookups ? "Loading currencies..." : "Find Currency"}
+              disabled={loadingLookups}
+              options={[
+                { value: "", label: "Find Currency" },
+                ...lookups.currencies.map((c) => ({
+                  value: String(c.id),
+                  label: c.code && c.code !== c.name ? `${c.code} - ${c.name}` : c.name,
+                })),
+              ]}
+            />
           </div>
 
           <div className="form-field-group col-span-2">
@@ -524,6 +483,7 @@ export function SupplierForm({ onBack, onSave }: SupplierFormProps) {
             </label>
             <CustomSelect
               id="port"
+              searchable
               value={formData.ports_id ? String(formData.ports_id) : ""}
               onChange={(val) => {
                 const chosen = lookups.ports.find((p) => String(p.id) === val);

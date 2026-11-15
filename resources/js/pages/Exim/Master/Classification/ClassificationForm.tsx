@@ -95,15 +95,7 @@ export function ClassificationForm({
     <div className="classification-form-page">
       {/* Page Header */}
       <div className="classification-form-header">
-        <h1
-          style={{
-            margin: 0,
-            fontSize: "20px",
-            fontWeight: 800,
-            color: "var(--ink)",
-            letterSpacing: "-0.3px",
-          }}
-        >
+        <h1 className="master-form-page-title">
           {isEdit ? "Edit Classification" : "Add Classification"}
         </h1>
       </div>
@@ -142,54 +134,86 @@ export function ClassificationForm({
 
       {/* Form Content Card */}
       <form onSubmit={handleSubmit} className="classification-form-card">
-        {/* 1. Classification Code */}
-        <div className="classification-form-group">
-          <label htmlFor="classificationCode" className="classification-form-label">
-            Classification Code <span className="required-mark">*</span>
-          </label>
-          <input
-            id="classificationCode"
-            type="text"
-            className={`classification-form-input ${
-              errors.code ? "has-error" : ""
-            }`}
-            placeholder="e.g. 01, 02, RM-01..."
-            value={code}
-            onChange={(e) => {
-              setCode(e.target.value);
-              if (errors.code) setErrors((prev) => ({ ...prev, code: undefined }));
-            }}
-            autoFocus={!isEdit}
-          />
-          {errors.code && (
-            <span className="classification-form-error-msg">{errors.code}</span>
-          )}
+        <div className="master-form-grid-2">
+          {/* 1. Classification Code */}
+          <div className="classification-form-group">
+            <label htmlFor="classificationCode" className="classification-form-label">
+              Classification Code <span className="required-mark">*</span>
+            </label>
+            <input
+              id="classificationCode"
+              type="text"
+              className={`classification-form-input ${
+                errors.code ? "has-error" : ""
+              }`}
+              placeholder="e.g. 01, 02, RM-01..."
+              value={code}
+              onChange={(e) => {
+                setCode(e.target.value);
+                if (errors.code) setErrors((prev) => ({ ...prev, code: undefined }));
+              }}
+              autoFocus={!isEdit}
+            />
+            {errors.code && (
+              <span className="classification-form-error-msg">{errors.code}</span>
+            )}
+          </div>
+
+          {/* 2. Name */}
+          <div className="classification-form-group">
+            <label htmlFor="classificationName" className="classification-form-label">
+              Name <span className="required-mark">*</span>
+            </label>
+            <input
+              id="classificationName"
+              type="text"
+              className={`classification-form-input ${
+                errors.name ? "has-error" : ""
+              }`}
+              placeholder="e.g. RAW MATERIAL (BAHAN BAKU)..."
+              value={name}
+              onChange={(e) => {
+                setName(e.target.value);
+                if (errors.name) setErrors((prev) => ({ ...prev, name: undefined }));
+              }}
+            />
+            {errors.name && (
+              <span className="classification-form-error-msg">{errors.name}</span>
+            )}
+          </div>
         </div>
 
-        {/* 2. Name */}
-        <div className="classification-form-group">
-          <label htmlFor="classificationName" className="classification-form-label">
-            Name <span className="required-mark">*</span>
-          </label>
-          <input
-            id="classificationName"
-            type="text"
-            className={`classification-form-input ${
-              errors.name ? "has-error" : ""
-            }`}
-            placeholder="e.g. RAW MATERIAL (BAHAN BAKU)..."
-            value={name}
-            onChange={(e) => {
-              setName(e.target.value);
-              if (errors.name) setErrors((prev) => ({ ...prev, name: undefined }));
-            }}
-          />
-          {errors.name && (
-            <span className="classification-form-error-msg">{errors.name}</span>
-          )}
+        <div className="master-form-grid-2">
+          {/* 3. Reporting Type */}
+          <div className="classification-form-group">
+            <label htmlFor="classificationReportingType" className="classification-form-label">
+              Reporting Type
+            </label>
+            <CustomSelect
+              id="classificationReportingType"
+              searchable
+              value={reportingType}
+              onChange={(val) => setReportingType(val)}
+              options={reportingTypeOptions.map((opt) => ({ value: opt, label: opt }))}
+            />
+          </div>
+
+          {/* 4. Account */}
+          <div className="classification-form-group">
+            <label htmlFor="classificationAccount" className="classification-form-label">
+              Account
+            </label>
+            <CustomSelect
+              id="classificationAccount"
+              searchable
+              value={account}
+              onChange={(val) => setAccount(val)}
+              options={accountOptions.map((opt) => ({ value: opt, label: opt }))}
+            />
+          </div>
         </div>
 
-        {/* 3. Description */}
+        {/* 5. Description */}
         <div className="classification-form-group">
           <label htmlFor="classificationDescription" className="classification-form-label">
             Description
@@ -204,34 +228,8 @@ export function ClassificationForm({
           />
         </div>
 
-        {/* 4. Reporting Type */}
-        <div className="classification-form-group">
-          <label htmlFor="classificationReportingType" className="classification-form-label">
-            Reporting Type
-          </label>
-          <CustomSelect
-            id="classificationReportingType"
-            value={reportingType}
-            onChange={(val) => setReportingType(val)}
-            options={reportingTypeOptions.map((opt) => ({ value: opt, label: opt }))}
-          />
-        </div>
-
-        {/* 5. Account */}
-        <div className="classification-form-group">
-          <label htmlFor="classificationAccount" className="classification-form-label">
-            Account
-          </label>
-          <CustomSelect
-            id="classificationAccount"
-            value={account}
-            onChange={(val) => setAccount(val)}
-            options={accountOptions.map((opt) => ({ value: opt, label: opt }))}
-          />
-        </div>
-
         {/* Form Action Buttons: Cancel and Save */}
-        <div className="classification-form-actions" style={{ display: "flex", gap: "10px", marginTop: "12px" }}>
+        <div className="classification-form-actions">
           <Button type="button" variant="ghost" onClick={onBack}>
             Cancel
           </Button>

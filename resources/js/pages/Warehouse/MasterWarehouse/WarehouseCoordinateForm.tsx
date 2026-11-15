@@ -78,7 +78,7 @@ export function WarehouseCoordinateForm({
           </div>
 
           {/* Form Actions */}
-          <div style={{ display: "flex", gap: "10px", marginTop: "16px" }}>
+          <div className="wh-form-actions">
             <Button type="button" variant="ghost" onClick={onBack}>
               Cancel
             </Button>

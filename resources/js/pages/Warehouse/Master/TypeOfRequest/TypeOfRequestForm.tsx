@@ -73,86 +73,56 @@ export function TypeOfRequestForm({
   };
 
   return (
-    <div className="panel" style={{ width: "100%", padding: 0 }}>
+    <div className="master-form-page">
       {/* Header */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "16px 20px",
-          borderBottom: "1px solid var(--line)",
-          background: "var(--white)",
-        }}
-      >
-        <h1
-          style={{
-            margin: 0,
-            fontSize: "18px",
-            fontWeight: 800,
-            color: "var(--ink)",
-            letterSpacing: "-0.2px",
-          }}
-        >
+      <div className="master-form-header">
+        <h1 className="master-form-page-title">
           {isEdit ? "Edit Type of Request" : "Add Type of Request"}
         </h1>
       </div>
 
       {/* Form Content */}
-      <form onSubmit={handleSubmit} style={{ padding: "24px 20px" }}>
+      <form onSubmit={handleSubmit} className="master-form-card">
         {error && (
-          <div
-            style={{
-              padding: "10px 14px",
-              background: "#fef2f2",
-              border: "1px solid #fecaca",
-              borderRadius: "4px",
-              color: "#b91c1c",
-              fontSize: "13px",
-              fontWeight: 600,
-              marginBottom: "16px",
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
-            }}
-          >
+          <div className="master-form-error-banner">
             <Icon name="alertTriangle" size={15} />
             <span>{error}</span>
           </div>
         )}
 
-        <div style={{ maxWidth: "600px", display: "flex", flexDirection: "column", gap: "16px" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: "12px" }}>
-            <div className="master-form-group">
-              <label className="master-form-label">
-                Type Code <span className="required-mark">*</span>
-              </label>
-              <input
-                type="text"
-                className="master-form-input"
-                placeholder="e.g. REQ-TYP-08"
-                value={code}
-                onChange={(e) => setCode(e.target.value)}
-                autoFocus
-              />
-            </div>
-            <div className="master-form-group">
-              <label className="master-form-label">
-                Type Name <span className="required-mark">*</span>
-              </label>
-              <input
-                type="text"
-                className="master-form-input"
-                placeholder="e.g. Quality Inspection Batch"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-              />
-            </div>
+        <div className="master-form-grid-3">
+          <div className="master-form-group">
+            <label className="master-form-label">
+              Type Code <span className="required-mark">*</span>
+            </label>
+            <input
+              type="text"
+              className="master-form-input"
+              placeholder="e.g. REQ-TYP-08"
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+              autoFocus
+            />
           </div>
+          <div className="master-form-group master-form-col-span-2">
+            <label className="master-form-label">
+              Type Name <span className="required-mark">*</span>
+            </label>
+            <input
+              type="text"
+              className="master-form-input"
+              placeholder="e.g. Quality Inspection Batch"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+          </div>
+        </div>
 
+        <div className="master-form-grid-4">
           <div className="master-form-group">
             <label className="master-form-label">Department / Scope</label>
             <CustomSelect
+              searchable
               value={department}
               onChange={(val) => setDepartment(val)}
               options={departmentOptions.map((dept) => ({ value: dept, label: dept }))}
@@ -160,40 +130,27 @@ export function TypeOfRequestForm({
           </div>
 
           <div className="master-form-group">
-            <label className="master-form-label">Description</label>
-            <textarea
-              className="master-form-input"
-              rows={3}
-              placeholder="Detailed description of when this request type applies..."
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
+            <label className="master-form-label">Requires Job Number</label>
+            <CustomSelect
+              value={requiresJobNumber ? "true" : "false"}
+              onChange={(val) => setRequiresJobNumber(val === "true")}
+              options={[
+                { value: "true", label: "Yes (Mandatory Job Number)" },
+                { value: "false", label: "No (General Stock)" },
+              ]}
             />
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-            <div className="master-form-group">
-              <label className="master-form-label">Requires Job Number</label>
-              <CustomSelect
-                value={requiresJobNumber ? "true" : "false"}
-                onChange={(val) => setRequiresJobNumber(val === "true")}
-                options={[
-                  { value: "true", label: "Yes (Mandatory Job Number)" },
-                  { value: "false", label: "No (General Stock)" },
-                ]}
-              />
-            </div>
-
-            <div className="master-form-group">
-              <label className="master-form-label">Requires 2nd Level Approval</label>
-              <CustomSelect
-                value={requiresApproval2 ? "true" : "false"}
-                onChange={(val) => setRequiresApproval2(val === "true")}
-                options={[
-                  { value: "true", label: "Yes (Dept Head + Warehouse Manager)" },
-                  { value: "false", label: "No (Single Approval)" },
-                ]}
-              />
-            </div>
+          <div className="master-form-group">
+            <label className="master-form-label">Requires 2nd Level Approval</label>
+            <CustomSelect
+              value={requiresApproval2 ? "true" : "false"}
+              onChange={(val) => setRequiresApproval2(val === "true")}
+              options={[
+                { value: "true", label: "Yes (Dept Head + Warehouse Manager)" },
+                { value: "false", label: "No (Single Approval)" },
+              ]}
+            />
           </div>
 
           <div className="master-form-group">
@@ -207,16 +164,27 @@ export function TypeOfRequestForm({
               ]}
             />
           </div>
+        </div>
 
-          {/* Form Actions */}
-          <div style={{ display: "flex", gap: "10px", marginTop: "12px" }}>
-            <Button type="button" variant="ghost" onClick={onBack}>
-              Cancel
-            </Button>
-            <Button type="submit" variant="primary">
-              Save
-            </Button>
-          </div>
+        <div className="master-form-group">
+          <label className="master-form-label">Description</label>
+          <textarea
+            className="master-form-textarea"
+            rows={3}
+            placeholder="Detailed description of when this request type applies..."
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+          />
+        </div>
+
+        {/* Form Actions */}
+        <div className="master-form-actions">
+          <Button type="button" variant="ghost" onClick={onBack}>
+            Cancel
+          </Button>
+          <Button type="submit" variant="primary">
+            Save
+          </Button>
         </div>
       </form>
     </div>

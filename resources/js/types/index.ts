@@ -178,6 +178,18 @@ export type ViewState =
   | { type: "item-qr" }
   | { type: "wh-req-material-create" }
   | { type: "wh-req-material-detail"; id: string }
+  | { type: "rafaksi-type-create" }
+  | { type: "rafaksi-type-edit"; id?: string; record?: any }
+  | { type: "job-number-create" }
+  | { type: "job-number-edit"; id?: string; record?: any }
+  | { type: "country-create" }
+  | { type: "country-edit"; id?: string; record?: any }
+  | { type: "currency-create" }
+  | { type: "currency-edit"; id?: string; record?: any }
+  | { type: "account-create" }
+  | { type: "account-edit"; id?: string; record?: any }
+  | { type: "transfer-stock-return-create" }
+  | { type: "transfer-stock-return-edit"; code?: string; record?: any }
   | { type: "transfer-stock-return-detail"; code: string }
   | { type: "stock-notification-create" }
   | { type: "stock-notification-edit"; record?: any }

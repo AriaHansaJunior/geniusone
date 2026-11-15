@@ -1028,6 +1028,7 @@ export function WarehouseCreate({
                 </label>
                 <CustomSelect
                   id="bpbRnNumber"
+                  searchable
                   value={rnNumber}
                   onChange={(val) => handleSelectRn(val)}
                   placeholder="Select RN Number..."
@@ -1075,6 +1076,7 @@ export function WarehouseCreate({
                 </label>
                 <CustomSelect
                   id="bpbPoNumber"
+                  searchable
                   value={poNumberHeader}
                   onChange={(val) => handleSelectPo(val)}
                   placeholder="Select Non-Berikat PO..."
@@ -1120,7 +1122,7 @@ export function WarehouseCreate({
               )}
             </div>
 
-            <div className="master-form-group">
+            <div className="master-form-group tx-col-span-2">
               <label htmlFor="bpbSupplier" className="master-form-label">
                 Supplier Name
               </label>
@@ -1220,7 +1222,7 @@ export function WarehouseCreate({
               />
             </div>
 
-            <div className="master-form-group">
+            <div className="master-form-group tx-col-span-2">
               <label htmlFor="bpbNoPen" className="master-form-label">
                 Registration Number (No. Pen)
               </label>
@@ -1234,7 +1236,7 @@ export function WarehouseCreate({
               />
             </div>
 
-            <div className="master-form-group">
+            <div className="master-form-group tx-col-span-2">
               <label htmlFor="bpbRegDate" className="master-form-label">
                 Registration Date
               </label>
@@ -1272,8 +1274,7 @@ export function WarehouseCreate({
               </span>
               <Button
                 type="button"
-                variant="secondary"
-                icon="plus"
+                variant="success"
                 onClick={() => setIsSourcePickerOpen(true)}
               >
                 Add Item
@@ -1408,6 +1409,7 @@ export function WarehouseCreate({
                         <td>
                           <CustomSelect
                             className="tx-custom-select-cell"
+                            searchable
                             value={it.location}
                             onChange={(val) => handleUpdateItemField(it.id, "location", val)}
                             options={warehouseOptions.map((loc) => ({ value: loc, label: loc }))}

@@ -395,13 +395,14 @@ export function ReceiveNoteForm({ onBack, onSave, existingReceiveNotes = [] }: R
       <div className="tx-panel">
         <form onSubmit={handleSubmit}>
           {/* Header Grid: Row 1 */}
-          <div className="tx-header-grid" style={{ marginBottom: "14px" }}>
+          <div className="tx-header-grid master-form-row-mb">
             {/* Supplier */}
             <div className="master-form-group">
               <label className="master-form-label">
                 Supplier <span className="required-asterisk">*</span>
               </label>
               <CustomSelect
+                searchable
                 value={supplier}
                 onChange={(val) => {
                   setSupplier(val);
@@ -426,6 +427,7 @@ export function ReceiveNoteForm({ onBack, onSave, existingReceiveNotes = [] }: R
                 Currency <span className="required-asterisk">*</span>
               </label>
               <CustomSelect
+                searchable
                 value={currency}
                 onChange={(val) => setCurrency(val)}
                 options={[
@@ -460,6 +462,7 @@ export function ReceiveNoteForm({ onBack, onSave, existingReceiveNotes = [] }: R
                 Type of Document <span className="required-asterisk">*</span>
               </label>
               <CustomSelect
+                searchable
                 value={typeOfDocument}
                 onChange={(val) => {
                   setTypeOfDocument(val);
@@ -481,20 +484,8 @@ export function ReceiveNoteForm({ onBack, onSave, existingReceiveNotes = [] }: R
             </div>
           </div>
 
-          {/* Header Grid: Row 2 */}
-          <div className="tx-header-grid" style={{ marginBottom: "14px" }}>
-            {/* Arrival Date */}
-            <div className="master-form-group">
-              <label className="master-form-label">
-                Arrival Date <span className="required-asterisk">*</span>
-              </label>
-              <CustomDatePicker
-                value={arrivalDate}
-                onChange={(val) => setArrivalDate(val)}
-                className={formErrors.arrivalDate ? "has-error" : ""}
-              />
-            </div>
-
+          {/* Header Grid: Row 2 (Invoice & Tax Invoice) */}
+          <div className="tx-header-grid master-form-row-mb">
             {/* Invoice Number */}
             <div className="master-form-group">
               <label className="master-form-label">Invoice Number</label>
@@ -544,8 +535,8 @@ export function ReceiveNoteForm({ onBack, onSave, existingReceiveNotes = [] }: R
             </div>
           </div>
 
-          {/* Header Grid: Row 3 */}
-          <div className="tx-header-grid" style={{ marginBottom: "14px" }}>
+          {/* Header Grid: Row 3 (Delivery & Packing List) */}
+          <div className="tx-header-grid master-form-row-mb">
             {/* S.J Number */}
             <div className="master-form-group">
               <label className="master-form-label">S.J Number</label>
@@ -587,6 +578,21 @@ export function ReceiveNoteForm({ onBack, onSave, existingReceiveNotes = [] }: R
                 onChange={(val) => setPlDate(val)}
               />
             </div>
+          </div>
+
+          {/* Header Grid: Row 4 (Arrival & Fleet Transport) */}
+          <div className="master-form-grid-3 master-form-row-mb">
+            {/* Arrival Date */}
+            <div className="master-form-group">
+              <label className="master-form-label">
+                Arrival Date <span className="required-asterisk">*</span>
+              </label>
+              <CustomDatePicker
+                value={arrivalDate}
+                onChange={(val) => setArrivalDate(val)}
+                className={formErrors.arrivalDate ? "has-error" : ""}
+              />
+            </div>
 
             {/* Vehicle Type */}
             <div className="master-form-group">
@@ -619,8 +625,8 @@ export function ReceiveNoteForm({ onBack, onSave, existingReceiveNotes = [] }: R
             </div>
           </div>
 
-          {/* Header Grid: Row 4 (Customs & Registration) */}
-          <div className="tx-header-grid" style={{ marginBottom: "14px" }}>
+          {/* Header Grid: Row 5 (Customs & Registration) */}
+          <div className="master-form-grid-3 master-form-row-mb">
             {/* Nomor Aju */}
             <div className="master-form-group">
               <label className="master-form-label">Nomor Aju</label>
@@ -656,40 +662,26 @@ export function ReceiveNoteForm({ onBack, onSave, existingReceiveNotes = [] }: R
           </div>
 
           {/* Options checkboxes and notes */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "24px",
-              padding: "10px 14px",
-              background: "rgba(248, 250, 252, 0.7)",
-              border: "1px solid var(--line)",
-              borderRadius: "var(--radius-sm)",
-              marginBottom: "16px",
-              flexWrap: "wrap",
-            }}
-          >
-            <label style={{ display: "inline-flex", alignItems: "center", gap: "8px", fontSize: "12px", fontWeight: 600, color: "var(--ink)", cursor: "pointer" }}>
+          <div className="tx-note-bar">
+            <label className="tx-note-bar__check">
               <input
                 type="checkbox"
                 checked={statusDn}
                 onChange={(e) => setStatusDn(e.target.checked)}
-                style={{ width: "16px", height: "16px", cursor: "pointer" }}
               />
               <span>Status DN: Facility User</span>
             </label>
 
-            <label style={{ display: "inline-flex", alignItems: "center", gap: "8px", fontSize: "12px", fontWeight: 600, color: "var(--ink)", cursor: "pointer" }}>
+            <label className="tx-note-bar__check">
               <input
                 type="checkbox"
                 checked={serviceSubkon}
                 onChange={(e) => setServiceSubkon(e.target.checked)}
-                style={{ width: "16px", height: "16px", cursor: "pointer" }}
               />
               <span>Service / Subkon</span>
             </label>
 
-            <div style={{ flex: 1, minWidth: "220px" }}>
+            <div className="tx-note-bar__input">
               <input
                 type="text"
                 className="master-form-input"

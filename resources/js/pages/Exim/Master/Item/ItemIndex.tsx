@@ -312,6 +312,7 @@ export function ItemIndex({
 
             <CustomSelect
               className="item-select-filter"
+              searchable
               value={category}
               onChange={(val) => {
                 setCategory(val);
@@ -325,6 +326,7 @@ export function ItemIndex({
 
             <CustomSelect
               className="item-select-filter"
+              searchable
               value={classification}
               onChange={(val) => {
                 setClassification(val);

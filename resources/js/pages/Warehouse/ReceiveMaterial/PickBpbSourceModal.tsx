@@ -429,6 +429,7 @@ export function PickBpbSourceModal({
             </label>
             <CustomSelect
               id="bpbPickerDocNumber"
+              searchable
               value={selectedDocNumber}
               onChange={(val) => {
                 setSelectedDocNumber(val);

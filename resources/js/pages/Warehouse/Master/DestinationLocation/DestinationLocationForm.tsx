@@ -70,113 +70,69 @@ export function DestinationLocationForm({
   };
 
   return (
-    <div className="panel" style={{ width: "100%", padding: 0 }}>
+    <div className="master-form-page">
       {/* Header */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "16px 20px",
-          borderBottom: "1px solid var(--line)",
-          background: "var(--white)",
-        }}
-      >
-        <h1
-          style={{
-            margin: 0,
-            fontSize: "18px",
-            fontWeight: 800,
-            color: "var(--ink)",
-            letterSpacing: "-0.2px",
-          }}
-        >
+      <div className="master-form-header">
+        <h1 className="master-form-page-title">
           {isEdit ? "Edit Destination Location" : "Add Destination Location"}
         </h1>
       </div>
 
-      {/* Form Content */}
-      <form onSubmit={handleSubmit} style={{ padding: "24px 20px" }}>
+      {/* Form Card */}
+      <form onSubmit={handleSubmit} className="master-form-card">
         {error && (
-          <div
-            style={{
-              padding: "10px 14px",
-              background: "#fef2f2",
-              border: "1px solid #fecaca",
-              borderRadius: "4px",
-              color: "#b91c1c",
-              fontSize: "13px",
-              fontWeight: 600,
-              marginBottom: "16px",
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
-            }}
-          >
+          <div className="master-form-error-banner">
             <Icon name="alertTriangle" size={15} />
             <span>{error}</span>
           </div>
         )}
 
-        <div style={{ maxWidth: "600px", display: "flex", flexDirection: "column", gap: "16px" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: "12px" }}>
-            <div className="master-form-group">
-              <label className="master-form-label">
-                Location Code <span className="required-mark">*</span>
-              </label>
-              <input
-                type="text"
-                className="master-form-input"
-                placeholder="e.g. LOC-PRD-03"
-                value={code}
-                onChange={(e) => setCode(e.target.value)}
-                autoFocus
-              />
-            </div>
-            <div className="master-form-group">
-              <label className="master-form-label">
-                Destination Name <span className="required-mark">*</span>
-              </label>
-              <input
-                type="text"
-                className="master-form-input"
-                placeholder="e.g. Smelter 2 Furnace Charging Deck"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-              />
-            </div>
+        <div className="master-form-grid-3">
+          <div className="master-form-group">
+            <label className="master-form-label">
+              Location Code <span className="required-mark">*</span>
+            </label>
+            <input
+              type="text"
+              className="master-form-input"
+              placeholder="e.g. LOC-PRD-03"
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+              autoFocus
+            />
           </div>
+          <div className="master-form-group master-form-col-span-2">
+            <label className="master-form-label">
+              Destination Name <span className="required-mark">*</span>
+            </label>
+            <input
+              type="text"
+              className="master-form-input"
+              placeholder="e.g. Smelter 2 Furnace Charging Deck"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+          </div>
+        </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-            <div className="master-form-group">
-              <label className="master-form-label">Location Classification</label>
-              <CustomSelect
-                value={locationType}
-                onChange={(val) => setLocationType(val as any)}
-                options={locationTypeOptions.map((type) => ({ value: type, label: type }))}
-              />
-            </div>
-
-            <div className="master-form-group">
-              <label className="master-form-label">Supervisor / PIC</label>
-              <input
-                type="text"
-                className="master-form-input"
-                placeholder="e.g. EKO PRASETYO"
-                value={pic}
-                onChange={(e) => setPic(e.target.value)}
-              />
-            </div>
+        <div className="master-form-grid-3">
+          <div className="master-form-group">
+            <label className="master-form-label">Location Classification</label>
+            <CustomSelect
+              value={locationType}
+              onChange={(val) => setLocationType(val as any)}
+              options={locationTypeOptions.map((type) => ({ value: type, label: type }))}
+            />
           </div>
 
           <div className="master-form-group">
-            <label className="master-form-label">Description &amp; Facility Notes</label>
-            <textarea
+            <label className="master-form-label">Supervisor / PIC</label>
+            <input
+              type="text"
               className="master-form-input"
-              rows={3}
-              placeholder="Description of facility, physical area, or specific machinery served..."
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              placeholder="e.g. EKO PRASETYO"
+              value={pic}
+              onChange={(e) => setPic(e.target.value)}
             />
           </div>
 
@@ -191,16 +147,27 @@ export function DestinationLocationForm({
               ]}
             />
           </div>
+        </div>
 
-          {/* Form Actions */}
-          <div style={{ display: "flex", gap: "10px", marginTop: "12px" }}>
-            <Button type="button" variant="ghost" onClick={onBack}>
-              Cancel
-            </Button>
-            <Button type="submit" variant="primary">
-              Save
-            </Button>
-          </div>
+        <div className="master-form-group">
+          <label className="master-form-label">Description &amp; Facility Notes</label>
+          <textarea
+            className="master-form-textarea"
+            rows={3}
+            placeholder="Description of facility, physical area, or specific machinery served..."
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+          />
+        </div>
+
+        {/* Form Actions */}
+        <div className="master-form-actions">
+          <Button type="button" variant="ghost" onClick={onBack}>
+            Cancel
+          </Button>
+          <Button type="submit" variant="primary">
+            Save
+          </Button>
         </div>
       </form>
     </div>

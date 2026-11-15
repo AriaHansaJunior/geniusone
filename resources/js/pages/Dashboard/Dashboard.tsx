@@ -478,6 +478,7 @@ export function Dashboard({
             <div className="master-form-group">
               <label className="master-form-label">Currency</label>
               <CustomSelect
+                searchable
                 value={currency}
                 onChange={(val) => setCurrency(val)}
                 options={currenciesList}

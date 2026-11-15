@@ -50,17 +50,9 @@ export function UnitForm({ initialRecord, onBack, onSave }: UnitFormProps) {
 
   return (
     <div className="unit-form-page">
-      {/* Page Header: Single clean heading without duplicate back buttons */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <h1
-          style={{
-            margin: 0,
-            fontSize: "20px",
-            fontWeight: 800,
-            color: "var(--ink)",
-            letterSpacing: "-0.3px",
-          }}
-        >
+      {/* Page Header */}
+      <div className="unit-form-header">
+        <h1 className="master-form-page-title">
           {isEdit ? "Edit Unit" : "Add Unit"}
         </h1>
       </div>
@@ -120,7 +112,7 @@ export function UnitForm({ initialRecord, onBack, onSave }: UnitFormProps) {
         </div>
 
         {/* Consistently aligned action buttons */}
-        <div className="unit-form-actions" style={{ display: "flex", gap: "10px", marginTop: "12px" }}>
+        <div className="unit-form-actions">
           <Button type="button" variant="ghost" onClick={onBack}>
             Cancel
           </Button>

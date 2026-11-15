@@ -109,15 +109,7 @@ export function HsForm({
     <div className="hs-form-page">
       {/* Page Header */}
       <div className="hs-form-header">
-        <h1
-          style={{
-            margin: 0,
-            fontSize: "20px",
-            fontWeight: 800,
-            color: "var(--ink)",
-            letterSpacing: "-0.3px",
-          }}
-        >
+        <h1 className="master-form-page-title">
           {isEdit ? "Edit HS" : "Add HS"}
         </h1>
       </div>
@@ -345,7 +337,7 @@ export function HsForm({
         </div>
 
         {/* Form Action Buttons: Cancel and Save */}
-        <div className="hs-form-actions" style={{ display: "flex", gap: "10px", marginTop: "16px" }}>
+        <div className="hs-form-actions">
           <Button type="button" variant="ghost" onClick={onBack}>
             Cancel
           </Button>

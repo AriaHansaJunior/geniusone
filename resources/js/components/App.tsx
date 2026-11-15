@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { AppLayout } from "./layout/AppLayout";
 import { Login } from "../pages";
 import { AppViewRenderer } from "./AppViewRenderer";
+import { Button } from "./ui/Button";
+import { useAdditionalMasterHandlers } from "../hooks/useAdditionalMasterHandlers";
 import {
   resolveViewStateFromPath,
   resolveInitialViewState,
@@ -15,8 +17,10 @@ import type { DestinationLocationRecord } from "../pages/Warehouse/Master/Destin
 import { ConfirmDialog } from "./ui/ConfirmDialog";
 import { pageMeta } from "../config/pageMeta";
 import { docToSlug } from "../utils/docSlug";
-import { navigationConfig } from "../config/navigation";
+import { ALL_SIDEBAR_MENU_ITEMS } from "../config/navigation";
 import { useAuthPermission } from "../context/AuthPermissionContext";
+
+const SIDEBAR_GUARDED_PAGES = new Set(ALL_SIDEBAR_MENU_ITEMS.map((item) => item.id));
 import type { PphRecord } from "../pages/Procurement/PurchaseMaster/Pph/pph-types";
 import type { SupplierRecord } from "../pages/Procurement/PurchaseMaster/Supplier/supplier-types";
 import type { PaymentTermRecord } from "../pages/Procurement/PurchaseMaster/PaymentTerm/payment-term-types";
@@ -107,20 +111,10 @@ import {
   saveWarehouseCoordinateApi,
   deleteWarehouseCoordinateApi,
   fetchMasterCountries,
-  saveCountryApi,
-  deleteCountryApi,
   fetchMasterRafaksiTypes,
-  saveRafaksiTypeApi,
-  deleteRafaksiTypeApi,
   fetchMasterCurrencies,
-  saveCurrencyApi,
-  deleteCurrencyApi,
   fetchMasterAccounts,
-  saveAccountApi,
-  deleteAccountApi,
   fetchMasterJobNumbers,
-  saveJobNumberApi,
-  deleteJobNumberApi,
   fetchMasterReceiveNotes,
   fetchMasterReceiveNoteReturns,
   saveReceiveNoteReturnApi,
@@ -146,7 +140,7 @@ interface AppProps {
 }
 
 export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
-  const { isAuthenticated, authReady, logoutUser } = useAuthPermission();
+  const { isAuthenticated, authReady, logoutUser, canAccessSidebarItem } = useAuthPermission();
   const [viewState, setViewState] = useState<ViewState>(() =>
     resolveInitialViewState(initialPage, initialCode)
   );
@@ -274,6 +268,7 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
   const [editingDestinationLocation, setEditingDestinationLocation] = useState<DestinationLocationRecord | null>(null);
 
   const loadedPagesRef = useRef<Set<string>>(new Set());
+  const [masterFetchStates, setMasterFetchStates] = useState<Record<string, "loading" | "done">>({});
 
   // On-demand route-based database synchronization
   useEffect(() => {
@@ -284,11 +279,21 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
     const loadOnce = (key: string, fetcher: () => Promise<any[] | null>, setter: (data: any[]) => void) => {
       if (loadedPagesRef.current.has(key)) return;
       loadedPagesRef.current.add(key);
-      fetcher().then((data) => {
-        if (isMounted && Array.isArray(data)) {
-          setter(data);
-        }
-      });
+      if (isMounted) {
+        setMasterFetchStates((prev) => ({ ...prev, [key]: "loading" }));
+      }
+      fetcher()
+        .then((data) => {
+          if (isMounted && Array.isArray(data)) {
+            setter(data);
+          }
+        })
+        .catch(() => {})
+        .finally(() => {
+          if (isMounted) {
+            setMasterFetchStates((prev) => ({ ...prev, [key]: "done" }));
+          }
+        });
     };
 
     if (page === "supplier" || type === "supplier-create") {
@@ -350,19 +355,19 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
     ) {
       loadOnce("warehouses", fetchMasterWarehouses, setWarehouseMasterRecords);
     }
-    if (page === "country") {
+    if (page === "country" || type === "country-create" || type === "country-edit") {
       loadOnce("countries", fetchMasterCountries, setCountryRecords);
     }
-    if (page === "rafaksi-type") {
+    if (page === "rafaksi-type" || type === "rafaksi-type-create" || type === "rafaksi-type-edit") {
       loadOnce("rafaksi-types", fetchMasterRafaksiTypes, setRafaksiTypeRecords);
     }
-    if (page === "currency") {
+    if (page === "currency" || type === "currency-create" || type === "currency-edit") {
       loadOnce("currencies", fetchMasterCurrencies, setCurrencyRecords);
     }
-    if (page === "account") {
+    if (page === "account" || type === "account-create" || type === "account-edit") {
       loadOnce("accounts", fetchMasterAccounts, setAccountRecords);
     }
-    if (page === "job-number" || type === "pr-create") {
+    if (page === "job-number" || type === "job-number-create" || type === "job-number-edit" || type === "pr-create") {
       loadOnce("job-numbers", fetchMasterJobNumbers, setJobNumberRecords);
     }
     if (page === "receive-note" || type === "receive-note-detail" || type === "receive-note-create" || type === "dashboard") {
@@ -1216,150 +1221,43 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
     }
   }, []);
 
-  const handleSaveCountry = useCallback(
-    async (data: { code?: string; name: string; status: boolean }, id?: string) => {
-      try {
-        const saved = await saveCountryApi(data, id);
-        if (saved) {
-          if (id) {
-            setCountryRecords((prev) => prev.map((c) => (c.id === saved.id ? saved : c)));
-          } else {
-            setCountryRecords((prev) => [saved, ...prev.map((c, i) => ({ ...c, no: i + 2 }))]);
-          }
-          return saved;
-        }
-      } catch (err) {
-        console.warn("Country API save failed:", err);
-      }
-      return null;
-    },
-    []
-  );
-
-  const handleDeleteCountry = useCallback(async (id: string) => {
-    try {
-      await deleteCountryApi(id);
-    } catch (err) {
-      console.warn("Country API delete failed:", err);
-    }
-    setCountryRecords((prev) => prev.filter((c) => c.id !== id));
-  }, []);
-
-  const handleSaveAccount = useCallback(
-    async (data: { accountCode: string; accountName: string; category?: string; status: boolean }, id?: string) => {
-      try {
-        const saved = await saveAccountApi(data, id);
-        if (saved) {
-          if (id) {
-            setAccountRecords((prev) => prev.map((a) => (a.id === saved.id ? saved : a)));
-          } else {
-            setAccountRecords((prev) => [saved, ...prev.map((a, i) => ({ ...a, no: i + 2 }))]);
-          }
-          return saved;
-        }
-      } catch (err) {
-        console.warn("Account API save failed:", err);
-      }
-      return null;
-    },
-    []
-  );
-
-  const handleDeleteAccount = useCallback(async (id: string) => {
-    try {
-      await deleteAccountApi(id);
-    } catch (err) {
-      console.warn("Account API delete failed:", err);
-    }
-    setAccountRecords((prev) => prev.filter((a) => a.id !== id));
-  }, []);
-
-  const handleSaveJobNumber = useCallback(
-    async (data: { jobNumber: string; jobName?: string; department?: string; status: boolean }, id?: string) => {
-      try {
-        const saved = await saveJobNumberApi(data, id);
-        if (saved) {
-          if (id) {
-            setJobNumberRecords((prev) => prev.map((j) => (j.id === saved.id ? saved : j)));
-          } else {
-            setJobNumberRecords((prev) => [saved, ...prev.map((j, i) => ({ ...j, no: i + 2 }))]);
-          }
-          return saved;
-        }
-      } catch (err) {
-        console.warn("Job Number API save failed:", err);
-      }
-      return null;
-    },
-    []
-  );
-
-  const handleDeleteJobNumber = useCallback(async (id: string) => {
-    try {
-      await deleteJobNumberApi(id);
-    } catch (err) {
-      console.warn("Job Number API delete failed:", err);
-    }
-    setJobNumberRecords((prev) => prev.filter((j) => j.id !== id));
-  }, []);
-
-  const handleSaveRafaksiType = useCallback(
-    async (data: { code?: string; name: string; description?: string; status: boolean }, id?: string) => {
-      try {
-        const saved = await saveRafaksiTypeApi(data, id);
-        if (saved) {
-          if (id) {
-            setRafaksiTypeRecords((prev) => prev.map((r) => (r.id === saved.id ? saved : r)));
-          } else {
-            setRafaksiTypeRecords((prev) => [saved, ...prev.map((r, i) => ({ ...r, no: i + 2 }))]);
-          }
-          return saved;
-        }
-      } catch (err) {
-        console.warn("Rafaksi Type API save failed:", err);
-      }
-      return null;
-    },
-    []
-  );
-
-  const handleDeleteRafaksiType = useCallback(async (id: string) => {
-    try {
-      await deleteRafaksiTypeApi(id);
-    } catch (err) {
-      console.warn("Rafaksi Type API delete failed:", err);
-    }
-    setRafaksiTypeRecords((prev) => prev.filter((r) => r.id !== id));
-  }, []);
-
-  const handleSaveCurrency = useCallback(
-    async (data: { currencyCode: string; currencyName: string; symbol?: string; status?: boolean }, id?: string) => {
-      try {
-        const saved = await saveCurrencyApi(data, id);
-        if (saved) {
-          if (id) {
-            setCurrencyRecords((prev) => prev.map((c) => (c.id === saved.id ? saved : c)));
-          } else {
-            setCurrencyRecords((prev) => [saved, ...prev.map((c, i) => ({ ...c, no: i + 2 }))]);
-          }
-          return saved;
-        }
-      } catch (err) {
-        console.warn("Currency API save failed:", err);
-      }
-      return null;
-    },
-    []
-  );
-
-  const handleDeleteCurrency = useCallback(async (id: string) => {
-    try {
-      await deleteCurrencyApi(id);
-    } catch (err) {
-      console.warn("Currency API delete failed:", err);
-    }
-    setCurrencyRecords((prev) => prev.filter((c) => c.id !== id));
-  }, []);
+  const {
+    handleNavigateCountryCreate,
+    handleNavigateCountryEdit,
+    handleSaveCountry,
+    handleDeleteCountry,
+    handleToggleCountryStatus,
+    handleNavigateAccountCreate,
+    handleNavigateAccountEdit,
+    handleSaveAccount,
+    handleDeleteAccount,
+    handleToggleAccountStatus,
+    handleNavigateJobNumberCreate,
+    handleNavigateJobNumberEdit,
+    handleSaveJobNumber,
+    handleDeleteJobNumber,
+    handleToggleJobNumberStatus,
+    handleNavigateRafaksiTypeCreate,
+    handleNavigateRafaksiTypeEdit,
+    handleSaveRafaksiType,
+    handleDeleteRafaksiType,
+    handleToggleRafaksiTypeStatus,
+    handleNavigateCurrencyCreate,
+    handleNavigateCurrencyEdit,
+    handleSaveCurrency,
+    handleDeleteCurrency,
+    handleNavigateTransferStockReturnCreate,
+    handleNavigateTransferStockReturnEdit,
+    handleNavigateTransferStockReturnDetail,
+  } = useAdditionalMasterHandlers({
+    setViewState,
+    handleNavigateList,
+    setCountryRecords,
+    setAccountRecords,
+    setJobNumberRecords,
+    setRafaksiTypeRecords,
+    setCurrencyRecords,
+  });
 
   const handleNavigateReceiveNoteReturnDetail = useCallback((rnNumber: string) => {
     const slug = String(rnNumber || "").replace(/[\/\\]/g, "-");
@@ -1380,21 +1278,6 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
     if (typeof window !== "undefined") {
       window.scrollTo(0, 0);
       window.history.pushState(nextState, "", `/exim/document-history/detail/${slug}`);
-    }
-  }, []);
-
-  const handleNavigateTransferStockReturnDetail = useCallback((mutationCode: string) => {
-    const slug = docToSlug(String(mutationCode || ""));
-    const nextState: ViewState = { type: "transfer-stock-return-detail", code: slug };
-    setViewState(nextState);
-
-    if (typeof window !== "undefined") {
-      window.scrollTo(0, 0);
-      window.history.pushState(
-        nextState,
-        "",
-        `/warehouse/incoming/transfer-stock-return/detail/${slug}`
-      );
     }
   }, []);
 
@@ -1841,7 +1724,19 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
   const currentMeta =
     viewState.type === "list"
       ? pageMeta[viewState.page] || pageMeta.dashboard
-      : pageMeta.dashboard;
+      : activeSidebarPage && pageMeta[activeSidebarPage]
+        ? pageMeta[activeSidebarPage]
+        : pageMeta.dashboard;
+
+  const isRouteForbidden =
+    authReady &&
+    isAuthenticated &&
+    Boolean(activeSidebarPage) &&
+    activeSidebarPage !== "dashboard" &&
+    SIDEBAR_GUARDED_PAGES.has(activeSidebarPage as string) &&
+    viewState.type !== "edit-profile" &&
+    viewState.type !== "not-found" &&
+    !canAccessSidebarItem(activeSidebarPage as string);
 
   return (
     <>
@@ -1850,22 +1745,43 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
         onNavigate={handleNavigateList}
         onNavigateProfile={handleNavigateProfile}
         onRequestLogout={handleRequestLogout}
-        hideDefaultHeader={hideDefaultHeader}
+        hideDefaultHeader={hideDefaultHeader && !isRouteForbidden}
       >
-        <AppViewRenderer
-          viewState={viewState}
-          currentMeta={currentMeta}
-          handleNavigateList={handleNavigateList}
-          handleNavigateDetail={handleNavigateDetail}
-          handleNavigateCreate={handleNavigateCreate}
-          handleNavigatePrCreate={handleNavigatePrCreate}
-          handleNavigatePoCreate={handleNavigatePoCreate}
-          handleNavigateReceiveNoteDetail={handleNavigateReceiveNoteDetail}
-          handleNavigateReceiveNoteReturnDetail={handleNavigateReceiveNoteReturnDetail}
-          handleNavigateDocumentHistoryDetail={handleNavigateDocumentHistoryDetail}
-          handleNavigateRequestMaterialCreate={handleNavigateRequestMaterialCreate}
-          handleNavigateRequestMaterialDetail={handleNavigateRequestMaterialDetail}
-          handleNavigateTransferStockReturnDetail={handleNavigateTransferStockReturnDetail}
+        {isRouteForbidden ? (
+          <div className="master-page-shell">
+            <div className="route-guard-card">
+              <h2 className="route-guard-card__title">Access Restricted</h2>
+              <p className="route-guard-card__desc">
+                You do not have permission to access this module or action. Contact your system administrator if you require access.
+              </p>
+              <div className="master-actions-group">
+                <Button
+                  type="button"
+                  variant="primary"
+                  onClick={() => handleNavigateList("dashboard", "/dashboard")}
+                >
+                  Back to Dashboard
+                </Button>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <AppViewRenderer
+            viewState={viewState}
+            currentMeta={currentMeta}
+            handleNavigateList={handleNavigateList}
+            handleNavigateDetail={handleNavigateDetail}
+            handleNavigateCreate={handleNavigateCreate}
+            handleNavigatePrCreate={handleNavigatePrCreate}
+            handleNavigatePoCreate={handleNavigatePoCreate}
+            handleNavigateReceiveNoteDetail={handleNavigateReceiveNoteDetail}
+            handleNavigateReceiveNoteReturnDetail={handleNavigateReceiveNoteReturnDetail}
+            handleNavigateDocumentHistoryDetail={handleNavigateDocumentHistoryDetail}
+            handleNavigateRequestMaterialCreate={handleNavigateRequestMaterialCreate}
+            handleNavigateRequestMaterialDetail={handleNavigateRequestMaterialDetail}
+            handleNavigateTransferStockReturnCreate={handleNavigateTransferStockReturnCreate}
+            handleNavigateTransferStockReturnEdit={handleNavigateTransferStockReturnEdit}
+            handleNavigateTransferStockReturnDetail={handleNavigateTransferStockReturnDetail}
           handleNavigateMasterWarehouseCreate={handleNavigateMasterWarehouseCreate}
           handleNavigateWarehouseCoordinates={handleNavigateWarehouseCoordinates}
           handleNavigateWarehouseCoordinateCreate={handleNavigateWarehouseCoordinateCreate}
@@ -1930,16 +1846,35 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
           handleSaveWarehouseMaster={handleSaveWarehouseMaster}
           handleSaveWarehouseCoordinate={handleSaveWarehouseCoordinate}
           handleDeleteWarehouseCoordinate={handleDeleteWarehouseCoordinate}
+          handleNavigateCountryCreate={handleNavigateCountryCreate}
+          handleNavigateCountryEdit={handleNavigateCountryEdit}
           handleSaveCountry={handleSaveCountry}
           handleDeleteCountry={handleDeleteCountry}
+          handleToggleCountryStatus={handleToggleCountryStatus}
+          isCountriesLoading={masterFetchStates["countries"] !== "done"}
+          handleNavigateAccountCreate={handleNavigateAccountCreate}
+          handleNavigateAccountEdit={handleNavigateAccountEdit}
           handleSaveAccount={handleSaveAccount}
           handleDeleteAccount={handleDeleteAccount}
+          handleToggleAccountStatus={handleToggleAccountStatus}
+          isAccountsLoading={masterFetchStates["accounts"] !== "done"}
+          handleNavigateJobNumberCreate={handleNavigateJobNumberCreate}
+          handleNavigateJobNumberEdit={handleNavigateJobNumberEdit}
           handleSaveJobNumber={handleSaveJobNumber}
           handleDeleteJobNumber={handleDeleteJobNumber}
+          handleToggleJobNumberStatus={handleToggleJobNumberStatus}
+          isJobNumbersLoading={masterFetchStates["job-numbers"] !== "done"}
+          handleNavigateRafaksiTypeCreate={handleNavigateRafaksiTypeCreate}
+          handleNavigateRafaksiTypeEdit={handleNavigateRafaksiTypeEdit}
           handleSaveRafaksiType={handleSaveRafaksiType}
           handleDeleteRafaksiType={handleDeleteRafaksiType}
+          handleToggleRafaksiTypeStatus={handleToggleRafaksiTypeStatus}
+          isRafaksiTypesLoading={masterFetchStates["rafaksi-types"] !== "done"}
+          handleNavigateCurrencyCreate={handleNavigateCurrencyCreate}
+          handleNavigateCurrencyEdit={handleNavigateCurrencyEdit}
           handleSaveCurrency={handleSaveCurrency}
           handleDeleteCurrency={handleDeleteCurrency}
+          isCurrenciesLoading={masterFetchStates["currencies"] !== "done"}
           handleNavigateGenerateQr={handleNavigateGenerateQr}
           handleNavigateItemEdit={handleNavigateItemEdit}
           handleSaveItem={handleSaveItem}
@@ -2000,9 +1935,10 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
           editingTypeOfRequest={editingTypeOfRequest}
           setEditingTypeOfRequest={setEditingTypeOfRequest}
           destinationLocationRecords={destinationLocationRecords}
-          editingDestinationLocation={editingDestinationLocation}
-          setEditingDestinationLocation={setEditingDestinationLocation}
-        />
+            editingDestinationLocation={editingDestinationLocation}
+            setEditingDestinationLocation={setEditingDestinationLocation}
+          />
+        )}
       </AppLayout>
 
       {/* Logout Confirmation Dialog */}

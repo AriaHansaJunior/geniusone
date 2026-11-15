@@ -101,7 +101,7 @@ export function PurchaseOrderTabsAndSummary({
             </span>
             <div style={{ display: "flex", gap: "8px" }}>
               <Button
-                variant="secondary"
+                variant="success"
                 onClick={() => setIsPrPickerOpen(true)}
                 type="button"
               >
@@ -180,6 +180,7 @@ export function PurchaseOrderTabsAndSummary({
                         ) : (
                           <CustomSelect
                             className="tx-custom-select-cell"
+                            searchable
                             value={row.prNumber}
                             onChange={(val) => handleSelectPr(row.id, val)}
                             placeholder="Select PR Number..."
@@ -512,6 +513,7 @@ export function PurchaseOrderTabsAndSummary({
                     <td>
                       <CustomSelect
                         className="tx-custom-select-cell"
+                        searchable
                         value={cost.costName}
                         onChange={(val) => handleUpdateCostField(cost.id, "costName", val)}
                         placeholder="Select Additional Cost..."

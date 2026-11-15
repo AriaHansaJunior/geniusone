@@ -35,9 +35,26 @@ class AccountApiController extends Controller
         ]);
     }
 
+    private function normalizeStatus(mixed $status): string
+    {
+        if (is_bool($status)) {
+            return $status ? 'active' : 'inactive';
+        }
+        $normalized = strtolower(trim((string) $status));
+        if (in_array($normalized, ['0', 'false', 'inactive', 'non-active', 'no'], true)) {
+            return 'inactive';
+        }
+
+        return 'active';
+    }
+
     public function store(Request $request): JsonResponse
     {
         $actorId = $this->requireActorId($request);
+
+        if ($request->has('status') && $request->input('status') !== null) {
+            $request->merge(['status' => $this->normalizeStatus($request->input('status'))]);
+        }
 
         $validated = $request->validate([
             'code' => 'required|string|max:45|unique:accounts,code',
@@ -75,6 +92,10 @@ class AccountApiController extends Controller
         $actorId = $this->requireActorId($request);
         $record = Account::findOrFail($id);
 
+        if ($request->has('status') && $request->input('status') !== null) {
+            $request->merge(['status' => $this->normalizeStatus($request->input('status'))]);
+        }
+
         $validated = $request->validate([
             'code' => 'sometimes|required|string|max:45|unique:accounts,code,'.$id,
             'name' => 'sometimes|required|string|max:45',
@@ -92,8 +113,9 @@ class AccountApiController extends Controller
         ]);
     }
 
-    public function destroy(int $id): JsonResponse
+    public function destroy(Request $request, int $id): JsonResponse
     {
+        $this->requireActorId($request);
         $record = Account::findOrFail($id);
         $record->delete();
 

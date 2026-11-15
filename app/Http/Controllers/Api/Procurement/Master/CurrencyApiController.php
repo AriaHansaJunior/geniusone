@@ -99,8 +99,9 @@ class CurrencyApiController extends Controller
         ]);
     }
 
-    public function destroy(int $id): JsonResponse
+    public function destroy(Request $request, int $id): JsonResponse
     {
+        $this->requireActorId($request);
         $record = Valuta::findOrFail($id);
         $record->delete();
 

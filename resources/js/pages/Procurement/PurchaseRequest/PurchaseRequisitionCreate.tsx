@@ -556,6 +556,7 @@ export function PurchaseRequisitionCreate({
                 </label>
                 <CustomSelect
                   id="prDept"
+                  searchable
                   value={deptRequest}
                   onChange={(val) => {
                     setDeptRequest(val);
@@ -577,6 +578,7 @@ export function PurchaseRequisitionCreate({
                 </label>
                 <CustomSelect
                   id="prSection"
+                  searchable
                   value={section}
                   onChange={(val) => {
                     setSection(val);

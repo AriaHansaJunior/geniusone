@@ -95,7 +95,7 @@ export function GenerateQrCodePage({
           </div>
 
           <Button
-            variant="secondary"
+            variant="success"
             onClick={() => setIsPickerOpen(true)}
           >
             Add Item

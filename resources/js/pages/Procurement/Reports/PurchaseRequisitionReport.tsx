@@ -545,6 +545,7 @@ export function PurchaseRequisitionReport({
               Dept. Request
             </label>
             <CustomSelect
+              searchable
               value={deptFilter}
               onChange={(val) => {
                 setDeptFilter(val);
@@ -560,6 +561,7 @@ export function PurchaseRequisitionReport({
               Section
             </label>
             <CustomSelect
+              searchable
               value={sectionFilter}
               onChange={(val) => {
                 setSectionFilter(val);

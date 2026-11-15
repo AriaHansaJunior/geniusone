@@ -102,6 +102,10 @@ export function Pagination({
             <span>Rows</span>
             <CustomSelect
               className="pagination__rows-custom-select"
+              dropdownClassName="pagination__rows-dropdown"
+              dropdownWidth={76}
+              menuPlacement="top"
+              searchable={false}
               value={String(pageSize)}
               onChange={(val) => {
                 const nextSize = Number(val);

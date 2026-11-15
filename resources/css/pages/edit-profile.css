@@ -4,9 +4,8 @@
 
 .edit-profile-page.full-page-detail {
   gap: 16px;
-  max-width: 960px;
-  margin: 0 auto;
   width: 100%;
+  max-width: none;
 }
 
 .edit-profile-page .detail-header-card {

@@ -37,27 +37,10 @@ export function AdditionalCostsForm({ onBack, onSave }: AdditionalCostsFormProps
   };
 
   return (
-    <div
-      className="additional-costs-form-page"
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        gap: "16px",
-        width: "100%",
-        animation: "fadeIn 0.15s ease-in-out",
-      }}
-    >
-      {/* Page Header: Single clean title, no redundant back button pill */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <h1
-          style={{
-            margin: 0,
-            fontSize: "20px",
-            fontWeight: 800,
-            color: "var(--ink)",
-            letterSpacing: "-0.3px",
-          }}
-        >
+    <div className="additional-costs-form-page master-form-page">
+      {/* Page Header */}
+      <div className="master-form-header">
+        <h1 className="master-form-page-title">
           Add Additional Costs
         </h1>
       </div>
@@ -90,68 +73,42 @@ export function AdditionalCostsForm({ onBack, onSave }: AdditionalCostsFormProps
       )}
 
       {/* Main Form Card */}
-      <form
-        onSubmit={handleSave}
-        className="panel"
-        style={{
-          background: "var(--white)",
-          border: "1px solid var(--line)",
-          borderRadius: "var(--radius-sm)",
-          padding: "24px 28px",
-          display: "flex",
-          flexDirection: "column",
-          gap: "20px",
-          maxWidth: "600px",
-        }}
-      >
-        {/* Field 1: Cost Code */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-          <label
-            htmlFor="costCode"
-            style={{ fontSize: "11.5px", fontWeight: 700, color: "var(--ink-soft)" }}
-          >
-            Cost Code
-          </label>
-          <input
-            id="costCode"
-            type="text"
-            className="form-input font-mono"
-            value={costCode}
-            onChange={(e) => setCostCode(e.target.value)}
-            required
-            autoFocus
-          />
-        </div>
+      <form onSubmit={handleSave} className="master-form-card">
+        <div className="master-form-grid-2">
+          {/* Field 1: Cost Code */}
+          <div className="master-form-group">
+            <label htmlFor="costCode" className="master-form-label">
+              Cost Code <span className="required-mark">*</span>
+            </label>
+            <input
+              id="costCode"
+              type="text"
+              className="master-form-input font-mono"
+              value={costCode}
+              onChange={(e) => setCostCode(e.target.value)}
+              required
+              autoFocus
+            />
+          </div>
 
-        {/* Field 2: Cost Name */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-          <label
-            htmlFor="costName"
-            style={{ fontSize: "11.5px", fontWeight: 700, color: "var(--ink-soft)" }}
-          >
-            Cost Name
-          </label>
-          <input
-            id="costName"
-            type="text"
-            className="form-input"
-            value={costName}
-            onChange={(e) => setCostName(e.target.value)}
-            required
-          />
+          {/* Field 2: Cost Name */}
+          <div className="master-form-group">
+            <label htmlFor="costName" className="master-form-label">
+              Cost Name <span className="required-mark">*</span>
+            </label>
+            <input
+              id="costName"
+              type="text"
+              className="master-form-input"
+              value={costName}
+              onChange={(e) => setCostName(e.target.value)}
+              required
+            />
+          </div>
         </div>
 
         {/* Action Buttons Footer */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "flex-end",
-            gap: "10px",
-            paddingTop: "14px",
-            borderTop: "1px solid var(--line)",
-          }}
-        >
+        <div className="master-form-actions">
           <Button type="button" variant="ghost" onClick={onBack}>
             Cancel
           </Button>

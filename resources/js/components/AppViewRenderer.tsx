@@ -63,10 +63,15 @@ import {
   PlaceholderPage,
   NotFoundPage,
   CountryIndex,
+  CountryForm,
   AccountIndex,
+  AccountForm,
   JobNumberIndex,
+  JobNumberForm,
   RafaksiTypeIndex,
+  RafaksiTypeForm,
   CurrencyIndex,
+  CurrencyForm,
   PurchaseRequisitionCreate,
   PurchaseOrderCreate,
   StockCardIndex,
@@ -81,6 +86,7 @@ import {
   DestinationLocationIndex,
   DestinationLocationForm,
   TransferStockReturnIndex,
+  TransferStockReturnForm,
   TransferStockReturnDetail,
   UserPermissionAdmin,
   AuditLogAdmin,
@@ -115,10 +121,16 @@ import type {
 } from "../pages/Warehouse/MasterWarehouse/warehouse-master-types";
 import type { ItemRecord } from "../pages/Exim/Master/Item/item-types";
 import type { CountryRecord } from "../pages/Exim/Master/Country/country-types";
+import type { CountryFormData } from "../pages/Exim/Master/Country/CountryForm";
 import type { AccountRecord } from "../pages/Exim/Master/Account/account-types";
+import type { AccountFormData } from "../pages/Exim/Master/Account/AccountForm";
 import type { JobNumberRecord } from "../pages/Procurement/PurchaseMaster/JobNumber/job-number-types";
+import type { JobNumberFormData } from "../pages/Procurement/PurchaseMaster/JobNumber/JobNumberForm";
 import type { RafaksiTypeRecord } from "../pages/Procurement/PurchaseMaster/RafaksiType/rafaksi-type-types";
+import type { RafaksiTypeFormData } from "../pages/Procurement/PurchaseMaster/RafaksiType/RafaksiTypeForm";
 import type { CurrencyRecord } from "../pages/Exim/Master/Currency/currency-types";
+import type { CurrencyFormData } from "../pages/Exim/Master/Currency/CurrencyForm";
+import type { TransferStockReturnRecord } from "../pages/Warehouse/TransferStockReturn/transfer-stock-return-types";
 import type { UnitReferenceRecord } from "../pages/Exim/Master/UnitReference/unit-reference-types";
 
 export interface AppViewRendererProps {
@@ -158,6 +170,8 @@ export interface AppViewRendererProps {
   handleNavigateDocumentHistoryDetail: (invoiceNumber: string) => void;
   handleNavigateRequestMaterialCreate: () => void;
   handleNavigateRequestMaterialDetail: (id: string) => void;
+  handleNavigateTransferStockReturnCreate: () => void;
+  handleNavigateTransferStockReturnEdit: (recordOrCode: TransferStockReturnRecord | string) => void;
   handleNavigateTransferStockReturnDetail: (code: string) => void;
   handleNavigateMasterWarehouseCreate: () => void;
   handleNavigateWarehouseCoordinates: (warehouse: WarehouseMasterRecord) => void;
@@ -223,16 +237,35 @@ export interface AppViewRendererProps {
   handleSaveWarehouseMaster: (newWarehouse: WarehouseMasterRecord) => Promise<void>;
   handleSaveWarehouseCoordinate: (newCoordinate: WarehouseCoordinateRecord) => Promise<void>;
   handleDeleteWarehouseCoordinate: (warehouseId: string, coordinateId: string) => Promise<void>;
-  handleSaveCountry: (data: any, id?: string) => Promise<CountryRecord | null>;
+  handleNavigateCountryCreate: () => void;
+  handleNavigateCountryEdit: (record: CountryRecord) => void;
+  handleSaveCountry: (data: CountryFormData, id?: string) => Promise<void>;
   handleDeleteCountry: (id: string) => Promise<void>;
-  handleSaveAccount: (data: any, id?: string) => Promise<AccountRecord | null>;
+  handleToggleCountryStatus: (id: string) => Promise<void>;
+  isCountriesLoading?: boolean;
+  handleNavigateAccountCreate: () => void;
+  handleNavigateAccountEdit: (record: AccountRecord) => void;
+  handleSaveAccount: (data: AccountFormData, id?: string) => Promise<void>;
   handleDeleteAccount: (id: string) => Promise<void>;
-  handleSaveJobNumber: (data: any, id?: string) => Promise<JobNumberRecord | null>;
+  handleToggleAccountStatus: (id: string) => Promise<void>;
+  isAccountsLoading?: boolean;
+  handleNavigateJobNumberCreate: () => void;
+  handleNavigateJobNumberEdit: (record: JobNumberRecord) => void;
+  handleSaveJobNumber: (data: JobNumberFormData, id?: string) => Promise<void>;
   handleDeleteJobNumber: (id: string) => Promise<void>;
-  handleSaveRafaksiType: (data: any, id?: string) => Promise<RafaksiTypeRecord | null>;
+  handleToggleJobNumberStatus: (id: string) => Promise<void>;
+  isJobNumbersLoading?: boolean;
+  handleNavigateRafaksiTypeCreate: () => void;
+  handleNavigateRafaksiTypeEdit: (record: RafaksiTypeRecord) => void;
+  handleSaveRafaksiType: (data: RafaksiTypeFormData, id?: string) => Promise<void>;
   handleDeleteRafaksiType: (id: string) => Promise<void>;
-  handleSaveCurrency: (data: any, id?: string) => Promise<CurrencyRecord | null>;
+  handleToggleRafaksiTypeStatus: (id: string) => Promise<void>;
+  isRafaksiTypesLoading?: boolean;
+  handleNavigateCurrencyCreate: () => void;
+  handleNavigateCurrencyEdit: (record: CurrencyRecord) => void;
+  handleSaveCurrency: (data: CurrencyFormData, id?: string) => Promise<void>;
   handleDeleteCurrency: (id: string) => Promise<void>;
+  isCurrenciesLoading?: boolean;
   handleNavigateGenerateQr: () => void;
   handleNavigateItemEdit: (item: ItemRecord) => void;
   handleSaveItem: (record: ItemRecord, isEdit: boolean) => Promise<void>;
@@ -311,6 +344,8 @@ export function AppViewRenderer({
   handleNavigateDocumentHistoryDetail,
   handleNavigateRequestMaterialCreate,
   handleNavigateRequestMaterialDetail,
+  handleNavigateTransferStockReturnCreate,
+  handleNavigateTransferStockReturnEdit,
   handleNavigateTransferStockReturnDetail,
   handleNavigateMasterWarehouseCreate,
   handleNavigateWarehouseCoordinates,
@@ -376,16 +411,35 @@ export function AppViewRenderer({
   handleSaveWarehouseMaster,
   handleSaveWarehouseCoordinate,
   handleDeleteWarehouseCoordinate,
+  handleNavigateCountryCreate,
+  handleNavigateCountryEdit,
   handleSaveCountry,
+  handleNavigateAccountCreate,
+  handleNavigateAccountEdit,
   handleSaveAccount,
   handleDeleteCountry,
+  handleToggleCountryStatus,
+  isCountriesLoading = false,
   handleDeleteAccount,
+  handleToggleAccountStatus,
+  isAccountsLoading = false,
+  handleNavigateJobNumberCreate,
+  handleNavigateJobNumberEdit,
   handleSaveJobNumber,
   handleDeleteJobNumber,
+  handleToggleJobNumberStatus,
+  isJobNumbersLoading = false,
+  handleNavigateRafaksiTypeCreate,
+  handleNavigateRafaksiTypeEdit,
   handleSaveRafaksiType,
   handleDeleteRafaksiType,
+  handleToggleRafaksiTypeStatus,
+  isRafaksiTypesLoading = false,
+  handleNavigateCurrencyCreate,
+  handleNavigateCurrencyEdit,
   handleSaveCurrency,
   handleDeleteCurrency,
+  isCurrenciesLoading = false,
   handleNavigateGenerateQr,
   handleNavigateItemEdit,
   handleSaveItem,
@@ -756,8 +810,10 @@ export function AppViewRenderer({
       {viewState.type === "list" && viewState.page === "country" && (
         <CountryIndex
           records={countryRecords}
-          onSave={handleSaveCountry}
+          onAddNew={handleNavigateCountryCreate}
+          onEdit={handleNavigateCountryEdit}
           onDelete={handleDeleteCountry}
+          onToggleStatus={handleToggleCountryStatus}
         />
       )}
 
@@ -765,8 +821,10 @@ export function AppViewRenderer({
       {viewState.type === "list" && viewState.page === "account" && (
         <AccountIndex
           records={accountRecords}
-          onSave={handleSaveAccount}
+          onAddNew={handleNavigateAccountCreate}
+          onEdit={handleNavigateAccountEdit}
           onDelete={handleDeleteAccount}
+          onToggleStatus={handleToggleAccountStatus}
         />
       )}
 
@@ -774,8 +832,10 @@ export function AppViewRenderer({
       {viewState.type === "list" && viewState.page === "job-number" && (
         <JobNumberIndex
           records={jobNumberRecords}
-          onSave={handleSaveJobNumber}
+          onAddNew={handleNavigateJobNumberCreate}
+          onEdit={handleNavigateJobNumberEdit}
           onDelete={handleDeleteJobNumber}
+          onToggleStatus={handleToggleJobNumberStatus}
         />
       )}
 
@@ -783,8 +843,10 @@ export function AppViewRenderer({
       {viewState.type === "list" && viewState.page === "rafaksi-type" && (
         <RafaksiTypeIndex
           records={rafaksiTypeRecords}
-          onSave={handleSaveRafaksiType}
+          onAddNew={handleNavigateRafaksiTypeCreate}
+          onEdit={handleNavigateRafaksiTypeEdit}
           onDelete={handleDeleteRafaksiType}
+          onToggleStatus={handleToggleRafaksiTypeStatus}
         />
       )}
 
@@ -792,7 +854,8 @@ export function AppViewRenderer({
       {viewState.type === "list" && viewState.page === "currency" && (
         <CurrencyIndex
           records={currencyRecords}
-          onSave={handleSaveCurrency}
+          onAddNew={handleNavigateCurrencyCreate}
+          onEdit={handleNavigateCurrencyEdit}
           onDelete={handleDeleteCurrency}
         />
       )}
@@ -849,6 +912,8 @@ export function AppViewRenderer({
       {/* Warehouse Incoming: Transfer Stock Return */}
       {viewState.type === "list" && viewState.page === "transfer-stock-return" && (
         <TransferStockReturnIndex
+          onAddNew={handleNavigateTransferStockReturnCreate}
+          onEdit={handleNavigateTransferStockReturnEdit}
           onOpenDetail={handleNavigateTransferStockReturnDetail}
         />
       )}
@@ -956,6 +1021,7 @@ export function AppViewRenderer({
               "/warehouse/incoming/transfer-stock-return"
             )
           }
+          onEdit={(rec) => handleNavigateTransferStockReturnEdit(rec)}
         />
       )}
 
@@ -1398,6 +1464,99 @@ export function AppViewRenderer({
             handleNavigateList("wh-destination-location", "/warehouse/master/destination-location");
           }}
           onSave={handleSaveDestinationLocation}
+        />
+      )}
+
+      {/* Dedicated Exim Master Country Form (Add / Edit) */}
+      {(viewState.type === "country-create" || viewState.type === "country-edit") && (
+        <CountryForm
+          mode={viewState.type === "country-edit" ? "edit" : "create"}
+          recordId={viewState.type === "country-edit" ? viewState.id : undefined}
+          initialRecord={viewState.type === "country-edit" ? viewState.record ?? null : null}
+          records={countryRecords}
+          isLoading={isCountriesLoading}
+          onSave={handleSaveCountry}
+          onCancel={() => handleNavigateList("country", "/exim/master/country")}
+        />
+      )}
+
+      {/* Dedicated Exim Master Account Form (Add / Edit) */}
+      {(viewState.type === "account-create" || viewState.type === "account-edit") && (
+        <AccountForm
+          mode={viewState.type === "account-edit" ? "edit" : "create"}
+          recordId={viewState.type === "account-edit" ? viewState.id : undefined}
+          initialRecord={viewState.type === "account-edit" ? viewState.record ?? null : null}
+          records={accountRecords}
+          isLoading={isAccountsLoading}
+          onSave={handleSaveAccount}
+          onCancel={() => handleNavigateList("account", "/exim/master/account")}
+        />
+      )}
+
+      {/* Dedicated Purchase Master Job Number Form (Add / Edit) */}
+      {(viewState.type === "job-number-create" || viewState.type === "job-number-edit") && (
+        <JobNumberForm
+          mode={viewState.type === "job-number-edit" ? "edit" : "create"}
+          recordId={viewState.type === "job-number-edit" ? viewState.id : undefined}
+          initialRecord={viewState.type === "job-number-edit" ? viewState.record ?? null : null}
+          records={jobNumberRecords}
+          isLoading={isJobNumbersLoading}
+          onSave={handleSaveJobNumber}
+          onCancel={() => handleNavigateList("job-number", "/procurement/purchase-master/job-number")}
+        />
+      )}
+
+      {/* Dedicated Purchase Master Rafaksi Type Form (Add / Edit) */}
+      {(viewState.type === "rafaksi-type-create" || viewState.type === "rafaksi-type-edit") && (
+        <RafaksiTypeForm
+          mode={viewState.type === "rafaksi-type-edit" ? "edit" : "create"}
+          recordId={viewState.type === "rafaksi-type-edit" ? viewState.id : undefined}
+          initialRecord={viewState.type === "rafaksi-type-edit" ? viewState.record ?? null : null}
+          records={rafaksiTypeRecords}
+          isLoading={isRafaksiTypesLoading}
+          onSave={handleSaveRafaksiType}
+          onCancel={() =>
+            handleNavigateList("rafaksi-type", "/procurement/purchase-master/rafaksi-type")
+          }
+        />
+      )}
+
+      {/* Dedicated Exim Master Currency Form (Add / Edit) */}
+      {(viewState.type === "currency-create" || viewState.type === "currency-edit") && (
+        <CurrencyForm
+          mode={viewState.type === "currency-edit" ? "edit" : "create"}
+          recordId={viewState.type === "currency-edit" ? viewState.id : undefined}
+          initialRecord={viewState.type === "currency-edit" ? viewState.record ?? null : null}
+          records={currencyRecords}
+          isLoading={isCurrenciesLoading}
+          onSave={handleSaveCurrency}
+          onCancel={() => handleNavigateList("currency", "/exim/master/currency")}
+        />
+      )}
+
+      {/* Dedicated Warehouse Incoming: Transfer Stock Return Form (Add / Edit) */}
+      {(viewState.type === "transfer-stock-return-create" ||
+        viewState.type === "transfer-stock-return-edit") && (
+        <TransferStockReturnForm
+          mode={viewState.type === "transfer-stock-return-edit" ? "edit" : "create"}
+          recordCode={
+            viewState.type === "transfer-stock-return-edit" ? viewState.code : undefined
+          }
+          initialRecord={
+            viewState.type === "transfer-stock-return-edit" ? viewState.record ?? null : null
+          }
+          onBack={() =>
+            handleNavigateList(
+              "transfer-stock-return",
+              "/warehouse/incoming/transfer-stock-return"
+            )
+          }
+          onSaved={() =>
+            handleNavigateList(
+              "transfer-stock-return",
+              "/warehouse/incoming/transfer-stock-return"
+            )
+          }
         />
       )}
 

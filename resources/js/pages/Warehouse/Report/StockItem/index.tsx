@@ -314,6 +314,7 @@ export function StockItemIndex() {
           <div className="master-form-group">
             <label className="master-form-label">Classification</label>
             <CustomSelect
+              searchable
               value={classification}
               onChange={(val) => {
                 setClassification(val);
@@ -327,6 +328,7 @@ export function StockItemIndex() {
           <div className="master-form-group">
             <label className="master-form-label">Coordinate</label>
             <CustomSelect
+              searchable
               value={coordinate}
               onChange={(val) => {
                 setCoordinate(val);
@@ -340,6 +342,7 @@ export function StockItemIndex() {
           <div className="master-form-group">
             <label className="master-form-label">Facility</label>
             <CustomSelect
+              searchable
               value={facility}
               onChange={(val) => {
                 setFacility(val);

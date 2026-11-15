@@ -5,12 +5,21 @@ Framework: Laravel
 
 ## Mandatory GeniusOne UI/UX Consistency Rules
 
-### Layout and Content
+### Layout, Navigation, and Responsive Integrity
 - Keep pages clean, compact, and content-focused.
 - Display the main page content directly below the page header.
 - Avoid redundant headings (e.g., do not display both "Payment Term" and "Master Payment Term" as competing headings for the same page).
 - Remove unnecessary summary labels, decorative metrics, and record-count messages such as "records shown" outside the table footer when they do not provide meaningful functionality.
 - Do not add explanatory descriptions, statistics, badges, or decorative elements without a clear functional purpose.
+- Ensure content containers use `min-width: 0` and flexible/scrollable table wrappers so active desktop sidebar (`238px`) never clips page content.
+- Ensure full responsive behavior across desktop, tablet, and mobile viewports with zero horizontal page clipping or broken controls.
+
+### Dedicated Pages & Routing
+- Use dedicated full pages (`*Form` create/edit pages) with registered Laravel routes, SPA router mappings, direct-link hydration, and permission middleware instead of modal popups for Add New and Edit workflows.
+
+### Stylesheets & CSS Architecture
+- Define all UI styling in external CSS files under `resources/css/` using GeniusOne design tokens, cards, and shared classes.
+- Do not use inline `style={{...}}` attributes in React page or form components (except genuinely dynamic computed runtime coordinates/percentages where CSS classes are not applicable).
 
 ### Tables and Pagination
 - Always place pagination below the table.
@@ -21,8 +30,8 @@ Framework: Laravel
 - Reuse shared table components and CSS rather than implementing a different table layout for each page.
 
 ### Buttons and Icons
+- Strict **icon-only OR text-only** rule: every button or interactive action pill must display either an icon alone or text alone — never combine icons and text inside the same button.
 - Never duplicate icons within a button.
-- The `Add New` button must display only one plus icon.
 - Keep icon size, alignment, and stroke style consistent.
 - Reuse the existing free, open-source icon library when suitable.
 - Do not introduce another icon library without a clear reason.

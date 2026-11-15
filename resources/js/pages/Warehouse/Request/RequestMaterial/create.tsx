@@ -466,34 +466,18 @@ export function RequestMaterialCreate({
 
       {/* Header Fields Form Panel */}
       <form onSubmit={handleSave} className="tx-panel" style={{ padding: "20px 24px" }}>
-        <h3
-          style={{
-            margin: "0 0 16px 0",
-            fontSize: "13px",
-            fontWeight: 800,
-            color: "var(--ink)",
-            textTransform: "uppercase",
-            letterSpacing: "0.4px",
-            borderBottom: "1px solid var(--line)",
-            paddingBottom: "8px",
-          }}
-        >
+        <h3 className="master-section-heading">
           Transaction Information
         </h3>
 
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-            gap: "16px",
-          }}
-        >
+        <div className="master-form-auto-grid">
           {/* Type of Request (Required) */}
           <div className="master-form-group">
             <label className="master-form-label">
               Type of Request <span className="required-asterisk">*</span>
             </label>
             <CustomSelect
+              searchable
               value={typeOfRequestId ? String(typeOfRequestId) : typeOfRequest}
               onChange={(val) => {
                 const chosen = lookups.typeOfRequests.find((t) => String(t.id) === val);
@@ -576,6 +560,7 @@ export function RequestMaterialCreate({
               Department <span className="required-asterisk">*</span>
             </label>
             <CustomSelect
+              searchable
               value={departmentsId ? String(departmentsId) : department}
               onChange={(val) => {
                 const chosen = lookups.departments.find((d) => String(d.id) === val);
@@ -627,6 +612,7 @@ export function RequestMaterialCreate({
             </label>
             {lookups.jobNumbers.length > 0 && !customJobMode ? (
               <CustomSelect
+                searchable
                 value={jobNumberId ? String(jobNumberId) : ""}
                 onChange={(val) => {
                   if (val === "__CUSTOM__") {
@@ -749,6 +735,7 @@ export function RequestMaterialCreate({
               Project Type <span className="required-asterisk">*</span>
             </label>
             <CustomSelect
+              searchable
               value={projectType}
               onChange={(val) => {
                 setProjectType(val);
@@ -786,6 +773,7 @@ export function RequestMaterialCreate({
               Warehouse Destination <span className="required-asterisk">*</span>
             </label>
             <CustomSelect
+              searchable
               value={warehousesId ? String(warehousesId) : warehouseDestination}
               onChange={(val) => {
                 const chosen = lookups.warehouses.find((w) => String(w.id) === val);
@@ -843,6 +831,7 @@ export function RequestMaterialCreate({
               Destination Location <span className="required-asterisk">*</span>
             </label>
             <CustomSelect
+              searchable
               value={destinationLocationId ? String(destinationLocationId) : destinationLocation}
               onChange={(val) => {
                 const chosen = lookups.destinationLocations.find((d) => String(d.id) === val);
@@ -1062,6 +1051,8 @@ export function RequestMaterialCreate({
                           >
                             {masterItems.length > 0 ? (
                               <CustomSelect
+                                className="tx-custom-select-cell"
+                                searchable
                                 value={row.items_id ? String(row.items_id) : ""}
                                 onChange={(val) => {
                                   const picked = masterItems.find((m) => String(m.id) === val);

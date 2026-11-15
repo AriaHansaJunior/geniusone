@@ -1,12 +1,10 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Button } from "../../../../components/ui/Button";
 import { SearchField } from "../../../../components/ui/SearchField";
 import { Pagination } from "../../../../components/ui/Pagination";
 import { Icon } from "../../../../components/ui/Icon";
 import { ConfirmDialog } from "../../../../components/ui/ConfirmDialog";
-import { CountryForm } from "./CountryForm";
 import {
-  initialCountryRecords,
   type CountryRecord,
   type CountrySortField,
   type SortDirection,
@@ -17,17 +15,15 @@ interface CountryIndexProps {
   onAddNew?: () => void;
   onEdit?: (record: CountryRecord) => void;
   onDelete?: (id: string) => Promise<boolean | void> | void;
-  onToggleStatus?: (id: string) => void;
-  onSave?: (data: { code: string; name: string; status: boolean }, id?: string) => Promise<CountryRecord | null>;
+  onToggleStatus?: (id: string) => Promise<void> | void;
 }
 
 export function CountryIndex({
-  records = initialCountryRecords,
+  records = [],
   onAddNew,
   onEdit,
   onDelete,
   onToggleStatus,
-  onSave,
 }: CountryIndexProps) {
   const [localRecords, setLocalRecords] = useState<CountryRecord[]>(records);
   const [search, setSearch] = useState("");
@@ -36,48 +32,34 @@ export function CountryIndex({
   const [sortField, setSortField] = useState<CountrySortField>("code");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
 
-  // Dialog & Modal States
   const [countryToDelete, setCountryToDelete] = useState<CountryRecord | null>(null);
   const [countryToConfirmEdit, setCountryToConfirmEdit] = useState<CountryRecord | null>(null);
-  const [isFormModalOpen, setIsFormModalOpen] = useState(false);
-  const [formMode, setFormMode] = useState<"create" | "edit">("create");
-  const [activeRecord, setActiveRecord] = useState<CountryRecord | null>(null);
-  const [exportNotice, setExportNotice] = useState<string | null>(null);
+  const [banner, setBanner] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
   useEffect(() => {
     setLocalRecords(records);
   }, [records]);
 
-  // Filter records based on search query
   const filteredRecords = useMemo(() => {
     if (!search.trim()) return localRecords;
     const q = search.toLowerCase().trim();
     return localRecords.filter((rec) => {
-      const matchCode = rec.code.toLowerCase().includes(q);
-      const matchName = rec.name.toLowerCase().includes(q);
-      return matchCode || matchName;
+      return rec.code.toLowerCase().includes(q) || rec.name.toLowerCase().includes(q);
     });
   }, [localRecords, search]);
 
-  // Sort records
   const sortedRecords = useMemo(() => {
     if (sortDirection === "none") return filteredRecords;
     const list = [...filteredRecords];
     list.sort((a, b) => {
-      let aVal = "";
-      let bVal = "";
-
-      if (sortField === "code") {
-        aVal = a.code;
-        bVal = b.code;
-      } else if (sortField === "name") {
-        aVal = a.name.toLowerCase();
-        bVal = b.name.toLowerCase();
-      } else if (sortField === "status") {
+      if (sortField === "status") {
         const aNum = a.status ? 1 : 0;
         const bNum = b.status ? 1 : 0;
         return sortDirection === "asc" ? aNum - bNum : bNum - aNum;
       }
+
+      const aVal = sortField === "code" ? a.code.toLowerCase() : a.name.toLowerCase();
+      const bVal = sortField === "code" ? b.code.toLowerCase() : b.name.toLowerCase();
 
       if (aVal < bVal) return sortDirection === "asc" ? -1 : 1;
       if (aVal > bVal) return sortDirection === "asc" ? 1 : -1;
@@ -86,118 +68,57 @@ export function CountryIndex({
     return list;
   }, [filteredRecords, sortField, sortDirection]);
 
-  // Pagination calculation
   const totalRecords = sortedRecords.length;
   const totalPages = Math.max(1, Math.ceil(totalRecords / pageSize));
-  const safeCurrentPage = Math.min(Math.max(1, currentPage), totalPages);
+  const safeCurrentPage = Math.min(currentPage, totalPages);
 
   const paginatedRecords = useMemo(() => {
-    const startIdx = (safeCurrentPage - 1) * pageSize;
-    return sortedRecords.slice(startIdx, startIdx + pageSize);
+    const startIndex = (safeCurrentPage - 1) * pageSize;
+    return sortedRecords.slice(startIndex, startIndex + pageSize);
   }, [sortedRecords, safeCurrentPage, pageSize]);
 
-  // Toggle sorting on column click
   const handleToggleSort = (field: CountrySortField) => {
     if (sortField === field) {
-      if (sortDirection === "asc") setSortDirection("desc");
-      else if (sortDirection === "desc") setSortDirection("none");
-      else setSortDirection("asc");
+      setSortDirection((prev) => (prev === "asc" ? "desc" : prev === "desc" ? "none" : "asc"));
     } else {
       setSortField(field);
       setSortDirection("asc");
     }
+    setCurrentPage(1);
   };
 
-  // Toggle active status
-  const handleToggleStatus = (id: string) => {
-    setLocalRecords((prev) =>
-      prev.map((rec) => (rec.id === id ? { ...rec, status: !rec.status } : rec))
-    );
-    if (onToggleStatus) onToggleStatus(id);
-  };
-
-  // Open Create Modal
-  const handleOpenCreateModal = () => {
-    setActiveRecord(null);
-    setFormMode("create");
-    setIsFormModalOpen(true);
-    if (onAddNew) onAddNew();
-  };
-
-  // Open Edit after confirmation
-  const handleConfirmEdit = () => {
-    if (!countryToConfirmEdit) return;
-    setActiveRecord(countryToConfirmEdit);
-    setFormMode("edit");
-    setIsFormModalOpen(true);
-    setCountryToConfirmEdit(null);
-    if (onEdit) onEdit(countryToConfirmEdit);
-  };
-
-  // Save from Modal
-  const handleSaveCountry = async (data: { code: string; name: string; status: boolean }) => {
-    if (onSave) {
-      try {
-        const saved = await onSave(data, formMode === "edit" ? activeRecord?.id : undefined);
-        if (saved) {
-          if (formMode === "create") {
-            setLocalRecords((prev) => [saved, ...prev.map((r, i) => ({ ...r, no: i + 2 }))]);
-          } else {
-            setLocalRecords((prev) => prev.map((r) => (r.id === saved.id ? saved : r)));
-          }
-          setIsFormModalOpen(false);
-          setActiveRecord(null);
-          return;
-        }
-      } catch (err) {
-        console.warn("Country save API error:", err);
+  const handleToggleStatus = async (id: string) => {
+    try {
+      if (onToggleStatus) {
+        await onToggleStatus(id);
+      } else {
+        setLocalRecords((prev) =>
+          prev.map((rec) => (rec.id === id ? { ...rec, status: !rec.status } : rec))
+        );
       }
+    } catch (err: any) {
+      setBanner({ type: "error", message: err?.message || "Failed to toggle status." });
     }
-
-    if (formMode === "create") {
-      const newRecord: CountryRecord = {
-        id: `country-${Date.now()}`,
-        no: localRecords.length + 1,
-        code: data.code,
-        name: data.name,
-        status: data.status,
-        createdAt: new Date().toISOString().replace("T", " ").substring(0, 19),
-        createdBy: "ADMINISTRATOR",
-      };
-      setLocalRecords((prev) => [newRecord, ...prev]);
-    } else if (formMode === "edit" && activeRecord) {
-      setLocalRecords((prev) =>
-        prev.map((rec) =>
-          rec.id === activeRecord.id
-            ? { ...rec, code: data.code, name: data.name, status: data.status }
-            : rec
-        )
-      );
-    }
-    setIsFormModalOpen(false);
-    setActiveRecord(null);
   };
 
-  // Confirm delete
   const handleConfirmDelete = async () => {
     if (!countryToDelete) return;
-    const idToDelete = countryToDelete.id;
-    if (onDelete) {
-      try {
-        await onDelete(idToDelete);
-      } catch (err) {
-        console.warn("Country delete API error:", err);
-      }
-    }
-    setLocalRecords((prev) => prev.filter((c) => c.id !== idToDelete));
+    const target = countryToDelete;
     setCountryToDelete(null);
+    try {
+      if (onDelete) {
+        await onDelete(target.id);
+      }
+      setLocalRecords((prev) => prev.filter((c) => c.id !== target.id));
+    } catch (err: any) {
+      setBanner({ type: "error", message: err?.message || `Failed to delete ${target.name}.` });
+    }
   };
 
-  // Export to Excel-compatible CSV
   const handleExportToExcel = () => {
     if (sortedRecords.length === 0) {
-      setExportNotice("No records available to export.");
-      setTimeout(() => setExportNotice(null), 3000);
+      setBanner({ type: "error", message: "No records available to export." });
+      setTimeout(() => setBanner(null), 3000);
       return;
     }
 
@@ -231,11 +152,14 @@ export function CountryIndex({
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
 
-      setExportNotice(`Exported ${sortedRecords.length} country record(s) to CSV.`);
-      setTimeout(() => setExportNotice(null), 4000);
+      setBanner({
+        type: "success",
+        message: `Exported ${sortedRecords.length} country record(s) to CSV.`,
+      });
+      setTimeout(() => setBanner(null), 4000);
     } catch {
-      setExportNotice("Failed to export data. Please try again.");
-      setTimeout(() => setExportNotice(null), 4000);
+      setBanner({ type: "error", message: "Failed to export data. Please try again." });
+      setTimeout(() => setBanner(null), 4000);
     }
   };
 
@@ -243,12 +167,7 @@ export function CountryIndex({
     const isActive = sortField === field && sortDirection !== "none";
     return (
       <span
-        style={{
-          marginLeft: "6px",
-          display: "inline-flex",
-          alignItems: "center",
-          color: isActive ? "var(--blue-600)" : "var(--muted-2)",
-        }}
+        className={`master-sort-indicator ${isActive ? "master-sort-indicator--active" : ""}`}
       >
         {isActive ? (
           sortDirection === "asc" ? (
@@ -265,29 +184,36 @@ export function CountryIndex({
 
   return (
     <div className="country-page">
-      {exportNotice && (
-        <div style={{ padding: "10px 14px", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: "var(--radius-sm)", color: "#166534", marginBottom: "14px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <span>{exportNotice}</span>
-          <button type="button" onClick={() => setExportNotice(null)} style={{ border: 0, background: "transparent", cursor: "pointer", color: "#166534", fontWeight: 700 }}>×</button>
+      {banner && (
+        <div className={`master-banner master-banner--${banner.type}`}>
+          <span>{banner.message}</span>
+          <button
+            type="button"
+            className="master-banner-close"
+            onClick={() => setBanner(null)}
+            aria-label="Dismiss notification"
+          >
+            ×
+          </button>
         </div>
       )}
 
-      {/* Main Table Panel */}
       <div className="panel table-panel">
-        <div className="table-toolbar" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 18px", borderBottom: "1px solid var(--line)", background: "var(--white)", gap: "12px" }}>
+        <div className="master-table-toolbar">
           <SearchField
             value={search}
             onChange={(val) => {
               setSearch(val);
               setCurrentPage(1);
             }}
-            placeholder="Search country code or name..."
+            placeholder="Search country code, name..."
           />
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <Button variant="primary" onClick={handleOpenCreateModal}>
+          <div className="master-toolbar-actions">
+            <Button type="button" variant="primary" onClick={() => onAddNew?.()}>
               Add New
             </Button>
             <Button
+              type="button"
               variant="excel"
               onClick={handleExportToExcel}
               title="Export to Excel CSV"
@@ -302,34 +228,31 @@ export function CountryIndex({
             <table className="data-table">
               <thead>
                 <tr>
-                  <th style={{ width: "60px", textAlign: "center" }}>
+                  <th className="master-col-no">
                     <span>No</span>
                   </th>
                   <th
-                    className="sortable-th"
-                    style={{ width: "120px", cursor: "pointer", userSelect: "none" }}
+                    className="sortable-th master-sortable-th master-col-code"
                     onClick={() => handleToggleSort("code")}
                   >
                     <span>Country Code</span>
                     {renderSortIndicator("code")}
                   </th>
                   <th
-                    className="sortable-th"
-                    style={{ cursor: "pointer", userSelect: "none" }}
+                    className="sortable-th master-sortable-th"
                     onClick={() => handleToggleSort("name")}
                   >
                     <span>Country Name</span>
                     {renderSortIndicator("name")}
                   </th>
                   <th
-                    className="sortable-th"
-                    style={{ width: "95px", textAlign: "center", cursor: "pointer", userSelect: "none" }}
+                    className="sortable-th master-sortable-th master-col-status"
                     onClick={() => handleToggleSort("status")}
                   >
                     <span>Status</span>
                     {renderSortIndicator("status")}
                   </th>
-                  <th style={{ width: "140px", textAlign: "center" }}>
+                  <th className="master-col-actions">
                     <span>Option</span>
                   </th>
                 </tr>
@@ -340,75 +263,40 @@ export function CountryIndex({
                     const rowNumber = (safeCurrentPage - 1) * pageSize + index + 1;
                     return (
                       <tr key={item.id}>
-                        <td style={{ textAlign: "center", color: "var(--muted)", fontWeight: 600 }}>
-                          {rowNumber}
-                        </td>
-                        <td style={{ fontWeight: 700, color: "var(--blue-700)" }}>
-                          {item.code}
-                        </td>
-                        <td style={{ fontWeight: 600, color: "var(--ink)" }}>
-                          {item.name}
-                        </td>
-                        <td style={{ textAlign: "center" }}>
+                        <td className="master-cell-no">{rowNumber}</td>
+                        <td className="master-cell-code">{item.code || "—"}</td>
+                        <td className="master-cell-name">{item.name}</td>
+                        <td className="master-cell-center">
                           <button
                             type="button"
+                            className={`master-status-pill ${
+                              item.status
+                                ? "master-status-pill--active"
+                                : "master-status-pill--inactive"
+                            }`}
                             onClick={() => handleToggleStatus(item.id)}
-                            style={{
-                              border: 0,
-                              background: item.status ? "#dcfce7" : "#f1f5f9",
-                              color: item.status ? "#15803d" : "#64748b",
-                              padding: "3px 8px",
-                              borderRadius: "999px",
-                              fontSize: "11px",
-                              fontWeight: 700,
-                              cursor: "pointer",
-                            }}
                             title="Click to toggle status"
                           >
                             {item.status ? "Active" : "Inactive"}
                           </button>
                         </td>
-                        <td style={{ textAlign: "center" }}>
-                          <div style={{ display: "inline-flex", gap: "6px" }}>
+                        <td className="master-cell-center">
+                          <div className="master-actions-group">
                             <button
                               type="button"
                               className="btn-action-edit"
-                              style={{
-                                display: "inline-flex",
-                                alignItems: "center",
-                                gap: "4px",
-                                padding: "4px 8px",
-                                borderRadius: "var(--radius-sm)",
-                                fontSize: "11px",
-                                fontWeight: 700,
-                                cursor: "pointer",
-                                border: "1px solid #0284c7",
-                                color: "#0284c7",
-                                background: "#fff",
-                              }}
                               onClick={() => setCountryToConfirmEdit(item)}
                               title={`Edit ${item.name}`}
+                              aria-label={`Edit ${item.name}`}
                             >
                               <Icon name="edit" size={13} />
                             </button>
                             <button
                               type="button"
                               className="btn-action-delete"
-                              style={{
-                                display: "inline-flex",
-                                alignItems: "center",
-                                gap: "4px",
-                                padding: "4px 8px",
-                                borderRadius: "var(--radius-sm)",
-                                fontSize: "11px",
-                                fontWeight: 700,
-                                cursor: "pointer",
-                                border: "1px solid #dc2626",
-                                color: "#dc2626",
-                                background: "#fff",
-                              }}
                               onClick={() => setCountryToDelete(item)}
                               title={`Delete ${item.name}`}
+                              aria-label={`Delete ${item.name}`}
                             >
                               <Icon name="trash" size={13} />
                             </button>
@@ -420,12 +308,12 @@ export function CountryIndex({
                 ) : (
                   <tr>
                     <td colSpan={5} className="empty-table-cell">
-                      <div className="empty" style={{ padding: "36px", textAlign: "center" }}>
-                        <div className="empty__icon" style={{ marginBottom: "8px" }}>
+                      <div className="empty master-empty-box">
+                        <div className="empty__icon master-empty-icon">
                           <Icon name="search" size={24} />
                         </div>
                         <strong>No countries found</strong>
-                        <span style={{ display: "block", color: "var(--muted)", fontSize: "12px", marginTop: "4px" }}>
+                        <span className="master-empty-subtitle">
                           Try adjusting your search query.
                         </span>
                       </div>
@@ -450,39 +338,29 @@ export function CountryIndex({
         </div>
       </div>
 
-      {/* Country Form Modal */}
-      <CountryForm
-        isOpen={isFormModalOpen}
-        mode={formMode}
-        record={activeRecord}
-        onSave={handleSaveCountry}
-        onCancel={() => {
-          setIsFormModalOpen(false);
-          setActiveRecord(null);
-        }}
-      />
-
-      {/* Edit Confirmation Dialog */}
       <ConfirmDialog
-        isOpen={!!countryToConfirmEdit}
-        title="Edit Record"
-        message={`Do you want to edit country "${countryToConfirmEdit?.name}" (${countryToConfirmEdit?.code})?`}
-        confirmLabel="Continue"
-        cancelLabel="Cancel"
-        confirmVariant="primary"
-        icon="edit"
-        onConfirm={handleConfirmEdit}
+        isOpen={Boolean(countryToConfirmEdit)}
         onCancel={() => setCountryToConfirmEdit(null)}
+        onConfirm={() => {
+          const target = countryToConfirmEdit;
+          setCountryToConfirmEdit(null);
+          if (target) onEdit?.(target);
+        }}
+        title="Edit Country"
+        message={`Open edit page for "${countryToConfirmEdit?.name}"?`}
+        confirmLabel="Yes, Edit"
+        cancelLabel="Cancel"
       />
 
-      {/* Delete Confirmation Dialog */}
       <ConfirmDialog
-        isOpen={!!countryToDelete}
-        entityType="country"
-        entityName={countryToDelete?.name}
-        entityCode={countryToDelete?.code}
-        onConfirm={handleConfirmDelete}
+        isOpen={Boolean(countryToDelete)}
         onCancel={() => setCountryToDelete(null)}
+        onConfirm={handleConfirmDelete}
+        title="Delete Country"
+        message={`Are you sure you want to delete "${countryToDelete?.name}"? This action cannot be undone.`}
+        confirmLabel="Yes, Delete"
+        cancelLabel="Cancel"
+        variant="danger"
       />
     </div>
   );

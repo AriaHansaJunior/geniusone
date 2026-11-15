@@ -114,15 +114,21 @@ Route::prefix('procurement')->group(function () {
         Route::get('pph-types', [PphApiController::class, 'pphTypes']);
         Route::apiResource('pph', PphApiController::class);
         Route::patch('pph/{id}/toggle-status', [PphApiController::class, 'toggleStatus']);
-        Route::apiResource('countries', CountryApiController::class);
-        Route::patch('countries/{id}/toggle-status', [CountryApiController::class, 'toggleStatus']);
-        Route::apiResource('rafaksi-types', RafaksiTypeApiController::class);
-        Route::patch('rafaksi-types/{id}/toggle-status', [RafaksiTypeApiController::class, 'toggleStatus']);
-        Route::apiResource('currencies', CurrencyApiController::class);
-        Route::patch('currencies/{id}/toggle-status', [CurrencyApiController::class, 'toggleStatus']);
-        Route::post('currencies/{id}/sync', [CurrencyApiController::class, 'sync']);
-        Route::apiResource('job-numbers', JobNumberApiController::class);
-        Route::patch('job-numbers/{id}/toggle-status', [JobNumberApiController::class, 'toggleStatus']);
+        Route::apiResource('countries', CountryApiController::class)->only(['index', 'show']);
+        Route::apiResource('rafaksi-types', RafaksiTypeApiController::class)->only(['index', 'show']);
+        Route::apiResource('currencies', CurrencyApiController::class)->only(['index', 'show']);
+        Route::apiResource('job-numbers', JobNumberApiController::class)->only(['index', 'show']);
+        Route::middleware(['auth', 'active'])->group(function () {
+            Route::apiResource('countries', CountryApiController::class)->except(['index', 'show']);
+            Route::patch('countries/{id}/toggle-status', [CountryApiController::class, 'toggleStatus']);
+            Route::apiResource('rafaksi-types', RafaksiTypeApiController::class)->except(['index', 'show']);
+            Route::patch('rafaksi-types/{id}/toggle-status', [RafaksiTypeApiController::class, 'toggleStatus']);
+            Route::apiResource('currencies', CurrencyApiController::class)->except(['index', 'show']);
+            Route::patch('currencies/{id}/toggle-status', [CurrencyApiController::class, 'toggleStatus']);
+            Route::post('currencies/{id}/sync', [CurrencyApiController::class, 'sync']);
+            Route::apiResource('job-numbers', JobNumberApiController::class)->except(['index', 'show']);
+            Route::patch('job-numbers/{id}/toggle-status', [JobNumberApiController::class, 'toggleStatus']);
+        });
         Route::apiResource('items', ItemApiController::class);
         Route::patch('items/{id}/toggle-status', [ItemApiController::class, 'toggleStatus']);
     });
@@ -164,11 +170,14 @@ Route::prefix('warehouse')->group(function () {
     Route::post('request-materials/{id}/reject', [MaterialRequestApiController::class, 'reject']);
 
     // Transfer Stock Returns
+    Route::get('transfer-stock-returns', [TransferStockReturnApiController::class, 'index']);
     Route::get('transfer-stock-returns/available-sources', [TransferStockReturnApiController::class, 'availableSourceItems']);
-    Route::post('transfer-stock-returns/{id}/approve', [TransferStockReturnApiController::class, 'approve']);
-    Route::post('transfer-stock-returns/{id}/reject', [TransferStockReturnApiController::class, 'reject']);
+    Route::middleware(['auth', 'active'])->group(function () {
+        Route::post('transfer-stock-returns/{id}/approve', [TransferStockReturnApiController::class, 'approve']);
+        Route::post('transfer-stock-returns/{id}/reject', [TransferStockReturnApiController::class, 'reject']);
+        Route::apiResource('transfer-stock-returns', TransferStockReturnApiController::class)->except(['index', 'show']);
+    });
     Route::get('transfer-stock-returns/{code}', [TransferStockReturnApiController::class, 'show'])->where('code', '.*');
-    Route::apiResource('transfer-stock-returns', TransferStockReturnApiController::class)->except(['show']);
 
     // Warehouse Master, Coordinates, Types of Request, Destination Locations
     Route::prefix('master')->group(function () {
@@ -227,10 +236,14 @@ Route::prefix('exim')->group(function () {
         Route::patch('styles/{id}/toggle-status', [StyleApiController::class, 'toggleStatus']);
         Route::apiResource('colours', ColourApiController::class);
         Route::patch('colours/{id}/toggle-status', [ColourApiController::class, 'toggleStatus']);
-        Route::apiResource('accounts', AccountApiController::class);
-        Route::patch('accounts/{id}/toggle-status', [AccountApiController::class, 'toggleStatus']);
-        Route::apiResource('job-numbers', JobNumberApiController::class);
-        Route::patch('job-numbers/{id}/toggle-status', [JobNumberApiController::class, 'toggleStatus']);
+        Route::apiResource('accounts', AccountApiController::class)->only(['index', 'show']);
+        Route::apiResource('job-numbers', JobNumberApiController::class)->only(['index', 'show']);
+        Route::middleware(['auth', 'active'])->group(function () {
+            Route::apiResource('accounts', AccountApiController::class)->except(['index', 'show']);
+            Route::patch('accounts/{id}/toggle-status', [AccountApiController::class, 'toggleStatus']);
+            Route::apiResource('job-numbers', JobNumberApiController::class)->except(['index', 'show']);
+            Route::patch('job-numbers/{id}/toggle-status', [JobNumberApiController::class, 'toggleStatus']);
+        });
     });
 
     // Exim Operations

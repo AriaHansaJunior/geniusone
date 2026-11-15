@@ -1,12 +1,10 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Button } from "../../../../components/ui/Button";
 import { SearchField } from "../../../../components/ui/SearchField";
 import { Pagination } from "../../../../components/ui/Pagination";
 import { Icon } from "../../../../components/ui/Icon";
 import { ConfirmDialog } from "../../../../components/ui/ConfirmDialog";
-import { AccountForm } from "./AccountForm";
 import {
-  initialAccountRecords,
   type AccountRecord,
   type AccountSortField,
   type SortDirection,
@@ -17,17 +15,15 @@ interface AccountIndexProps {
   onAddNew?: () => void;
   onEdit?: (record: AccountRecord) => void;
   onDelete?: (id: string) => Promise<boolean | void> | void;
-  onToggleStatus?: (id: string) => void;
-  onSave?: (data: { accountCode: string; accountName: string; category?: string; status: boolean }, id?: string) => Promise<AccountRecord | null>;
+  onToggleStatus?: (id: string) => Promise<void> | void;
 }
 
 export function AccountIndex({
-  records = initialAccountRecords,
+  records = [],
   onAddNew,
   onEdit,
   onDelete,
   onToggleStatus,
-  onSave,
 }: AccountIndexProps) {
   const [localRecords, setLocalRecords] = useState<AccountRecord[]>(records);
   const [search, setSearch] = useState("");
@@ -36,52 +32,48 @@ export function AccountIndex({
   const [sortField, setSortField] = useState<AccountSortField>("accountCode");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
 
-  // Dialog & Modal States
   const [accountToDelete, setAccountToDelete] = useState<AccountRecord | null>(null);
   const [accountToConfirmEdit, setAccountToConfirmEdit] = useState<AccountRecord | null>(null);
-  const [isFormModalOpen, setIsFormModalOpen] = useState(false);
-  const [formMode, setFormMode] = useState<"create" | "edit">("create");
-  const [activeRecord, setActiveRecord] = useState<AccountRecord | null>(null);
-  const [exportNotice, setExportNotice] = useState<string | null>(null);
+  const [banner, setBanner] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
   useEffect(() => {
     setLocalRecords(records);
   }, [records]);
 
-  // Filter records based on search query
   const filteredRecords = useMemo(() => {
     if (!search.trim()) return localRecords;
     const q = search.toLowerCase().trim();
     return localRecords.filter((rec) => {
-      const matchCode = rec.accountCode.toLowerCase().includes(q);
-      const matchName = rec.accountName.toLowerCase().includes(q);
-      const matchCat = rec.category.toLowerCase().includes(q);
-      return matchCode || matchName || matchCat;
+      return (
+        rec.accountCode.toLowerCase().includes(q) ||
+        rec.accountName.toLowerCase().includes(q) ||
+        rec.category.toLowerCase().includes(q)
+      );
     });
   }, [localRecords, search]);
 
-  // Sort records
   const sortedRecords = useMemo(() => {
     if (sortDirection === "none") return filteredRecords;
     const list = [...filteredRecords];
     list.sort((a, b) => {
-      let aVal = "";
-      let bVal = "";
-
-      if (sortField === "accountCode") {
-        aVal = a.accountCode;
-        bVal = b.accountCode;
-      } else if (sortField === "accountName") {
-        aVal = a.accountName.toLowerCase();
-        bVal = b.accountName.toLowerCase();
-      } else if (sortField === "category") {
-        aVal = a.category.toLowerCase();
-        bVal = b.category.toLowerCase();
-      } else if (sortField === "status") {
+      if (sortField === "status") {
         const aNum = a.status ? 1 : 0;
         const bNum = b.status ? 1 : 0;
         return sortDirection === "asc" ? aNum - bNum : bNum - aNum;
       }
+
+      const aVal =
+        sortField === "accountCode"
+          ? a.accountCode.toLowerCase()
+          : sortField === "accountName"
+          ? a.accountName.toLowerCase()
+          : a.category.toLowerCase();
+      const bVal =
+        sortField === "accountCode"
+          ? b.accountCode.toLowerCase()
+          : sortField === "accountName"
+          ? b.accountName.toLowerCase()
+          : b.category.toLowerCase();
 
       if (aVal < bVal) return sortDirection === "asc" ? -1 : 1;
       if (aVal > bVal) return sortDirection === "asc" ? 1 : -1;
@@ -90,135 +82,73 @@ export function AccountIndex({
     return list;
   }, [filteredRecords, sortField, sortDirection]);
 
-  // Pagination calculation
   const totalRecords = sortedRecords.length;
   const totalPages = Math.max(1, Math.ceil(totalRecords / pageSize));
-  const safeCurrentPage = Math.min(Math.max(1, currentPage), totalPages);
+  const safeCurrentPage = Math.min(currentPage, totalPages);
 
   const paginatedRecords = useMemo(() => {
-    const startIdx = (safeCurrentPage - 1) * pageSize;
-    return sortedRecords.slice(startIdx, startIdx + pageSize);
+    const startIndex = (safeCurrentPage - 1) * pageSize;
+    return sortedRecords.slice(startIndex, startIndex + pageSize);
   }, [sortedRecords, safeCurrentPage, pageSize]);
 
-  // Toggle sorting on column click
   const handleToggleSort = (field: AccountSortField) => {
     if (sortField === field) {
-      if (sortDirection === "asc") setSortDirection("desc");
-      else if (sortDirection === "desc") setSortDirection("none");
-      else setSortDirection("asc");
+      setSortDirection((prev) => (prev === "asc" ? "desc" : prev === "desc" ? "none" : "asc"));
     } else {
       setSortField(field);
       setSortDirection("asc");
     }
+    setCurrentPage(1);
   };
 
-  // Toggle active status
-  const handleToggleStatus = (id: string) => {
-    setLocalRecords((prev) =>
-      prev.map((rec) => (rec.id === id ? { ...rec, status: !rec.status } : rec))
-    );
-    if (onToggleStatus) onToggleStatus(id);
-  };
-
-  // Open Create Modal
-  const handleOpenCreateModal = () => {
-    setActiveRecord(null);
-    setFormMode("create");
-    setIsFormModalOpen(true);
-    if (onAddNew) onAddNew();
-  };
-
-  // Open Edit after confirmation
-  const handleConfirmEdit = () => {
-    if (!accountToConfirmEdit) return;
-    setActiveRecord(accountToConfirmEdit);
-    setFormMode("edit");
-    setIsFormModalOpen(true);
-    setAccountToConfirmEdit(null);
-    if (onEdit) onEdit(accountToConfirmEdit);
-  };
-
-  // Save from Modal
-  const handleSaveAccount = async (data: {
-    accountCode: string;
-    accountName: string;
-    category: string;
-    status: boolean;
-  }) => {
-    if (onSave) {
-      try {
-        const saved = await onSave(data, formMode === "edit" ? activeRecord?.id : undefined);
-        if (saved) {
-          if (formMode === "create") {
-            setLocalRecords((prev) => [saved, ...prev.map((r, i) => ({ ...r, no: i + 2 }))]);
-          } else {
-            setLocalRecords((prev) => prev.map((r) => (r.id === saved.id ? saved : r)));
-          }
-          setIsFormModalOpen(false);
-          setActiveRecord(null);
-          return;
-        }
-      } catch (err) {
-        console.warn("Account save API error:", err);
+  const handleToggleStatus = async (id: string) => {
+    try {
+      if (onToggleStatus) {
+        await onToggleStatus(id);
+      } else {
+        setLocalRecords((prev) =>
+          prev.map((rec) => (rec.id === id ? { ...rec, status: !rec.status } : rec))
+        );
       }
+    } catch (err: any) {
+      setBanner({ type: "error", message: err?.message || "Failed to toggle status." });
     }
-
-    if (formMode === "create") {
-      const newRecord: AccountRecord = {
-        id: `acc-${Date.now()}`,
-        no: localRecords.length + 1,
-        accountCode: data.accountCode,
-        accountName: data.accountName,
-        category: data.category,
-        status: data.status,
-        createdAt: new Date().toISOString().replace("T", " ").substring(0, 19),
-        createdBy: "ADMINISTRATOR",
-      };
-      setLocalRecords((prev) => [newRecord, ...prev]);
-    } else if (formMode === "edit" && activeRecord) {
-      setLocalRecords((prev) =>
-        prev.map((rec) =>
-          rec.id === activeRecord.id
-            ? {
-                ...rec,
-                accountCode: data.accountCode,
-                accountName: data.accountName,
-                category: data.category,
-                status: data.status,
-              }
-            : rec
-        )
-      );
-    }
-    setIsFormModalOpen(false);
-    setActiveRecord(null);
   };
 
-  // Confirm delete
   const handleConfirmDelete = async () => {
     if (!accountToDelete) return;
-    const idToDelete = accountToDelete.id;
-    if (onDelete) {
-      try {
-        await onDelete(idToDelete);
-      } catch (err) {
-        console.warn("Account delete API error:", err);
-      }
-    }
-    setLocalRecords((prev) => prev.filter((a) => a.id !== idToDelete));
+    const target = accountToDelete;
     setAccountToDelete(null);
+    try {
+      if (onDelete) {
+        await onDelete(target.id);
+      }
+      setLocalRecords((prev) => prev.filter((a) => a.id !== target.id));
+    } catch (err: any) {
+      setBanner({
+        type: "error",
+        message: err?.message || `Failed to delete ${target.accountCode}.`,
+      });
+    }
   };
 
-  // Export to Excel-compatible CSV
   const handleExportToExcel = () => {
     if (sortedRecords.length === 0) {
-      setExportNotice("No records available to export.");
-      setTimeout(() => setExportNotice(null), 3000);
+      setBanner({ type: "error", message: "No records available to export." });
+      setTimeout(() => setBanner(null), 3000);
       return;
     }
 
     try {
-      const headers = ["No", "Account Code", "Account Name", "Category", "Status", "Created At", "Created By"];
+      const headers = [
+        "No",
+        "Account Code",
+        "Account Name",
+        "Category",
+        "Status",
+        "Created At",
+        "Created By",
+      ];
       const csvRows = [headers.join(",")];
 
       sortedRecords.forEach((row, index) => {
@@ -248,11 +178,14 @@ export function AccountIndex({
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
 
-      setExportNotice(`Exported ${sortedRecords.length} account record(s) to CSV.`);
-      setTimeout(() => setExportNotice(null), 4000);
+      setBanner({
+        type: "success",
+        message: `Exported ${sortedRecords.length} account record(s) to CSV.`,
+      });
+      setTimeout(() => setBanner(null), 4000);
     } catch {
-      setExportNotice("Failed to export data. Please try again.");
-      setTimeout(() => setExportNotice(null), 4000);
+      setBanner({ type: "error", message: "Failed to export data. Please try again." });
+      setTimeout(() => setBanner(null), 4000);
     }
   };
 
@@ -260,12 +193,7 @@ export function AccountIndex({
     const isActive = sortField === field && sortDirection !== "none";
     return (
       <span
-        style={{
-          marginLeft: "6px",
-          display: "inline-flex",
-          alignItems: "center",
-          color: isActive ? "var(--blue-600)" : "var(--muted-2)",
-        }}
+        className={`master-sort-indicator ${isActive ? "master-sort-indicator--active" : ""}`}
       >
         {isActive ? (
           sortDirection === "asc" ? (
@@ -282,16 +210,22 @@ export function AccountIndex({
 
   return (
     <div className="account-page">
-      {exportNotice && (
-        <div style={{ padding: "10px 14px", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: "var(--radius-sm)", color: "#166534", marginBottom: "14px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <span>{exportNotice}</span>
-          <button type="button" onClick={() => setExportNotice(null)} style={{ border: 0, background: "transparent", cursor: "pointer", color: "#166534", fontWeight: 700 }}>×</button>
+      {banner && (
+        <div className={`master-banner master-banner--${banner.type}`}>
+          <span>{banner.message}</span>
+          <button
+            type="button"
+            className="master-banner-close"
+            onClick={() => setBanner(null)}
+            aria-label="Dismiss notification"
+          >
+            ×
+          </button>
         </div>
       )}
 
-      {/* Main Table Panel */}
       <div className="panel table-panel">
-        <div className="table-toolbar" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 18px", borderBottom: "1px solid var(--line)", background: "var(--white)", gap: "12px" }}>
+        <div className="master-table-toolbar">
           <SearchField
             value={search}
             onChange={(val) => {
@@ -300,11 +234,12 @@ export function AccountIndex({
             }}
             placeholder="Search account code, name, category..."
           />
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <Button variant="primary" onClick={handleOpenCreateModal}>
+          <div className="master-toolbar-actions">
+            <Button type="button" variant="primary" onClick={() => onAddNew?.()}>
               Add New
             </Button>
             <Button
+              type="button"
               variant="excel"
               onClick={handleExportToExcel}
               title="Export to Excel CSV"
@@ -319,42 +254,38 @@ export function AccountIndex({
             <table className="data-table">
               <thead>
                 <tr>
-                  <th style={{ width: "60px", textAlign: "center" }}>
+                  <th className="master-col-no">
                     <span>No</span>
                   </th>
                   <th
-                    className="sortable-th"
-                    style={{ width: "130px", cursor: "pointer", userSelect: "none" }}
+                    className="sortable-th master-sortable-th master-col-code"
                     onClick={() => handleToggleSort("accountCode")}
                   >
                     <span>Account Code</span>
                     {renderSortIndicator("accountCode")}
                   </th>
                   <th
-                    className="sortable-th"
-                    style={{ cursor: "pointer", userSelect: "none" }}
+                    className="sortable-th master-sortable-th"
                     onClick={() => handleToggleSort("accountName")}
                   >
                     <span>Account Name</span>
                     {renderSortIndicator("accountName")}
                   </th>
                   <th
-                    className="sortable-th"
-                    style={{ width: "180px", cursor: "pointer", userSelect: "none" }}
+                    className="sortable-th master-sortable-th master-col-category"
                     onClick={() => handleToggleSort("category")}
                   >
                     <span>Category</span>
                     {renderSortIndicator("category")}
                   </th>
                   <th
-                    className="sortable-th"
-                    style={{ width: "95px", textAlign: "center", cursor: "pointer", userSelect: "none" }}
+                    className="sortable-th master-sortable-th master-col-status"
                     onClick={() => handleToggleSort("status")}
                   >
                     <span>Status</span>
                     {renderSortIndicator("status")}
                   </th>
-                  <th style={{ width: "140px", textAlign: "center" }}>
+                  <th className="master-col-actions">
                     <span>Option</span>
                   </th>
                 </tr>
@@ -365,78 +296,41 @@ export function AccountIndex({
                     const rowNumber = (safeCurrentPage - 1) * pageSize + index + 1;
                     return (
                       <tr key={item.id}>
-                        <td style={{ textAlign: "center", color: "var(--muted)", fontWeight: 600 }}>
-                          {rowNumber}
-                        </td>
-                        <td style={{ fontWeight: 700, color: "var(--blue-700)", fontFamily: "ui-monospace, monospace" }}>
-                          {item.accountCode}
-                        </td>
-                        <td style={{ fontWeight: 600, color: "var(--ink)" }}>
-                          {item.accountName}
-                        </td>
-                        <td style={{ color: "var(--ink-soft)" }}>
-                          {item.category}
-                        </td>
-                        <td style={{ textAlign: "center" }}>
+                        <td className="master-cell-no">{rowNumber}</td>
+                        <td className="master-cell-code">{item.accountCode}</td>
+                        <td className="master-cell-name">{item.accountName}</td>
+                        <td className="master-cell-muted">{item.category || "—"}</td>
+                        <td className="master-cell-center">
                           <button
                             type="button"
+                            className={`master-status-pill ${
+                              item.status
+                                ? "master-status-pill--active"
+                                : "master-status-pill--inactive"
+                            }`}
                             onClick={() => handleToggleStatus(item.id)}
-                            style={{
-                              border: 0,
-                              background: item.status ? "#dcfce7" : "#f1f5f9",
-                              color: item.status ? "#15803d" : "#64748b",
-                              padding: "3px 8px",
-                              borderRadius: "999px",
-                              fontSize: "11px",
-                              fontWeight: 700,
-                              cursor: "pointer",
-                            }}
                             title="Click to toggle status"
                           >
                             {item.status ? "Active" : "Inactive"}
                           </button>
                         </td>
-                        <td style={{ textAlign: "center" }}>
-                          <div style={{ display: "inline-flex", gap: "6px" }}>
+                        <td className="master-cell-center">
+                          <div className="master-actions-group">
                             <button
                               type="button"
                               className="btn-action-edit"
-                              style={{
-                                display: "inline-flex",
-                                alignItems: "center",
-                                gap: "4px",
-                                padding: "4px 8px",
-                                borderRadius: "var(--radius-sm)",
-                                fontSize: "11px",
-                                fontWeight: 700,
-                                cursor: "pointer",
-                                border: "1px solid #0284c7",
-                                color: "#0284c7",
-                                background: "#fff",
-                              }}
                               onClick={() => setAccountToConfirmEdit(item)}
-                              title={`Edit ${item.accountName}`}
+                              title={`Edit ${item.accountCode}`}
+                              aria-label={`Edit ${item.accountCode}`}
                             >
                               <Icon name="edit" size={13} />
                             </button>
                             <button
                               type="button"
                               className="btn-action-delete"
-                              style={{
-                                display: "inline-flex",
-                                alignItems: "center",
-                                gap: "4px",
-                                padding: "4px 8px",
-                                borderRadius: "var(--radius-sm)",
-                                fontSize: "11px",
-                                fontWeight: 700,
-                                cursor: "pointer",
-                                border: "1px solid #dc2626",
-                                color: "#dc2626",
-                                background: "#fff",
-                              }}
                               onClick={() => setAccountToDelete(item)}
-                              title={`Delete ${item.accountName}`}
+                              title={`Delete ${item.accountCode}`}
+                              aria-label={`Delete ${item.accountCode}`}
                             >
                               <Icon name="trash" size={13} />
                             </button>
@@ -448,12 +342,12 @@ export function AccountIndex({
                 ) : (
                   <tr>
                     <td colSpan={6} className="empty-table-cell">
-                      <div className="empty" style={{ padding: "36px", textAlign: "center" }}>
-                        <div className="empty__icon" style={{ marginBottom: "8px" }}>
+                      <div className="empty master-empty-box">
+                        <div className="empty__icon master-empty-icon">
                           <Icon name="search" size={24} />
                         </div>
                         <strong>No accounts found</strong>
-                        <span style={{ display: "block", color: "var(--muted)", fontSize: "12px", marginTop: "4px" }}>
+                        <span className="master-empty-subtitle">
                           Try adjusting your search query.
                         </span>
                       </div>
@@ -478,39 +372,29 @@ export function AccountIndex({
         </div>
       </div>
 
-      {/* Account Form Modal */}
-      <AccountForm
-        isOpen={isFormModalOpen}
-        mode={formMode}
-        record={activeRecord}
-        onSave={handleSaveAccount}
-        onCancel={() => {
-          setIsFormModalOpen(false);
-          setActiveRecord(null);
-        }}
-      />
-
-      {/* Edit Confirmation Dialog */}
       <ConfirmDialog
-        isOpen={!!accountToConfirmEdit}
-        title="Edit Record"
-        message={`Do you want to edit account "${accountToConfirmEdit?.accountName}" (${accountToConfirmEdit?.accountCode})?`}
-        confirmLabel="Continue"
-        cancelLabel="Cancel"
-        confirmVariant="primary"
-        icon="edit"
-        onConfirm={handleConfirmEdit}
+        isOpen={Boolean(accountToConfirmEdit)}
         onCancel={() => setAccountToConfirmEdit(null)}
+        onConfirm={() => {
+          const target = accountToConfirmEdit;
+          setAccountToConfirmEdit(null);
+          if (target) onEdit?.(target);
+        }}
+        title="Edit Account"
+        message={`Open edit page for "${accountToConfirmEdit?.accountCode} - ${accountToConfirmEdit?.accountName}"?`}
+        confirmLabel="Yes, Edit"
+        cancelLabel="Cancel"
       />
 
-      {/* Delete Confirmation Dialog */}
       <ConfirmDialog
-        isOpen={!!accountToDelete}
-        entityType="account"
-        entityName={accountToDelete?.accountName}
-        entityCode={accountToDelete?.accountCode}
-        onConfirm={handleConfirmDelete}
+        isOpen={Boolean(accountToDelete)}
         onCancel={() => setAccountToDelete(null)}
+        onConfirm={handleConfirmDelete}
+        title="Delete Account"
+        message={`Are you sure you want to delete "${accountToDelete?.accountCode} - ${accountToDelete?.accountName}"? This action cannot be undone.`}
+        confirmLabel="Yes, Delete"
+        cancelLabel="Cancel"
+        variant="danger"
       />
     </div>
   );

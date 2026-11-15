@@ -767,6 +767,7 @@ export function DashboardPendingApprovals({
 
               <div className="dashboard-approval-filter-item dashboard-approval-filter-item--sort">
                 <CustomSelect
+                  searchable={false}
                   value={sortBy}
                   onChange={(val) => setSortBy(val as any)}
                   options={[

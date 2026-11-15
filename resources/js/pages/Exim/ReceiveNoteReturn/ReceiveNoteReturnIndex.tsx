@@ -384,6 +384,7 @@ export function ReceiveNoteReturnIndex({
             <label className="rnr-filter-label">Customer</label>
             <CustomSelect
               className="rnr-filter-select"
+              searchable
               value={selectedCustomer}
               onChange={(val) => {
                 setSelectedCustomer(val);
@@ -398,6 +399,7 @@ export function ReceiveNoteReturnIndex({
             <label className="rnr-filter-label">Type of Document</label>
             <CustomSelect
               className="rnr-filter-select"
+              searchable
               value={selectedDocType}
               onChange={(val) => {
                 setSelectedDocType(val);

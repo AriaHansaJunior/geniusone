@@ -1317,6 +1317,7 @@ export function UserPermissionAdmin({ onNavigateAudit }: UserPermissionAdminProp
                         <td>
                           <div className="user-identity" style={{ gap: "4px", minWidth: "180px" }}>
                             <CustomSelect
+                              searchable
                               value={user.isSuperAdmin ? "superadmin" : user.role}
                               disabled={user.isSuperAdmin}
                               onChange={(val) => handleAssignRoleDirectly(user, val)}

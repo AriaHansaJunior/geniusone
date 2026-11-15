@@ -261,26 +261,15 @@ export function AuditLogAdmin({ onNavigateUsers }: AuditLogAdminProps) {
   // Security barrier for non-SuperAdmin users (AFTER all hooks have been invoked)
   if (!isSuperAdmin) {
     return (
-      <div className="panel" style={{ padding: "40px 24px", textAlign: "center" }}>
-        <div style={{ maxWidth: "460px", margin: "0 auto" }}>
-          <div
-            style={{
-              width: "48px",
-              height: "48px",
-              borderRadius: "50%",
-              background: "#fee2e2",
-              color: "#dc2626",
-              display: "grid",
-              placeItems: "center",
-              margin: "0 auto 16px",
-            }}
-          >
+      <div className="panel audit-restricted-card">
+        <div className="audit-restricted-inner">
+          <div className="audit-restricted-icon">
             <Icon name="lock" size={24} />
           </div>
-          <h2 style={{ fontSize: "18px", fontWeight: 700, margin: "0 0 8px", color: "var(--ink)" }}>
+          <h2 className="audit-restricted-title">
             Access Restricted
           </h2>
-          <p style={{ fontSize: "13px", color: "var(--muted)", margin: "0 0 20px", lineHeight: 1.5 }}>
+          <p className="audit-restricted-desc">
             The System Audit Trail & History contains high-privilege operational telemetry and is strictly restricted to
             Super Administrator accounts.
           </p>

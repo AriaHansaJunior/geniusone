@@ -477,6 +477,7 @@ export function ReceiveNoteIndex({
             <label className="rn-filter-label">Supplier</label>
             <CustomSelect
               className="rn-filter-select"
+              searchable
               value={selectedSupplier}
               onChange={(val) => {
                 setSelectedSupplier(val);
@@ -491,6 +492,7 @@ export function ReceiveNoteIndex({
             <label className="rn-filter-label">Type of Document</label>
             <CustomSelect
               className="rn-filter-select"
+              searchable
               value={selectedDocType}
               onChange={(val) => {
                 setSelectedDocType(val);

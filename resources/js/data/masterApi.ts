@@ -1129,7 +1129,7 @@ export async function fetchMasterCountries(): Promise<CountryRecord[] | null> {
 }
 
 export async function saveCountryApi(data: { code?: string; name: string; status: boolean }, id?: string): Promise<CountryRecord | null> {
-  const payload = { code: data.code || "", name: data.name, status: data.status ? 1 : 0 };
+  const payload = { code: data.code?.trim() || null, name: data.name, status: data.status ? 1 : 0 };
   const res = id
     ? await apiPut<{ data: any }>(`/api/procurement/master/countries/${toNumericOrCleanId(id)}`, payload)
     : await apiPost<{ data: any }>("/api/procurement/master/countries", payload);
@@ -1175,7 +1175,7 @@ export async function saveRafaksiTypeApi(
   id?: string
 ): Promise<RafaksiTypeRecord | null> {
   const payload = {
-    code: data.code,
+    code: data.code?.trim() || null,
     name: data.name,
     description: data.description || "",
     status: data.status ? 1 : 0,
@@ -1215,22 +1215,29 @@ export async function fetchMasterCurrencies(): Promise<CurrencyRecord[] | null> 
     currencyCode: r.code || "",
     currencyName: r.name || "",
     symbol: r.symbol || r.code || "",
-    syncStatus: (isTruthyStatus(r.status) ? "Synced" : "Not Synced") as CurrencyRecord["syncStatus"],
-    lastSynced: formatDisplayDate(r.updated_at || r.created_at),
+    syncStatus: (r.sync_status || (isTruthyStatus(r.status) ? "Synced" : "Not Synced")) as CurrencyRecord["syncStatus"],
+    lastSynced: formatDisplayDate(r.last_synced_at || r.updated_at || r.created_at),
     createdBy: r.created_by_name || r.created_by_user?.name || r.creator?.name || "-",
     createdAt: formatDisplayDate(r.created_at),
   }));
 }
 
 export async function saveCurrencyApi(
-  data: { currencyCode: string; currencyName: string; symbol?: string; status?: boolean },
+  data: { currencyCode: string; currencyName: string; symbol?: string; syncStatus?: string; status?: boolean },
   id?: string
 ): Promise<CurrencyRecord | null> {
+  const resolvedStatus =
+    data.status !== undefined
+      ? data.status ? 1 : 0
+      : data.syncStatus === "Not Synced" || data.syncStatus === "Failed"
+      ? 0
+      : 1;
   const payload = {
     code: data.currencyCode,
     name: data.currencyName,
     symbol: data.symbol || data.currencyCode,
-    status: data.status === false ? 0 : 1,
+    sync_status: data.syncStatus || (resolvedStatus === 1 ? "Synced" : "Not Synced"),
+    status: resolvedStatus,
   };
   const res = id
     ? await apiPut<{ data: any }>(`/api/procurement/master/currencies/${toNumericOrCleanId(id)}`, payload)
@@ -1243,8 +1250,8 @@ export async function saveCurrencyApi(
     currencyCode: r.code || data.currencyCode,
     currencyName: r.name || data.currencyName,
     symbol: r.symbol || data.symbol || data.currencyCode,
-    syncStatus: (isTruthyStatus(r.status ?? 1) ? "Synced" : "Not Synced") as CurrencyRecord["syncStatus"],
-    lastSynced: formatDisplayDate(r.updated_at || r.created_at),
+    syncStatus: (r.sync_status || (isTruthyStatus(r.status ?? 1) ? "Synced" : "Not Synced")) as CurrencyRecord["syncStatus"],
+    lastSynced: formatDisplayDate(r.last_synced_at || r.updated_at || r.created_at),
     createdBy: r.created_by_name || r.created_by_user?.name || r.creator?.name || "-",
     createdAt: formatDisplayDate(r.created_at),
   };
@@ -1282,7 +1289,7 @@ export async function saveAccountApi(
     code: data.accountCode,
     name: data.accountName,
     category: data.category || "Inventory",
-    status: data.status ? 1 : 0,
+    status: data.status ? "active" : "inactive",
   };
   const res = id
     ? await apiPut<{ data: any }>(`/api/exim/master/accounts/${toNumericOrCleanId(id)}`, payload)
@@ -1317,8 +1324,8 @@ export async function fetchMasterJobNumbers(): Promise<JobNumberRecord[] | null>
     id: String(r.id),
     no: idx + 1,
     jobNumber: r.code || r.job_number || "",
-    jobName: r.description || r.name || "",
-    department: r.department?.name || r.department_name || "-",
+    jobName: r.name || r.description || "",
+    department: (typeof r.department === "string" ? r.department : r.department?.name) || r.department_name || "-",
     status: isTruthyStatus(r.status),
     createdBy: r.created_by_name || r.creator?.name || "-",
     createdAt: formatDisplayDate(r.updated_at || r.created_at),
@@ -1331,8 +1338,8 @@ export async function saveJobNumberApi(
 ): Promise<JobNumberRecord | null> {
   const payload = {
     code: data.jobNumber,
-    description: data.jobName || "",
-    department_name: data.department || "",
+    name: data.jobName || data.jobNumber,
+    department: data.department || "",
     status: data.status ? 1 : 0,
   };
   const res = id
@@ -1344,8 +1351,8 @@ export async function saveJobNumberApi(
     id: String(r.id),
     no: 1,
     jobNumber: r.code || data.jobNumber,
-    jobName: r.description || data.jobName || "",
-    department: r.department?.name || r.department_name || data.department || "-",
+    jobName: r.name || r.description || data.jobName || "",
+    department: (typeof r.department === "string" ? r.department : r.department?.name) || r.department_name || data.department || "-",
     status: isTruthyStatus(r.status),
     createdBy: r.created_by_name || r.creator?.name || "-",
     createdAt: formatDisplayDate(r.updated_at || r.created_at),

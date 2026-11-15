@@ -1,11 +1,9 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Button } from "../../../../components/ui/Button";
 import { SearchField } from "../../../../components/ui/SearchField";
 import { Pagination } from "../../../../components/ui/Pagination";
 import { Icon } from "../../../../components/ui/Icon";
-import { StatusToggle } from "../../../../components/ui/StatusToggle";
 import { ConfirmDialog } from "../../../../components/ui/ConfirmDialog";
-import { JobNumberForm } from "./JobNumberForm";
 import {
   type JobNumberRecord,
   type JobNumberSortField,
@@ -17,8 +15,7 @@ interface JobNumberIndexProps {
   onAddNew?: () => void;
   onEdit?: (record: JobNumberRecord) => void;
   onDelete?: (id: string) => Promise<boolean | void> | void;
-  onToggleStatus?: (id: string) => void;
-  onSave?: (data: { jobNumber: string; jobName?: string; department?: string; status: boolean }, id?: string) => Promise<JobNumberRecord | null>;
+  onToggleStatus?: (id: string) => Promise<void> | void;
 }
 
 export function JobNumberIndex({
@@ -27,7 +24,6 @@ export function JobNumberIndex({
   onEdit,
   onDelete,
   onToggleStatus,
-  onSave,
 }: JobNumberIndexProps) {
   const [localRecords, setLocalRecords] = useState<JobNumberRecord[]>(records);
   const [search, setSearch] = useState("");
@@ -36,52 +32,48 @@ export function JobNumberIndex({
   const [sortField, setSortField] = useState<JobNumberSortField>("jobNumber");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
 
-  // Dialog & Modal States
   const [jobToDelete, setJobToDelete] = useState<JobNumberRecord | null>(null);
   const [jobToConfirmEdit, setJobToConfirmEdit] = useState<JobNumberRecord | null>(null);
-  const [isFormModalOpen, setIsFormModalOpen] = useState(false);
-  const [formMode, setFormMode] = useState<"create" | "edit">("create");
-  const [activeRecord, setActiveRecord] = useState<JobNumberRecord | null>(null);
-  const [exportNotice, setExportNotice] = useState<string | null>(null);
+  const [banner, setBanner] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
   useEffect(() => {
     setLocalRecords(records);
   }, [records]);
 
-  // Filter records based on search query
   const filteredRecords = useMemo(() => {
     if (!search.trim()) return localRecords;
     const q = search.toLowerCase().trim();
     return localRecords.filter((rec) => {
-      const matchNum = rec.jobNumber.toLowerCase().includes(q);
-      const matchName = rec.jobName.toLowerCase().includes(q);
-      const matchDept = rec.department.toLowerCase().includes(q);
-      return matchNum || matchName || matchDept;
+      return (
+        rec.jobNumber.toLowerCase().includes(q) ||
+        rec.jobName.toLowerCase().includes(q) ||
+        rec.department.toLowerCase().includes(q)
+      );
     });
   }, [localRecords, search]);
 
-  // Sort records
   const sortedRecords = useMemo(() => {
     if (sortDirection === "none") return filteredRecords;
     const list = [...filteredRecords];
     list.sort((a, b) => {
-      let aVal = "";
-      let bVal = "";
-
-      if (sortField === "jobNumber") {
-        aVal = a.jobNumber;
-        bVal = b.jobNumber;
-      } else if (sortField === "jobName") {
-        aVal = a.jobName.toLowerCase();
-        bVal = b.jobName.toLowerCase();
-      } else if (sortField === "department") {
-        aVal = a.department.toLowerCase();
-        bVal = b.department.toLowerCase();
-      } else if (sortField === "status") {
+      if (sortField === "status") {
         const aNum = a.status ? 1 : 0;
         const bNum = b.status ? 1 : 0;
         return sortDirection === "asc" ? aNum - bNum : bNum - aNum;
       }
+
+      const aVal =
+        sortField === "jobNumber"
+          ? a.jobNumber.toLowerCase()
+          : sortField === "jobName"
+          ? a.jobName.toLowerCase()
+          : a.department.toLowerCase();
+      const bVal =
+        sortField === "jobNumber"
+          ? b.jobNumber.toLowerCase()
+          : sortField === "jobName"
+          ? b.jobName.toLowerCase()
+          : b.department.toLowerCase();
 
       if (aVal < bVal) return sortDirection === "asc" ? -1 : 1;
       if (aVal > bVal) return sortDirection === "asc" ? 1 : -1;
@@ -90,135 +82,73 @@ export function JobNumberIndex({
     return list;
   }, [filteredRecords, sortField, sortDirection]);
 
-  // Pagination calculation
   const totalRecords = sortedRecords.length;
   const totalPages = Math.max(1, Math.ceil(totalRecords / pageSize));
-  const safeCurrentPage = Math.min(Math.max(1, currentPage), totalPages);
+  const safeCurrentPage = Math.min(currentPage, totalPages);
 
   const paginatedRecords = useMemo(() => {
-    const startIdx = (safeCurrentPage - 1) * pageSize;
-    return sortedRecords.slice(startIdx, startIdx + pageSize);
+    const startIndex = (safeCurrentPage - 1) * pageSize;
+    return sortedRecords.slice(startIndex, startIndex + pageSize);
   }, [sortedRecords, safeCurrentPage, pageSize]);
 
-  // Toggle sorting on column click
   const handleToggleSort = (field: JobNumberSortField) => {
     if (sortField === field) {
-      if (sortDirection === "asc") setSortDirection("desc");
-      else if (sortDirection === "desc") setSortDirection("none");
-      else setSortDirection("asc");
+      setSortDirection((prev) => (prev === "asc" ? "desc" : prev === "desc" ? "none" : "asc"));
     } else {
       setSortField(field);
       setSortDirection("asc");
     }
+    setCurrentPage(1);
   };
 
-  // Toggle active status
-  const handleToggleStatus = (id: string) => {
-    setLocalRecords((prev) =>
-      prev.map((rec) => (rec.id === id ? { ...rec, status: !rec.status } : rec))
-    );
-    if (onToggleStatus) onToggleStatus(id);
-  };
-
-  // Open Create Modal
-  const handleOpenCreateModal = () => {
-    setActiveRecord(null);
-    setFormMode("create");
-    setIsFormModalOpen(true);
-    if (onAddNew) onAddNew();
-  };
-
-  // Open Edit after confirmation
-  const handleConfirmEdit = () => {
-    if (!jobToConfirmEdit) return;
-    setActiveRecord(jobToConfirmEdit);
-    setFormMode("edit");
-    setIsFormModalOpen(true);
-    setJobToConfirmEdit(null);
-    if (onEdit) onEdit(jobToConfirmEdit);
-  };
-
-  // Save from Modal
-  const handleSaveJobNumber = async (data: {
-    jobNumber: string;
-    jobName: string;
-    department: string;
-    status: boolean;
-  }) => {
-    if (onSave) {
-      try {
-        const saved = await onSave(data, formMode === "edit" ? activeRecord?.id : undefined);
-        if (saved) {
-          if (formMode === "create") {
-            setLocalRecords((prev) => [saved, ...prev.map((r, i) => ({ ...r, no: i + 2 }))]);
-          } else {
-            setLocalRecords((prev) => prev.map((r) => (r.id === saved.id ? saved : r)));
-          }
-          setIsFormModalOpen(false);
-          setActiveRecord(null);
-          return;
-        }
-      } catch (err) {
-        console.warn("Job number save API error:", err);
+  const handleToggleStatus = async (id: string) => {
+    try {
+      if (onToggleStatus) {
+        await onToggleStatus(id);
+      } else {
+        setLocalRecords((prev) =>
+          prev.map((rec) => (rec.id === id ? { ...rec, status: !rec.status } : rec))
+        );
       }
+    } catch (err: any) {
+      setBanner({ type: "error", message: err?.message || "Failed to toggle status." });
     }
-
-    if (formMode === "create") {
-      const newRecord: JobNumberRecord = {
-        id: `job-${Date.now()}`,
-        no: localRecords.length + 1,
-        jobNumber: data.jobNumber,
-        jobName: data.jobName,
-        department: data.department,
-        status: data.status,
-        createdAt: new Date().toISOString().replace("T", " ").substring(0, 19),
-        createdBy: "ADMINISTRATOR",
-      };
-      setLocalRecords((prev) => [newRecord, ...prev]);
-    } else if (formMode === "edit" && activeRecord) {
-      setLocalRecords((prev) =>
-        prev.map((rec) =>
-          rec.id === activeRecord.id
-            ? {
-                ...rec,
-                jobNumber: data.jobNumber,
-                jobName: data.jobName,
-                department: data.department,
-                status: data.status,
-              }
-            : rec
-        )
-      );
-    }
-    setIsFormModalOpen(false);
-    setActiveRecord(null);
   };
 
-  // Confirm delete
   const handleConfirmDelete = async () => {
     if (!jobToDelete) return;
-    const idToDelete = jobToDelete.id;
-    if (onDelete) {
-      try {
-        await onDelete(idToDelete);
-      } catch (err) {
-        console.warn("Job number delete API error:", err);
-      }
-    }
-    setLocalRecords((prev) => prev.filter((j) => j.id !== idToDelete));
+    const target = jobToDelete;
     setJobToDelete(null);
+    try {
+      if (onDelete) {
+        await onDelete(target.id);
+      }
+      setLocalRecords((prev) => prev.filter((j) => j.id !== target.id));
+    } catch (err: any) {
+      setBanner({
+        type: "error",
+        message: err?.message || `Failed to delete ${target.jobNumber}.`,
+      });
+    }
   };
 
-  // Export to Excel-compatible CSV
   const handleExportToExcel = () => {
     if (sortedRecords.length === 0) {
-      setExportNotice("No records available to export.");
-      setTimeout(() => setExportNotice(null), 3000);
+      setBanner({ type: "error", message: "No records available to export." });
+      setTimeout(() => setBanner(null), 3000);
       return;
     }
 
     try {
-      const headers = ["No", "Job Number", "Job Name", "Department", "Status", "Created At", "Created By"];
+      const headers = [
+        "No",
+        "Job Number",
+        "Job Name",
+        "Department",
+        "Status",
+        "Created At",
+        "Created By",
+      ];
       const csvRows = [headers.join(",")];
 
       sortedRecords.forEach((row, index) => {
@@ -248,11 +178,14 @@ export function JobNumberIndex({
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
 
-      setExportNotice(`Exported ${sortedRecords.length} job number record(s) to CSV.`);
-      setTimeout(() => setExportNotice(null), 4000);
+      setBanner({
+        type: "success",
+        message: `Exported ${sortedRecords.length} job number record(s) to CSV.`,
+      });
+      setTimeout(() => setBanner(null), 4000);
     } catch {
-      setExportNotice("Failed to export data. Please try again.");
-      setTimeout(() => setExportNotice(null), 4000);
+      setBanner({ type: "error", message: "Failed to export data. Please try again." });
+      setTimeout(() => setBanner(null), 4000);
     }
   };
 
@@ -260,12 +193,7 @@ export function JobNumberIndex({
     const isActive = sortField === field && sortDirection !== "none";
     return (
       <span
-        style={{
-          marginLeft: "6px",
-          display: "inline-flex",
-          alignItems: "center",
-          color: isActive ? "var(--blue-600)" : "var(--muted-2)",
-        }}
+        className={`master-sort-indicator ${isActive ? "master-sort-indicator--active" : ""}`}
       >
         {isActive ? (
           sortDirection === "asc" ? (
@@ -282,16 +210,22 @@ export function JobNumberIndex({
 
   return (
     <div className="job-number-page">
-      {exportNotice && (
-        <div style={{ padding: "10px 14px", background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: "var(--radius-sm)", color: "#166534", marginBottom: "14px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <span>{exportNotice}</span>
-          <button type="button" onClick={() => setExportNotice(null)} style={{ border: 0, background: "transparent", cursor: "pointer", color: "#166534", fontWeight: 700 }}>×</button>
+      {banner && (
+        <div className={`master-banner master-banner--${banner.type}`}>
+          <span>{banner.message}</span>
+          <button
+            type="button"
+            className="master-banner-close"
+            onClick={() => setBanner(null)}
+            aria-label="Dismiss notification"
+          >
+            ×
+          </button>
         </div>
       )}
 
-      {/* Main Table Panel */}
       <div className="panel table-panel">
-        <div className="table-toolbar" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 18px", borderBottom: "1px solid var(--line)", background: "var(--white)", gap: "12px" }}>
+        <div className="master-table-toolbar">
           <SearchField
             value={search}
             onChange={(val) => {
@@ -300,11 +234,12 @@ export function JobNumberIndex({
             }}
             placeholder="Search job number, job name, department..."
           />
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <Button variant="primary" onClick={handleOpenCreateModal}>
+          <div className="master-toolbar-actions">
+            <Button type="button" variant="primary" onClick={() => onAddNew?.()}>
               Add New
             </Button>
             <Button
+              type="button"
               variant="excel"
               onClick={handleExportToExcel}
               title="Export to Excel CSV"
@@ -319,42 +254,38 @@ export function JobNumberIndex({
             <table className="data-table">
               <thead>
                 <tr>
-                  <th style={{ width: "60px", textAlign: "center" }}>
+                  <th className="master-col-no">
                     <span>No</span>
                   </th>
                   <th
-                    className="sortable-th"
-                    style={{ width: "160px", cursor: "pointer", userSelect: "none" }}
+                    className="sortable-th master-sortable-th master-col-code-wide"
                     onClick={() => handleToggleSort("jobNumber")}
                   >
                     <span>Job Number</span>
                     {renderSortIndicator("jobNumber")}
                   </th>
                   <th
-                    className="sortable-th"
-                    style={{ cursor: "pointer", userSelect: "none" }}
+                    className="sortable-th master-sortable-th"
                     onClick={() => handleToggleSort("jobName")}
                   >
                     <span>Job Name / Description</span>
                     {renderSortIndicator("jobName")}
                   </th>
                   <th
-                    className="sortable-th"
-                    style={{ width: "150px", cursor: "pointer", userSelect: "none" }}
+                    className="sortable-th master-sortable-th master-col-category"
                     onClick={() => handleToggleSort("department")}
                   >
                     <span>Department</span>
                     {renderSortIndicator("department")}
                   </th>
                   <th
-                    className="sortable-th"
-                    style={{ width: "95px", textAlign: "center", cursor: "pointer", userSelect: "none" }}
+                    className="sortable-th master-sortable-th master-col-status"
                     onClick={() => handleToggleSort("status")}
                   >
                     <span>Status</span>
                     {renderSortIndicator("status")}
                   </th>
-                  <th style={{ width: "140px", textAlign: "center" }}>
+                  <th className="master-col-actions">
                     <span>Option</span>
                   </th>
                 </tr>
@@ -365,67 +296,45 @@ export function JobNumberIndex({
                     const rowNumber = (safeCurrentPage - 1) * pageSize + index + 1;
                     return (
                       <tr key={item.id}>
-                        <td style={{ textAlign: "center", color: "var(--muted)", fontWeight: 600 }}>
-                          {rowNumber}
-                        </td>
-                        <td style={{ fontWeight: 700, color: "var(--blue-700)", fontFamily: "ui-monospace, monospace" }}>
-                          {item.jobNumber}
-                        </td>
-                        <td style={{ fontWeight: 600, color: "var(--ink)" }}>
-                          {item.jobName}
-                        </td>
+                        <td className="master-cell-no">{rowNumber}</td>
+                        <td className="master-cell-code">{item.jobNumber}</td>
+                        <td className="master-cell-name">{item.jobName}</td>
                         <td>
-                          <span style={{ display: "inline-block", padding: "2px 8px", background: "var(--canvas)", border: "1px solid var(--line)", borderRadius: "var(--radius-sm)", fontSize: "11px", fontWeight: 700, color: "var(--ink-soft)" }}>
-                            {item.department}
+                          <span className="master-category-badge">
+                            {item.department || "—"}
                           </span>
                         </td>
-                        <td style={{ textAlign: "center" }}>
-                          <StatusToggle
-                            active={item.status}
-                            onToggle={() => handleToggleStatus(item.id)}
-                          />
+                        <td className="master-cell-center">
+                          <button
+                            type="button"
+                            className={`master-status-pill ${
+                              item.status
+                                ? "master-status-pill--active"
+                                : "master-status-pill--inactive"
+                            }`}
+                            onClick={() => handleToggleStatus(item.id)}
+                            title="Click to toggle status"
+                          >
+                            {item.status ? "Active" : "Inactive"}
+                          </button>
                         </td>
-                        <td style={{ textAlign: "center" }}>
-                          <div style={{ display: "inline-flex", gap: "6px" }}>
+                        <td className="master-cell-center">
+                          <div className="master-actions-group">
                             <button
                               type="button"
                               className="btn-action-edit"
-                              style={{
-                                display: "inline-flex",
-                                alignItems: "center",
-                                gap: "4px",
-                                padding: "4px 8px",
-                                borderRadius: "var(--radius-sm)",
-                                fontSize: "11px",
-                                fontWeight: 700,
-                                cursor: "pointer",
-                                border: "1px solid #0284c7",
-                                color: "#0284c7",
-                                background: "#fff",
-                              }}
                               onClick={() => setJobToConfirmEdit(item)}
                               title={`Edit ${item.jobNumber}`}
+                              aria-label={`Edit ${item.jobNumber}`}
                             >
                               <Icon name="edit" size={13} />
                             </button>
                             <button
                               type="button"
                               className="btn-action-delete"
-                              style={{
-                                display: "inline-flex",
-                                alignItems: "center",
-                                gap: "4px",
-                                padding: "4px 8px",
-                                borderRadius: "var(--radius-sm)",
-                                fontSize: "11px",
-                                fontWeight: 700,
-                                cursor: "pointer",
-                                border: "1px solid #dc2626",
-                                color: "#dc2626",
-                                background: "#fff",
-                              }}
                               onClick={() => setJobToDelete(item)}
                               title={`Delete ${item.jobNumber}`}
+                              aria-label={`Delete ${item.jobNumber}`}
                             >
                               <Icon name="trash" size={13} />
                             </button>
@@ -437,12 +346,12 @@ export function JobNumberIndex({
                 ) : (
                   <tr>
                     <td colSpan={6} className="empty-table-cell">
-                      <div className="empty" style={{ padding: "36px", textAlign: "center" }}>
-                        <div className="empty__icon" style={{ marginBottom: "8px" }}>
+                      <div className="empty master-empty-box">
+                        <div className="empty__icon master-empty-icon">
                           <Icon name="search" size={24} />
                         </div>
                         <strong>No job numbers found</strong>
-                        <span style={{ display: "block", color: "var(--muted)", fontSize: "12px", marginTop: "4px" }}>
+                        <span className="master-empty-subtitle">
                           Try adjusting your search query.
                         </span>
                       </div>
@@ -467,39 +376,29 @@ export function JobNumberIndex({
         </div>
       </div>
 
-      {/* Job Number Form Modal */}
-      <JobNumberForm
-        isOpen={isFormModalOpen}
-        mode={formMode}
-        record={activeRecord}
-        onSave={handleSaveJobNumber}
-        onCancel={() => {
-          setIsFormModalOpen(false);
-          setActiveRecord(null);
-        }}
-      />
-
-      {/* Edit Confirmation Dialog */}
       <ConfirmDialog
-        isOpen={!!jobToConfirmEdit}
-        title="Edit Record"
-        message={`Do you want to edit job number "${jobToConfirmEdit?.jobNumber}"?`}
-        confirmLabel="Continue"
-        cancelLabel="Cancel"
-        confirmVariant="primary"
-        icon="edit"
-        onConfirm={handleConfirmEdit}
+        isOpen={Boolean(jobToConfirmEdit)}
         onCancel={() => setJobToConfirmEdit(null)}
+        onConfirm={() => {
+          const target = jobToConfirmEdit;
+          setJobToConfirmEdit(null);
+          if (target) onEdit?.(target);
+        }}
+        title="Edit Job Number"
+        message={`Open edit page for "${jobToConfirmEdit?.jobNumber}"?`}
+        confirmLabel="Yes, Edit"
+        cancelLabel="Cancel"
       />
 
-      {/* Delete Confirmation Dialog */}
       <ConfirmDialog
-        isOpen={!!jobToDelete}
-        entityType="job number"
-        entityName={jobToDelete?.jobName}
-        entityCode={jobToDelete?.jobNumber}
-        onConfirm={handleConfirmDelete}
+        isOpen={Boolean(jobToDelete)}
         onCancel={() => setJobToDelete(null)}
+        onConfirm={handleConfirmDelete}
+        title="Delete Job Number"
+        message={`Are you sure you want to delete "${jobToDelete?.jobNumber}"? This action cannot be undone.`}
+        confirmLabel="Yes, Delete"
+        cancelLabel="Cancel"
+        variant="danger"
       />
     </div>
   );

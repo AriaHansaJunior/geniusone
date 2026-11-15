@@ -37,27 +37,10 @@ export function PurchaseCategoryForm({ onBack, onSave }: PurchaseCategoryFormPro
   };
 
   return (
-    <div
-      className="purchase-category-form-page"
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        gap: "16px",
-        width: "100%",
-        animation: "fadeIn 0.15s ease-in-out",
-      }}
-    >
-      {/* Page Header: Single clean title, no redundant back button pill */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <h1
-          style={{
-            margin: 0,
-            fontSize: "20px",
-            fontWeight: 800,
-            color: "var(--ink)",
-            letterSpacing: "-0.3px",
-          }}
-        >
+    <div className="purchase-category-form-page master-form-page">
+      {/* Page Header */}
+      <div className="master-form-header">
+        <h1 className="master-form-page-title">
           Add Purchase Category
         </h1>
       </div>
@@ -90,70 +73,44 @@ export function PurchaseCategoryForm({ onBack, onSave }: PurchaseCategoryFormPro
       )}
 
       {/* Main Form Card */}
-      <form
-        onSubmit={handleSave}
-        className="panel"
-        style={{
-          background: "var(--white)",
-          border: "1px solid var(--line)",
-          borderRadius: "var(--radius-sm)",
-          padding: "24px 28px",
-          display: "flex",
-          flexDirection: "column",
-          gap: "20px",
-          maxWidth: "600px",
-        }}
-      >
-        {/* Field 1: Category Code */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-          <label
-            htmlFor="categoryCode"
-            style={{ fontSize: "11.5px", fontWeight: 700, color: "var(--ink-soft)" }}
-          >
-            Category Code
-          </label>
-          <input
-            id="categoryCode"
-            type="text"
-            className="form-input font-mono"
-            placeholder="Purchase Category Code"
-            value={categoryCode}
-            onChange={(e) => setCategoryCode(e.target.value)}
-            required
-            autoFocus
-          />
-        </div>
+      <form onSubmit={handleSave} className="master-form-card">
+        <div className="master-form-grid-2">
+          {/* Field 1: Category Code */}
+          <div className="master-form-group">
+            <label htmlFor="categoryCode" className="master-form-label">
+              Category Code <span className="required-mark">*</span>
+            </label>
+            <input
+              id="categoryCode"
+              type="text"
+              className="master-form-input font-mono"
+              placeholder="Purchase Category Code"
+              value={categoryCode}
+              onChange={(e) => setCategoryCode(e.target.value)}
+              required
+              autoFocus
+            />
+          </div>
 
-        {/* Field 2: Category Name */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-          <label
-            htmlFor="categoryName"
-            style={{ fontSize: "11.5px", fontWeight: 700, color: "var(--ink-soft)" }}
-          >
-            Category Name
-          </label>
-          <input
-            id="categoryName"
-            type="text"
-            className="form-input"
-            placeholder="Purchase Category Name"
-            value={categoryName}
-            onChange={(e) => setCategoryName(e.target.value)}
-            required
-          />
+          {/* Field 2: Category Name */}
+          <div className="master-form-group">
+            <label htmlFor="categoryName" className="master-form-label">
+              Category Name <span className="required-mark">*</span>
+            </label>
+            <input
+              id="categoryName"
+              type="text"
+              className="master-form-input"
+              placeholder="Purchase Category Name"
+              value={categoryName}
+              onChange={(e) => setCategoryName(e.target.value)}
+              required
+            />
+          </div>
         </div>
 
         {/* Action Buttons Footer */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "flex-end",
-            gap: "10px",
-            paddingTop: "14px",
-            borderTop: "1px solid var(--line)",
-          }}
-        >
+        <div className="master-form-actions">
           <Button type="button" variant="ghost" onClick={onBack}>
             Cancel
           </Button>

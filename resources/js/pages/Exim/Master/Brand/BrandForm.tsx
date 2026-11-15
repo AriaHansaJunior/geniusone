@@ -79,15 +79,7 @@ export function BrandForm({
     <div className="brand-form-page">
       {/* Page Header */}
       <div className="brand-form-header">
-        <h1
-          style={{
-            margin: 0,
-            fontSize: "20px",
-            fontWeight: 800,
-            color: "var(--ink)",
-            letterSpacing: "-0.3px",
-          }}
-        >
+        <h1 className="master-form-page-title">
           {isEdit ? "Edit Brand" : "Add Brand"}
         </h1>
       </div>
@@ -126,47 +118,49 @@ export function BrandForm({
 
       {/* Form Content Card */}
       <form onSubmit={handleSubmit} className="brand-form-card">
-        {/* 1. Code */}
-        <div className="brand-form-group">
-          <label htmlFor="brandCode" className="brand-form-label">
-            Code <span className="required-mark">*</span>
-          </label>
-          <input
-            id="brandCode"
-            type="text"
-            className={`brand-form-input ${errors.code ? "has-error" : ""}`}
-            placeholder="e.g. 00, 01, MIT..."
-            value={code}
-            onChange={(e) => {
-              setCode(e.target.value);
-              if (errors.code) setErrors((prev) => ({ ...prev, code: undefined }));
-            }}
-            autoFocus={!isEdit}
-          />
-          {errors.code && (
-            <span className="brand-form-error-msg">{errors.code}</span>
-          )}
-        </div>
+        <div className="master-form-grid-2">
+          {/* 1. Code */}
+          <div className="brand-form-group">
+            <label htmlFor="brandCode" className="brand-form-label">
+              Code <span className="required-mark">*</span>
+            </label>
+            <input
+              id="brandCode"
+              type="text"
+              className={`brand-form-input ${errors.code ? "has-error" : ""}`}
+              placeholder="e.g. 00, 01, MIT..."
+              value={code}
+              onChange={(e) => {
+                setCode(e.target.value);
+                if (errors.code) setErrors((prev) => ({ ...prev, code: undefined }));
+              }}
+              autoFocus={!isEdit}
+            />
+            {errors.code && (
+              <span className="brand-form-error-msg">{errors.code}</span>
+            )}
+          </div>
 
-        {/* 2. Name */}
-        <div className="brand-form-group">
-          <label htmlFor="brandName" className="brand-form-label">
-            Name <span className="required-mark">*</span>
-          </label>
-          <input
-            id="brandName"
-            type="text"
-            className={`brand-form-input ${errors.name ? "has-error" : ""}`}
-            placeholder="e.g. NO BRAND, SANDVIK, MITSUBISHI..."
-            value={name}
-            onChange={(e) => {
-              setName(e.target.value);
-              if (errors.name) setErrors((prev) => ({ ...prev, name: undefined }));
-            }}
-          />
-          {errors.name && (
-            <span className="brand-form-error-msg">{errors.name}</span>
-          )}
+          {/* 2. Name */}
+          <div className="brand-form-group">
+            <label htmlFor="brandName" className="brand-form-label">
+              Name <span className="required-mark">*</span>
+            </label>
+            <input
+              id="brandName"
+              type="text"
+              className={`brand-form-input ${errors.name ? "has-error" : ""}`}
+              placeholder="e.g. NO BRAND, SANDVIK, MITSUBISHI..."
+              value={name}
+              onChange={(e) => {
+                setName(e.target.value);
+                if (errors.name) setErrors((prev) => ({ ...prev, name: undefined }));
+              }}
+            />
+            {errors.name && (
+              <span className="brand-form-error-msg">{errors.name}</span>
+            )}
+          </div>
         </div>
 
         {/* 3. Description */}
@@ -185,7 +179,7 @@ export function BrandForm({
         </div>
 
         {/* Form Action Buttons: Cancel and Save */}
-        <div className="brand-form-actions" style={{ display: "flex", gap: "10px", marginTop: "12px" }}>
+        <div className="brand-form-actions">
           <Button type="button" variant="ghost" onClick={onBack}>
             Cancel
           </Button>

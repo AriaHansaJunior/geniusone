@@ -37,26 +37,11 @@ export function DeliveryTermsForm({ onBack, onSave }: DeliveryTermsFormProps) {
 
   return (
     <div
-      className="delivery-terms-form-page"
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        gap: "16px",
-        width: "100%",
-        animation: "fadeIn 0.15s ease-in-out",
-      }}
+      className="delivery-terms-form-page master-form-page"
     >
-      {/* Page Header: Single clean title, no redundant back button pill */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <h1
-          style={{
-            margin: 0,
-            fontSize: "20px",
-            fontWeight: 800,
-            color: "var(--ink)",
-            letterSpacing: "-0.3px",
-          }}
-        >
+      {/* Page Header */}
+      <div className="master-form-header">
+        <h1 className="master-form-page-title">
           Add Delivery Term
         </h1>
       </div>
@@ -89,31 +74,15 @@ export function DeliveryTermsForm({ onBack, onSave }: DeliveryTermsFormProps) {
       )}
 
       {/* Main Form Card */}
-      <form
-        onSubmit={handleSave}
-        className="panel"
-        style={{
-          background: "var(--white)",
-          border: "1px solid var(--line)",
-          borderRadius: "var(--radius-sm)",
-          padding: "24px 28px",
-          display: "flex",
-          flexDirection: "column",
-          gap: "20px",
-          maxWidth: "600px",
-        }}
-      >
-        <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-          <label
-            htmlFor="deliveryTermName"
-            style={{ fontSize: "11.5px", fontWeight: 700, color: "var(--ink-soft)" }}
-          >
-            Delivery Term
+      <form onSubmit={handleSave} className="master-form-card">
+        <div className="master-form-group">
+          <label htmlFor="deliveryTermName" className="master-form-label">
+            Delivery Term <span className="required-mark">*</span>
           </label>
           <input
             id="deliveryTermName"
             type="text"
-            className="form-input"
+            className="master-form-input"
             placeholder="Delivery Terms"
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -123,16 +92,7 @@ export function DeliveryTermsForm({ onBack, onSave }: DeliveryTermsFormProps) {
         </div>
 
         {/* Action Buttons Footer */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "flex-end",
-            gap: "10px",
-            paddingTop: "14px",
-            borderTop: "1px solid var(--line)",
-          }}
-        >
+        <div className="master-form-actions">
           <Button type="button" variant="ghost" onClick={onBack}>
             Cancel
           </Button>

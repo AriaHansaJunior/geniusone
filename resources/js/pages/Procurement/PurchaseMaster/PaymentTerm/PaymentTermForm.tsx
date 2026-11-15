@@ -36,10 +36,10 @@ export function PaymentTermForm({ onBack, onSave }: PaymentTermFormProps) {
   };
 
   return (
-    <div className="payment-term-form-page" style={{ display: "flex", flexDirection: "column", gap: "16px", width: "100%", animation: "fadeIn 0.15s ease-in-out" }}>
+    <div className="payment-term-form-page master-form-page">
       {/* Page Header */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <h1 style={{ margin: 0, fontSize: "20px", fontWeight: 800, color: "var(--ink)", letterSpacing: "-0.3px" }}>
+      <div className="master-form-header">
+        <h1 className="master-form-page-title">
           Add Payment Term
         </h1>
       </div>
@@ -72,15 +72,15 @@ export function PaymentTermForm({ onBack, onSave }: PaymentTermFormProps) {
       )}
 
       {/* Main Form Card */}
-      <form onSubmit={handleSave} className="panel" style={{ background: "var(--white)", border: "1px solid var(--line)", borderRadius: "var(--radius-sm)", padding: "24px 28px", display: "flex", flexDirection: "column", gap: "24px", maxWidth: "600px" }}>
-        <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-          <label htmlFor="paymentTermName" style={{ fontSize: "11.5px", fontWeight: 700, color: "var(--ink-soft)" }}>
-            Payment Term Name
+      <form onSubmit={handleSave} className="master-form-card">
+        <div className="master-form-group">
+          <label htmlFor="paymentTermName" className="master-form-label">
+            Payment Term Name <span className="required-mark">*</span>
           </label>
           <input
             id="paymentTermName"
             type="text"
-            className="form-input"
+            className="master-form-input"
             placeholder="Payment Term Name"
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -90,7 +90,7 @@ export function PaymentTermForm({ onBack, onSave }: PaymentTermFormProps) {
         </div>
 
         {/* Action Buttons Footer */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "10px", paddingTop: "14px", borderTop: "1px solid var(--line)" }}>
+        <div className="master-form-actions">
           <Button type="button" variant="ghost" onClick={onBack}>
             Cancel
           </Button>

@@ -81,15 +81,7 @@ export function StyleForm({
     <div className="style-form-page">
       {/* Page Header */}
       <div className="style-form-header">
-        <h1
-          style={{
-            margin: 0,
-            fontSize: "20px",
-            fontWeight: 800,
-            color: "var(--ink)",
-            letterSpacing: "-0.3px",
-          }}
-        >
+        <h1 className="master-form-page-title">
           {isEdit ? "Edit Style" : "Add Style"}
         </h1>
       </div>
@@ -128,47 +120,49 @@ export function StyleForm({
 
       {/* Form Content Card */}
       <form onSubmit={handleSubmit} className="style-form-card">
-        {/* 1. Code */}
-        <div className="style-form-group">
-          <label htmlFor="styleCode" className="style-form-label">
-            Code <span className="required-mark">*</span>
-          </label>
-          <input
-            id="styleCode"
-            type="text"
-            className={`style-form-input ${errors.code ? "has-error" : ""}`}
-            placeholder="e.g. 01, 02, STY-INGOT..."
-            value={code}
-            onChange={(e) => {
-              setCode(e.target.value);
-              if (errors.code) setErrors((prev) => ({ ...prev, code: undefined }));
-            }}
-            autoFocus={!isEdit}
-          />
-          {errors.code && (
-            <span className="style-form-error-msg">{errors.code}</span>
-          )}
-        </div>
+        <div className="master-form-grid-2">
+          {/* 1. Code */}
+          <div className="style-form-group">
+            <label htmlFor="styleCode" className="style-form-label">
+              Code <span className="required-mark">*</span>
+            </label>
+            <input
+              id="styleCode"
+              type="text"
+              className={`style-form-input ${errors.code ? "has-error" : ""}`}
+              placeholder="e.g. 01, 02, STY-INGOT..."
+              value={code}
+              onChange={(e) => {
+                setCode(e.target.value);
+                if (errors.code) setErrors((prev) => ({ ...prev, code: undefined }));
+              }}
+              autoFocus={!isEdit}
+            />
+            {errors.code && (
+              <span className="style-form-error-msg">{errors.code}</span>
+            )}
+          </div>
 
-        {/* 2. Name */}
-        <div className="style-form-group">
-          <label htmlFor="styleName" className="style-form-label">
-            Name <span className="required-mark">*</span>
-          </label>
-          <input
-            id="styleName"
-            type="text"
-            className={`style-form-input ${errors.name ? "has-error" : ""}`}
-            placeholder="e.g. No Style, Lead Ingot 99.97%..."
-            value={name}
-            onChange={(e) => {
-              setName(e.target.value);
-              if (errors.name) setErrors((prev) => ({ ...prev, name: undefined }));
-            }}
-          />
-          {errors.name && (
-            <span className="style-form-error-msg">{errors.name}</span>
-          )}
+          {/* 2. Name */}
+          <div className="style-form-group">
+            <label htmlFor="styleName" className="style-form-label">
+              Name <span className="required-mark">*</span>
+            </label>
+            <input
+              id="styleName"
+              type="text"
+              className={`style-form-input ${errors.name ? "has-error" : ""}`}
+              placeholder="e.g. No Style, Lead Ingot 99.97%..."
+              value={name}
+              onChange={(e) => {
+                setName(e.target.value);
+                if (errors.name) setErrors((prev) => ({ ...prev, name: undefined }));
+              }}
+            />
+            {errors.name && (
+              <span className="style-form-error-msg">{errors.name}</span>
+            )}
+          </div>
         </div>
 
         {/* 3. Description */}
@@ -187,7 +181,7 @@ export function StyleForm({
         </div>
 
         {/* Form Action Buttons: Cancel and Save */}
-        <div className="style-form-actions" style={{ display: "flex", gap: "10px", marginTop: "12px" }}>
+        <div className="style-form-actions">
           <Button type="button" variant="ghost" onClick={onBack}>
             Cancel
           </Button>

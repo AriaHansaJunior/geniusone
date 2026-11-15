@@ -377,6 +377,7 @@ export function RequestMaterialIndex({
           <div className="master-form-group">
             <label className="master-form-label">Type of Request</label>
             <CustomSelect
+              searchable
               value={typeOfRequest}
               onChange={(val) => {
                 setTypeOfRequest(val);
@@ -390,6 +391,7 @@ export function RequestMaterialIndex({
           <div className="master-form-group">
             <label className="master-form-label">Created By</label>
             <CustomSelect
+              searchable
               value={createdBy}
               onChange={(val) => {
                 setCreatedBy(val);
@@ -403,6 +405,7 @@ export function RequestMaterialIndex({
           <div className="master-form-group">
             <label className="master-form-label">Destination Location</label>
             <CustomSelect
+              searchable
               value={destinationLocation}
               onChange={(val) => {
                 setDestinationLocation(val);
@@ -429,6 +432,7 @@ export function RequestMaterialIndex({
           <div className="master-form-group">
             <label className="master-form-label">Department</label>
             <CustomSelect
+              searchable
               value={department}
               onChange={(val) => {
                 setDepartment(val);
@@ -442,6 +446,7 @@ export function RequestMaterialIndex({
           <div className="master-form-group">
             <label className="master-form-label">Project Type</label>
             <CustomSelect
+              searchable
               value={projectType}
               onChange={(val) => {
                 setProjectType(val);

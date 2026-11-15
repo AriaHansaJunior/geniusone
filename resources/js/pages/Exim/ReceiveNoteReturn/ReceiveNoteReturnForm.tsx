@@ -282,7 +282,7 @@ export function ReceiveNoteReturnForm({
       <div className="tx-panel">
         <form onSubmit={handleSubmit}>
           {/* Header Row 1: Arrival Date, Customer, Currency, Jenis Retur */}
-          <div className="tx-header-grid" style={{ marginBottom: "14px" }}>
+          <div className="tx-header-grid master-form-row-mb">
             {/* Arrival Date */}
             <div className="master-form-group">
               <label className="master-form-label">
@@ -300,6 +300,7 @@ export function ReceiveNoteReturnForm({
                 Customer <span className="required-asterisk">*</span>
               </label>
               <CustomSelect
+                searchable
                 value={customer}
                 onChange={(val) => {
                   setCustomer(val);
@@ -326,6 +327,7 @@ export function ReceiveNoteReturnForm({
                 Currency <span className="required-asterisk">*</span>
               </label>
               <CustomSelect
+                searchable
                 value={currency}
                 onChange={(val) => {
                   setCurrency(val);
@@ -362,7 +364,7 @@ export function ReceiveNoteReturnForm({
           </div>
 
           {/* Header Row 2: Vehicle Type, License Plate, Type of Document */}
-          <div className="tx-header-grid" style={{ marginBottom: "16px" }}>
+          <div className="master-form-grid-3 master-form-row-mb-lg">
             {/* Vehicle Type */}
             <div className="master-form-group">
               <label className="master-form-label">Vehicle Type</label>
@@ -389,6 +391,7 @@ export function ReceiveNoteReturnForm({
             <div className="master-form-group">
               <label className="master-form-label">Type of Document</label>
               <CustomSelect
+                searchable
                 value={typeOfDocument}
                 onChange={(val) => setTypeOfDocument(val)}
                 placeholder="Select Option..."
@@ -593,10 +596,11 @@ export function ReceiveNoteReturnForm({
                   Optionally record packaging, delivery discrepancy, or transport fees associated with this sales return.
                 </p>
               </div>
-              <div className="tx-header-grid">
+              <div className="master-form-grid-2">
                 <div className="master-form-group">
                   <label className="master-form-label">Additional Cost</label>
                   <CustomSelect
+                    searchable
                     value={additionalCostRemark}
                     onChange={(val) => setAdditionalCostRemark(val)}
                     placeholder="Select Additional Cost..."

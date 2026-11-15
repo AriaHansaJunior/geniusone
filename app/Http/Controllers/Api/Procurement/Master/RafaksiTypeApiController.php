@@ -86,8 +86,9 @@ class RafaksiTypeApiController extends Controller
         ]);
     }
 
-    public function destroy(int $id): JsonResponse
+    public function destroy(Request $request, int $id): JsonResponse
     {
+        $this->requireActorId($request);
         $record = RafaksiType::findOrFail($id);
         $record->delete();
 

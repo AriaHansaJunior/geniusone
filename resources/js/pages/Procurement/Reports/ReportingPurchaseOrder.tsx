@@ -470,6 +470,7 @@ export function ReportingPurchaseOrder({
               Supplier
             </label>
             <CustomSelect
+              searchable
               value={supplierFilter}
               onChange={(val) => {
                 setSupplierFilter(val);

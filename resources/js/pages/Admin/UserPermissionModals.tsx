@@ -236,6 +236,7 @@ export function UserPermissionModals({
                   <div className="form-field">
                     <label className="form-label">Department</label>
                     <CustomSelect
+                      searchable
                       value={String(newUserData.department_id)}
                       onChange={(val) => setNewUserData({ ...newUserData, department_id: Number(val) })}
                       options={departmentsList.map((dept) => ({
@@ -248,6 +249,7 @@ export function UserPermissionModals({
                   <div className="form-field">
                     <label className="form-label">System Role (Inherits Role Permissions)</label>
                     <CustomSelect
+                      searchable
                       value={newUserData.role}
                       disabled={newUserData.isSuperAdmin}
                       onChange={(val) => setNewUserData({ ...newUserData, role: val })}
@@ -912,6 +914,7 @@ export function UserPermissionModals({
                   <div className="form-field">
                     <label className="form-label">Department</label>
                     <CustomSelect
+                      searchable
                       value={String(editUserProfileData.department_id)}
                       onChange={(val) =>
                         setEditUserProfileData({
@@ -929,6 +932,7 @@ export function UserPermissionModals({
                   <div className="form-field">
                     <label className="form-label">System Role (Inherits Role Permissions)</label>
                     <CustomSelect
+                      searchable
                       value={editUserProfileData.role}
                       disabled={editUserProfileData.isSuperAdmin}
                       menuPlacement="top"

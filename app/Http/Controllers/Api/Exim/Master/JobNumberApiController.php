@@ -39,6 +39,13 @@ class JobNumberApiController extends Controller
     {
         $actorId = $this->requireActorId($request);
 
+        if (! $request->filled('name') && $request->filled('description')) {
+            $request->merge(['name' => trim((string) $request->input('description'))]);
+        }
+        if (! $request->has('department') && $request->has('department_name')) {
+            $request->merge(['department' => $request->input('department_name')]);
+        }
+
         $validated = $request->validate([
             'code' => 'nullable|string|max:60|unique:job_number,code',
             'name' => 'required|string|max:45',
@@ -72,6 +79,13 @@ class JobNumberApiController extends Controller
         $actorId = $this->requireActorId($request);
         $record = JobNumber::findOrFail($id);
 
+        if (! $request->filled('name') && $request->filled('description')) {
+            $request->merge(['name' => trim((string) $request->input('description'))]);
+        }
+        if (! $request->has('department') && $request->has('department_name')) {
+            $request->merge(['department' => $request->input('department_name')]);
+        }
+
         $validated = $request->validate([
             'code' => 'nullable|string|max:60|unique:job_number,code,'.$id,
             'name' => 'sometimes|required|string|max:45',
@@ -89,8 +103,9 @@ class JobNumberApiController extends Controller
         ]);
     }
 
-    public function destroy(int $id): JsonResponse
+    public function destroy(Request $request, int $id): JsonResponse
     {
+        $this->requireActorId($request);
         $record = JobNumber::findOrFail($id);
         $record->delete();
 

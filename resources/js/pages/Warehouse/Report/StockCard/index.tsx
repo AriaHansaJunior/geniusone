@@ -425,6 +425,7 @@ export function StockCardIndex() {
           <div className="master-form-group" style={{ gridColumn: "span 2" }}>
             <label className="master-form-label">Item</label>
             <CustomSelect
+              searchable
               value={selectedItemCode}
               onChange={(newCode) => {
                 setSelectedItemCode(newCode);
@@ -445,6 +446,7 @@ export function StockCardIndex() {
           <div className="master-form-group">
             <label className="master-form-label">Unit</label>
             <CustomSelect
+              searchable
               value={selectedUnit}
               onChange={(val) => setSelectedUnit(val)}
               options={stockCardUnitsList}
@@ -455,6 +457,7 @@ export function StockCardIndex() {
           <div className="master-form-group">
             <label className="master-form-label">Warehouse</label>
             <CustomSelect
+              searchable
               value={selectedWarehouse}
               onChange={(val) => setSelectedWarehouse(val)}
               options={warehousesList}

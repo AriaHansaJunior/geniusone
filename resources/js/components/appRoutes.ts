@@ -139,6 +139,111 @@ export function resolveViewStateFromPath(pathname: string, defaultPage: PageKey 
     return { type: "pph-create" };
   }
 
+  // Rafaksi Type Create & Edit
+  if (
+    cleanPath === "/procurement/purchase-master/rafaksi-type/create" ||
+    cleanPath === "/procurement/purchase-master/rafaksi-type/add" ||
+    cleanPath === "/procurement/rafaksi-type/create" ||
+    cleanPath === "/procurement/rafaksi-type/add"
+  ) {
+    return { type: "rafaksi-type-create" };
+  }
+  const rafaksiEditMatch = cleanPath.match(
+    /^\/(?:procurement\/purchase-master\/rafaksi-type|procurement\/rafaksi-type)\/edit\/([^/]+)$/
+  );
+  if (rafaksiEditMatch) {
+    return { type: "rafaksi-type-edit", id: decodeURIComponent(rafaksiEditMatch[1]) };
+  }
+
+  // Job Number Create & Edit
+  if (
+    cleanPath === "/procurement/purchase-master/job-number/create" ||
+    cleanPath === "/procurement/purchase-master/job-number/add" ||
+    cleanPath === "/procurement/job-number/create" ||
+    cleanPath === "/procurement/job-number/add" ||
+    cleanPath === "/exim/master/job-number/create" ||
+    cleanPath === "/exim/master/job-number/add"
+  ) {
+    return { type: "job-number-create" };
+  }
+  const jobNumberEditMatch = cleanPath.match(
+    /^\/(?:procurement\/purchase-master\/job-number|procurement\/job-number|exim\/master\/job-number)\/edit\/([^/]+)$/
+  );
+  if (jobNumberEditMatch) {
+    return { type: "job-number-edit", id: decodeURIComponent(jobNumberEditMatch[1]) };
+  }
+
+  // Country Create & Edit
+  if (
+    cleanPath === "/exim/master/country/create" ||
+    cleanPath === "/exim/master/country/add" ||
+    cleanPath === "/exim/country/create" ||
+    cleanPath === "/exim/country/add"
+  ) {
+    return { type: "country-create" };
+  }
+  const countryEditMatch = cleanPath.match(
+    /^\/(?:exim\/master\/country|exim\/country)\/edit\/([^/]+)$/
+  );
+  if (countryEditMatch) {
+    return { type: "country-edit", id: decodeURIComponent(countryEditMatch[1]) };
+  }
+
+  // Currency Create & Edit
+  if (
+    cleanPath === "/exim/master/currency/create" ||
+    cleanPath === "/exim/master/currency/add" ||
+    cleanPath === "/exim/currency/create" ||
+    cleanPath === "/exim/currency/add" ||
+    cleanPath === "/procurement/purchase-master/currency/create" ||
+    cleanPath === "/procurement/purchase-master/currency/add"
+  ) {
+    return { type: "currency-create" };
+  }
+  const currencyEditMatch = cleanPath.match(
+    /^\/(?:exim\/master\/currency|exim\/currency|procurement\/purchase-master\/currency)\/edit\/([^/]+)$/
+  );
+  if (currencyEditMatch) {
+    return { type: "currency-edit", id: decodeURIComponent(currencyEditMatch[1]) };
+  }
+
+  // Account Create & Edit
+  if (
+    cleanPath === "/exim/master/account/create" ||
+    cleanPath === "/exim/master/account/add" ||
+    cleanPath === "/exim/account/create" ||
+    cleanPath === "/exim/account/add" ||
+    cleanPath === "/procurement/purchase-master/account/create" ||
+    cleanPath === "/procurement/purchase-master/account/add"
+  ) {
+    return { type: "account-create" };
+  }
+  const accountEditMatch = cleanPath.match(
+    /^\/(?:exim\/master\/account|exim\/account|procurement\/purchase-master\/account)\/edit\/([^/]+)$/
+  );
+  if (accountEditMatch) {
+    return { type: "account-edit", id: decodeURIComponent(accountEditMatch[1]) };
+  }
+
+  // Transfer Stock Return Create & Edit (declared before TSR detail wildcard match)
+  if (
+    cleanPath === "/warehouse/incoming/transfer-stock-return/create" ||
+    cleanPath === "/warehouse/incoming/transfer-stock-return/add" ||
+    cleanPath === "/warehouse/transfer-stock-return/create" ||
+    cleanPath === "/warehouse/transfer-stock-return/add"
+  ) {
+    return { type: "transfer-stock-return-create" };
+  }
+  const transferStockReturnEditMatch = cleanPath.match(
+    /^\/(?:warehouse\/incoming\/transfer-stock-return|warehouse\/transfer-stock-return)\/edit\/(.+)$/
+  );
+  if (transferStockReturnEditMatch) {
+    return {
+      type: "transfer-stock-return-edit",
+      code: decodeURIComponent(transferStockReturnEditMatch[1]),
+    };
+  }
+
   // PR Create
   if (
     cleanPath === "/procurement/transactions/purchase-requisition/create" ||
@@ -375,7 +480,7 @@ export function resolveViewStateFromPath(pathname: string, defaultPage: PageKey 
   }
 
   const transferStockReturnDetailMatch = cleanPath.match(
-    /^\/(?:warehouse\/incoming\/transfer-stock-return|warehouse\/incoming\/transfer-stock-retur|warehouse\/transfer-stock-return|warehouse\/transfer_stok_retur)\/(?:details?\/)?(?!create$|add$)(.+)$/
+    /^\/(?:warehouse\/incoming\/transfer-stock-return|warehouse\/incoming\/transfer-stock-retur|warehouse\/transfer-stock-return|warehouse\/transfer_stok_retur)\/(?:details?\/)?(?!create$|add$|edit\/)(.+)$/
   );
   if (transferStockReturnDetailMatch) {
     return {
@@ -592,6 +697,18 @@ export function resolveInitialViewState(initialPage = "dashboard", initialCode =
   if (initialPage === "warehouse-detail") return { type: "warehouse-detail", code: initialCode || "" };
   if (initialPage === "wh-req-material-create") return { type: "wh-req-material-create" };
   if (initialPage === "wh-req-material-detail") return { type: "wh-req-material-detail", id: initialCode || "" };
+  if (initialPage === "rafaksi-type-create") return { type: "rafaksi-type-create" };
+  if (initialPage === "rafaksi-type-edit") return { type: "rafaksi-type-edit", id: initialCode || "" };
+  if (initialPage === "job-number-create") return { type: "job-number-create" };
+  if (initialPage === "job-number-edit") return { type: "job-number-edit", id: initialCode || "" };
+  if (initialPage === "country-create") return { type: "country-create" };
+  if (initialPage === "country-edit") return { type: "country-edit", id: initialCode || "" };
+  if (initialPage === "currency-create") return { type: "currency-create" };
+  if (initialPage === "currency-edit") return { type: "currency-edit", id: initialCode || "" };
+  if (initialPage === "account-create") return { type: "account-create" };
+  if (initialPage === "account-edit") return { type: "account-edit", id: initialCode || "" };
+  if (initialPage === "transfer-stock-return-create") return { type: "transfer-stock-return-create" };
+  if (initialPage === "transfer-stock-return-edit") return { type: "transfer-stock-return-edit", code: initialCode || "" };
   if (initialPage === "transfer-stock-return-detail") return { type: "transfer-stock-return-detail", code: initialCode || "" };
   if (initialPage === "stock-notification-create") return { type: "stock-notification-create" };
   if (initialPage === "wh-type-of-request-create") return { type: "wh-type-of-request-create" };
@@ -628,7 +745,18 @@ export function resolveActiveSidebarPage(viewState: ViewState): PageKey | null {
   if (viewState.type === "warehouse-master-create" || viewState.type === "warehouse-coordinate" || viewState.type === "warehouse-coordinate-create") return "warehouse-master";
   if (viewState.type === "item-create" || viewState.type === "item-edit" || viewState.type === "item-qr") return "item";
   if (viewState.type === "wh-req-material-create" || viewState.type === "wh-req-material-detail") return "wh-req-material";
-  if (viewState.type === "transfer-stock-return-detail") return "transfer-stock-return";
+  if (viewState.type === "rafaksi-type-create" || viewState.type === "rafaksi-type-edit") return "rafaksi-type";
+  if (viewState.type === "job-number-create" || viewState.type === "job-number-edit") return "job-number";
+  if (viewState.type === "country-create" || viewState.type === "country-edit") return "country";
+  if (viewState.type === "currency-create" || viewState.type === "currency-edit") return "currency";
+  if (viewState.type === "account-create" || viewState.type === "account-edit") return "account";
+  if (
+    viewState.type === "transfer-stock-return-create" ||
+    viewState.type === "transfer-stock-return-edit" ||
+    viewState.type === "transfer-stock-return-detail"
+  ) {
+    return "transfer-stock-return";
+  }
   if (viewState.type === "stock-notification-create" || viewState.type === "stock-notification-edit") return "stock-notification-master";
   if (viewState.type === "wh-type-of-request-create" || viewState.type === "wh-type-of-request-edit") return "wh-type-of-request";
   if (viewState.type === "wh-destination-location-create" || viewState.type === "wh-destination-location-edit") return "wh-destination-location";

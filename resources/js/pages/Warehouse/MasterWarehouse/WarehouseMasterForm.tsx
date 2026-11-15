@@ -106,58 +106,61 @@ export function WarehouseMasterForm({
         </div>
       )}
 
-      {/* Form Card (Compact, Narrow Left-Aligned matching Screenshot 4) */}
+      {/* Full-Width Balanced Form Card */}
       <div className="wh-form-card">
         <form onSubmit={handleSubmit} noValidate>
-          {/* Name Field */}
-          <div className="wh-form-group">
-            <label htmlFor="wh-name" className="wh-form-label">
-              Name <span className="wh-required">*</span>
-            </label>
-            <input
-              id="wh-name"
-              type="text"
-              className={`wh-form-input ${
-                errors.name ? "wh-form-input--error" : ""
-              }`}
-              value={name}
-              onChange={(e) => {
-                setName(e.target.value);
-                if (errors.name) {
-                  setErrors((prev) => ({ ...prev, name: undefined }));
-                }
-              }}
-              placeholder="Enter warehouse name"
-              autoFocus
-            />
-            {errors.name && (
-              <span className="wh-form-error">{errors.name}</span>
-            )}
-          </div>
+          <div className="master-form-grid-2">
+            {/* Name Field */}
+            <div className="wh-form-group">
+              <label htmlFor="wh-name" className="wh-form-label">
+                Name <span className="wh-required">*</span>
+              </label>
+              <input
+                id="wh-name"
+                type="text"
+                className={`wh-form-input ${
+                  errors.name ? "wh-form-input--error" : ""
+                }`}
+                value={name}
+                onChange={(e) => {
+                  setName(e.target.value);
+                  if (errors.name) {
+                    setErrors((prev) => ({ ...prev, name: undefined }));
+                  }
+                }}
+                placeholder="Enter warehouse name"
+                autoFocus
+              />
+              {errors.name && (
+                <span className="wh-form-error">{errors.name}</span>
+              )}
+            </div>
 
-          {/* Warehouse Type Field */}
-          <div className="wh-form-group">
-            <label htmlFor="wh-type" className="wh-form-label">
-              Warehouse Type <span className="wh-required">*</span>
-            </label>
-            <CustomSelect
-              id="wh-type"
-              value={type}
-              onChange={(val) => {
-                setType(val as WarehouseType);
-                if (errors.type) {
-                  setErrors((prev) => ({ ...prev, type: undefined }));
-                }
-              }}
-              placeholder="Choose Warehouse Type"
-              options={[
-                { value: "", label: "Choose Warehouse Type" },
-                ...warehouseTypesList.map((wt) => ({ value: wt, label: wt })),
-              ]}
-            />
-            {errors.type && (
-              <span className="wh-form-error">{errors.type}</span>
-            )}
+            {/* Warehouse Type Field */}
+            <div className="wh-form-group">
+              <label htmlFor="wh-type" className="wh-form-label">
+                Warehouse Type <span className="wh-required">*</span>
+              </label>
+              <CustomSelect
+                id="wh-type"
+                searchable
+                value={type}
+                onChange={(val) => {
+                  setType(val as WarehouseType);
+                  if (errors.type) {
+                    setErrors((prev) => ({ ...prev, type: undefined }));
+                  }
+                }}
+                placeholder="Choose Warehouse Type"
+                options={[
+                  { value: "", label: "Choose Warehouse Type" },
+                  ...warehouseTypesList.map((wt) => ({ value: wt, label: wt })),
+                ]}
+              />
+              {errors.type && (
+                <span className="wh-form-error">{errors.type}</span>
+              )}
+            </div>
           </div>
 
           {/* Description Field */}
@@ -176,7 +179,7 @@ export function WarehouseMasterForm({
           </div>
 
           {/* Form Actions */}
-          <div style={{ display: "flex", gap: "10px", marginTop: "16px" }}>
+          <div className="wh-form-actions">
             <Button type="button" variant="ghost" onClick={onBack}>
               Cancel
             </Button>

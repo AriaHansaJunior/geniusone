@@ -149,10 +149,25 @@ Route::get('/procurement/purchase-master/pph/add', fn () => view('app', ['page' 
 
 Route::get('/procurement/rafaksi-type', fn () => view('app', ['page' => 'rafaksi-type']))->name('procurement.rafaksi-type');
 Route::get('/procurement/purchase-master/rafaksi-type', fn () => view('app', ['page' => 'rafaksi-type']));
+Route::get('/procurement/rafaksi-type/create', fn () => view('app', ['page' => 'rafaksi-type-create']))->name('procurement.rafaksi-type.create');
+Route::get('/procurement/rafaksi-type/add', fn () => view('app', ['page' => 'rafaksi-type-create']));
+Route::get('/procurement/purchase-master/rafaksi-type/create', fn () => view('app', ['page' => 'rafaksi-type-create']));
+Route::get('/procurement/purchase-master/rafaksi-type/add', fn () => view('app', ['page' => 'rafaksi-type-create']));
+Route::get('/procurement/rafaksi-type/edit/{id}', fn ($id) => view('app', ['page' => 'rafaksi-type-edit', 'code' => $id]))->name('procurement.rafaksi-type.edit');
+Route::get('/procurement/purchase-master/rafaksi-type/edit/{id}', fn ($id) => view('app', ['page' => 'rafaksi-type-edit', 'code' => $id]));
 
 Route::get('/procurement/job-number', fn () => view('app', ['page' => 'job-number']))->name('procurement.job-number');
 Route::get('/procurement/purchase-master/job-number', fn () => view('app', ['page' => 'job-number']));
 Route::get('/exim/master/job-number', fn () => view('app', ['page' => 'job-number']));
+Route::get('/procurement/job-number/create', fn () => view('app', ['page' => 'job-number-create']))->name('procurement.job-number.create');
+Route::get('/procurement/job-number/add', fn () => view('app', ['page' => 'job-number-create']));
+Route::get('/procurement/purchase-master/job-number/create', fn () => view('app', ['page' => 'job-number-create']));
+Route::get('/procurement/purchase-master/job-number/add', fn () => view('app', ['page' => 'job-number-create']));
+Route::get('/exim/master/job-number/create', fn () => view('app', ['page' => 'job-number-create']));
+Route::get('/exim/master/job-number/add', fn () => view('app', ['page' => 'job-number-create']));
+Route::get('/procurement/job-number/edit/{id}', fn ($id) => view('app', ['page' => 'job-number-edit', 'code' => $id]))->name('procurement.job-number.edit');
+Route::get('/procurement/purchase-master/job-number/edit/{id}', fn ($id) => view('app', ['page' => 'job-number-edit', 'code' => $id]));
+Route::get('/exim/master/job-number/edit/{id}', fn ($id) => view('app', ['page' => 'job-number-edit', 'code' => $id]));
 
 Route::get('/procurement/item', fn () => view('app', ['page' => 'item']))->name('procurement.item');
 Route::get('/procurement/purchase-master/item', fn () => view('app', ['page' => 'item']));
@@ -258,14 +273,38 @@ Route::get('/exim/master/color/add', fn () => view('app', ['page' => 'colour-cre
 
 Route::get('/exim/country', fn () => view('app', ['page' => 'country']))->name('exim.country');
 Route::get('/exim/master/country', fn () => view('app', ['page' => 'country']));
+Route::get('/exim/country/create', fn () => view('app', ['page' => 'country-create']))->name('exim.country.create');
+Route::get('/exim/country/add', fn () => view('app', ['page' => 'country-create']));
+Route::get('/exim/master/country/create', fn () => view('app', ['page' => 'country-create']));
+Route::get('/exim/master/country/add', fn () => view('app', ['page' => 'country-create']));
+Route::get('/exim/country/edit/{id}', fn ($id) => view('app', ['page' => 'country-edit', 'code' => $id]))->name('exim.country.edit');
+Route::get('/exim/master/country/edit/{id}', fn ($id) => view('app', ['page' => 'country-edit', 'code' => $id]));
 
 Route::get('/exim/currency', fn () => view('app', ['page' => 'currency']))->name('exim.currency');
 Route::get('/exim/master/currency', fn () => view('app', ['page' => 'currency']));
 Route::get('/procurement/purchase-master/currency', fn () => view('app', ['page' => 'currency']));
+Route::get('/exim/currency/create', fn () => view('app', ['page' => 'currency-create']))->name('exim.currency.create');
+Route::get('/exim/currency/add', fn () => view('app', ['page' => 'currency-create']));
+Route::get('/exim/master/currency/create', fn () => view('app', ['page' => 'currency-create']));
+Route::get('/exim/master/currency/add', fn () => view('app', ['page' => 'currency-create']));
+Route::get('/procurement/purchase-master/currency/create', fn () => view('app', ['page' => 'currency-create']));
+Route::get('/procurement/purchase-master/currency/add', fn () => view('app', ['page' => 'currency-create']));
+Route::get('/exim/currency/edit/{id}', fn ($id) => view('app', ['page' => 'currency-edit', 'code' => $id]))->name('exim.currency.edit');
+Route::get('/exim/master/currency/edit/{id}', fn ($id) => view('app', ['page' => 'currency-edit', 'code' => $id]));
+Route::get('/procurement/purchase-master/currency/edit/{id}', fn ($id) => view('app', ['page' => 'currency-edit', 'code' => $id]));
 
 Route::get('/exim/account', fn () => view('app', ['page' => 'account']))->name('exim.account');
 Route::get('/exim/master/account', fn () => view('app', ['page' => 'account']));
 Route::get('/procurement/purchase-master/account', fn () => view('app', ['page' => 'account']));
+Route::get('/exim/account/create', fn () => view('app', ['page' => 'account-create']))->name('exim.account.create');
+Route::get('/exim/account/add', fn () => view('app', ['page' => 'account-create']));
+Route::get('/exim/master/account/create', fn () => view('app', ['page' => 'account-create']));
+Route::get('/exim/master/account/add', fn () => view('app', ['page' => 'account-create']));
+Route::get('/procurement/purchase-master/account/create', fn () => view('app', ['page' => 'account-create']));
+Route::get('/procurement/purchase-master/account/add', fn () => view('app', ['page' => 'account-create']));
+Route::get('/exim/account/edit/{id}', fn ($id) => view('app', ['page' => 'account-edit', 'code' => $id]))->name('exim.account.edit');
+Route::get('/exim/master/account/edit/{id}', fn ($id) => view('app', ['page' => 'account-edit', 'code' => $id]));
+Route::get('/procurement/purchase-master/account/edit/{id}', fn ($id) => view('app', ['page' => 'account-edit', 'code' => $id]));
 
 // Exim - Other Routes
 Route::get('/exim/receive-note', fn () => view('app', ['page' => 'receive-note']))->name('exim.receive-note');
@@ -311,10 +350,16 @@ Route::get('/warehouse/adjustment/adjustment-stock', fn () => view('app', ['page
 
 // Warehouse Incoming Routes
 Route::get('/warehouse/incoming/transfer-stock-return', fn () => view('app', ['page' => 'transfer-stock-return']))->name('warehouse.transfer-stock-return');
+Route::get('/warehouse/incoming/transfer-stock-return/create', fn () => view('app', ['page' => 'transfer-stock-return-create']))->name('warehouse.transfer-stock-return.create');
+Route::get('/warehouse/incoming/transfer-stock-return/add', fn () => view('app', ['page' => 'transfer-stock-return-create']));
+Route::get('/warehouse/incoming/transfer-stock-return/edit/{code}', fn ($code) => view('app', ['page' => 'transfer-stock-return-edit', 'code' => $code]))->where('code', '.*')->name('warehouse.transfer-stock-return.edit');
 Route::get('/warehouse/incoming/transfer-stock-return/detail/{code}', fn ($code) => view('app', ['page' => 'transfer-stock-return-detail', 'code' => $code]))->where('code', '.*')->name('warehouse.transfer-stock-return.detail');
 Route::get('/warehouse/incoming/transfer-stock-return/details/{code}', fn ($code) => view('app', ['page' => 'transfer-stock-return-detail', 'code' => $code]))->where('code', '.*');
 Route::get('/warehouse/incoming/transfer-stock-return/{code}', fn ($code) => view('app', ['page' => 'transfer-stock-return-detail', 'code' => $code]))->where('code', '.*');
 Route::get('/warehouse/transfer-stock-return', fn () => redirect('/warehouse/incoming/transfer-stock-return'));
+Route::get('/warehouse/transfer-stock-return/create', fn () => view('app', ['page' => 'transfer-stock-return-create']));
+Route::get('/warehouse/transfer-stock-return/add', fn () => view('app', ['page' => 'transfer-stock-return-create']));
+Route::get('/warehouse/transfer-stock-return/edit/{code}', fn ($code) => view('app', ['page' => 'transfer-stock-return-edit', 'code' => $code]))->where('code', '.*');
 Route::get('/warehouse/transfer-stock-return/detail/{code}', fn ($code) => view('app', ['page' => 'transfer-stock-return-detail', 'code' => $code]))->where('code', '.*');
 Route::get('/warehouse/transfer_stok_retur', fn () => redirect('/warehouse/incoming/transfer-stock-return'));
 Route::get('/warehouse/incoming/transfer-stock-result', fn () => view('app', ['page' => 'transfer-stock-result']));

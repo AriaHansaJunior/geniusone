@@ -150,7 +150,7 @@ export function ColorForm({ onBack, onSave }: ColorFormProps) {
         </div>
 
         {/* Form Action Buttons: Cancel and Save */}
-        <div className="color-form-actions" style={{ display: "flex", gap: "10px", marginTop: "12px" }}>
+        <div className="color-form-actions">
           <Button type="button" variant="ghost" onClick={onBack}>
             Cancel
           </Button>

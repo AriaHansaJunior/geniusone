@@ -68,15 +68,7 @@ export function DepartmentForm({
     <div className="department-form-page">
       {/* Page Header */}
       <div className="department-form-header">
-        <h1
-          style={{
-            margin: 0,
-            fontSize: "20px",
-            fontWeight: 800,
-            color: "var(--ink)",
-            letterSpacing: "-0.3px",
-          }}
-        >
+        <h1 className="master-form-page-title">
           {isEdit ? "Edit Department" : "Add Department"}
         </h1>
       </div>
@@ -115,43 +107,46 @@ export function DepartmentForm({
 
       {/* Form Content Card */}
       <form onSubmit={handleSubmit} className="department-form-card">
-        {/* 1. Section Name */}
-        <div className="department-form-group">
-          <label htmlFor="sectionName" className="department-form-label">
-            Section Name <span className="required-mark">*</span>
-          </label>
-          <input
-            id="sectionName"
-            type="text"
-            className={`department-form-input ${error ? "has-error" : ""}`}
-            placeholder="e.g. MARKETING, PPIC, IT..."
-            value={sectionName}
-            onChange={(e) => {
-              setSectionName(e.target.value);
-              if (error) setError(null);
-            }}
-            autoFocus={!isEdit}
-          />
-          {error && (
-            <span className="department-form-error-msg">{error}</span>
-          )}
-        </div>
+        <div className="master-form-grid-2">
+          {/* 1. Section Name */}
+          <div className="department-form-group">
+            <label htmlFor="sectionName" className="department-form-label">
+              Section Name <span className="required-mark">*</span>
+            </label>
+            <input
+              id="sectionName"
+              type="text"
+              className={`department-form-input ${error ? "has-error" : ""}`}
+              placeholder="e.g. MARKETING, PPIC, IT..."
+              value={sectionName}
+              onChange={(e) => {
+                setSectionName(e.target.value);
+                if (error) setError(null);
+              }}
+              autoFocus={!isEdit}
+            />
+            {error && (
+              <span className="department-form-error-msg">{error}</span>
+            )}
+          </div>
 
-        {/* 2. Unit */}
-        <div className="department-form-group">
-          <label htmlFor="departmentUnit" className="department-form-label">
-            Unit
-          </label>
-          <CustomSelect
-            id="departmentUnit"
-            value={unit}
-            onChange={(val) => setUnit(val)}
-            options={unitOptions.map((opt) => ({ value: opt, label: opt }))}
-          />
+          {/* 2. Unit */}
+          <div className="department-form-group">
+            <label htmlFor="departmentUnit" className="department-form-label">
+              Unit
+            </label>
+            <CustomSelect
+              id="departmentUnit"
+              searchable
+              value={unit}
+              onChange={(val) => setUnit(val)}
+              options={unitOptions.map((opt) => ({ value: opt, label: opt }))}
+            />
+          </div>
         </div>
 
         {/* Form Action Buttons: Cancel and Save */}
-        <div className="department-form-actions" style={{ display: "flex", gap: "10px", marginTop: "12px" }}>
+        <div className="department-form-actions">
           <Button type="button" variant="ghost" onClick={onBack}>
             Cancel
           </Button>

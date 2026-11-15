@@ -1,5 +1,12 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
+import { createPortal } from "react-dom";
 import { Icon } from "./Icon";
+import {
+  filterSelectOptions,
+  handleDropdownSearchKeyDown,
+  useDropdownPortalLifecycle,
+  type PortalDropdownPosition,
+} from "./CustomSelect";
 import type { IconName } from "../../types";
 
 export interface FieldOption {
@@ -16,6 +23,8 @@ export function Field({
   options,
   isInput,
   inputPlaceholder,
+  searchable,
+  searchPlaceholder = "Type to search...",
   onChange,
   onInputChange,
   onClick,
@@ -28,13 +37,24 @@ export function Field({
   options?: (FieldOption | string)[];
   isInput?: boolean;
   inputPlaceholder?: string;
+  searchable?: boolean;
+  searchPlaceholder?: string;
   onChange?: (val: string) => void;
   onInputChange?: (val: string) => void;
   onClick?: () => void;
 }) {
   const [isOpen, setIsOpen] = useState(false);
+  const [portalPos, setPortalPos] = useState<PortalDropdownPosition>({
+    style: {},
+    openUpwards: false,
+    alignRight: false,
+  });
+  const [searchQuery, setSearchQuery] = useState("");
+  const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const containerRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Normalize options array
   const normalizedOptions: FieldOption[] = useMemo(() => {
@@ -47,6 +67,14 @@ export function Field({
     });
   }, [options]);
 
+  const isSearchEnabled =
+    !isInput && (searchable !== undefined ? searchable : normalizedOptions.length >= 6);
+
+  const filteredOptions = useMemo(() => {
+    if (!isSearchEnabled) return normalizedOptions;
+    return filterSelectOptions(normalizedOptions, searchQuery);
+  }, [isSearchEnabled, normalizedOptions, searchQuery]);
+
   // Selected label calculation
   const selectedLabel = useMemo(() => {
     if (displayValue) return displayValue;
@@ -57,45 +85,38 @@ export function Field({
     return value || "";
   }, [displayValue, normalizedOptions, value]);
 
-  // Handle click outside to close dropdown
+  const updatePortalPosition = useDropdownPortalLifecycle({
+    isOpen,
+    setIsOpen,
+    containerRef,
+    triggerRef,
+    listRef,
+    searchInputRef,
+    isSearchEnabled,
+    menuPlacement: "auto",
+    setPortalPos,
+    setSearchQuery,
+    setHighlightedIndex,
+  });
+
   useEffect(() => {
-    if (!isOpen) return;
-
-    const handleClickOutside = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        setIsOpen(false);
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    document.addEventListener("keydown", handleKeyDown);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [isOpen]);
-
-  // Scroll active option into view
-  useEffect(() => {
-    if (isOpen && listRef.current) {
-      const activeEl = listRef.current.querySelector(".custom-select-option.is-selected") as HTMLElement;
-      if (activeEl) {
-        activeEl.scrollIntoView({ block: "nearest" });
-      }
+    if (!isOpen || !isSearchEnabled) return;
+    if (searchQuery.trim() === "") {
+      const selectedIdx = filteredOptions.findIndex((opt) => opt.value === value);
+      setHighlightedIndex(selectedIdx >= 0 ? selectedIdx : filteredOptions.length > 0 ? 0 : -1);
+    } else {
+      setHighlightedIndex(filteredOptions.length > 0 ? 0 : -1);
     }
-  }, [isOpen]);
+  }, [filteredOptions.length, isOpen, isSearchEnabled, searchQuery, value]);
 
   const handleToggle = () => {
     if (onClick) {
       onClick();
     }
     if (!isInput && normalizedOptions.length > 0) {
+      if (!isOpen) {
+        updatePortalPosition();
+      }
       setIsOpen((prev) => !prev);
     }
   };
@@ -104,8 +125,111 @@ export function Field({
     if (onChange) {
       onChange(optVal);
     }
+    setSearchQuery("");
+    setHighlightedIndex(-1);
     setIsOpen(false);
   };
+
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    handleDropdownSearchKeyDown(
+      e,
+      filteredOptions,
+      highlightedIndex,
+      setHighlightedIndex,
+      handleSelectOption,
+      listRef.current
+    );
+  };
+
+  const renderFieldOptions = () => {
+    if (filteredOptions.length === 0) {
+      return <div className="custom-select-empty">No matching results</div>;
+    }
+
+    return filteredOptions.map((opt, idx) => {
+      const isSelected = opt.value === value;
+      const isHighlighted = isSearchEnabled && idx === highlightedIndex;
+      return (
+        <div
+          key={opt.value}
+          className={`custom-select-option ${isSelected ? "is-selected" : ""} ${
+            isHighlighted ? "is-highlighted" : ""
+          }`}
+          role="option"
+          aria-selected={isSelected}
+          onClick={(e) => {
+            e.stopPropagation();
+            handleSelectOption(opt.value);
+          }}
+        >
+          <span className="custom-select-option-text" title={opt.label}>
+            {opt.label}
+          </span>
+          {isSelected && (
+            <span className="custom-select-option-check" aria-hidden="true">
+              <Icon name="check" size={14} strokeWidth={2.5} />
+            </span>
+          )}
+        </div>
+      );
+    });
+  };
+
+  const dropdownMenu =
+    !isInput && isOpen && normalizedOptions.length > 0 && typeof document !== "undefined"
+      ? createPortal(
+          <div
+            ref={listRef}
+            className={`custom-select-dropdown custom-select-dropdown--portal ${
+              isSearchEnabled ? "custom-select-dropdown--searchable" : ""
+            } ${portalPos.openUpwards ? "custom-select-dropdown--top" : ""} ${
+              portalPos.alignRight ? "custom-select-dropdown--align-right" : ""
+            }`}
+            role="listbox"
+            style={portalPos.style}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {isSearchEnabled && (
+              <div className="custom-select-search-box">
+                <span className="custom-select-search-icon" aria-hidden="true">
+                  <Icon name="search" size={14} />
+                </span>
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  className="custom-select-search-input"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={handleSearchKeyDown}
+                  placeholder={searchPlaceholder}
+                  aria-label={`Search ${label}`}
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    className="custom-select-search-clear"
+                    onClick={() => {
+                      setSearchQuery("");
+                      searchInputRef.current?.focus({ preventScroll: true });
+                    }}
+                    aria-label="Clear search"
+                    title="Clear search"
+                  >
+                    <Icon name="close" size={13} />
+                  </button>
+                )}
+              </div>
+            )}
+
+            {isSearchEnabled ? (
+              <div className="custom-select-options-list">{renderFieldOptions()}</div>
+            ) : (
+              renderFieldOptions()
+            )}
+          </div>,
+          document.body
+        )
+      : null;
 
   return (
     <div
@@ -115,15 +239,29 @@ export function Field({
     >
       <span className="field__label">{label}</span>
       <div
+        ref={triggerRef}
         className={`field__control ${isOpen ? "is-active" : ""}`}
         style={{ position: "relative", cursor: isInput ? "text" : "pointer" }}
         onClick={handleToggle}
         role={isInput ? undefined : "button"}
         tabIndex={isInput ? undefined : 0}
         onKeyDown={(e) => {
-          if (!isInput && (e.key === "Enter" || e.key === " ")) {
+          if (isInput) return;
+          if (e.key === "Enter" || e.key === " " || e.key === "ArrowDown") {
             e.preventDefault();
             handleToggle();
+          } else if (
+            isSearchEnabled &&
+            !isOpen &&
+            e.key.length === 1 &&
+            !e.ctrlKey &&
+            !e.metaKey &&
+            !e.altKey
+          ) {
+            e.preventDefault();
+            updatePortalPosition();
+            setSearchQuery(e.key);
+            setIsOpen(true);
           }
         }}
         aria-haspopup={!isInput && normalizedOptions.length > 0 ? "listbox" : undefined}
@@ -182,40 +320,7 @@ export function Field({
         )}
       </div>
 
-      {/* Custom Floating Dropdown Menu (No Native OS Menu) */}
-      {!isInput && isOpen && normalizedOptions.length > 0 && (
-        <div
-          ref={listRef}
-          className="custom-select-dropdown"
-          role="listbox"
-          style={{ minWidth: "100%", width: "max-content", maxWidth: "min(92vw, 420px)" }}
-        >
-          {normalizedOptions.map((opt) => {
-            const isSelected = opt.value === value;
-            return (
-              <div
-                key={opt.value}
-                className={`custom-select-option ${isSelected ? "is-selected" : ""}`}
-                role="option"
-                aria-selected={isSelected}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleSelectOption(opt.value);
-                }}
-              >
-                <span className="custom-select-option-text" title={opt.label}>
-                  {opt.label}
-                </span>
-                {isSelected && (
-                  <span className="custom-select-option-check" aria-hidden="true">
-                    <Icon name="check" size={14} strokeWidth={2.5} />
-                  </span>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
+      {dropdownMenu}
     </div>
   );
 }

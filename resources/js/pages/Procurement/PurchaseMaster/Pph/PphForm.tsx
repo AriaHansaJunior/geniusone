@@ -93,27 +93,10 @@ export function PphForm({ onBack, onSave }: PphFormProps) {
   };
 
   return (
-    <div
-      className="pph-form-page"
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        gap: "16px",
-        width: "100%",
-        animation: "fadeIn 0.15s ease-in-out",
-      }}
-    >
-      {/* Page Header: Single clean title, no redundant back button pill */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <h1
-          style={{
-            margin: 0,
-            fontSize: "20px",
-            fontWeight: 800,
-            color: "var(--ink)",
-            letterSpacing: "-0.3px",
-          }}
-        >
+    <div className="pph-form-page master-form-page">
+      {/* Page Header */}
+      <div className="master-form-header">
+        <h1 className="master-form-page-title">
           Add PPH
         </h1>
       </div>
@@ -146,115 +129,84 @@ export function PphForm({ onBack, onSave }: PphFormProps) {
       )}
 
       {/* Main Form Card */}
-      <form
-        onSubmit={handleFormSubmit}
-        className="panel"
-        style={{
-          background: "var(--white)",
-          border: "1px solid var(--line)",
-          borderRadius: "var(--radius-sm)",
-          padding: "24px 28px",
-          display: "flex",
-          flexDirection: "column",
-          gap: "20px",
-          maxWidth: "600px",
-        }}
-      >
-        {/* Field 1: Nama PPH */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-          <label
-            htmlFor="namaPph"
-            style={{ fontSize: "11.5px", fontWeight: 700, color: "var(--ink-soft)" }}
-          >
-            Nama PPH
-          </label>
-          <input
-            id="namaPph"
-            type="text"
-            className="form-input"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            required
-            autoFocus
-          />
-        </div>
+      <form onSubmit={handleFormSubmit} className="master-form-card">
+        <div className="master-form-grid-4">
+          {/* Field 1: Nama PPH */}
+          <div className="master-form-group">
+            <label htmlFor="namaPph" className="master-form-label">
+              Nama PPH <span className="required-mark">*</span>
+            </label>
+            <input
+              id="namaPph"
+              type="text"
+              className="master-form-input"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+              autoFocus
+            />
+          </div>
 
-        {/* Field 2: Nilai PPH % */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-          <label
-            htmlFor="nilaiPph"
-            style={{ fontSize: "11.5px", fontWeight: 700, color: "var(--ink-soft)" }}
-          >
-            Nilai PPH %
-          </label>
-          <input
-            id="nilaiPph"
-            type="number"
-            step="0.0001"
-            min="0"
-            className="form-input font-mono"
-            value={rate}
-            onChange={(e) => setRate(e.target.value)}
-            onBlur={handleRateBlur}
-            required
-          />
-        </div>
+          {/* Field 2: Nilai PPH % */}
+          <div className="master-form-group">
+            <label htmlFor="nilaiPph" className="master-form-label">
+              Nilai PPH % <span className="required-mark">*</span>
+            </label>
+            <input
+              id="nilaiPph"
+              type="number"
+              step="0.0001"
+              min="0"
+              className="master-form-input font-mono"
+              value={rate}
+              onChange={(e) => setRate(e.target.value)}
+              onBlur={handleRateBlur}
+              required
+            />
+          </div>
 
-        {/* Field 3: Jenis PPH */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-          <label
-            htmlFor="jenisPph"
-            style={{ fontSize: "11.5px", fontWeight: 700, color: "var(--ink-soft)" }}
-          >
-            Jenis PPH
-          </label>
-          <CustomSelect
-            id="jenisPph"
-            value={pphType}
-            onChange={(val) => setPphType(val)}
-            placeholder="Select PPH Type"
-            options={[
-              { value: "", label: "Select PPH Type" },
-              { value: "PPh 21", label: "PPh 21" },
-              { value: "PPh 22", label: "PPh 22" },
-              { value: "PPh 23", label: "PPh 23" },
-              { value: "PPh 4 (2)", label: "PPh 4 (2)" },
-              { value: "PPh 31 E", label: "PPh 31 E" },
-              { value: "PBBKB", label: "PBBKB" },
-            ]}
-          />
-        </div>
+          {/* Field 3: Jenis PPH */}
+          <div className="master-form-group">
+            <label htmlFor="jenisPph" className="master-form-label">
+              Jenis PPH <span className="required-mark">*</span>
+            </label>
+            <CustomSelect
+              id="jenisPph"
+              searchable
+              value={pphType}
+              onChange={(val) => setPphType(val)}
+              placeholder="Select PPH Type"
+              options={[
+                { value: "", label: "Select PPH Type" },
+                { value: "PPh 21", label: "PPh 21" },
+                { value: "PPh 22", label: "PPh 22" },
+                { value: "PPh 23", label: "PPh 23" },
+                { value: "PPh 4 (2)", label: "PPh 4 (2)" },
+                { value: "PPh 31 E", label: "PPh 31 E" },
+                { value: "PBBKB", label: "PBBKB" },
+              ]}
+            />
+          </div>
 
-        {/* Field 4: Deduction */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-          <label
-            htmlFor="deduction"
-            style={{ fontSize: "11.5px", fontWeight: 700, color: "var(--ink-soft)" }}
-          >
-            Deduction
-          </label>
-          <CustomSelect
-            id="deduction"
-            value={deduction}
-            onChange={(val) => setDeduction(val)}
-            options={[
-              { value: "No", label: "No" },
-              { value: "Yes", label: "Yes" },
-            ]}
-          />
+          {/* Field 4: Deduction */}
+          <div className="master-form-group">
+            <label htmlFor="deduction" className="master-form-label">
+              Deduction
+            </label>
+            <CustomSelect
+              id="deduction"
+              value={deduction}
+              onChange={(val) => setDeduction(val)}
+              options={[
+                { value: "No", label: "No" },
+                { value: "Yes", label: "Yes" },
+              ]}
+            />
+          </div>
         </div>
 
         {/* Action Buttons Footer */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "flex-end",
-            gap: "10px",
-            paddingTop: "14px",
-            borderTop: "1px solid var(--line)",
-          }}
-        >
+        <div className="master-form-actions">
           <Button type="button" variant="ghost" onClick={handleCancelClick}>
             Cancel
           </Button>

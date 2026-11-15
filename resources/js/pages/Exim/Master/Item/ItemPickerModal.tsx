@@ -147,6 +147,7 @@ export function ItemPickerModal({
 
             <CustomSelect
               className="item-picker-custom-select"
+              searchable
               value={classification}
               onChange={(val) => {
                 setClassification(val);
@@ -157,6 +158,7 @@ export function ItemPickerModal({
 
             <CustomSelect
               className="item-picker-custom-select"
+              searchable
               value={category}
               onChange={(val) => {
                 setCategory(val);
