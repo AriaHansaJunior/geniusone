@@ -3,7 +3,7 @@ import { Button } from "../../../components/ui/Button";
 import { SearchField } from "../../../components/ui/SearchField";
 import { Icon } from "../../../components/ui/Icon";
 import { Pagination } from "../../../components/ui/Pagination";
-import { ConfirmDialog } from "../../../components/ui/ConfirmDialog";
+import { StatusToggle } from "../../../components/ui/StatusToggle";
 import type {
   WarehouseCoordinateRecord,
   WarehouseCoordinateSortField,
@@ -15,14 +15,14 @@ interface WarehouseCoordinateIndexProps {
   warehouse: WarehouseMasterRecord;
   onAddNew: () => void;
   onBack: () => void;
-  onDeleteCoordinate?: (coordinateId: string) => void;
+  onToggleCoordinateStatus?: (coordinateId: string) => Promise<void> | void;
 }
 
 export function WarehouseCoordinateIndex({
   warehouse,
   onAddNew,
   onBack,
-  onDeleteCoordinate,
+  onToggleCoordinateStatus,
 }: WarehouseCoordinateIndexProps) {
   const [search, setSearch] = useState("");
   const [pageSize, setPageSize] = useState<number>(10); // Screenshot 2 shows 10 by default
@@ -30,8 +30,6 @@ export function WarehouseCoordinateIndex({
   const [sortField, setSortField] =
     useState<WarehouseCoordinateSortField>("name");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
-  const [coordToDelete, setCoordToDelete] =
-    useState<WarehouseCoordinateRecord | null>(null);
 
   const coordinates: WarehouseCoordinateRecord[] = warehouse.coordinates || [];
 
@@ -158,7 +156,7 @@ export function WarehouseCoordinateIndex({
                     {renderSortIndicator("name")}
                   </div>
                 </th>
-                <th className="wh-th-option text-center">Option</th>
+                <th className="master-col-status text-center">Status</th>
               </tr>
             </thead>
             <tbody>
@@ -179,20 +177,12 @@ export function WarehouseCoordinateIndex({
                         {sequentialNumber}
                       </td>
                       <td className="font-medium text-ink">{coord.name}</td>
-                      <td className="wh-td-option text-center">
-                        {onDeleteCoordinate && (
-                          <div className="wh-row-actions">
-                            <button
-                              type="button"
-                              className="wh-action-btn wh-action-btn--delete"
-                              onClick={() => setCoordToDelete(coord)}
-                              title={`Delete coordinate ${coord.name}`}
-                              aria-label={`Delete coordinate ${coord.name}`}
-                            >
-                              <Icon name="trash" size={13} />
-                            </button>
-                          </div>
-                        )}
+                      <td className="master-cell-center">
+                        <StatusToggle
+                          active={coord.status !== false}
+                          onToggle={() => onToggleCoordinateStatus?.(coord.id)}
+                          ariaLabel={`Toggle status for coordinate ${coord.name}`}
+                        />
                       </td>
                     </tr>
                   );
@@ -215,20 +205,6 @@ export function WarehouseCoordinateIndex({
           }}
         />
       </div>
-
-      {/* Delete Confirmation Dialog */}
-      <ConfirmDialog
-        isOpen={!!coordToDelete}
-        entityType="warehouse coordinate"
-        entityName={coordToDelete?.name}
-        onConfirm={() => {
-          if (coordToDelete && onDeleteCoordinate) {
-            onDeleteCoordinate(coordToDelete.id);
-          }
-          setCoordToDelete(null);
-        }}
-        onCancel={() => setCoordToDelete(null)}
-      />
     </div>
   );
 }

@@ -6,7 +6,6 @@ import { Pagination } from "../../../../components/ui/Pagination";
 import { Badge } from "../../../../components/ui/Badge";
 import { Icon } from "../../../../components/ui/Icon";
 import { StatusToggle } from "../../../../components/ui/StatusToggle";
-import { ConfirmDialog } from "../../../../components/ui/ConfirmDialog";
 import { toggleDestinationLocationStatusApi } from "../../../../data/masterApi";
 import { useNotification } from "../../../../context/NotificationContext";
 import { initialDestinationLocationRecords } from "./destination-location-data";
@@ -15,8 +14,7 @@ import type { DestinationLocationRecord, DestinationLocationSortField } from "./
 interface DestinationLocationIndexProps {
   records?: DestinationLocationRecord[];
   onAddNew: () => void;
-  onEdit?: (record: DestinationLocationRecord) => void;
-  onDelete?: (id: string) => void;
+  onToggleStatus?: (id: string) => Promise<void> | void;
 }
 
 type SortDirection = "none" | "asc" | "desc";
@@ -24,8 +22,7 @@ type SortDirection = "none" | "asc" | "desc";
 export function DestinationLocationIndex({
   records = initialDestinationLocationRecords,
   onAddNew,
-  onEdit,
-  onDelete,
+  onToggleStatus,
 }: DestinationLocationIndexProps) {
   const [localRecords, setLocalRecords] = useState<DestinationLocationRecord[]>(records);
   const [search, setSearch] = useState("");
@@ -33,7 +30,6 @@ export function DestinationLocationIndex({
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [sortField, setSortField] = useState<DestinationLocationSortField>("no");
   const [sortDirection, setSortDirection] = useState<SortDirection>("none");
-  const [recordToDelete, setRecordToDelete] = useState<DestinationLocationRecord | null>(null);
   const [exportNotice, setExportNotice] = useState<string | null>(null);
 
   useEffect(() => {
@@ -112,17 +108,13 @@ export function DestinationLocationIndex({
     );
   };
 
-  const handleConfirmDelete = () => {
-    if (!recordToDelete) return;
-    const id = recordToDelete.id;
-    setLocalRecords((prev) => prev.filter((r) => r.id !== id));
-    if (onDelete) onDelete(id);
-    setRecordToDelete(null);
-  };
-
   const { notifySuccess, notifyError } = useNotification();
 
   const handleToggleStatus = async (record: DestinationLocationRecord) => {
+    if (onToggleStatus) {
+      await onToggleStatus(record.id);
+      return;
+    }
     const previousStatus = record.status;
     const nextStatus = previousStatus === "Active" ? "Inactive" : "Active";
     setLocalRecords((prev) =>
@@ -275,15 +267,12 @@ export function DestinationLocationIndex({
                     {renderSortIndicator("status")}
                   </div>
                 </th>
-                <th className="wh-th-option text-center wh-col-option">
-                  Option
-                </th>
               </tr>
             </thead>
             <tbody>
               {paginatedRecords.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="wh-table-empty">
+                  <td colSpan={7} className="wh-table-empty">
                     No destination location records found matching filters.
                   </td>
                 </tr>
@@ -318,28 +307,6 @@ export function DestinationLocationIndex({
                           ariaLabel={`Toggle status for ${item.name}`}
                         />
                       </td>
-                      <td className="text-center">
-                        <div className="wh-row-actions">
-                          {onEdit && (
-                            <button
-                              type="button"
-                              className="wh-action-btn wh-action-btn--edit"
-                              title={`Edit ${item.name}`}
-                              onClick={() => onEdit(item)}
-                            >
-                              <Icon name="edit" size={13} />
-                            </button>
-                          )}
-                          <button
-                            type="button"
-                            className="wh-action-btn wh-action-btn--delete"
-                            title={`Delete ${item.name}`}
-                            onClick={() => setRecordToDelete(item)}
-                          >
-                            <Icon name="trash" size={13} />
-                          </button>
-                        </div>
-                      </td>
                     </tr>
                   );
                 })
@@ -361,18 +328,6 @@ export function DestinationLocationIndex({
           }}
         />
       </div>
-
-      {/* Delete Confirmation Modal */}
-      {recordToDelete && (
-        <ConfirmDialog
-          isOpen={true}
-          entityType="destination location"
-          entityName={recordToDelete.name}
-          entityCode={recordToDelete.code}
-          onConfirm={handleConfirmDelete}
-          onCancel={() => setRecordToDelete(null)}
-        />
-      )}
     </div>
   );
 }

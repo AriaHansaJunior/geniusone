@@ -1033,6 +1033,7 @@ export async function fetchMasterWarehouses(): Promise<WarehouseMasterRecord[] |
           id: String(c.id),
           warehouseId: String(r.id),
           name: c.name || c.code || "",
+          status: isTruthyStatus(c.status ?? 1),
         }))
       : [];
 
@@ -1106,7 +1107,19 @@ export async function saveWarehouseCoordinateApi(coord: WarehouseCoordinateRecor
     id: String(res.data.id),
     warehouseId: String(res.data.warehouses_id || coord.warehouseId),
     name: res.data.name || res.data.code || coord.name,
+    status: isTruthyStatus(res.data.status ?? 1),
   };
+}
+
+export async function toggleWarehouseCoordinateStatusApi(
+  coordinateId: string,
+  nextStatus: boolean
+): Promise<boolean> {
+  const res = await apiPatch(
+    `/api/warehouse/master/coordinates/${toNumericOrCleanId(coordinateId)}`,
+    { status: nextStatus ? 1 : 0 }
+  );
+  return Boolean(res);
 }
 
 export async function deleteWarehouseCoordinateApi(coordinateId: string): Promise<boolean> {

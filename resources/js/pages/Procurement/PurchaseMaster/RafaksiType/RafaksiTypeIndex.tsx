@@ -3,7 +3,7 @@ import { Button } from "../../../../components/ui/Button";
 import { SearchField } from "../../../../components/ui/SearchField";
 import { Pagination } from "../../../../components/ui/Pagination";
 import { Icon } from "../../../../components/ui/Icon";
-import { ConfirmDialog } from "../../../../components/ui/ConfirmDialog";
+import { StatusToggle } from "../../../../components/ui/StatusToggle";
 import {
   type RafaksiTypeRecord,
   type RafaksiTypeSortField,
@@ -13,16 +13,12 @@ import {
 interface RafaksiTypeIndexProps {
   records?: RafaksiTypeRecord[];
   onAddNew?: () => void;
-  onEdit?: (record: RafaksiTypeRecord) => void;
-  onDelete?: (id: string) => Promise<boolean | void> | void;
   onToggleStatus?: (id: string) => Promise<void> | void;
 }
 
 export function RafaksiTypeIndex({
   records = [],
   onAddNew,
-  onEdit,
-  onDelete,
   onToggleStatus,
 }: RafaksiTypeIndexProps) {
   const [localRecords, setLocalRecords] = useState<RafaksiTypeRecord[]>(records);
@@ -32,8 +28,6 @@ export function RafaksiTypeIndex({
   const [sortField, setSortField] = useState<RafaksiTypeSortField>("code");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
 
-  const [rafaksiToDelete, setRafaksiToDelete] = useState<RafaksiTypeRecord | null>(null);
-  const [rafaksiToConfirmEdit, setRafaksiToConfirmEdit] = useState<RafaksiTypeRecord | null>(null);
   const [banner, setBanner] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
   useEffect(() => {
@@ -112,20 +106,6 @@ export function RafaksiTypeIndex({
       }
     } catch (err: any) {
       setBanner({ type: "error", message: err?.message || "Failed to toggle status." });
-    }
-  };
-
-  const handleConfirmDelete = async () => {
-    if (!rafaksiToDelete) return;
-    const target = rafaksiToDelete;
-    setRafaksiToDelete(null);
-    try {
-      if (onDelete) {
-        await onDelete(target.id);
-      }
-      setLocalRecords((prev) => prev.filter((r) => r.id !== target.id));
-    } catch (err: any) {
-      setBanner({ type: "error", message: err?.message || `Failed to delete ${target.name}.` });
     }
   };
 
@@ -282,9 +262,6 @@ export function RafaksiTypeIndex({
                     <span>Status</span>
                     {renderSortIndicator("status")}
                   </th>
-                  <th className="master-col-actions">
-                    <span>Option</span>
-                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -298,47 +275,18 @@ export function RafaksiTypeIndex({
                         <td className="master-cell-name">{item.name}</td>
                         <td className="master-cell-muted">{item.description || "—"}</td>
                         <td className="master-cell-center">
-                          <button
-                            type="button"
-                            className={`master-status-pill ${
-                              item.status
-                                ? "master-status-pill--active"
-                                : "master-status-pill--inactive"
-                            }`}
-                            onClick={() => handleToggleStatus(item.id)}
-                            title="Click to toggle status"
-                          >
-                            {item.status ? "Active" : "Inactive"}
-                          </button>
-                        </td>
-                        <td className="master-cell-center">
-                          <div className="master-actions-group">
-                            <button
-                              type="button"
-                              className="btn-action-edit"
-                              onClick={() => setRafaksiToConfirmEdit(item)}
-                              title={`Edit ${item.name}`}
-                              aria-label={`Edit ${item.name}`}
-                            >
-                              <Icon name="edit" size={13} />
-                            </button>
-                            <button
-                              type="button"
-                              className="btn-action-delete"
-                              onClick={() => setRafaksiToDelete(item)}
-                              title={`Delete ${item.name}`}
-                              aria-label={`Delete ${item.name}`}
-                            >
-                              <Icon name="trash" size={13} />
-                            </button>
-                          </div>
+                          <StatusToggle
+                            active={item.status}
+                            onToggle={() => handleToggleStatus(item.id)}
+                            ariaLabel={`Toggle status for ${item.name}`}
+                          />
                         </td>
                       </tr>
                     );
                   })
                 ) : (
                   <tr>
-                    <td colSpan={6} className="empty-table-cell">
+                    <td colSpan={5} className="empty-table-cell">
                       <div className="empty master-empty-box">
                         <div className="empty__icon master-empty-icon">
                           <Icon name="search" size={24} />
@@ -368,31 +316,6 @@ export function RafaksiTypeIndex({
           />
         </div>
       </div>
-
-      <ConfirmDialog
-        isOpen={Boolean(rafaksiToConfirmEdit)}
-        onCancel={() => setRafaksiToConfirmEdit(null)}
-        onConfirm={() => {
-          const target = rafaksiToConfirmEdit;
-          setRafaksiToConfirmEdit(null);
-          if (target) onEdit?.(target);
-        }}
-        title="Edit Rafaksi Type"
-        message={`Open edit page for "${rafaksiToConfirmEdit?.name}"?`}
-        confirmLabel="Yes, Edit"
-        cancelLabel="Cancel"
-      />
-
-      <ConfirmDialog
-        isOpen={Boolean(rafaksiToDelete)}
-        onCancel={() => setRafaksiToDelete(null)}
-        onConfirm={handleConfirmDelete}
-        title="Delete Rafaksi Type"
-        message={`Are you sure you want to delete "${rafaksiToDelete?.name}"? This action cannot be undone.`}
-        confirmLabel="Yes, Delete"
-        cancelLabel="Cancel"
-        variant="danger"
-      />
     </div>
   );
 }

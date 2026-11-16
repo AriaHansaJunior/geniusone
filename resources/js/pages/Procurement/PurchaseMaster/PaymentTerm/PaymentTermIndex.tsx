@@ -4,14 +4,11 @@ import { SearchField } from "../../../../components/ui/SearchField";
 import { Pagination } from "../../../../components/ui/Pagination";
 import { Icon } from "../../../../components/ui/Icon";
 import { StatusToggle } from "../../../../components/ui/StatusToggle";
-import { ConfirmDialog } from "../../../../components/ui/ConfirmDialog";
 import { type PaymentTermRecord } from "./payment-term-types";
 
 interface PaymentTermIndexProps {
   records?: PaymentTermRecord[];
   onAddNew: () => void;
-  onEdit?: (record: PaymentTermRecord) => void;
-  onDelete?: (id: string) => Promise<void> | void;
   onToggleHide?: (id: string) => void;
 }
 
@@ -20,13 +17,9 @@ type SortDirection = "none" | "asc" | "desc";
 export function PaymentTermIndex({
   records = [],
   onAddNew,
-  onEdit,
-  onDelete,
   onToggleHide,
 }: PaymentTermIndexProps) {
   const [localRecords, setLocalRecords] = useState<PaymentTermRecord[]>(records);
-  const [recordToEdit, setRecordToEdit] = useState<PaymentTermRecord | null>(null);
-  const [recordToDelete, setRecordToDelete] = useState<PaymentTermRecord | null>(null);
 
   useEffect(() => {
     setLocalRecords(records);
@@ -43,15 +36,6 @@ export function PaymentTermIndex({
     );
     if (onToggleHide) {
       onToggleHide(id);
-    }
-  };
-
-  const handleConfirmDelete = async () => {
-    if (!recordToDelete) return;
-    const target = recordToDelete;
-    setRecordToDelete(null);
-    if (onDelete) {
-      await onDelete(target.id);
     }
   };
 
@@ -94,8 +78,6 @@ export function PaymentTermIndex({
       return "asc";
     });
   };
-
-  const hasActions = Boolean(onEdit || onDelete);
 
   return (
     <div className="master-page-shell payment-term-page">
@@ -146,11 +128,6 @@ export function PaymentTermIndex({
                   <th className="master-col-status">
                     <span>Status</span>
                   </th>
-                  {hasActions && (
-                    <th className="master-col-actions">
-                      <span>Option</span>
-                    </th>
-                  )}
                 </tr>
               </thead>
               <tbody>
@@ -168,40 +145,12 @@ export function PaymentTermIndex({
                             ariaLabel={`Toggle status for ${item.name}`}
                           />
                         </td>
-                        {hasActions && (
-                          <td className="master-cell-center">
-                            <div className="master-actions-group">
-                              {onEdit && (
-                                <button
-                                  type="button"
-                                  className="btn-action-edit"
-                                  title={`Edit ${item.name}`}
-                                  aria-label={`Edit ${item.name}`}
-                                  onClick={() => setRecordToEdit(item)}
-                                >
-                                  <Icon name="edit" size={13} />
-                                </button>
-                              )}
-                              {onDelete && (
-                                <button
-                                  type="button"
-                                  className="btn-action-delete"
-                                  title={`Delete ${item.name}`}
-                                  aria-label={`Delete ${item.name}`}
-                                  onClick={() => setRecordToDelete(item)}
-                                >
-                                  <Icon name="trash" size={13} />
-                                </button>
-                              )}
-                            </div>
-                          </td>
-                        )}
                       </tr>
                     );
                   })
                 ) : (
                   <tr>
-                    <td colSpan={hasActions ? 4 : 3} className="empty-table-cell">
+                    <td colSpan={3} className="empty-table-cell">
                       <div className="empty master-empty-box">
                         <div className="empty__icon master-empty-icon">
                           <Icon name="search" size={24} />
@@ -230,31 +179,6 @@ export function PaymentTermIndex({
           />
         </div>
       </div>
-
-      <ConfirmDialog
-        isOpen={!!recordToEdit}
-        title="Edit Payment Term"
-        message={`Do you want to edit payment term "${recordToEdit?.name}"?`}
-        confirmLabel="Continue"
-        cancelLabel="Cancel"
-        confirmVariant="primary"
-        icon="edit"
-        onConfirm={() => {
-          if (recordToEdit && onEdit) {
-            onEdit(recordToEdit);
-          }
-          setRecordToEdit(null);
-        }}
-        onCancel={() => setRecordToEdit(null)}
-      />
-
-      <ConfirmDialog
-        isOpen={!!recordToDelete}
-        entityType="payment term"
-        entityName={recordToDelete?.name}
-        onConfirm={handleConfirmDelete}
-        onCancel={() => setRecordToDelete(null)}
-      />
     </div>
   );
 }

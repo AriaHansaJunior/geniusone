@@ -3,7 +3,7 @@ import { Button } from "../../../../components/ui/Button";
 import { SearchField } from "../../../../components/ui/SearchField";
 import { Pagination } from "../../../../components/ui/Pagination";
 import { Icon } from "../../../../components/ui/Icon";
-import { ConfirmDialog } from "../../../../components/ui/ConfirmDialog";
+import { StatusToggle } from "../../../../components/ui/StatusToggle";
 import {
   type JobNumberRecord,
   type JobNumberSortField,
@@ -13,16 +13,12 @@ import {
 interface JobNumberIndexProps {
   records?: JobNumberRecord[];
   onAddNew?: () => void;
-  onEdit?: (record: JobNumberRecord) => void;
-  onDelete?: (id: string) => Promise<boolean | void> | void;
   onToggleStatus?: (id: string) => Promise<void> | void;
 }
 
 export function JobNumberIndex({
   records = [],
   onAddNew,
-  onEdit,
-  onDelete,
   onToggleStatus,
 }: JobNumberIndexProps) {
   const [localRecords, setLocalRecords] = useState<JobNumberRecord[]>(records);
@@ -32,8 +28,6 @@ export function JobNumberIndex({
   const [sortField, setSortField] = useState<JobNumberSortField>("jobNumber");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
 
-  const [jobToDelete, setJobToDelete] = useState<JobNumberRecord | null>(null);
-  const [jobToConfirmEdit, setJobToConfirmEdit] = useState<JobNumberRecord | null>(null);
   const [banner, setBanner] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
   useEffect(() => {
@@ -112,23 +106,6 @@ export function JobNumberIndex({
       }
     } catch (err: any) {
       setBanner({ type: "error", message: err?.message || "Failed to toggle status." });
-    }
-  };
-
-  const handleConfirmDelete = async () => {
-    if (!jobToDelete) return;
-    const target = jobToDelete;
-    setJobToDelete(null);
-    try {
-      if (onDelete) {
-        await onDelete(target.id);
-      }
-      setLocalRecords((prev) => prev.filter((j) => j.id !== target.id));
-    } catch (err: any) {
-      setBanner({
-        type: "error",
-        message: err?.message || `Failed to delete ${target.jobNumber}.`,
-      });
     }
   };
 
@@ -285,9 +262,6 @@ export function JobNumberIndex({
                     <span>Status</span>
                     {renderSortIndicator("status")}
                   </th>
-                  <th className="master-col-actions">
-                    <span>Option</span>
-                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -305,47 +279,18 @@ export function JobNumberIndex({
                           </span>
                         </td>
                         <td className="master-cell-center">
-                          <button
-                            type="button"
-                            className={`master-status-pill ${
-                              item.status
-                                ? "master-status-pill--active"
-                                : "master-status-pill--inactive"
-                            }`}
-                            onClick={() => handleToggleStatus(item.id)}
-                            title="Click to toggle status"
-                          >
-                            {item.status ? "Active" : "Inactive"}
-                          </button>
-                        </td>
-                        <td className="master-cell-center">
-                          <div className="master-actions-group">
-                            <button
-                              type="button"
-                              className="btn-action-edit"
-                              onClick={() => setJobToConfirmEdit(item)}
-                              title={`Edit ${item.jobNumber}`}
-                              aria-label={`Edit ${item.jobNumber}`}
-                            >
-                              <Icon name="edit" size={13} />
-                            </button>
-                            <button
-                              type="button"
-                              className="btn-action-delete"
-                              onClick={() => setJobToDelete(item)}
-                              title={`Delete ${item.jobNumber}`}
-                              aria-label={`Delete ${item.jobNumber}`}
-                            >
-                              <Icon name="trash" size={13} />
-                            </button>
-                          </div>
+                          <StatusToggle
+                            active={item.status}
+                            onToggle={() => handleToggleStatus(item.id)}
+                            ariaLabel={`Toggle status for ${item.jobNumber}`}
+                          />
                         </td>
                       </tr>
                     );
                   })
                 ) : (
                   <tr>
-                    <td colSpan={6} className="empty-table-cell">
+                    <td colSpan={5} className="empty-table-cell">
                       <div className="empty master-empty-box">
                         <div className="empty__icon master-empty-icon">
                           <Icon name="search" size={24} />
@@ -375,31 +320,6 @@ export function JobNumberIndex({
           />
         </div>
       </div>
-
-      <ConfirmDialog
-        isOpen={Boolean(jobToConfirmEdit)}
-        onCancel={() => setJobToConfirmEdit(null)}
-        onConfirm={() => {
-          const target = jobToConfirmEdit;
-          setJobToConfirmEdit(null);
-          if (target) onEdit?.(target);
-        }}
-        title="Edit Job Number"
-        message={`Open edit page for "${jobToConfirmEdit?.jobNumber}"?`}
-        confirmLabel="Yes, Edit"
-        cancelLabel="Cancel"
-      />
-
-      <ConfirmDialog
-        isOpen={Boolean(jobToDelete)}
-        onCancel={() => setJobToDelete(null)}
-        onConfirm={handleConfirmDelete}
-        title="Delete Job Number"
-        message={`Are you sure you want to delete "${jobToDelete?.jobNumber}"? This action cannot be undone.`}
-        confirmLabel="Yes, Delete"
-        cancelLabel="Cancel"
-        variant="danger"
-      />
     </div>
   );
 }

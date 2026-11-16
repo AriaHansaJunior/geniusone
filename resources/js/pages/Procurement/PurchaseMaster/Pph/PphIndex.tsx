@@ -4,14 +4,11 @@ import { SearchField } from "../../../../components/ui/SearchField";
 import { Pagination } from "../../../../components/ui/Pagination";
 import { Icon } from "../../../../components/ui/Icon";
 import { StatusToggle } from "../../../../components/ui/StatusToggle";
-import { ConfirmDialog } from "../../../../components/ui/ConfirmDialog";
 import { type PphRecord } from "./pph-types";
 
 interface PphIndexProps {
   records?: PphRecord[];
   onAddNew: () => void;
-  onEdit?: (record: PphRecord) => void;
-  onDelete?: (id: string) => Promise<void> | void;
   onToggleHide?: (id: string) => void;
 }
 
@@ -21,13 +18,9 @@ type SortDirection = "asc" | "desc";
 export function PphIndex({
   records = [],
   onAddNew,
-  onEdit,
-  onDelete,
   onToggleHide,
 }: PphIndexProps) {
   const [localRecords, setLocalRecords] = useState<PphRecord[]>(records);
-  const [recordToEdit, setRecordToEdit] = useState<PphRecord | null>(null);
-  const [recordToDelete, setRecordToDelete] = useState<PphRecord | null>(null);
 
   useEffect(() => {
     setLocalRecords(records);
@@ -45,15 +38,6 @@ export function PphIndex({
     );
     if (onToggleHide) {
       onToggleHide(id);
-    }
-  };
-
-  const handleConfirmDelete = async () => {
-    if (!recordToDelete) return;
-    const target = recordToDelete;
-    setRecordToDelete(null);
-    if (onDelete) {
-      await onDelete(target.id);
     }
   };
 
@@ -132,8 +116,6 @@ export function PphIndex({
     );
   };
 
-  const hasActions = Boolean(onEdit || onDelete);
-
   return (
     <div className="master-page-shell pph-page">
       <div className="panel table-panel">
@@ -186,11 +168,6 @@ export function PphIndex({
                   <th className="master-col-status">
                     <span>Status</span>
                   </th>
-                  {hasActions && (
-                    <th className="master-col-actions">
-                      <span>Option</span>
-                    </th>
-                  )}
                 </tr>
               </thead>
               <tbody>
@@ -210,40 +187,12 @@ export function PphIndex({
                             ariaLabel={`Toggle status for ${item.name}`}
                           />
                         </td>
-                        {hasActions && (
-                          <td className="master-cell-center">
-                            <div className="master-actions-group">
-                              {onEdit && (
-                                <button
-                                  type="button"
-                                  className="btn-action-edit"
-                                  title={`Edit ${item.name}`}
-                                  aria-label={`Edit ${item.name}`}
-                                  onClick={() => setRecordToEdit(item)}
-                                >
-                                  <Icon name="edit" size={13} />
-                                </button>
-                              )}
-                              {onDelete && (
-                                <button
-                                  type="button"
-                                  className="btn-action-delete"
-                                  title={`Delete ${item.name}`}
-                                  aria-label={`Delete ${item.name}`}
-                                  onClick={() => setRecordToDelete(item)}
-                                >
-                                  <Icon name="trash" size={13} />
-                                </button>
-                              )}
-                            </div>
-                          </td>
-                        )}
                       </tr>
                     );
                   })
                 ) : (
                   <tr>
-                    <td colSpan={hasActions ? 6 : 5} className="empty-table-cell">
+                    <td colSpan={5} className="empty-table-cell">
                       <div className="empty master-empty-box">
                         <div className="empty__icon master-empty-icon">
                           <Icon name="search" size={24} />
@@ -272,31 +221,6 @@ export function PphIndex({
           />
         </div>
       </div>
-
-      <ConfirmDialog
-        isOpen={!!recordToEdit}
-        title="Edit PPH Rate"
-        message={`Do you want to edit PPH rate "${recordToEdit?.name}"?`}
-        confirmLabel="Continue"
-        cancelLabel="Cancel"
-        confirmVariant="primary"
-        icon="edit"
-        onConfirm={() => {
-          if (recordToEdit && onEdit) {
-            onEdit(recordToEdit);
-          }
-          setRecordToEdit(null);
-        }}
-        onCancel={() => setRecordToEdit(null)}
-      />
-
-      <ConfirmDialog
-        isOpen={!!recordToDelete}
-        entityType="PPH rate"
-        entityName={recordToDelete?.name}
-        onConfirm={handleConfirmDelete}
-        onCancel={() => setRecordToDelete(null)}
-      />
     </div>
   );
 }

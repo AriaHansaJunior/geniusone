@@ -134,6 +134,7 @@ import {
   toggleWarehouseMasterStatusApi,
   saveWarehouseCoordinateApi,
   deleteWarehouseCoordinateApi,
+  toggleWarehouseCoordinateStatusApi,
   fetchPphTypesMasterApi,
   fetchTypeRatesBmMasterApi,
   fetchTypeRatesCukaiMasterApi,
@@ -157,6 +158,7 @@ import {
   fetchStockNotificationsApi,
   saveStockNotificationApi,
   deleteStockNotificationApi,
+  toggleStockNotificationStatusApi,
   fetchWarehouseTypesOfRequestApi,
   saveWarehouseTypeOfRequestApi,
   deleteWarehouseTypeOfRequestApi,
@@ -1983,6 +1985,51 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
     [warehouseMasterRecords, notifySuccess, notifyError]
   );
 
+  const handleToggleWarehouseCoordinateStatus = useCallback(
+    async (warehouseId: string, coordinateId: string) => {
+      const targetWh = warehouseMasterRecords.find((w) => w.id === warehouseId);
+      const currentCoord = targetWh?.coordinates?.find((c) => c.id === coordinateId);
+      const previousStatus = currentCoord?.status !== false;
+      const nextStatus = !previousStatus;
+
+      setWarehouseMasterRecords((prev) =>
+        prev.map((w) =>
+          w.id === warehouseId
+            ? {
+                ...w,
+                coordinates: (w.coordinates || []).map((c) =>
+                  c.id === coordinateId ? { ...c, status: nextStatus } : c
+                ),
+              }
+            : w
+        )
+      );
+
+      try {
+        const ok = await toggleWarehouseCoordinateStatusApi(coordinateId, nextStatus);
+        if (!ok) {
+          throw new Error("Failed to update warehouse coordinate status.");
+        }
+        notifySuccess("Status Updated", "Warehouse coordinate status updated.");
+      } catch (err) {
+        setWarehouseMasterRecords((prev) =>
+          prev.map((w) =>
+            w.id === warehouseId
+              ? {
+                  ...w,
+                  coordinates: (w.coordinates || []).map((c) =>
+                    c.id === coordinateId ? { ...c, status: previousStatus } : c
+                  ),
+                }
+              : w
+          )
+        );
+        notifyError("Status Update Failed", err);
+      }
+    },
+    [warehouseMasterRecords, notifySuccess, notifyError]
+  );
+
   const handleDeleteWarehouseCoordinate = useCallback(
     async (warehouseId: string, coordinateId: string) => {
       try {
@@ -2163,6 +2210,38 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
       throw err;
     }
   }, [notifySuccess, notifyError]);
+
+  const handleToggleStockNotificationStatus = useCallback(
+    async (id: string) => {
+      const target = stockNotificationRecords.find((r) => r.id === id);
+      const previousStatus = target?.status ?? "Active";
+      const nextStatus: StockNotificationRecord["status"] =
+        previousStatus === "Active" ? "Inactive" : "Active";
+
+      setStockNotificationRecords((prev) =>
+        prev.map((r) => (r.id === id ? { ...r, status: nextStatus } : r))
+      );
+
+      try {
+        const updated = await toggleStockNotificationStatusApi(id);
+        if (!updated) {
+          throw new Error("Failed to update Stock Notification status.");
+        }
+        setStockNotificationRecords((prev) =>
+          prev.map((r) =>
+            r.id === id ? { ...r, ...updated, no: r.no } : r
+          )
+        );
+        notifySuccess("Status Updated", "Stock notification status updated.");
+      } catch (err) {
+        setStockNotificationRecords((prev) =>
+          prev.map((r) => (r.id === id ? { ...r, status: previousStatus } : r))
+        );
+        notifyError("Status Update Failed", err);
+      }
+    },
+    [stockNotificationRecords, notifySuccess, notifyError]
+  );
 
   // Type of Request Master Handlers
   const handleNavigateTypeOfRequestCreate = useCallback(() => {
@@ -2458,6 +2537,7 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
             handleEditStockNotification={handleEditStockNotification}
             handleSaveStockNotification={handleSaveStockNotification}
             handleDeleteStockNotification={handleDeleteStockNotification}
+            handleToggleStockNotificationStatus={handleToggleStockNotificationStatus}
             handleNavigateTypeOfRequestCreate={handleNavigateTypeOfRequestCreate}
             handleEditTypeOfRequest={handleEditTypeOfRequest}
             handleSaveTypeOfRequest={handleSaveTypeOfRequest}
@@ -2539,6 +2619,7 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
             handleSaveWarehouseMaster={handleSaveWarehouseMaster}
             handleSaveWarehouseCoordinate={handleSaveWarehouseCoordinate}
             handleDeleteWarehouseCoordinate={handleDeleteWarehouseCoordinate}
+            handleToggleWarehouseCoordinateStatus={handleToggleWarehouseCoordinateStatus}
             handleNavigateCountryCreate={handleNavigateCountryCreate}
             handleNavigateCountryEdit={handleNavigateCountryEdit}
             handleSaveCountry={handleSaveCountry}

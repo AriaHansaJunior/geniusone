@@ -5,16 +5,15 @@ import { SearchField } from "../../../components/ui/SearchField";
 import { Pagination } from "../../../components/ui/Pagination";
 import { Badge } from "../../../components/ui/Badge";
 import { Icon } from "../../../components/ui/Icon";
-import { ConfirmDialog } from "../../../components/ui/ConfirmDialog";
 import { StatusToggle } from "../../../components/ui/StatusToggle";
 import { toggleStockNotificationStatusApi } from "../../../data/masterApi";
+import { useNotification } from "../../../context/NotificationContext";
 import type { StockNotificationRecord, StockNotificationSortField } from "./stock-notification-types";
 
 interface StockNotificationIndexProps {
   records?: StockNotificationRecord[];
   onAddNew: () => void;
-  onEdit?: (record: StockNotificationRecord) => void;
-  onDelete?: (id: string) => void;
+  onToggleStatus?: (id: string) => Promise<void> | void;
 }
 
 type SortDirection = "none" | "asc" | "desc";
@@ -22,16 +21,15 @@ type SortDirection = "none" | "asc" | "desc";
 export function StockNotificationIndex({
   records = [],
   onAddNew,
-  onEdit,
-  onDelete,
+  onToggleStatus,
 }: StockNotificationIndexProps) {
+  const { notifySuccess, notifyError } = useNotification();
   const [localRecords, setLocalRecords] = useState<StockNotificationRecord[]>(records);
   const [search, setSearch] = useState("");
   const [pageSize, setPageSize] = useState<number>(10);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [sortField, setSortField] = useState<StockNotificationSortField>("no");
   const [sortDirection, setSortDirection] = useState<SortDirection>("none");
-  const [recordToDelete, setRecordToDelete] = useState<StockNotificationRecord | null>(null);
   const [exportNotice, setExportNotice] = useState<string | null>(null);
 
   useEffect(() => {
@@ -109,15 +107,11 @@ export function StockNotificationIndex({
     );
   };
 
-  const handleConfirmDelete = () => {
-    if (!recordToDelete) return;
-    const id = recordToDelete.id;
-    setLocalRecords((prev) => prev.filter((r) => r.id !== id));
-    if (onDelete) onDelete(id);
-    setRecordToDelete(null);
-  };
-
   const handleToggleStatus = async (record: StockNotificationRecord) => {
+    if (onToggleStatus) {
+      await onToggleStatus(record.id);
+      return;
+    }
     const previousStatus = record.status;
     const nextStatus = previousStatus === "Active" ? "Inactive" : "Active";
     const updateRow = (patch: Partial<StockNotificationRecord>) => {
@@ -131,12 +125,14 @@ export function StockNotificationIndex({
       const updated = await toggleStockNotificationStatusApi(record.id);
       if (updated) {
         updateRow({ ...updated, no: record.no });
+        notifySuccess("Status Updated", `${record.itemName} rule is now ${updated.status}.`);
         return;
       }
-    } catch {
-      // Revert optimistic toggle below when request fails
+      throw new Error("Failed to toggle stock notification status.");
+    } catch (err) {
+      updateRow({ status: previousStatus });
+      notifyError("Status Update Failed", err);
     }
-    updateRow({ status: previousStatus });
   };
 
   const handleExportExcel = () => {
@@ -271,15 +267,12 @@ export function StockNotificationIndex({
                     {renderSortIndicator("status")}
                   </div>
                 </th>
-                <th className="wh-th-option text-center wh-col-option">
-                  Option
-                </th>
               </tr>
             </thead>
             <tbody>
               {paginatedRecords.length === 0 ? (
                 <tr>
-                  <td colSpan={10} className="wh-table-empty">
+                  <td colSpan={9} className="wh-table-empty">
                     No stock buffer rules found matching filters.
                   </td>
                 </tr>
@@ -326,28 +319,6 @@ export function StockNotificationIndex({
                           ariaLabel={`Toggle status for ${item.itemName}`}
                         />
                       </td>
-                      <td className="text-center">
-                        <div className="wh-row-actions">
-                          {onEdit && (
-                            <button
-                              type="button"
-                              className="wh-action-btn wh-action-btn--edit"
-                              title={`Edit ${item.itemName}`}
-                              onClick={() => onEdit(item)}
-                            >
-                              <Icon name="edit" size={13} />
-                            </button>
-                          )}
-                          <button
-                            type="button"
-                            className="wh-action-btn wh-action-btn--delete"
-                            title={`Delete ${item.itemName}`}
-                            onClick={() => setRecordToDelete(item)}
-                          >
-                            <Icon name="trash" size={13} />
-                          </button>
-                        </div>
-                      </td>
                     </tr>
                   );
                 })
@@ -369,18 +340,6 @@ export function StockNotificationIndex({
           }}
         />
       </div>
-
-      {/* Delete Confirmation Dialog */}
-      {recordToDelete && (
-        <ConfirmDialog
-          isOpen={true}
-          entityType="stock buffer rule"
-          entityName={recordToDelete.itemName}
-          entityCode={recordToDelete.itemCode}
-          onConfirm={handleConfirmDelete}
-          onCancel={() => setRecordToDelete(null)}
-        />
-      )}
     </div>
   );
 }

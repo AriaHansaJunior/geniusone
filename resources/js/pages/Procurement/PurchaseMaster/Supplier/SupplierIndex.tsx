@@ -4,15 +4,12 @@ import { Icon } from "../../../../components/ui/Icon";
 import { SearchField } from "../../../../components/ui/SearchField";
 import { Pagination } from "../../../../components/ui/Pagination";
 import { StatusToggle } from "../../../../components/ui/StatusToggle";
-import { ConfirmDialog } from "../../../../components/ui/ConfirmDialog";
 import { useNotification } from "../../../../context/NotificationContext";
 import { type SupplierRecord } from "./supplier-types";
 
 interface SupplierIndexProps {
   records?: SupplierRecord[];
   onAddNew: () => void;
-  onEdit?: (record: SupplierRecord) => void;
-  onDelete?: (id: string) => Promise<void> | void;
   onToggleHide?: (id: string) => void;
 }
 
@@ -24,22 +21,19 @@ type SortField =
   | "country"
   | "npwp"
   | "nitku"
-  | "created";
+  | "created"
+  | "status";
 
 type SortDirection = "asc" | "desc";
 
 export function SupplierIndex({
   records = [],
   onAddNew,
-  onEdit,
-  onDelete,
   onToggleHide,
 }: SupplierIndexProps) {
   const { notifySuccess, notifyError, notifyWarning } = useNotification();
 
   const [localRecords, setLocalRecords] = useState<SupplierRecord[]>(records);
-  const [supplierToEdit, setSupplierToEdit] = useState<SupplierRecord | null>(null);
-  const [supplierToDelete, setSupplierToDelete] = useState<SupplierRecord | null>(null);
 
   useEffect(() => {
     setLocalRecords(records);
@@ -57,15 +51,6 @@ export function SupplierIndex({
     );
     if (onToggleHide) {
       onToggleHide(id);
-    }
-  };
-
-  const handleConfirmDelete = async () => {
-    if (!supplierToDelete) return;
-    const target = supplierToDelete;
-    setSupplierToDelete(null);
-    if (onDelete) {
-      await onDelete(target.id);
     }
   };
 
@@ -99,6 +84,9 @@ export function SupplierIndex({
       } else if (sortField === "created") {
         aVal = a.createdAt;
         bVal = b.createdAt;
+      } else if (sortField === "status") {
+        aVal = a.hidden ? 0 : 1;
+        bVal = b.hidden ? 0 : 1;
       } else {
         aVal = (a[sortField] || "").toLowerCase();
         bVal = (b[sortField] || "").toLowerCase();
@@ -291,14 +279,13 @@ export function SupplierIndex({
                     <span>Created</span>
                     {renderSortIndicator("created")}
                   </th>
-                  <th className="supplier-col-status">
+                  <th
+                    className="sortable-th master-sortable-th supplier-col-status"
+                    onClick={() => handleSort("status")}
+                  >
                     <span>Status</span>
+                    {renderSortIndicator("status")}
                   </th>
-                  {(onEdit || onDelete) && (
-                    <th className="supplier-col-option">
-                      <span>Option</span>
-                    </th>
-                  )}
                 </tr>
               </thead>
               <tbody>
@@ -331,43 +318,12 @@ export function SupplierIndex({
                             ariaLabel={`Toggle status for ${item.supplierName}`}
                           />
                         </td>
-                        {(onEdit || onDelete) && (
-                          <td className="master-cell-center">
-                            <div className="master-actions-group">
-                              {onEdit && (
-                                <button
-                                  type="button"
-                                  className="btn-action-edit"
-                                  title={`Edit ${item.supplierName}`}
-                                  aria-label={`Edit ${item.supplierName}`}
-                                  onClick={() => setSupplierToEdit(item)}
-                                >
-                                  <Icon name="edit" size={13} />
-                                </button>
-                              )}
-                              {onDelete && (
-                                <button
-                                  type="button"
-                                  className="btn-action-delete"
-                                  title={`Delete ${item.supplierName}`}
-                                  aria-label={`Delete ${item.supplierName}`}
-                                  onClick={() => setSupplierToDelete(item)}
-                                >
-                                  <Icon name="trash" size={13} />
-                                </button>
-                              )}
-                            </div>
-                          </td>
-                        )}
                       </tr>
                     );
                   })
                 ) : (
                   <tr>
-                    <td
-                      colSpan={onEdit || onDelete ? 10 : 9}
-                      className="empty-table-cell"
-                    >
+                    <td colSpan={9} className="empty-table-cell">
                       <div className="empty master-empty-box">
                         <div className="empty__icon master-empty-icon">
                           <Icon name="search" size={24} />
@@ -395,32 +351,6 @@ export function SupplierIndex({
           />
         </div>
       </div>
-
-      <ConfirmDialog
-        isOpen={!!supplierToEdit}
-        title="Edit Supplier"
-        message={`Do you want to edit supplier "${supplierToEdit?.supplierName}"?`}
-        confirmLabel="Continue"
-        cancelLabel="Cancel"
-        confirmVariant="primary"
-        icon="edit"
-        onConfirm={() => {
-          if (supplierToEdit && onEdit) {
-            onEdit(supplierToEdit);
-          }
-          setSupplierToEdit(null);
-        }}
-        onCancel={() => setSupplierToEdit(null)}
-      />
-
-      <ConfirmDialog
-        isOpen={!!supplierToDelete}
-        entityType="supplier"
-        entityName={supplierToDelete?.supplierName}
-        entityCode={supplierToDelete?.supplierCode}
-        onConfirm={handleConfirmDelete}
-        onCancel={() => setSupplierToDelete(null)}
-      />
     </div>
   );
 }

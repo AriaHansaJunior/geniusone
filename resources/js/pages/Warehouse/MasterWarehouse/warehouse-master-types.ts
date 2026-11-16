@@ -9,6 +9,7 @@ export interface WarehouseCoordinateRecord {
   id: string;
   warehouseId: string;
   name: string;
+  status?: boolean;
 }
 
 export interface WarehouseMasterRecord {

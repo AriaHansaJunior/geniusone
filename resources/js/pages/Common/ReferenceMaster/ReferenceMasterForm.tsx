@@ -112,7 +112,7 @@ export function ReferenceMasterForm({
             {errors.name && <span className="master-form-error-text">{errors.name}</span>}
           </div>
 
-          {config.hasStatus && (
+          {config.hasStatus && config.hasStatusColumn !== false && (
             <div className="master-form-group">
               <span className="master-form-label">Status</span>
               <label className="master-form-switch-box">

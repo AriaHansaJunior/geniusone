@@ -263,45 +263,40 @@
 }
 
 .supplier-data-table th.supplier-col-no {
-  width: 52px;
+  width: 48px;
   text-align: center;
 }
 
 .supplier-data-table th.supplier-col-code {
-  width: 120px;
+  width: 110px;
 }
 
 .supplier-data-table th.supplier-col-name {
-  width: 220px;
+  width: 185px;
 }
 
 .supplier-data-table th.supplier-col-address {
-  min-width: 240px;
+  min-width: 185px;
 }
 
 .supplier-data-table th.supplier-col-country {
-  width: 100px;
+  width: 96px;
   text-align: center;
 }
 
 .supplier-data-table th.supplier-col-npwp {
-  width: 135px;
+  width: 118px;
 }
 
 .supplier-data-table th.supplier-col-nitku {
-  width: 145px;
+  width: 120px;
 }
 
 .supplier-data-table th.supplier-col-created {
-  width: 165px;
+  width: 150px;
 }
 
 .supplier-data-table th.supplier-col-status {
-  width: 100px;
-  text-align: center;
-}
-
-.supplier-data-table th.supplier-col-option {
   width: 96px;
   text-align: center;
 }

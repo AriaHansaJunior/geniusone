@@ -5,7 +5,6 @@ import { SearchField } from "../../../components/ui/SearchField";
 import { Icon } from "../../../components/ui/Icon";
 import { Pagination } from "../../../components/ui/Pagination";
 import { StatusToggle } from "../../../components/ui/StatusToggle";
-import { ConfirmDialog } from "../../../components/ui/ConfirmDialog";
 import { useNotification } from "../../../context/NotificationContext";
 import { initialWarehouseMasterRecords } from "./warehouse-master-data";
 import type {
@@ -17,8 +16,6 @@ import type {
 interface MasterWarehouseIndexProps {
   records?: WarehouseMasterRecord[];
   onAddNew: () => void;
-  onEdit?: (warehouse: WarehouseMasterRecord) => void;
-  onDelete?: (id: string) => Promise<void> | void;
   onToggleStatus?: (id: string) => Promise<void> | void;
   onViewCoordinates: (warehouse: WarehouseMasterRecord) => void;
 }
@@ -26,8 +23,6 @@ interface MasterWarehouseIndexProps {
 export function MasterWarehouseIndex({
   records = initialWarehouseMasterRecords,
   onAddNew,
-  onEdit,
-  onDelete,
   onToggleStatus,
   onViewCoordinates,
 }: MasterWarehouseIndexProps) {
@@ -40,10 +35,6 @@ export function MasterWarehouseIndex({
   const [sortField, setSortField] =
     useState<WarehouseMasterSortField>("name");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
-  const [warehouseToEdit, setWarehouseToEdit] =
-    useState<WarehouseMasterRecord | null>(null);
-  const [warehouseToDelete, setWarehouseToDelete] =
-    useState<WarehouseMasterRecord | null>(null);
 
   useEffect(() => {
     setLocalRecords(records);
@@ -145,15 +136,6 @@ export function MasterWarehouseIndex({
     );
   };
 
-  const handleConfirmDelete = async () => {
-    if (!warehouseToDelete) return;
-    const target = warehouseToDelete;
-    setWarehouseToDelete(null);
-    if (onDelete) {
-      await onDelete(target.id);
-    }
-  };
-
   const handleExportExcel = () => {
     if (sortedRecords.length === 0) {
       notifyWarning("Nothing to Export", "No warehouse records match your current filter.");
@@ -240,13 +222,12 @@ export function MasterWarehouseIndex({
                     <span>Status</span>
                     {renderSortIndicator("status")}
                   </th>
-                  <th className="master-col-actions">Option</th>
                 </tr>
               </thead>
               <tbody>
                 {paginatedRecords.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="empty-table-cell">
+                    <td colSpan={5} className="empty-table-cell">
                       <div className="empty master-empty-box">
                         <div className="empty__icon master-empty-icon">
                           <Icon name="search" size={24} />
@@ -265,7 +246,16 @@ export function MasterWarehouseIndex({
                     return (
                       <tr key={wh.id}>
                         <td className="master-cell-no">{sequentialNumber}</td>
-                        <td className="master-cell-name">{wh.name}</td>
+                        <td className="master-cell-name">
+                          <button
+                            type="button"
+                            className="wh-name-link"
+                            onClick={() => onViewCoordinates(wh)}
+                            title={`View coordinates for ${wh.name}`}
+                          >
+                            {wh.name}
+                          </button>
+                        </td>
                         <td>{getWarehouseTypeString(wh.type)}</td>
                         <td className="master-cell-muted">{wh.description || "-"}</td>
                         <td className="master-cell-center">
@@ -274,41 +264,6 @@ export function MasterWarehouseIndex({
                             onToggle={() => onToggleStatus?.(wh.id)}
                             ariaLabel={`Toggle status for ${wh.name}`}
                           />
-                        </td>
-                        <td className="master-cell-center">
-                          <div className="master-actions-group">
-                            <button
-                              type="button"
-                              className="wh-action-btn wh-btn-view-coordinate"
-                              onClick={() => onViewCoordinates(wh)}
-                              title={`View coordinates for ${wh.name}`}
-                              aria-label={`View coordinates for ${wh.name}`}
-                            >
-                              <Icon name="list" size={13} />
-                            </button>
-                            {onEdit && (
-                              <button
-                                type="button"
-                                className="btn-action-edit"
-                                onClick={() => setWarehouseToEdit(wh)}
-                                title={`Edit ${wh.name}`}
-                                aria-label={`Edit ${wh.name}`}
-                              >
-                                <Icon name="edit" size={13} />
-                              </button>
-                            )}
-                            {onDelete && (
-                              <button
-                                type="button"
-                                className="btn-action-delete"
-                                onClick={() => setWarehouseToDelete(wh)}
-                                title={`Delete ${wh.name}`}
-                                aria-label={`Delete ${wh.name}`}
-                              >
-                                <Icon name="trash" size={13} />
-                              </button>
-                            )}
-                          </div>
                         </td>
                       </tr>
                     );
@@ -331,31 +286,6 @@ export function MasterWarehouseIndex({
           />
         </div>
       </div>
-
-      <ConfirmDialog
-        isOpen={!!warehouseToEdit}
-        title="Edit Warehouse"
-        message={`Do you want to edit warehouse "${warehouseToEdit?.name}"?`}
-        confirmLabel="Continue"
-        cancelLabel="Cancel"
-        confirmVariant="primary"
-        icon="edit"
-        onConfirm={() => {
-          if (warehouseToEdit && onEdit) {
-            onEdit(warehouseToEdit);
-          }
-          setWarehouseToEdit(null);
-        }}
-        onCancel={() => setWarehouseToEdit(null)}
-      />
-
-      <ConfirmDialog
-        isOpen={!!warehouseToDelete}
-        entityType="warehouse"
-        entityName={warehouseToDelete?.name}
-        onConfirm={handleConfirmDelete}
-        onCancel={() => setWarehouseToDelete(null)}
-      />
     </div>
   );
 }

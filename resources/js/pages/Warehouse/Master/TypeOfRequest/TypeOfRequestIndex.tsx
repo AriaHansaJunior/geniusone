@@ -6,7 +6,6 @@ import { Pagination } from "../../../../components/ui/Pagination";
 import { Badge } from "../../../../components/ui/Badge";
 import { Icon } from "../../../../components/ui/Icon";
 import { StatusToggle } from "../../../../components/ui/StatusToggle";
-import { ConfirmDialog } from "../../../../components/ui/ConfirmDialog";
 import { toggleWarehouseTypeOfRequestStatusApi } from "../../../../data/masterApi";
 import { useNotification } from "../../../../context/NotificationContext";
 import { initialTypeOfRequestRecords } from "./type-of-request-data";
@@ -15,8 +14,7 @@ import type { TypeOfRequestRecord, TypeOfRequestSortField } from "./type-of-requ
 interface TypeOfRequestIndexProps {
   records?: TypeOfRequestRecord[];
   onAddNew: () => void;
-  onEdit?: (record: TypeOfRequestRecord) => void;
-  onDelete?: (id: string) => void;
+  onToggleStatus?: (id: string) => Promise<void> | void;
 }
 
 type SortDirection = "none" | "asc" | "desc";
@@ -24,8 +22,7 @@ type SortDirection = "none" | "asc" | "desc";
 export function TypeOfRequestIndex({
   records = initialTypeOfRequestRecords,
   onAddNew,
-  onEdit,
-  onDelete,
+  onToggleStatus,
 }: TypeOfRequestIndexProps) {
   const [localRecords, setLocalRecords] = useState<TypeOfRequestRecord[]>(records);
   const [search, setSearch] = useState("");
@@ -33,7 +30,6 @@ export function TypeOfRequestIndex({
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [sortField, setSortField] = useState<TypeOfRequestSortField>("no");
   const [sortDirection, setSortDirection] = useState<SortDirection>("none");
-  const [recordToDelete, setRecordToDelete] = useState<TypeOfRequestRecord | null>(null);
   const [exportNotice, setExportNotice] = useState<string | null>(null);
 
   useEffect(() => {
@@ -110,17 +106,13 @@ export function TypeOfRequestIndex({
     );
   };
 
-  const handleConfirmDelete = () => {
-    if (!recordToDelete) return;
-    const id = recordToDelete.id;
-    setLocalRecords((prev) => prev.filter((r) => r.id !== id));
-    if (onDelete) onDelete(id);
-    setRecordToDelete(null);
-  };
-
   const { notifySuccess, notifyError } = useNotification();
 
   const handleToggleStatus = async (record: TypeOfRequestRecord) => {
+    if (onToggleStatus) {
+      await onToggleStatus(record.id);
+      return;
+    }
     const previousStatus = record.status;
     const nextStatus = previousStatus === "Active" ? "Inactive" : "Active";
     setLocalRecords((prev) =>
@@ -240,15 +232,12 @@ export function TypeOfRequestIndex({
                     {renderSortIndicator("status")}
                   </div>
                 </th>
-                <th className="wh-th-option text-center wh-col-option">
-                  Option
-                </th>
               </tr>
             </thead>
             <tbody>
               {paginatedRecords.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="wh-table-empty">
+                  <td colSpan={6} className="wh-table-empty">
                     No request type records found matching filters.
                   </td>
                 </tr>
@@ -279,29 +268,8 @@ export function TypeOfRequestIndex({
                         <StatusToggle
                           active={item.status === "Active"}
                           onToggle={() => handleToggleStatus(item)}
+                          ariaLabel={`Toggle status for ${item.name}`}
                         />
-                      </td>
-                      <td className="text-center">
-                        <div className="wh-row-actions">
-                          {onEdit && (
-                            <button
-                              type="button"
-                              className="wh-action-btn wh-action-btn--edit"
-                              title={`Edit ${item.name}`}
-                              onClick={() => onEdit(item)}
-                            >
-                              <Icon name="edit" size={13} />
-                            </button>
-                          )}
-                          <button
-                            type="button"
-                            className="wh-action-btn wh-action-btn--delete"
-                            title={`Delete ${item.name}`}
-                            onClick={() => setRecordToDelete(item)}
-                          >
-                            <Icon name="trash" size={13} />
-                          </button>
-                        </div>
                       </td>
                     </tr>
                   );
@@ -324,17 +292,6 @@ export function TypeOfRequestIndex({
           }}
         />
       </div>
-
-      {/* Delete Confirmation Modal */}
-      {recordToDelete && (
-        <ConfirmDialog
-          isOpen={true}
-          entityType="request type"
-          entityName={recordToDelete.name}
-          onConfirm={handleConfirmDelete}
-          onCancel={() => setRecordToDelete(null)}
-        />
-      )}
     </div>
   );
 }

@@ -196,6 +196,7 @@ export interface AppViewRendererProps {
   handleEditStockNotification: (record: StockNotificationRecord) => void;
   handleSaveStockNotification: (record: StockNotificationRecord, isEdit: boolean) => Promise<void> | void;
   handleDeleteStockNotification: (id: string) => Promise<void> | void;
+  handleToggleStockNotificationStatus?: (id: string) => Promise<void> | void;
   handleNavigateTypeOfRequestCreate: () => void;
   handleEditTypeOfRequest: (record: TypeOfRequestRecord) => void;
   handleSaveTypeOfRequest: (record: TypeOfRequestRecord, isEdit: boolean) => Promise<void> | void;
@@ -278,6 +279,7 @@ export interface AppViewRendererProps {
   isWarehouseTypesLoading?: boolean;
   handleSaveWarehouseCoordinate: (newCoordinate: WarehouseCoordinateRecord) => Promise<void>;
   handleDeleteWarehouseCoordinate: (warehouseId: string, coordinateId: string) => Promise<void>;
+  handleToggleWarehouseCoordinateStatus?: (warehouseId: string, coordinateId: string) => Promise<void>;
   handleNavigateCountryCreate: () => void;
   handleNavigateCountryEdit: (record: CountryRecord) => void;
   handleSaveCountry: (data: CountryFormData, id?: string) => Promise<void>;
@@ -423,16 +425,17 @@ export function AppViewRenderer({
   handleEditStockNotification,
   handleSaveStockNotification,
   handleDeleteStockNotification,
+  handleToggleStockNotificationStatus,
   handleNavigateTypeOfRequestCreate,
   handleEditTypeOfRequest,
   handleSaveTypeOfRequest,
   handleDeleteTypeOfRequest,
-  handleToggleTypeOfRequestStatus: _handleToggleTypeOfRequestStatus,
+  handleToggleTypeOfRequestStatus,
   handleNavigateDestinationLocationCreate,
   handleEditDestinationLocation,
   handleSaveDestinationLocation,
   handleDeleteDestinationLocation,
-  handleToggleDestinationLocationStatus: _handleToggleDestinationLocationStatus,
+  handleToggleDestinationLocationStatus,
   handleToggleSupplierHide,
   handleTogglePaymentTermHide,
   handleTogglePurchaseCategoryHide,
@@ -505,6 +508,7 @@ export function AppViewRenderer({
   isWarehouseTypesLoading,
   handleSaveWarehouseCoordinate,
   handleDeleteWarehouseCoordinate,
+  handleToggleWarehouseCoordinateStatus,
   handleNavigateCountryCreate,
   handleNavigateCountryEdit,
   handleSaveCountry,
@@ -730,8 +734,6 @@ export function AppViewRenderer({
           records={supplierRecords}
           onToggleHide={handleToggleSupplierHide}
           onAddNew={() => handleNavigateCreate("supplier")}
-          onEdit={handleNavigateSupplierEdit}
-          onDelete={handleDeleteSupplier}
         />
       )}
 
@@ -741,8 +743,6 @@ export function AppViewRenderer({
           records={paymentTermRecords}
           onToggleHide={handleTogglePaymentTermHide}
           onAddNew={() => handleNavigateCreate("payment-term")}
-          onEdit={handleNavigatePaymentTermEdit}
-          onDelete={handleDeletePaymentTerm}
         />
       )}
 
@@ -752,8 +752,6 @@ export function AppViewRenderer({
           records={purchaseCategoryRecords}
           onToggleHide={handleTogglePurchaseCategoryHide}
           onAddNew={() => handleNavigateCreate("purchase-category")}
-          onEdit={handleNavigatePurchaseCategoryEdit}
-          onDelete={handleDeletePurchaseCategory}
         />
       )}
 
@@ -763,8 +761,6 @@ export function AppViewRenderer({
           records={deliveryTermRecords}
           onToggleHide={handleToggleDeliveryTermHide}
           onAddNew={() => handleNavigateCreate("delivery-terms")}
-          onEdit={handleNavigateDeliveryTermEdit}
-          onDelete={handleDeleteDeliveryTerm}
         />
       )}
 
@@ -774,8 +770,6 @@ export function AppViewRenderer({
           records={additionalCostRecords}
           onToggleHide={handleToggleAdditionalCostHide}
           onAddNew={() => handleNavigateCreate("additional-costs")}
-          onEdit={handleNavigateAdditionalCostEdit}
-          onDelete={handleDeleteAdditionalCost}
         />
       )}
 
@@ -785,8 +779,6 @@ export function AppViewRenderer({
           records={pphRecords}
           onToggleHide={handleTogglePphHide}
           onAddNew={() => handleNavigateCreate("pph")}
-          onEdit={handleNavigatePphEdit}
-          onDelete={handleDeletePph}
         />
       )}
 
@@ -921,8 +913,6 @@ export function AppViewRenderer({
         <MasterWarehouseIndex
           records={warehouseMasterRecords}
           onAddNew={handleNavigateMasterWarehouseCreate}
-          onEdit={handleNavigateWarehouseMasterEdit}
-          onDelete={handleDeleteWarehouseMaster}
           onToggleStatus={handleToggleWarehouseMasterStatus}
           onViewCoordinates={handleNavigateWarehouseCoordinates}
         />
@@ -951,8 +941,6 @@ export function AppViewRenderer({
         <JobNumberIndex
           records={jobNumberRecords}
           onAddNew={handleNavigateJobNumberCreate}
-          onEdit={handleNavigateJobNumberEdit}
-          onDelete={handleDeleteJobNumber}
           onToggleStatus={handleToggleJobNumberStatus}
         />
       )}
@@ -962,8 +950,6 @@ export function AppViewRenderer({
         <RafaksiTypeIndex
           records={rafaksiTypeRecords}
           onAddNew={handleNavigateRafaksiTypeCreate}
-          onEdit={handleNavigateRafaksiTypeEdit}
-          onDelete={handleDeleteRafaksiType}
           onToggleStatus={handleToggleRafaksiTypeStatus}
         />
       )}
@@ -1001,8 +987,7 @@ export function AppViewRenderer({
         <StockNotificationIndex
           records={stockNotificationRecords}
           onAddNew={handleNavigateStockNotificationCreate}
-          onEdit={handleEditStockNotification}
-          onDelete={handleDeleteStockNotification}
+          onToggleStatus={handleToggleStockNotificationStatus}
         />
       )}
 
@@ -1011,8 +996,7 @@ export function AppViewRenderer({
         <TypeOfRequestIndex
           records={typeOfRequestRecords}
           onAddNew={handleNavigateTypeOfRequestCreate}
-          onEdit={handleEditTypeOfRequest}
-          onDelete={handleDeleteTypeOfRequest}
+          onToggleStatus={handleToggleTypeOfRequestStatus}
         />
       )}
 
@@ -1021,8 +1005,7 @@ export function AppViewRenderer({
         <DestinationLocationIndex
           records={destinationLocationRecords}
           onAddNew={handleNavigateDestinationLocationCreate}
-          onEdit={handleEditDestinationLocation}
-          onDelete={handleDeleteDestinationLocation}
+          onToggleStatus={handleToggleDestinationLocationStatus}
         />
       )}
 
@@ -1234,21 +1217,27 @@ export function AppViewRenderer({
       )}
 
       {/* Master Warehouse - Warehouse Coordinate Listing */}
-      {viewState.type === "warehouse-coordinate" && (
-        <WarehouseCoordinateIndex
-          warehouse={
-            warehouseMasterRecords.find(
-              (w) =>
-                w.id === viewState.warehouseId ||
-                w.code === viewState.warehouseId ||
-                docToSlug(w.code || w.name) === docToSlug(viewState.warehouseId)
-            ) || warehouseMasterRecords[0]
-          }
-          onAddNew={() => handleNavigateWarehouseCoordinateCreate(viewState.warehouseId)}
-          onBack={() => handleNavigateList("warehouse-master", "/warehouse/master/warehouse")}
-          onDeleteCoordinate={(coordId) => handleDeleteWarehouseCoordinate(viewState.warehouseId, coordId)}
-        />
-      )}
+      {viewState.type === "warehouse-coordinate" && (() => {
+        const activeWarehouse =
+          warehouseMasterRecords.find(
+            (w) =>
+              w.id === viewState.warehouseId ||
+              w.code === viewState.warehouseId ||
+              docToSlug(w.code || w.name) === docToSlug(viewState.warehouseId)
+          ) || warehouseMasterRecords[0];
+        return (
+          <WarehouseCoordinateIndex
+            warehouse={activeWarehouse}
+            onAddNew={() => handleNavigateWarehouseCoordinateCreate(viewState.warehouseId)}
+            onBack={() => handleNavigateList("warehouse-master", "/warehouse/master/warehouse")}
+            onToggleCoordinateStatus={(coordId) =>
+              activeWarehouse
+                ? handleToggleWarehouseCoordinateStatus?.(activeWarehouse.id, coordId)
+                : undefined
+            }
+          />
+        );
+      })()}
 
       {/* Master Warehouse - Add / Edit Warehouse Form */}
       {(viewState.type === "warehouse-master-create" ||

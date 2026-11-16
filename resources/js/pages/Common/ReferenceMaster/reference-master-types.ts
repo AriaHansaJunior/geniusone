@@ -29,6 +29,7 @@ export interface ReferenceMasterConfig {
   expectedWriteEndpoint: string;
   hasCode: boolean;
   hasStatus: boolean;
+  hasStatusColumn?: boolean;
   codeLabel?: string;
   codePlaceholder?: string;
   nameLabel: string;
