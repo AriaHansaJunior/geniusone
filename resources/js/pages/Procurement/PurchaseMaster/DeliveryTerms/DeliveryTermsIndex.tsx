@@ -86,22 +86,11 @@ export function DeliveryTermsIndex({
   };
 
   return (
-    <div className="delivery-terms-page" style={{ width: "100%", animation: "fadeIn 0.15s ease-in-out" }}>
+    <div className="delivery-terms-page">
       {/* Main Table Container Card */}
       <div className="panel table-panel">
         {/* Table Toolbar: Search on left, Single Add New action on right */}
-        <div
-          className="table-toolbar"
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            padding: "12px 18px",
-            borderBottom: "1px solid var(--line)",
-            background: "var(--white)",
-            gap: "16px",
-          }}
-        >
+        <div className="table-toolbar master-table-toolbar">
           <SearchField
             value={search}
             onChange={(val) => {
@@ -110,7 +99,7 @@ export function DeliveryTermsIndex({
             }}
             placeholder="Search delivery term..."
           />
-          <div className="button-row">
+          <div className="button-row master-toolbar-actions">
             <Button variant="primary" onClick={onAddNew}>
               Add New
             </Button>
@@ -123,22 +112,18 @@ export function DeliveryTermsIndex({
             <table className="data-table">
               <thead>
                 <tr>
-                  <th style={{ width: "60px", textAlign: "center" }}>
+                  <th className="master-col-no">
                     <span>No</span>
                   </th>
                   <th
-                    className="sortable-th"
-                    style={{ cursor: "pointer", userSelect: "none" }}
+                    className="sortable-th master-sortable-th"
                     onClick={handleToggleSort}
                   >
                     <span>Delivery Term</span>
                     <span
-                      style={{
-                        marginLeft: "6px",
-                        display: "inline-flex",
-                        alignItems: "center",
-                        color: sortDirection === "none" ? "var(--muted-2)" : "var(--blue-600)",
-                      }}
+                      className={`master-sort-indicator ${
+                        sortDirection !== "none" ? "master-sort-indicator--active" : ""
+                      }`}
                     >
                       {sortDirection === "asc" ? (
                         <Icon name="arrowUp" size={12} />
@@ -149,7 +134,7 @@ export function DeliveryTermsIndex({
                       )}
                     </span>
                   </th>
-                  <th style={{ width: "95px", textAlign: "center" }}>
+                  <th className="master-col-status">
                     <span>Status</span>
                   </th>
                 </tr>
@@ -160,16 +145,17 @@ export function DeliveryTermsIndex({
                     const rowNumber = (safeCurrentPage - 1) * pageSize + index + 1;
                     return (
                       <tr key={item.id} className={item.hidden ? "row--hidden" : ""}>
-                        <td style={{ textAlign: "center", color: "var(--muted)", fontWeight: 600 }}>
+                        <td className="master-cell-no">
                           {rowNumber}
                         </td>
-                        <td style={{ fontWeight: 600, color: "var(--ink)", wordBreak: "break-word" }}>
+                        <td className="master-cell-name">
                           {item.name}
                         </td>
-                        <td style={{ textAlign: "center" }}>
+                        <td className="master-cell-center">
                           <StatusToggle
                             hidden={item.hidden}
                             onToggle={() => handleToggleHide(item.id)}
+                            ariaLabel={`Toggle status for ${item.name}`}
                           />
                         </td>
                       </tr>

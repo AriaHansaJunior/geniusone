@@ -11,15 +11,14 @@ class TypeOfRequestApiController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $query = TypeOfRequest::with(['createdByUser', 'updatedByUser'])
+        $query = TypeOfRequest::with(['createdByUser', 'updatedByUser', 'department'])
             ->withCount('materialRequests')
             ->orderBy('name');
 
         if ($search = trim((string) $request->query('search', ''))) {
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                    ->orWhere('code', 'like', "%{$search}%")
-                    ->orWhere('department', 'like', "%{$search}%")
+                    ->orWhereHas('department', fn ($departmentQuery) => $departmentQuery->where('name', 'like', "%{$search}%"))
                     ->orWhere('description', 'like', "%{$search}%");
             });
         }
@@ -42,26 +41,18 @@ class TypeOfRequestApiController extends Controller
         $actorId = $this->requireActorId($request);
 
         $validated = $request->validate([
-            'code' => 'nullable|string|max:45',
             'name' => 'required|string|max:120',
-            'department' => 'nullable|string|max:100',
+            'departments_id' => 'required|integer|exists:departments,id',
             'description' => 'nullable|string|max:255',
             'requires_job_number' => 'nullable|boolean',
-            'requires_approval_2' => 'nullable|boolean',
             'status' => 'nullable|boolean',
         ]);
 
-        $code = ! empty($validated['code'])
-            ? $validated['code']
-            : 'TOR-' . str_pad((string) (TypeOfRequest::withTrashed()->count() + 1), 2, '0', STR_PAD_LEFT);
-
         $record = TypeOfRequest::create([
-            'code' => $code,
             'name' => $validated['name'],
-            'department' => $validated['department'] ?? null,
+            'departments_id' => $validated['departments_id'],
             'description' => $validated['description'] ?? null,
             'requires_job_number' => (bool) ($validated['requires_job_number'] ?? false),
-            'requires_approval_2' => (bool) ($validated['requires_approval_2'] ?? false),
             'status' => array_key_exists('status', $validated) ? (int) (bool) $validated['status'] : 1,
             'created_by' => $actorId,
             'updated_by' => $actorId,
@@ -70,14 +61,14 @@ class TypeOfRequestApiController extends Controller
         return response()->json([
             'status' => 'success',
             'message' => 'Type of Request created.',
-            'data' => $this->transform($record->loadCount('materialRequests')->load(['createdByUser', 'updatedByUser'])),
+            'data' => $this->transform($record->loadCount('materialRequests')->load(['createdByUser', 'updatedByUser', 'department'])),
         ], 201);
     }
 
     public function show(int $id): JsonResponse
     {
         $record = TypeOfRequest::withCount('materialRequests')
-            ->with(['createdByUser', 'updatedByUser'])
+            ->with(['createdByUser', 'updatedByUser', 'department'])
             ->findOrFail($id);
 
         return response()->json([
@@ -92,12 +83,10 @@ class TypeOfRequestApiController extends Controller
         $record = TypeOfRequest::findOrFail($id);
 
         $validated = $request->validate([
-            'code' => 'nullable|string|max:45',
             'name' => 'sometimes|required|string|max:120',
-            'department' => 'nullable|string|max:100',
+            'departments_id' => 'sometimes|required|integer|exists:departments,id',
             'description' => 'nullable|string|max:255',
             'requires_job_number' => 'nullable|boolean',
-            'requires_approval_2' => 'nullable|boolean',
             'status' => 'nullable|boolean',
         ]);
 
@@ -111,7 +100,7 @@ class TypeOfRequestApiController extends Controller
         return response()->json([
             'status' => 'success',
             'message' => 'Type of Request updated.',
-            'data' => $this->transform($record->loadCount('materialRequests')->load(['createdByUser', 'updatedByUser'])),
+            'data' => $this->transform($record->loadCount('materialRequests')->load(['createdByUser', 'updatedByUser', 'department'])),
         ]);
     }
 
@@ -126,7 +115,7 @@ class TypeOfRequestApiController extends Controller
         return response()->json([
             'status' => 'success',
             'message' => 'Type of Request status updated.',
-            'data' => $this->transform($record->loadCount('materialRequests')->load(['createdByUser', 'updatedByUser'])),
+            'data' => $this->transform($record->loadCount('materialRequests')->load(['createdByUser', 'updatedByUser', 'department'])),
         ]);
     }
 
@@ -147,12 +136,11 @@ class TypeOfRequestApiController extends Controller
         return [
             'id' => (string) $row->id,
             'rawId' => $row->id,
-            'code' => $row->code ?: ('TOR-' . str_pad((string) $row->id, 2, '0', STR_PAD_LEFT)),
             'name' => $row->name,
-            'department' => $row->department ?? '',
+            'departmentId' => (string) $row->departments_id,
+            'department' => $row->department?->name ?? '',
             'description' => $row->description ?? '',
             'requiresJobNumber' => (bool) $row->requires_job_number,
-            'requiresApproval2' => (bool) $row->requires_approval_2,
             'usageCount' => (int) ($row->material_requests_count ?? 0),
             'status' => (int) $row->status === 1 ? 'Active' : 'Inactive',
             'statusCode' => (int) $row->status,

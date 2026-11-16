@@ -40,6 +40,11 @@ class CurrencyApiController extends Controller
     public function store(Request $request): JsonResponse
     {
         $actorId = $this->requireActorId($request);
+        $code = strtoupper(trim((string) $request->input('code', '')));
+        $request->merge([
+            'code' => $code,
+            'name' => $request->input('name') ?: $code,
+        ]);
 
         $validated = $request->validate([
             'code' => 'required|string|max:45|unique:valutas,code',
@@ -50,6 +55,10 @@ class CurrencyApiController extends Controller
         ]);
 
         $validated['code'] = strtoupper(trim($validated['code']));
+        $validated['name'] = $validated['name'] ?: $validated['code'];
+        $validated['symbol'] = ($validated['symbol'] ?? null) ?: $validated['code'];
+        $validated['sync_status'] = ($validated['sync_status'] ?? null) ?: 'Synced';
+        $validated['status'] = $validated['status'] ?? 1;
         $validated['created_by'] = $actorId;
         $validated['updated_by'] = $actorId;
 

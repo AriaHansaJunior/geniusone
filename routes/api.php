@@ -19,6 +19,7 @@ use App\Http\Controllers\Api\Exim\Master\DepartmentApiController;
 use App\Http\Controllers\Api\Exim\Master\FacilityApiController;
 use App\Http\Controllers\Api\Exim\Master\HsCodeApiController;
 use App\Http\Controllers\Api\Exim\Master\ItemApiController;
+use App\Http\Controllers\Api\Exim\Master\ReportingTypeApiController;
 // Exim Domain Controllers
 use App\Http\Controllers\Api\Exim\Master\JobNumberApiController;
 use App\Http\Controllers\Api\Exim\Master\StyleApiController;
@@ -217,6 +218,7 @@ Route::prefix('exim')->group(function () {
         Route::patch('brands/{id}/toggle-status', [BrandApiController::class, 'toggleStatus']);
         Route::apiResource('classifications', ClassificationApiController::class);
         Route::patch('classifications/{id}/toggle-status', [ClassificationApiController::class, 'toggleStatus']);
+        Route::get('reporting-types', [ReportingTypeApiController::class, 'index']);
         Route::apiResource('departments', DepartmentApiController::class);
         Route::patch('departments/{id}/toggle-status', [DepartmentApiController::class, 'toggleStatus']);
         Route::get('sections', [DepartmentApiController::class, 'sections']);

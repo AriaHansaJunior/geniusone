@@ -1,20 +1,24 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Button } from "../../../../components/ui/Button";
 import { Icon } from "../../../../components/ui/Icon";
 import { ConfirmDialog } from "../../../../components/ui/ConfirmDialog";
 import { CustomSelect } from "../../../../components/ui/CustomSelect";
+import { fetchPphTypesApi } from "../../../../data/masterApi";
 import type { PphRecord } from "./pph-types";
 
 interface PphFormProps {
   onBack: () => void;
-  onSave?: (record: PphRecord) => void;
+  onSave?: (record: PphRecord) => void | Promise<any>;
 }
 
 export function PphForm({ onBack, onSave }: PphFormProps) {
   const [name, setName] = useState("");
   const [rate, setRate] = useState("0.00");
-  const [pphType, setPphType] = useState("");
+  const [selectedTypeId, setSelectedTypeId] = useState("");
+  const [pphTypes, setPphTypes] = useState<Array<{ id: number; name: string }>>([]);
+  const [loadingTypes, setLoadingTypes] = useState(false);
   const [deduction, setDeduction] = useState("No");
+  const [saving, setSaving] = useState(false);
 
   const [notification, setNotification] = useState<{
     type: "info" | "warning";
@@ -25,8 +29,30 @@ export function PphForm({ onBack, onSave }: PphFormProps) {
   const [showSaveConfirm, setShowSaveConfirm] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
 
+  // Fetch PPh types from pph_type table
+  useEffect(() => {
+    let cancelled = false;
+    setLoadingTypes(true);
+    fetchPphTypesApi()
+      .then((data) => {
+        if (!cancelled && Array.isArray(data)) {
+          setPphTypes(data);
+        }
+      })
+      .catch((err) => {
+        console.warn("Failed to load PPH types from database:", err);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingTypes(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   // Form dirty check
-  const isDirty = name.trim() !== "" || rate !== "0.00" || pphType !== "" || deduction !== "No";
+  const isDirty = name.trim() !== "" || rate !== "0.00" || selectedTypeId !== "" || deduction !== "No";
 
   const handleRateBlur = () => {
     const parsed = parseFloat(rate);
@@ -57,23 +83,45 @@ export function PphForm({ onBack, onSave }: PphFormProps) {
       return;
     }
 
+    if (!selectedTypeId) {
+      setNotification({
+        type: "warning",
+        message: "Please select a Jenis PPH before proceeding.",
+      });
+      return;
+    }
+
     setNotification(null);
     setShowSaveConfirm(true);
   };
 
-  const handleConfirmSave = () => {
+  const handleConfirmSave = async () => {
     setShowSaveConfirm(false);
+
+    const chosenType = pphTypes.find((t) => String(t.id) === selectedTypeId);
 
     const newRecord: PphRecord = {
       id: `pph-${Date.now()}`,
       name: name.trim(),
       rate: parseFloat(rate) || 0,
       deduction: deduction,
-      type: pphType || undefined,
+      type: chosenType ? chosenType.name : undefined,
+      typeId: chosenType ? chosenType.id : (selectedTypeId ? Number(selectedTypeId) : undefined),
     };
 
     if (onSave) {
-      onSave(newRecord);
+      try {
+        setSaving(true);
+        setNotification(null);
+        await onSave(newRecord);
+      } catch (err: any) {
+        setNotification({
+          type: "warning",
+          message: err?.message || "Failed to save PPH to database.",
+        });
+      } finally {
+        setSaving(false);
+      }
     } else {
       onBack();
     }
@@ -173,17 +221,15 @@ export function PphForm({ onBack, onSave }: PphFormProps) {
             <CustomSelect
               id="jenisPph"
               searchable
-              value={pphType}
-              onChange={(val) => setPphType(val)}
-              placeholder="Select PPH Type"
+              value={selectedTypeId}
+              onChange={(val) => setSelectedTypeId(val)}
+              placeholder={loadingTypes ? "Loading PPH types..." : "Select PPH Type"}
               options={[
                 { value: "", label: "Select PPH Type" },
-                { value: "PPh 21", label: "PPh 21" },
-                { value: "PPh 22", label: "PPh 22" },
-                { value: "PPh 23", label: "PPh 23" },
-                { value: "PPh 4 (2)", label: "PPh 4 (2)" },
-                { value: "PPh 31 E", label: "PPh 31 E" },
-                { value: "PBBKB", label: "PBBKB" },
+                ...pphTypes.map((t) => ({
+                  value: String(t.id),
+                  label: t.name,
+                })),
               ]}
             />
           </div>
@@ -207,11 +253,11 @@ export function PphForm({ onBack, onSave }: PphFormProps) {
 
         {/* Action Buttons Footer */}
         <div className="master-form-actions">
-          <Button type="button" variant="ghost" onClick={handleCancelClick}>
+          <Button type="button" variant="ghost" onClick={handleCancelClick} disabled={saving}>
             Cancel
           </Button>
-          <Button type="submit" variant="primary" icon="check">
-            Save
+          <Button type="submit" variant="primary" disabled={saving}>
+            {saving ? "Saving..." : "Save"}
           </Button>
         </div>
       </form>

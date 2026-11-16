@@ -1,12 +1,11 @@
 export interface TypeOfRequestRecord {
   id: string;
   no: number;
-  code: string;
   name: string;
+  departmentId: string;
   department: string;
   description: string;
   requiresJobNumber: boolean;
-  requiresApproval2: boolean;
   status: "Active" | "Inactive";
   createdAt: string;
   createdBy: string;
@@ -16,7 +15,6 @@ export interface TypeOfRequestRecord {
 
 export type TypeOfRequestSortField =
   | "no"
-  | "code"
   | "name"
   | "department"
   | "status";

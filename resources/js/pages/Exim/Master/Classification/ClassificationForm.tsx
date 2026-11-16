@@ -2,20 +2,28 @@ import React, { useState } from "react";
 import { Button } from "../../../../components/ui/Button";
 import { Icon } from "../../../../components/ui/Icon";
 import { CustomSelect } from "../../../../components/ui/CustomSelect";
-import {
-  reportingTypeOptions,
-  accountOptions,
-} from "./classification-data";
-import type { ClassificationRecord } from "./classification-types";
+import type { AccountRecord } from "../Account/account-types";
+import type {
+  ClassificationRecord,
+  ReportingTypeOption,
+} from "./classification-types";
 
 interface ClassificationFormProps {
   initialRecord?: ClassificationRecord | null;
+  reportingTypes: ReportingTypeOption[];
+  accounts: AccountRecord[];
+  isReportingTypesLoading?: boolean;
+  isAccountsLoading?: boolean;
   onBack: () => void;
   onSave?: (record: ClassificationRecord, isEdit: boolean) => void;
 }
 
 export function ClassificationForm({
   initialRecord,
+  reportingTypes,
+  accounts,
+  isReportingTypesLoading = false,
+  isAccountsLoading = false,
   onBack,
   onSave,
 }: ClassificationFormProps) {
@@ -28,18 +36,14 @@ export function ClassificationForm({
       ? initialRecord.description
       : ""
   );
-  const [reportingType, setReportingType] = useState(
-    initialRecord?.reportingType && initialRecord.reportingType !== "-"
-      ? initialRecord.reportingType
-      : "Select Classification"
-  );
-  const [account, setAccount] = useState(
-    initialRecord?.account || "Find Account"
-  );
+  const [reportingTypeId, setReportingTypeId] = useState(initialRecord?.reportingTypeId || "");
+  const [accountId, setAccountId] = useState(initialRecord?.accountId || "");
 
   const [errors, setErrors] = useState<{
     code?: string;
     name?: string;
+    reportingType?: string;
+    account?: string;
   }>({});
 
   const [notification, setNotification] = useState<{
@@ -50,7 +54,12 @@ export function ClassificationForm({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    const newErrors: { code?: string; name?: string } = {};
+    const newErrors: {
+      code?: string;
+      name?: string;
+      reportingType?: string;
+      account?: string;
+    } = {};
 
     const trimmedCode = code.trim();
     const trimmedName = name.trim();
@@ -60,6 +69,12 @@ export function ClassificationForm({
     }
     if (!trimmedName) {
       newErrors.name = "Name is required.";
+    }
+    if (!reportingTypeId) {
+      newErrors.reportingType = "Reporting Type is required.";
+    }
+    if (!accountId) {
+      newErrors.account = "Account is required.";
     }
 
     if (Object.keys(newErrors).length > 0) {
@@ -74,15 +89,22 @@ export function ClassificationForm({
     setErrors({});
     setNotification(null);
 
+    const selectedReportingType = reportingTypes.find((option) => option.id === reportingTypeId);
+    const selectedAccount = accounts.find((option) => option.id === accountId);
+    const accountLabel = selectedAccount
+      ? `${selectedAccount.accountCode} - ${selectedAccount.accountName}`.replace(/^ - | - $/g, "")
+      : initialRecord?.account;
+
     const updatedRecord: ClassificationRecord = {
       id: initialRecord ? initialRecord.id : `cls-${Date.now()}`,
       no: initialRecord ? initialRecord.no : 1,
       code: trimmedCode,
       name: trimmedName,
       description: description.trim() || "-",
-      reportingType:
-        reportingType === "Select Classification" ? "-" : reportingType,
-      account: account === "Find Account" ? undefined : account,
+      reportingTypeId,
+      reportingType: selectedReportingType?.name || initialRecord?.reportingType || "-",
+      accountId,
+      account: accountLabel,
       status: initialRecord ? initialRecord.status : true,
     };
 
@@ -187,29 +209,71 @@ export function ClassificationForm({
           {/* 3. Reporting Type */}
           <div className="classification-form-group">
             <label htmlFor="classificationReportingType" className="classification-form-label">
-              Reporting Type
+              Reporting Type <span className="required-mark">*</span>
             </label>
             <CustomSelect
               id="classificationReportingType"
               searchable
-              value={reportingType}
-              onChange={(val) => setReportingType(val)}
-              options={reportingTypeOptions.map((opt) => ({ value: opt, label: opt }))}
+              value={reportingTypeId}
+              onChange={(val) => {
+                setReportingTypeId(val);
+                if (errors.reportingType) {
+                  setErrors((prev) => ({ ...prev, reportingType: undefined }));
+                }
+              }}
+              options={[
+                {
+                  value: "",
+                  label: isReportingTypesLoading
+                    ? "Loading reporting types..."
+                    : reportingTypes.length === 0
+                    ? "No reporting types available"
+                    : "Select Reporting Type",
+                },
+                ...reportingTypes.map((option) => ({
+                  value: option.id,
+                  label: option.name,
+                })),
+              ]}
             />
+            {errors.reportingType && (
+              <span className="classification-form-error-msg">{errors.reportingType}</span>
+            )}
           </div>
 
           {/* 4. Account */}
           <div className="classification-form-group">
             <label htmlFor="classificationAccount" className="classification-form-label">
-              Account
+              Account <span className="required-mark">*</span>
             </label>
             <CustomSelect
               id="classificationAccount"
               searchable
-              value={account}
-              onChange={(val) => setAccount(val)}
-              options={accountOptions.map((opt) => ({ value: opt, label: opt }))}
+              value={accountId}
+              onChange={(val) => {
+                setAccountId(val);
+                if (errors.account) {
+                  setErrors((prev) => ({ ...prev, account: undefined }));
+                }
+              }}
+              options={[
+                {
+                  value: "",
+                  label: isAccountsLoading
+                    ? "Loading accounts..."
+                    : accounts.length === 0
+                    ? "No accounts available"
+                    : "Select Account",
+                },
+                ...accounts.map((option) => ({
+                  value: option.id,
+                  label: `${option.accountCode} - ${option.accountName}`.replace(/^ - | - $/g, ""),
+                })),
+              ]}
             />
+            {errors.account && (
+              <span className="classification-form-error-msg">{errors.account}</span>
+            )}
           </div>
         </div>
 

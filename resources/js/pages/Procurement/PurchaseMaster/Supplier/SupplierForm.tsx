@@ -573,7 +573,7 @@ export function SupplierForm({ onBack, onSave }: SupplierFormProps) {
           <Button type="button" variant="ghost" onClick={onBack} disabled={saving}>
             Cancel
           </Button>
-          <Button type="submit" variant="primary" icon="check" disabled={saving}>
+          <Button type="submit" variant="primary" disabled={saving}>
             {saving ? "Saving..." : "Save"}
           </Button>
         </div>

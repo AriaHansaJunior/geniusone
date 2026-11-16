@@ -1,10 +1,9 @@
-export type WarehouseType =
-  | "Raw Material"
-  | "Work In Process"
-  | "Finish Good"
-  | "Production"
-  | "Scrap"
-  | "Others";
+export type WarehouseType = string;
+
+export interface WarehouseTypeOption {
+  id: string;
+  name: string;
+}
 
 export interface WarehouseCoordinateRecord {
   id: string;
@@ -18,6 +17,7 @@ export interface WarehouseMasterRecord {
   no: number;
   name: string;
   type: WarehouseType;
+  warehouseTypeId?: string;
   description: string;
   status: boolean; // true = active (blue checked square), false = inactive
   coordinates?: WarehouseCoordinateRecord[];

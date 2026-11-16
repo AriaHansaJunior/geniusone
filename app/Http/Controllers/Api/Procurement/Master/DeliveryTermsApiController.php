@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Master\Finance\DeliveryTerm;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class DeliveryTermsApiController extends Controller
 {
@@ -34,9 +35,16 @@ class DeliveryTermsApiController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'name' => 'required|string|max:45|unique:delivery_terms,name',
+            'name' => [
+                'required',
+                'string',
+                'max:45',
+                Rule::unique('delivery_terms', 'name')->withoutTrashed(),
+            ],
             'status' => 'nullable|integer',
         ]);
+
+        $validated['status'] = $request->input('status', 1);
 
         $record = DeliveryTerm::create($validated);
 
@@ -58,7 +66,13 @@ class DeliveryTermsApiController extends Controller
         $record = DeliveryTerm::findOrFail($id);
 
         $validated = $request->validate([
-            'name' => 'sometimes|required|string|max:45|unique:delivery_terms,name,'.$id,
+            'name' => [
+                'sometimes',
+                'required',
+                'string',
+                'max:45',
+                Rule::unique('delivery_terms', 'name')->ignore($id)->withoutTrashed(),
+            ],
             'status' => 'nullable|integer',
         ]);
 

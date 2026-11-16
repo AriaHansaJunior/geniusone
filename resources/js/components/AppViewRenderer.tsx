@@ -104,7 +104,10 @@ import type { PurchaseCategoryRecord } from "../pages/Procurement/PurchaseMaster
 import type { DeliveryTermRecord } from "../pages/Procurement/PurchaseMaster/DeliveryTerms/delivery-terms-types";
 import type { AdditionalCostRecord } from "../pages/Procurement/PurchaseMaster/AdditionalCosts/additional-costs-types";
 import type { UnitRecord } from "../pages/Exim/Master/Unit/unit-types";
-import type { ClassificationRecord } from "../pages/Exim/Master/Classification/classification-types";
+import type {
+  ClassificationRecord,
+  ReportingTypeOption,
+} from "../pages/Exim/Master/Classification/classification-types";
 import type { DepartmentRecord } from "../pages/Exim/Master/Department/department-types";
 import type { BrandRecord } from "../pages/Exim/Master/Brand/brand-types";
 import type { FacilityRecord } from "../pages/Exim/Master/Facility/facility-types";
@@ -118,6 +121,7 @@ import type { DocumentHistoryRecord } from "../pages/Exim/DocumentHistory/docume
 import type {
   WarehouseMasterRecord,
   WarehouseCoordinateRecord,
+  WarehouseTypeOption,
 } from "../pages/Warehouse/MasterWarehouse/warehouse-master-types";
 import type { ItemRecord } from "../pages/Exim/Master/Item/item-types";
 import type { CountryRecord } from "../pages/Exim/Master/Country/country-types";
@@ -235,6 +239,7 @@ export interface AppViewRendererProps {
   handleSaveReceiveNote: (newRecord: ReceiveNoteRecord) => Promise<void>;
   handleSaveReceiveNoteReturn: (newRecord: ReceiveNoteReturnRecord) => Promise<void>;
   handleSaveWarehouseMaster: (newWarehouse: WarehouseMasterRecord) => Promise<void>;
+  isWarehouseTypesLoading?: boolean;
   handleSaveWarehouseCoordinate: (newCoordinate: WarehouseCoordinateRecord) => Promise<void>;
   handleDeleteWarehouseCoordinate: (warehouseId: string, coordinateId: string) => Promise<void>;
   handleNavigateCountryCreate: () => void;
@@ -249,6 +254,7 @@ export interface AppViewRendererProps {
   handleDeleteAccount: (id: string) => Promise<void>;
   handleToggleAccountStatus: (id: string) => Promise<void>;
   isAccountsLoading?: boolean;
+  isReportingTypesLoading?: boolean;
   handleNavigateJobNumberCreate: () => void;
   handleNavigateJobNumberEdit: (record: JobNumberRecord) => void;
   handleSaveJobNumber: (data: JobNumberFormData, id?: string) => Promise<void>;
@@ -285,9 +291,11 @@ export interface AppViewRendererProps {
   setEditingUnit: React.Dispatch<React.SetStateAction<UnitRecord | null>>;
   unitReferenceRecords: UnitReferenceRecord[];
   classificationRecords: ClassificationRecord[];
+  reportingTypeRecords: ReportingTypeOption[];
   editingClassification: ClassificationRecord | null;
   setEditingClassification: React.Dispatch<React.SetStateAction<ClassificationRecord | null>>;
   departmentRecords: DepartmentRecord[];
+  isDepartmentsLoading?: boolean;
   editingDepartment: DepartmentRecord | null;
   setEditingDepartment: React.Dispatch<React.SetStateAction<DepartmentRecord | null>>;
   brandRecords: BrandRecord[];
@@ -314,6 +322,7 @@ export interface AppViewRendererProps {
   receiveNoteReturnRecords: ReceiveNoteReturnRecord[];
   documentHistoryRecords: DocumentHistoryRecord[];
   warehouseMasterRecords: WarehouseMasterRecord[];
+  warehouseTypeRecords: WarehouseTypeOption[];
   countryRecords: CountryRecord[];
   accountRecords: AccountRecord[];
   jobNumberRecords: JobNumberRecord[];
@@ -409,6 +418,7 @@ export function AppViewRenderer({
   handleSaveReceiveNote,
   handleSaveReceiveNoteReturn,
   handleSaveWarehouseMaster,
+  isWarehouseTypesLoading,
   handleSaveWarehouseCoordinate,
   handleDeleteWarehouseCoordinate,
   handleNavigateCountryCreate,
@@ -423,6 +433,7 @@ export function AppViewRenderer({
   handleDeleteAccount,
   handleToggleAccountStatus,
   isAccountsLoading = false,
+  isReportingTypesLoading = false,
   handleNavigateJobNumberCreate,
   handleNavigateJobNumberEdit,
   handleSaveJobNumber,
@@ -458,9 +469,11 @@ export function AppViewRenderer({
   setEditingUnit,
   unitReferenceRecords,
   classificationRecords,
+  reportingTypeRecords,
   editingClassification,
   setEditingClassification,
   departmentRecords,
+  isDepartmentsLoading,
   editingDepartment,
   setEditingDepartment,
   brandRecords,
@@ -487,6 +500,7 @@ export function AppViewRenderer({
   receiveNoteReturnRecords,
   documentHistoryRecords,
   warehouseMasterRecords,
+  warehouseTypeRecords,
   countryRecords,
   accountRecords,
   jobNumberRecords,
@@ -1120,6 +1134,8 @@ export function AppViewRenderer({
       {/* Master Warehouse - Add New Warehouse Form */}
       {viewState.type === "warehouse-master-create" && (
         <WarehouseMasterForm
+          warehouseTypes={warehouseTypeRecords}
+          isWarehouseTypesLoading={isWarehouseTypesLoading}
           onBack={() => handleNavigateList("warehouse-master", "/warehouse/master/warehouse")}
           onSave={handleSaveWarehouseMaster}
         />
@@ -1255,6 +1271,10 @@ export function AppViewRenderer({
               ? viewState.record
               : editingClassification
           }
+          reportingTypes={reportingTypeRecords}
+          accounts={accountRecords}
+          isReportingTypesLoading={isReportingTypesLoading}
+          isAccountsLoading={isAccountsLoading}
           onBack={() => {
             setEditingClassification(null);
             handleNavigateList("classification", "/exim/master/classification");
@@ -1271,6 +1291,7 @@ export function AppViewRenderer({
               ? viewState.record
               : editingDepartment
           }
+          units={unitRecords}
           onBack={() => {
             setEditingDepartment(null);
             handleNavigateList("department", "/exim/master/department");
@@ -1443,6 +1464,8 @@ export function AppViewRenderer({
               ? viewState.record
               : editingTypeOfRequest
           }
+          departments={departmentRecords}
+          isDepartmentsLoading={isDepartmentsLoading}
           onBack={() => {
             setEditingTypeOfRequest(null);
             handleNavigateList("wh-type-of-request", "/warehouse/master/type-of-request");
@@ -1501,6 +1524,8 @@ export function AppViewRenderer({
           initialRecord={viewState.type === "job-number-edit" ? viewState.record ?? null : null}
           records={jobNumberRecords}
           isLoading={isJobNumbersLoading}
+          departments={departmentRecords}
+          isDepartmentsLoading={isDepartmentsLoading}
           onSave={handleSaveJobNumber}
           onCancel={() => handleNavigateList("job-number", "/procurement/purchase-master/job-number")}
         />

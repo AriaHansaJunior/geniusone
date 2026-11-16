@@ -7,6 +7,7 @@ use App\Models\Master\Finance\Pph;
 use App\Models\Master\Finance\PphType;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class PphApiController extends Controller
 {
@@ -43,7 +44,12 @@ class PphApiController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'name' => 'required|string|max:45|unique:pph,name',
+            'name' => [
+                'required',
+                'string',
+                'max:45',
+                Rule::unique('pph', 'name')->withoutTrashed(),
+            ],
             'value' => 'required|numeric',
             'deduction' => 'nullable|in:yes,no,-',
             'status' => 'nullable|string|max:45',
@@ -95,7 +101,13 @@ class PphApiController extends Controller
         $record = Pph::findOrFail($id);
 
         $validated = $request->validate([
-            'name' => 'sometimes|required|string|max:45|unique:pph,name,'.$id,
+            'name' => [
+                'sometimes',
+                'required',
+                'string',
+                'max:45',
+                Rule::unique('pph', 'name')->ignore($id)->withoutTrashed(),
+            ],
             'value' => 'sometimes|required|numeric',
             'deduction' => 'nullable|in:yes,no,-',
             'status' => 'nullable|string|max:45',

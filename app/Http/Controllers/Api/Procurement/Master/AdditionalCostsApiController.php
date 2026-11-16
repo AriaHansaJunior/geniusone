@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Procurement\PurchaseOrder\AdditionalCostType;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class AdditionalCostsApiController extends Controller
 {
@@ -37,10 +38,22 @@ class AdditionalCostsApiController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'code' => 'required|string|max:45|unique:additional_cost_types,code',
-            'name' => 'required|string|max:45|unique:additional_cost_types,name',
+            'code' => [
+                'required',
+                'string',
+                'max:45',
+                Rule::unique('additional_cost_types', 'code')->withoutTrashed(),
+            ],
+            'name' => [
+                'required',
+                'string',
+                'max:45',
+                Rule::unique('additional_cost_types', 'name')->withoutTrashed(),
+            ],
             'status' => 'nullable|integer',
         ]);
+
+        $validated['status'] = $request->input('status', 1);
 
         $record = AdditionalCostType::create($validated);
 
@@ -62,8 +75,20 @@ class AdditionalCostsApiController extends Controller
         $record = AdditionalCostType::findOrFail($id);
 
         $validated = $request->validate([
-            'code' => 'sometimes|required|string|max:45|unique:additional_cost_types,code,'.$id,
-            'name' => 'sometimes|required|string|max:45|unique:additional_cost_types,name,'.$id,
+            'code' => [
+                'sometimes',
+                'required',
+                'string',
+                'max:45',
+                Rule::unique('additional_cost_types', 'code')->ignore($id)->withoutTrashed(),
+            ],
+            'name' => [
+                'sometimes',
+                'required',
+                'string',
+                'max:45',
+                Rule::unique('additional_cost_types', 'name')->ignore($id)->withoutTrashed(),
+            ],
             'status' => 'nullable|integer',
         ]);
 

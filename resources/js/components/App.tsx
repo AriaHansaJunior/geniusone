@@ -28,7 +28,10 @@ import type { PurchaseCategoryRecord } from "../pages/Procurement/PurchaseMaster
 import type { DeliveryTermRecord } from "../pages/Procurement/PurchaseMaster/DeliveryTerms/delivery-terms-types";
 import type { AdditionalCostRecord } from "../pages/Procurement/PurchaseMaster/AdditionalCosts/additional-costs-types";
 import type { UnitRecord } from "../pages/Exim/Master/Unit/unit-types";
-import type { ClassificationRecord } from "../pages/Exim/Master/Classification/classification-types";
+import type {
+  ClassificationRecord,
+  ReportingTypeOption,
+} from "../pages/Exim/Master/Classification/classification-types";
 import type { DepartmentRecord } from "../pages/Exim/Master/Department/department-types";
 import type { BrandRecord } from "../pages/Exim/Master/Brand/brand-types";
 import type { FacilityRecord } from "../pages/Exim/Master/Facility/facility-types";
@@ -42,6 +45,7 @@ import type { DocumentHistoryRecord } from "../pages/Exim/DocumentHistory/docume
 import type {
   WarehouseMasterRecord,
   WarehouseCoordinateRecord,
+  WarehouseTypeOption,
 } from "../pages/Warehouse/MasterWarehouse/warehouse-master-types";
 import type { ItemRecord } from "../pages/Exim/Master/Item/item-types";
 import type { SupplierFormData } from "../pages/Procurement/PurchaseMaster/Supplier/supplier-types";
@@ -79,6 +83,7 @@ import {
   toggleBrandStatusApi,
   deleteBrandApi,
   fetchMasterClassifications,
+  fetchMasterReportingTypes,
   saveClassificationApi,
   toggleClassificationStatusApi,
   deleteClassificationApi,
@@ -107,6 +112,7 @@ import {
   saveItemApi,
   deleteItemApi,
   fetchMasterWarehouses,
+  fetchWarehouseTypesApi,
   saveWarehouseMasterApi,
   saveWarehouseCoordinateApi,
   deleteWarehouseCoordinateApi,
@@ -234,6 +240,7 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
   const [editingUnit, setEditingUnit] = useState<UnitRecord | null>(null);
   const [classificationRecords, setClassificationRecords] = useState<ClassificationRecord[]>([]);
   const [editingClassification, setEditingClassification] = useState<ClassificationRecord | null>(null);
+  const [reportingTypeRecords, setReportingTypeRecords] = useState<ReportingTypeOption[]>([]);
   const [departmentRecords, setDepartmentRecords] = useState<DepartmentRecord[]>([]);
   const [editingDepartment, setEditingDepartment] = useState<DepartmentRecord | null>(null);
   const [brandRecords, setBrandRecords] = useState<BrandRecord[]>([]);
@@ -251,6 +258,7 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
   const [receiveNoteReturnRecords, setReceiveNoteReturnRecords] = useState<ReceiveNoteReturnRecord[]>([]);
   const [documentHistoryRecords, setDocumentHistoryRecords] = useState<DocumentHistoryRecord[]>([]);
   const [warehouseMasterRecords, setWarehouseMasterRecords] = useState<WarehouseMasterRecord[]>([]);
+  const [warehouseTypeRecords, setWarehouseTypeRecords] = useState<WarehouseTypeOption[]>([]);
   const [itemRecords, setItemRecords] = useState<ItemRecord[]>([]);
   const [editingItem, setEditingItem] = useState<ItemRecord | null>(null);
   const [countryRecords, setCountryRecords] = useState<CountryRecord[]>([]);
@@ -288,7 +296,12 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
     const page = viewState.type === "list" ? viewState.page : undefined;
     const type = viewState.type;
 
-    const loadOnce = (key: string, fetcher: () => Promise<any[] | null>, setter: (data: any[]) => void) => {
+    const loadOnce = (
+      key: string,
+      fetcher: () => Promise<any[] | null>,
+      setter: (data: any[]) => void,
+      onError?: (error: unknown) => void
+    ) => {
       if (loadedPagesRef.current.has(key)) return;
       loadedPagesRef.current.add(key);
       if (isMounted) {
@@ -300,7 +313,9 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
             setter(data);
           }
         })
-        .catch(() => {})
+        .catch((error: unknown) => {
+          if (onError) onError(error);
+        })
         .finally(() => {
           if (isMounted) {
             setMasterFetchStates((prev) => ({ ...prev, [key]: "done" }));
@@ -334,8 +349,24 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
     }
     if (page === "classification" || type === "classification-create" || type === "classification-edit") {
       loadOnce("classifications", fetchMasterClassifications, setClassificationRecords);
+      loadOnce("reporting-types", fetchMasterReportingTypes, setReportingTypeRecords, (error) => {
+        console.error("Reporting Types could not be loaded:", error);
+      });
     }
     if (page === "department" || type === "department-create" || type === "department-edit") {
+      loadOnce("units", fetchMasterUnits, setUnitRecords);
+    }
+    if (
+      page === "department" ||
+      type === "department-create" ||
+      type === "department-edit" ||
+      page === "job-number" ||
+      type === "job-number-create" ||
+      type === "job-number-edit" ||
+      page === "wh-type-of-request" ||
+      type === "wh-type-of-request-create" ||
+      type === "wh-type-of-request-edit"
+    ) {
       loadOnce("departments", fetchMasterDepartments, setDepartmentRecords);
     }
     if (page === "brand" || type === "brand-create" || type === "brand-edit") {
@@ -366,6 +397,7 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
       type === "warehouse-coordinate-create"
     ) {
       loadOnce("warehouses", fetchMasterWarehouses, setWarehouseMasterRecords);
+      loadOnce("warehouse-types", fetchWarehouseTypesApi, setWarehouseTypeRecords);
     }
     if (page === "country" || type === "country-create" || type === "country-edit") {
       loadOnce("countries", fetchMasterCountries, setCountryRecords);
@@ -376,8 +408,17 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
     if (page === "currency" || type === "currency-create" || type === "currency-edit") {
       loadOnce("currencies", fetchMasterCurrencies, setCurrencyRecords);
     }
-    if (page === "account" || type === "account-create" || type === "account-edit") {
-      loadOnce("accounts", fetchMasterAccounts, setAccountRecords);
+    if (
+      page === "account" ||
+      type === "account-create" ||
+      type === "account-edit" ||
+      page === "classification" ||
+      type === "classification-create" ||
+      type === "classification-edit"
+    ) {
+      loadOnce("accounts", fetchMasterAccounts, setAccountRecords, (error) => {
+        console.error("Accounts could not be loaded:", error);
+      });
     }
     if (page === "job-number" || type === "job-number-create" || type === "job-number-edit" || type === "pr-create") {
       loadOnce("job-numbers", fetchMasterJobNumbers, setJobNumberRecords);
@@ -493,9 +534,7 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
     async (formData: SupplierFormData) => {
       try {
         const saved = await saveSupplierApi(formData);
-        if (saved) {
-          setSupplierRecords((prev) => [saved, ...prev.map((s, idx) => ({ ...s, no: idx + 2 }))]);
-        }
+        setSupplierRecords((prev) => [saved, ...prev.map((s, idx) => ({ ...s, no: idx + 2 }))]);
         handleNavigateList("supplier", "/procurement/purchase-master/supplier");
       } catch (err) {
         console.error("Failed to persist supplier to backend:", err);
@@ -509,13 +548,11 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
     async (data: { name: string }) => {
       try {
         const saved = await savePaymentTermApi(data.name);
-        if (saved) {
-          setPaymentTermRecords((prev) => [saved, ...prev.map((p, idx) => ({ ...p, no: idx + 2 }))]);
-        }
+        setPaymentTermRecords((prev) => [saved, ...prev.map((p, idx) => ({ ...p, no: idx + 2 }))]);
         handleNavigateList("payment-term", "/procurement/purchase-master/payment-term");
       } catch (err) {
         console.error("Failed to persist payment term to backend:", err);
-        alert(err instanceof Error ? err.message : "Failed to save Payment Term.");
+        throw err;
       }
     },
     [handleNavigateList]
@@ -541,13 +578,11 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
     async (data: { name: string }) => {
       try {
         const saved = await saveDeliveryTermApi(data.name);
-        if (saved) {
-          setDeliveryTermRecords((prev) => [saved, ...prev.map((d, idx) => ({ ...d, no: idx + 2 }))]);
-        }
+        setDeliveryTermRecords((prev) => [saved, ...prev.map((d, idx) => ({ ...d, no: idx + 2 }))]);
         handleNavigateList("delivery-terms", "/procurement/purchase-master/delivery-terms");
       } catch (err) {
         console.error("Failed to persist delivery term to backend:", err);
-        alert(err instanceof Error ? err.message : "Failed to save Delivery Term.");
+        throw err;
       }
     },
     [handleNavigateList]
@@ -557,13 +592,11 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
     async (data: { code: string; name: string }) => {
       try {
         const saved = await saveAdditionalCostApi(data.code, data.name);
-        if (saved) {
-          setAdditionalCostRecords((prev) => [saved, ...prev.map((a, idx) => ({ ...a, no: idx + 2 }))]);
-        }
+        setAdditionalCostRecords((prev) => [saved, ...prev.map((a, idx) => ({ ...a, no: idx + 2 }))]);
         handleNavigateList("additional-costs", "/procurement/purchase-master/additional-costs");
       } catch (err) {
         console.error("Failed to persist additional cost to backend:", err);
-        alert(err instanceof Error ? err.message : "Failed to save Additional Cost.");
+        throw err;
       }
     },
     [handleNavigateList]
@@ -573,13 +606,11 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
     async (newRec: PphRecord) => {
       try {
         const saved = await savePphApi(newRec);
-        if (saved) {
-          setPphRecords((prev) => [saved, ...prev]);
-        }
+        setPphRecords((prev) => [saved, ...prev]);
         handleNavigateList("pph", "/procurement/purchase-master/pph");
       } catch (err) {
         console.error("Failed to persist PPH to backend:", err);
-        alert(err instanceof Error ? err.message : "Failed to save PPH record.");
+        throw err;
       }
     },
     [handleNavigateList]
@@ -1305,12 +1336,10 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
     async (newRecord: WarehouseMasterRecord) => {
       try {
         const saved = await saveWarehouseMasterApi(newRecord);
-        if (saved) {
-          setWarehouseMasterRecords((prev) => [
-            { ...saved, no: 1 },
-            ...prev.map((w) => ({ ...w, no: w.no + 1 })),
-          ]);
-        }
+        setWarehouseMasterRecords((prev) => [
+          { ...saved, no: 1 },
+          ...prev.map((w) => ({ ...w, no: w.no + 1 })),
+        ]);
         const nextState: ViewState = { type: "list", page: "warehouse-master" };
         setViewState(nextState);
 
@@ -1447,12 +1476,10 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
     async (record: ItemRecord, isEdit: boolean) => {
       try {
         const saved = await saveItemApi(record, isEdit);
-        if (saved) {
-          if (isEdit) {
-            setItemRecords((prev) => prev.map((i) => (i.id === saved.id ? saved : i)));
-          } else {
-            setItemRecords((prev) => [saved, ...prev]);
-          }
+        if (isEdit) {
+          setItemRecords((prev) => prev.map((i) => (i.id === saved.id ? saved : i)));
+        } else {
+          setItemRecords((prev) => [saved, ...prev]);
         }
         setEditingItem(null);
         handleNavigateList("item", "/exim/master/item");
@@ -1549,14 +1576,12 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
   const handleSaveTypeOfRequest = useCallback(async (record: TypeOfRequestRecord, isEdit: boolean) => {
     try {
       const saved = await saveWarehouseTypeOfRequestApi(record, isEdit);
-      if (saved) {
-        if (isEdit) {
-          setTypeOfRequestRecords((prev) =>
-            prev.map((r) => (r.id === saved.id ? saved : r))
-          );
-        } else {
-          setTypeOfRequestRecords((prev) => [saved, ...prev]);
-        }
+      if (isEdit) {
+        setTypeOfRequestRecords((prev) =>
+          prev.map((r) => (r.id === saved.id ? saved : r))
+        );
+      } else {
+        setTypeOfRequestRecords((prev) => [saved, ...prev]);
       }
       setEditingTypeOfRequest(null);
       handleNavigateList("wh-type-of-request", "/warehouse/master/type-of-request");
@@ -1600,14 +1625,12 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
   const handleSaveDestinationLocation = useCallback(async (record: DestinationLocationRecord, isEdit: boolean) => {
     try {
       const saved = await saveDestinationLocationApi(record, isEdit);
-      if (saved) {
-        if (isEdit) {
-          setDestinationLocationRecords((prev) =>
-            prev.map((r) => (r.id === saved.id ? saved : r))
-          );
-        } else {
-          setDestinationLocationRecords((prev) => [saved, ...prev]);
-        }
+      if (isEdit) {
+        setDestinationLocationRecords((prev) =>
+          prev.map((r) => (r.id === saved.id ? saved : r))
+        );
+      } else {
+        setDestinationLocationRecords((prev) => [saved, ...prev]);
       }
       setEditingDestinationLocation(null);
       handleNavigateList("wh-destination-location", "/warehouse/master/destination-location");
@@ -1846,6 +1869,7 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
           handleDeleteAccount={handleDeleteAccount}
           handleToggleAccountStatus={handleToggleAccountStatus}
           isAccountsLoading={masterFetchStates["accounts"] !== "done"}
+          isReportingTypesLoading={masterFetchStates["reporting-types"] !== "done"}
           handleNavigateJobNumberCreate={handleNavigateJobNumberCreate}
           handleNavigateJobNumberEdit={handleNavigateJobNumberEdit}
           handleSaveJobNumber={handleSaveJobNumber}
@@ -1881,9 +1905,11 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
           setEditingUnit={setEditingUnit}
           unitReferenceRecords={unitReferenceRecords}
           classificationRecords={classificationRecords}
+          reportingTypeRecords={reportingTypeRecords}
           editingClassification={editingClassification}
           setEditingClassification={setEditingClassification}
           departmentRecords={departmentRecords}
+          isDepartmentsLoading={masterFetchStates.departments === "loading"}
           editingDepartment={editingDepartment}
           setEditingDepartment={setEditingDepartment}
           brandRecords={brandRecords}
@@ -1910,6 +1936,8 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
           receiveNoteReturnRecords={receiveNoteReturnRecords}
           documentHistoryRecords={documentHistoryRecords}
           warehouseMasterRecords={warehouseMasterRecords}
+          warehouseTypeRecords={warehouseTypeRecords}
+          isWarehouseTypesLoading={masterFetchStates["warehouse-types"] !== "done"}
           countryRecords={countryRecords}
           accountRecords={accountRecords}
           jobNumberRecords={jobNumberRecords}

@@ -446,9 +446,13 @@ class SystemReferenceDataSeeder extends Seeder
         });
 
         DB::table('job_number')->get()->each(function ($job, $idx) use ($adminId, $now) {
+            $departmentId = DB::table('departments')
+                ->where('name', $idx % 2 === 0 ? 'REFINING' : 'SMELTING')
+                ->value('id');
+
             DB::table('job_number')->where('id', $job->id)->update([
                 'code' => $job->code ?: $job->name,
-                'department' => $job->department ?: ($idx % 2 === 0 ? 'REFINING' : 'SMELTING'),
+                'departments_id' => $job->departments_id ?: $departmentId,
                 'created_by' => $job->created_by ?: $adminId,
                 'updated_by' => $job->updated_by ?: $adminId,
                 'updated_at' => $job->updated_at ?: $now,
@@ -497,32 +501,34 @@ class SystemReferenceDataSeeder extends Seeder
         });
 
         $torDefaults = [
-            'Production Issue' => ['code' => 'TOR-01', 'department' => 'Production', 'description' => 'Raw material & consumable issuance for production runs', 'requires_job_number' => true, 'requires_approval_2' => true],
-            'Sample Requisition' => ['code' => 'TOR-02', 'department' => 'R&D / QC', 'description' => 'Material requisition for laboratory sample testing', 'requires_job_number' => false, 'requires_approval_2' => false],
-            'Subkon Issue' => ['code' => 'TOR-03', 'department' => 'Subcontracting', 'description' => 'Material issuance for external subcontractor processing', 'requires_job_number' => true, 'requires_approval_2' => true],
-            'Packing Material' => ['code' => 'TOR-04', 'department' => 'Logistics', 'description' => 'Carton, pallet, and packaging supplies issuance', 'requires_job_number' => false, 'requires_approval_2' => false],
+            'Production Issue' => ['department' => 'Produksi & Smelting', 'description' => 'Raw material & consumable issuance for production runs', 'requires_job_number' => true],
+            'Sample Requisition' => ['department' => 'LABORATORY', 'description' => 'Material requisition for laboratory sample testing', 'requires_job_number' => false],
+            'Subkon Issue' => ['department' => 'PPIC & Logistik', 'description' => 'Material issuance for external subcontractor processing', 'requires_job_number' => true],
+            'Packing Material' => ['department' => 'LOGISTICS', 'description' => 'Carton, pallet, and packaging supplies issuance', 'requires_job_number' => false],
         ];
         foreach ($torDefaults as $name => $meta) {
+            $departmentId = DB::table('departments')->where('name', $meta['department'])->value('id');
             $row = DB::table('type_of_request')->where('name', $name)->first();
             if ($row) {
                 DB::table('type_of_request')->where('id', $row->id)->update([
-                    'code' => $row->code ?: $meta['code'],
-                    'department' => $row->department ?: $meta['department'],
                     'description' => $row->description ?: $meta['description'],
+                    'departments_id' => $row->departments_id ?: $departmentId,
                     'requires_job_number' => $row->requires_job_number ?: $meta['requires_job_number'],
-                    'requires_approval_2' => $row->requires_approval_2 ?: $meta['requires_approval_2'],
                     'created_by' => $row->created_by ?: $adminId,
                     'updated_by' => $row->updated_by ?: $adminId,
                 ]);
             } else {
-                DB::table('type_of_request')->insert(array_merge($meta, [
+                DB::table('type_of_request')->insert([
                     'name' => $name,
+                    'departments_id' => $departmentId,
+                    'description' => $meta['description'],
+                    'requires_job_number' => $meta['requires_job_number'],
                     'status' => 1,
                     'created_by' => $adminId,
                     'updated_by' => $adminId,
                     'created_at' => $now,
                     'updated_at' => $now,
-                ]));
+                ]);
             }
         }
 

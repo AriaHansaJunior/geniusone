@@ -2,17 +2,19 @@ import React, { useState } from "react";
 import { Button } from "../../../../components/ui/Button";
 import { Icon } from "../../../../components/ui/Icon";
 import { CustomSelect } from "../../../../components/ui/CustomSelect";
-import { unitOptions } from "./department-data";
 import type { DepartmentRecord } from "./department-types";
+import type { UnitRecord } from "../Unit/unit-types";
 
 interface DepartmentFormProps {
   initialRecord?: DepartmentRecord | null;
+  units: UnitRecord[];
   onBack: () => void;
   onSave?: (record: DepartmentRecord, isEdit: boolean) => void;
 }
 
 export function DepartmentForm({
   initialRecord,
+  units,
   onBack,
   onSave,
 }: DepartmentFormProps) {
@@ -21,11 +23,7 @@ export function DepartmentForm({
   const [sectionName, setSectionName] = useState(
     initialRecord?.sectionName || ""
   );
-  const [unit, setUnit] = useState(
-    initialRecord?.unit && initialRecord.unit !== "-"
-      ? initialRecord.unit
-      : "Select Unit"
-  );
+  const [unitId, setUnitId] = useState(initialRecord?.unitId || "");
 
   const [error, setError] = useState<string | null>(null);
 
@@ -55,7 +53,8 @@ export function DepartmentForm({
       id: initialRecord ? initialRecord.id : `dept-${Date.now()}`,
       no: initialRecord ? initialRecord.no : 1,
       sectionName: trimmedName,
-      unit: unit === "Select Unit" ? "-" : unit,
+      unit: units.find((item) => item.id === unitId)?.name || "",
+      unitId,
       status: initialRecord ? initialRecord.status : true,
     };
 
@@ -138,9 +137,13 @@ export function DepartmentForm({
             <CustomSelect
               id="departmentUnit"
               searchable
-              value={unit}
-              onChange={(val) => setUnit(val)}
-              options={unitOptions.map((opt) => ({ value: opt, label: opt }))}
+              value={unitId}
+              onChange={setUnitId}
+              placeholder="Select Unit"
+              options={units.map((unit) => ({
+                value: unit.id,
+                label: unit.name,
+              }))}
             />
           </div>
         </div>

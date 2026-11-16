@@ -98,12 +98,9 @@ export function AdditionalCostsIndex({
     const isActive = sortField === field;
     return (
       <span
-        style={{
-          marginLeft: "6px",
-          display: "inline-flex",
-          alignItems: "center",
-          color: isActive ? "var(--blue-600)" : "var(--muted-2)",
-        }}
+        className={`master-sort-indicator ${
+          isActive ? "master-sort-indicator--active" : ""
+        }`}
       >
         {isActive ? (
           sortDirection === "asc" ? (
@@ -119,22 +116,11 @@ export function AdditionalCostsIndex({
   };
 
   return (
-    <div className="additional-costs-page" style={{ width: "100%", animation: "fadeIn 0.15s ease-in-out" }}>
+    <div className="additional-costs-page">
       {/* Main Table Container Card */}
       <div className="panel table-panel">
         {/* Table Toolbar: Search on left, Single Add New action on right */}
-        <div
-          className="table-toolbar"
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            padding: "12px 18px",
-            borderBottom: "1px solid var(--line)",
-            background: "var(--white)",
-            gap: "16px",
-          }}
-        >
+        <div className="table-toolbar master-table-toolbar">
           <SearchField
             value={search}
             onChange={(val) => {
@@ -144,7 +130,7 @@ export function AdditionalCostsIndex({
             placeholder="Search cost code, name..."
           />
 
-          <div className="button-row">
+          <div className="button-row master-toolbar-actions">
             <Button variant="primary" onClick={onAddNew}>
               Add New
             </Button>
@@ -157,26 +143,24 @@ export function AdditionalCostsIndex({
             <table className="data-table">
               <thead>
                 <tr>
-                  <th style={{ width: "60px", textAlign: "center" }}>
+                  <th className="master-col-no">
                     <span>No</span>
                   </th>
                   <th
-                    className="sortable-th"
-                    style={{ width: "180px", cursor: "pointer", userSelect: "none" }}
+                    className="sortable-th master-sortable-th master-col-code"
                     onClick={() => handleToggleSort("costCode")}
                   >
                     <span>Cost Code</span>
                     {renderSortArrow("costCode")}
                   </th>
                   <th
-                    className="sortable-th"
-                    style={{ cursor: "pointer", userSelect: "none" }}
+                    className="sortable-th master-sortable-th"
                     onClick={() => handleToggleSort("costName")}
                   >
                     <span>Cost Name</span>
                     {renderSortArrow("costName")}
                   </th>
-                  <th style={{ width: "95px", textAlign: "center" }}>
+                  <th className="master-col-status">
                     <span>Status</span>
                   </th>
                 </tr>
@@ -187,19 +171,20 @@ export function AdditionalCostsIndex({
                     const rowNumber = (safeCurrentPage - 1) * pageSize + index + 1;
                     return (
                       <tr key={item.id} className={item.hidden ? "row--hidden" : ""}>
-                        <td style={{ textAlign: "center", color: "var(--muted)", fontWeight: 600 }}>
+                        <td className="master-cell-no">
                           {rowNumber}
                         </td>
-                        <td style={{ fontWeight: 600, color: "var(--ink)", fontFamily: "var(--font-mono, monospace)" }}>
+                        <td className="master-cell-code">
                           {item.costCode}
                         </td>
-                        <td style={{ fontWeight: 600, color: "var(--ink)", wordBreak: "break-word" }}>
+                        <td className="master-cell-name">
                           {item.costName}
                         </td>
-                        <td style={{ textAlign: "center" }}>
+                        <td className="master-cell-center">
                           <StatusToggle
                             hidden={item.hidden}
                             onToggle={() => handleToggleHide(item.id)}
+                            ariaLabel={`Toggle status for ${item.costName}`}
                           />
                         </td>
                       </tr>

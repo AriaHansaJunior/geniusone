@@ -11,13 +11,13 @@ class JobNumberApiController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $query = JobNumber::with(['createdByUser', 'updatedByUser']);
+        $query = JobNumber::with(['createdByUser', 'updatedByUser', 'department']);
 
         if ($search = $request->query('search')) {
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
                     ->orWhere('code', 'like', "%{$search}%")
-                    ->orWhere('department', 'like', "%{$search}%");
+                    ->orWhereHas('department', fn ($departmentQuery) => $departmentQuery->where('name', 'like', "%{$search}%"));
             });
         }
 
@@ -42,14 +42,10 @@ class JobNumberApiController extends Controller
         if (! $request->filled('name') && $request->filled('description')) {
             $request->merge(['name' => trim((string) $request->input('description'))]);
         }
-        if (! $request->has('department') && $request->has('department_name')) {
-            $request->merge(['department' => $request->input('department_name')]);
-        }
-
         $validated = $request->validate([
             'code' => 'nullable|string|max:60|unique:job_number,code',
             'name' => 'required|string|max:45',
-            'department' => 'nullable|string|max:100',
+            'departments_id' => 'nullable|integer|exists:departments,id',
             'status' => 'nullable|integer',
         ]);
 
@@ -63,13 +59,13 @@ class JobNumberApiController extends Controller
 
         return response()->json([
             'message' => 'Job number created successfully',
-            'data' => $record->load(['createdByUser', 'updatedByUser']),
+            'data' => $record->load(['createdByUser', 'updatedByUser', 'department']),
         ], 201);
     }
 
     public function show(int $id): JsonResponse
     {
-        $record = JobNumber::with(['createdByUser', 'updatedByUser'])->findOrFail($id);
+        $record = JobNumber::with(['createdByUser', 'updatedByUser', 'department'])->findOrFail($id);
 
         return response()->json(['data' => $record]);
     }
@@ -82,14 +78,10 @@ class JobNumberApiController extends Controller
         if (! $request->filled('name') && $request->filled('description')) {
             $request->merge(['name' => trim((string) $request->input('description'))]);
         }
-        if (! $request->has('department') && $request->has('department_name')) {
-            $request->merge(['department' => $request->input('department_name')]);
-        }
-
         $validated = $request->validate([
             'code' => 'nullable|string|max:60|unique:job_number,code,'.$id,
             'name' => 'sometimes|required|string|max:45',
-            'department' => 'nullable|string|max:100',
+            'departments_id' => 'nullable|integer|exists:departments,id',
             'status' => 'nullable|integer',
         ]);
 
@@ -99,7 +91,7 @@ class JobNumberApiController extends Controller
 
         return response()->json([
             'message' => 'Job number updated successfully',
-            'data' => $record->load(['createdByUser', 'updatedByUser']),
+            'data' => $record->load(['createdByUser', 'updatedByUser', 'department']),
         ]);
     }
 
@@ -122,7 +114,7 @@ class JobNumberApiController extends Controller
 
         return response()->json([
             'message' => 'Job number status updated successfully',
-            'data' => $record->load(['createdByUser', 'updatedByUser']),
+            'data' => $record->load(['createdByUser', 'updatedByUser', 'department']),
         ]);
     }
 }

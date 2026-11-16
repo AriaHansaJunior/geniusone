@@ -10,15 +10,6 @@ interface DestinationLocationFormProps {
   onSave: (record: DestinationLocationRecord, isEdit: boolean) => void;
 }
 
-const locationTypeOptions = [
-  "Production Area",
-  "Warehouse",
-  "Workshop",
-  "Laboratory",
-  "Office",
-  "Shipping Area",
-];
-
 export function DestinationLocationForm({
   initialRecord,
   onBack,
@@ -26,10 +17,7 @@ export function DestinationLocationForm({
 }: DestinationLocationFormProps) {
   const isEdit = !!initialRecord;
 
-  const [code, setCode] = useState(initialRecord?.code || "");
   const [name, setName] = useState(initialRecord?.name || "");
-  const [locationType, setLocationType] = useState<any>(initialRecord?.locationType || "Production Area");
-  const [pic, setPic] = useState(initialRecord?.pic || "");
   const [description, setDescription] = useState(initialRecord?.description || "");
   const [status, setStatus] = useState<"Active" | "Inactive">(initialRecord?.status || "Active");
   const [error, setError] = useState<string | null>(null);
@@ -37,13 +25,8 @@ export function DestinationLocationForm({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    const trimmedCode = code.trim();
     const trimmedName = name.trim();
 
-    if (!trimmedCode) {
-      setError("Location Code is required.");
-      return;
-    }
     if (!trimmedName) {
       setError("Destination Name is required.");
       return;
@@ -54,10 +37,10 @@ export function DestinationLocationForm({
     const record: DestinationLocationRecord = {
       id: initialRecord ? initialRecord.id : `dest-${Date.now()}`,
       no: initialRecord ? initialRecord.no : 1,
-      code: trimmedCode.toUpperCase(),
+      code: initialRecord?.code || "",
       name: trimmedName,
-      locationType,
-      pic: pic.trim() || "DAMAR",
+      locationType: initialRecord?.locationType || "Production Area",
+      pic: initialRecord?.pic || "",
       description: description.trim(),
       status,
       createdAt: initialRecord?.createdAt || new Date().toISOString().replace("T", " ").substring(0, 19),
@@ -87,21 +70,8 @@ export function DestinationLocationForm({
           </div>
         )}
 
-        <div className="master-form-grid-3">
+        <div className="master-form-grid-2">
           <div className="master-form-group">
-            <label className="master-form-label">
-              Location Code <span className="required-mark">*</span>
-            </label>
-            <input
-              type="text"
-              className="master-form-input"
-              placeholder="e.g. LOC-PRD-03"
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-              autoFocus
-            />
-          </div>
-          <div className="master-form-group master-form-col-span-2">
             <label className="master-form-label">
               Destination Name <span className="required-mark">*</span>
             </label>
@@ -111,31 +81,9 @@ export function DestinationLocationForm({
               placeholder="e.g. Smelter 2 Furnace Charging Deck"
               value={name}
               onChange={(e) => setName(e.target.value)}
+              autoFocus
             />
           </div>
-        </div>
-
-        <div className="master-form-grid-3">
-          <div className="master-form-group">
-            <label className="master-form-label">Location Classification</label>
-            <CustomSelect
-              value={locationType}
-              onChange={(val) => setLocationType(val as any)}
-              options={locationTypeOptions.map((type) => ({ value: type, label: type }))}
-            />
-          </div>
-
-          <div className="master-form-group">
-            <label className="master-form-label">Supervisor / PIC</label>
-            <input
-              type="text"
-              className="master-form-input"
-              placeholder="e.g. EKO PRASETYO"
-              value={pic}
-              onChange={(e) => setPic(e.target.value)}
-            />
-          </div>
-
           <div className="master-form-group">
             <label className="master-form-label">Status</label>
             <CustomSelect

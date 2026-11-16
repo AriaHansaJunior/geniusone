@@ -1,13 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { Button } from "../../../../components/ui/Button";
-import { CustomSelect } from "../../../../components/ui/CustomSelect";
-import type { CurrencyRecord, SyncStatus } from "./currency-types";
+import type { CurrencyRecord } from "./currency-types";
 
 export interface CurrencyFormData {
   currencyCode: string;
-  currencyName: string;
-  symbol: string;
-  syncStatus: SyncStatus;
 }
 
 export interface CurrencyFormProps {
@@ -36,24 +32,15 @@ export function CurrencyForm({
       : null);
 
   const [currencyCode, setCurrencyCode] = useState("");
-  const [currencyName, setCurrencyName] = useState("");
-  const [symbol, setSymbol] = useState("");
-  const [syncStatus, setSyncStatus] = useState<SyncStatus>("Synced");
-  const [errors, setErrors] = useState<{ currencyCode?: string; currencyName?: string }>({});
+  const [errors, setErrors] = useState<{ currencyCode?: string }>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (mode === "edit" && resolvedRecord) {
       setCurrencyCode(resolvedRecord.currencyCode || "");
-      setCurrencyName(resolvedRecord.currencyName || "");
-      setSymbol(resolvedRecord.symbol || "");
-      setSyncStatus(resolvedRecord.syncStatus || "Synced");
     } else if (mode === "create") {
       setCurrencyCode("");
-      setCurrencyName("");
-      setSymbol("");
-      setSyncStatus("Synced");
     }
     setErrors({});
     setSubmitError(null);
@@ -61,14 +48,11 @@ export function CurrencyForm({
   }, [mode, resolvedRecord]);
 
   const validate = () => {
-    const newErrors: { currencyCode?: string; currencyName?: string } = {};
+    const newErrors: { currencyCode?: string } = {};
     if (!currencyCode.trim()) {
       newErrors.currencyCode = "Currency code is required.";
     } else if (currencyCode.trim().length > 6) {
       newErrors.currencyCode = "Currency code cannot exceed 6 characters.";
-    }
-    if (!currencyName.trim()) {
-      newErrors.currencyName = "Currency name is required.";
     }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -84,9 +68,6 @@ export function CurrencyForm({
       await onSave(
         {
           currencyCode: currencyCode.trim().toUpperCase(),
-          currencyName: currencyName.trim(),
-          symbol: symbol.trim(),
-          syncStatus,
         },
         resolvedRecord?.id ?? recordId
       );
@@ -132,7 +113,7 @@ export function CurrencyForm({
 
         {submitError && <div className="master-form-alert--error">{submitError}</div>}
 
-        <div className="master-form-grid-4">
+        <div className="master-form-grid-2">
           <div className="master-form-group">
             <label htmlFor="currencyCode" className="master-form-label">
               Currency Code <span className="master-required-star">*</span>
@@ -151,57 +132,6 @@ export function CurrencyForm({
               autoFocus
             />
             {errors.currencyCode && <span className="master-error-msg">{errors.currencyCode}</span>}
-          </div>
-
-          <div className="master-form-group">
-            <label htmlFor="currencyName" className="master-form-label">
-              Currency Name <span className="master-required-star">*</span>
-            </label>
-            <input
-              id="currencyName"
-              type="text"
-              className={`master-form-input ${errors.currencyName ? "has-error" : ""}`}
-              placeholder="e.g. US Dollar, Indonesian Rupiah"
-              value={currencyName}
-              onChange={(e) => {
-                setCurrencyName(e.target.value);
-                if (errors.currencyName) setErrors((prev) => ({ ...prev, currencyName: undefined }));
-              }}
-              maxLength={45}
-            />
-            {errors.currencyName && <span className="master-error-msg">{errors.currencyName}</span>}
-          </div>
-
-          <div className="master-form-group">
-            <label htmlFor="currencySymbol" className="master-form-label">
-              Symbol / Prefix
-            </label>
-            <input
-              id="currencySymbol"
-              type="text"
-              className="master-form-input"
-              placeholder="e.g. $, Rp, €, ¥, S$"
-              value={symbol}
-              onChange={(e) => setSymbol(e.target.value)}
-              maxLength={8}
-            />
-          </div>
-
-          <div className="master-form-group">
-            <label htmlFor="currencySyncStatus" className="master-form-label">
-              Sync Status
-            </label>
-            <CustomSelect
-              id="currencySyncStatus"
-              value={syncStatus}
-              onChange={(val) => setSyncStatus(val as SyncStatus)}
-              options={[
-                { value: "Synced", label: "Synced" },
-                { value: "Pending", label: "Pending" },
-                { value: "Failed", label: "Failed" },
-                { value: "Not Synced", label: "Not Synced" },
-              ]}
-            />
           </div>
         </div>
 

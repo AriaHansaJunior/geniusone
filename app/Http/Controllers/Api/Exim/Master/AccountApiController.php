@@ -66,8 +66,8 @@ class AccountApiController extends Controller
         if (empty($validated['status'])) {
             $validated['status'] = 'active';
         }
-        if (! isset($validated['category'])) {
-            $validated['category'] = '';
+        if (empty($validated['category'])) {
+            $validated['category'] = 'Inventory';
         }
         $validated['created_by'] = $actorId;
         $validated['updated_by'] = $actorId;

@@ -1,12 +1,14 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Button } from "../../../../components/ui/Button";
 import { CustomSelect } from "../../../../components/ui/CustomSelect";
+import type { DepartmentRecord } from "../../../Exim/Master/Department/department-types";
 import type { JobNumberRecord } from "./job-number-types";
 
 export interface JobNumberFormData {
   jobNumber: string;
   jobName: string;
   department: string;
+  departmentId: string;
   status: boolean;
 }
 
@@ -16,20 +18,11 @@ export interface JobNumberFormProps {
   recordId?: string;
   records?: JobNumberRecord[];
   isLoading?: boolean;
+  departments: DepartmentRecord[];
+  isDepartmentsLoading?: boolean;
   onSave: (data: JobNumberFormData, id?: string) => Promise<void> | void;
   onCancel: () => void;
 }
-
-const DEFAULT_DEPARTMENTS = [
-  "PRODUCTION",
-  "SMELTING",
-  "MAINTENANCE",
-  "REVERB",
-  "HSE",
-  "TEKNIK",
-  "PPIC",
-  "PROCUREMENT",
-];
 
 export function JobNumberForm({
   mode,
@@ -37,6 +30,8 @@ export function JobNumberForm({
   recordId,
   records,
   isLoading = false,
+  departments,
+  isDepartmentsLoading = false,
   onSave,
   onCancel,
 }: JobNumberFormProps) {
@@ -48,7 +43,7 @@ export function JobNumberForm({
 
   const [jobNumber, setJobNumber] = useState("");
   const [jobName, setJobName] = useState("");
-  const [department, setDepartment] = useState("");
+  const [departmentId, setDepartmentId] = useState("");
   const [status, setStatus] = useState(true);
   const [errors, setErrors] = useState<{ jobNumber?: string; jobName?: string }>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -58,30 +53,18 @@ export function JobNumberForm({
     if (mode === "edit" && resolvedRecord) {
       setJobNumber(resolvedRecord.jobNumber || "");
       setJobName(resolvedRecord.jobName || "");
-      const deptVal = resolvedRecord.department && resolvedRecord.department !== "-" ? resolvedRecord.department : "";
-      setDepartment(deptVal);
+      setDepartmentId(resolvedRecord.departmentId || "");
       setStatus(resolvedRecord.status ?? true);
     } else if (mode === "create") {
       setJobNumber("");
       setJobName("");
-      setDepartment("");
+      setDepartmentId("");
       setStatus(true);
     }
     setErrors({});
     setSubmitError(null);
     setIsSubmitting(false);
   }, [mode, resolvedRecord]);
-
-  const departmentOptions = useMemo(() => {
-    const list = [...DEFAULT_DEPARTMENTS];
-    if (department && !list.includes(department)) {
-      list.unshift(department);
-    }
-    return [
-      { value: "", label: "Select Department . . ." },
-      ...list.map((d) => ({ value: d, label: d })),
-    ];
-  }, [department]);
 
   const validate = () => {
     const newErrors: { jobNumber?: string; jobName?: string } = {};
@@ -106,7 +89,8 @@ export function JobNumberForm({
         {
           jobNumber: jobNumber.trim().toUpperCase(),
           jobName: jobName.trim().toUpperCase(),
-          department: department.trim(),
+          departmentId,
+          department: departments.find((department) => department.id === departmentId)?.sectionName || "",
           status,
         },
         resolvedRecord?.id ?? recordId
@@ -200,10 +184,21 @@ export function JobNumberForm({
             <CustomSelect
               id="jobDepartment"
               searchable
-              value={department}
-              onChange={(val) => setDepartment(val)}
-              placeholder="Select Department . . ."
-              options={departmentOptions}
+              value={departmentId}
+              onChange={setDepartmentId}
+              placeholder={isDepartmentsLoading ? "Loading departments..." : "Select Department . . ."}
+              options={[
+                {
+                  value: "",
+                  label: isDepartmentsLoading
+                    ? "Loading departments..."
+                    : departments.length > 0 ? "Select Department . . ." : "No departments available",
+                },
+                ...departments.map((department) => ({
+                  value: department.id,
+                  label: department.sectionName,
+                })),
+              ]}
             />
           </div>
         </div>

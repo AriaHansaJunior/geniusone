@@ -12,7 +12,10 @@ import type { AdditionalCostRecord } from "../pages/Procurement/PurchaseMaster/A
 import type { PphRecord } from "../pages/Procurement/PurchaseMaster/Pph/pph-types";
 import type { UnitRecord } from "../pages/Exim/Master/Unit/unit-types";
 import type { BrandRecord } from "../pages/Exim/Master/Brand/brand-types";
-import type { ClassificationRecord } from "../pages/Exim/Master/Classification/classification-types";
+import type {
+  ClassificationRecord,
+  ReportingTypeOption,
+} from "../pages/Exim/Master/Classification/classification-types";
 import type { DepartmentRecord } from "../pages/Exim/Master/Department/department-types";
 import type { FacilityRecord } from "../pages/Exim/Master/Facility/facility-types";
 import type { HsRecord } from "../pages/Exim/Master/Hs/hs-types";
@@ -20,7 +23,7 @@ import type { CategoryRecord } from "../pages/Exim/Master/Category/category-type
 import type { StyleRecord } from "../pages/Exim/Master/Style/style-types";
 import type { ColorRecord } from "../pages/Exim/Master/Color/color-types";
 import type { ItemRecord } from "../pages/Exim/Master/Item/item-types";
-import type { WarehouseMasterRecord, WarehouseCoordinateRecord, WarehouseType } from "../pages/Warehouse/MasterWarehouse/warehouse-master-types";
+import type { WarehouseMasterRecord, WarehouseCoordinateRecord, WarehouseType, WarehouseTypeOption } from "../pages/Warehouse/MasterWarehouse/warehouse-master-types";
 import type { CountryRecord } from "../pages/Exim/Master/Country/country-types";
 import type { RafaksiTypeRecord } from "../pages/Procurement/PurchaseMaster/RafaksiType/rafaksi-type-types";
 import type { CurrencyRecord } from "../pages/Exim/Master/Currency/currency-types";
@@ -119,7 +122,7 @@ export async function fetchMasterSuppliers(): Promise<SupplierRecord[] | null> {
   }));
 }
 
-export async function saveSupplierApi(data: SupplierFormData, editId?: string): Promise<SupplierRecord | null> {
+export async function saveSupplierApi(data: SupplierFormData, editId?: string): Promise<SupplierRecord> {
   const cleanOpt = (v?: string) => (v && v.trim() !== "" && v.trim() !== "-" && v.trim() !== "—" ? v.trim() : undefined);
   const emailClean = cleanOpt(data.email);
   const payload: Record<string, any> = {
@@ -153,7 +156,9 @@ export async function saveSupplierApi(data: SupplierFormData, editId?: string): 
   const res = editId
     ? await apiPut<{ data: any }>(`/api/procurement/master/suppliers/${toNumericOrCleanId(editId)}`, payload)
     : await apiPost<{ data: any }>("/api/procurement/master/suppliers", payload);
-  if (!res?.data) return null;
+  if (!res?.data) {
+    throw new Error("Supplier was not returned after saving.");
+  }
   const r = res.data;
   return {
     id: String(r.id),
@@ -190,11 +195,13 @@ export async function fetchMasterPaymentTerms(): Promise<PaymentTermRecord[] | n
   }));
 }
 
-export async function savePaymentTermApi(name: string, editId?: string): Promise<PaymentTermRecord | null> {
+export async function savePaymentTermApi(name: string, editId?: string): Promise<PaymentTermRecord> {
   const res = editId
     ? await apiPut<{ data: any }>(`/api/procurement/master/payment-terms/${toNumericOrCleanId(editId)}`, { name })
     : await apiPost<{ data: any }>("/api/procurement/master/payment-terms", { name, status: 1 });
-  if (!res?.data) return null;
+  if (!res?.data) {
+    throw new Error("Payment term was not returned after saving.");
+  }
   return {
     id: String(res.data.id),
     no: 1,
@@ -256,11 +263,13 @@ export async function fetchMasterDeliveryTerms(): Promise<DeliveryTermRecord[] |
   }));
 }
 
-export async function saveDeliveryTermApi(name: string, editId?: string): Promise<DeliveryTermRecord | null> {
+export async function saveDeliveryTermApi(name: string, editId?: string): Promise<DeliveryTermRecord> {
   const res = editId
     ? await apiPut<{ data: any }>(`/api/procurement/master/delivery-terms/${toNumericOrCleanId(editId)}`, { name })
     : await apiPost<{ data: any }>("/api/procurement/master/delivery-terms", { name, status: 1 });
-  if (!res?.data) return null;
+  if (!res?.data) {
+    throw new Error("Delivery term was not returned after saving.");
+  }
   return {
     id: String(res.data.id),
     name: res.data.name || name,
@@ -288,12 +297,14 @@ export async function fetchMasterAdditionalCosts(): Promise<AdditionalCostRecord
   }));
 }
 
-export async function saveAdditionalCostApi(code: string, name: string, editId?: string): Promise<AdditionalCostRecord | null> {
+export async function saveAdditionalCostApi(code: string, name: string, editId?: string): Promise<AdditionalCostRecord> {
   const payload = { code, name, status: 1 };
   const res = editId
     ? await apiPut<{ data: any }>(`/api/procurement/master/additional-costs/${toNumericOrCleanId(editId)}`, payload)
     : await apiPost<{ data: any }>("/api/procurement/master/additional-costs", payload);
-  if (!res?.data) return null;
+  if (!res?.data) {
+    throw new Error("Additional cost was not returned after saving.");
+  }
   return {
     id: String(res.data.id),
     costCode: res.data.code || code,
@@ -329,10 +340,11 @@ export async function fetchMasterPph(): Promise<PphRecord[] | null> {
   }));
 }
 
-export async function savePphApi(rec: PphRecord, isEdit?: boolean): Promise<PphRecord | null> {
+export async function savePphApi(rec: PphRecord, isEdit?: boolean): Promise<PphRecord> {
   const payload = {
     name: rec.name,
     value: Number(rec.rate) || 0,
+    pph_type_id: rec.typeId ? Number(rec.typeId) : undefined,
     pph_type_name: rec.type || undefined,
     deduction: rec.deduction === "Yes" || (rec.deduction as any) === true ? "yes" : "no",
     status: rec.hidden ? "inactive" : "active",
@@ -340,7 +352,9 @@ export async function savePphApi(rec: PphRecord, isEdit?: boolean): Promise<PphR
   const res = isEdit && rec.id
     ? await apiPut<{ data: any }>(`/api/procurement/master/pph/${toNumericOrCleanId(rec.id)}`, payload)
     : await apiPost<{ data: any }>("/api/procurement/master/pph", payload);
-  if (!res?.data) return null;
+  if (!res?.data) {
+    throw new Error("PPh tax rate was not returned after saving.");
+  }
   const r = res.data;
   return {
     id: String(r.id),
@@ -348,6 +362,7 @@ export async function savePphApi(rec: PphRecord, isEdit?: boolean): Promise<PphR
     rate: Number(r.value ?? r.rates ?? rec.rate ?? 0),
     deduction: r.deduction === "yes" || r.deduction === true || r.deduction === 1 ? "Yes" : "No",
     type: r.type?.nama || r.type?.name || r.type_pph?.name || r.type_pph_name || rec.type,
+    typeId: r.pph_type_id ?? rec.typeId,
     hidden: !isTruthyStatus(r.status ?? "active"),
   };
 }
@@ -377,7 +392,7 @@ export async function fetchMasterUnits(): Promise<UnitRecord[] | null> {
   }));
 }
 
-export async function saveUnitApi(record: UnitRecord, isEdit: boolean): Promise<UnitRecord | null> {
+export async function saveUnitApi(record: UnitRecord, isEdit: boolean): Promise<UnitRecord> {
   const payload = {
     name: record.name,
     status: 1,
@@ -386,10 +401,14 @@ export async function saveUnitApi(record: UnitRecord, isEdit: boolean): Promise<
     ? await apiPut<{ data: any }>(`/api/exim/master/units/${toNumericOrCleanId(record.id)}`, payload)
     : await apiPost<{ data: any }>("/api/exim/master/units", payload);
   const r = res?.data;
+  if (!r) {
+    throw new Error("Unit was not returned after saving.");
+  }
+
   return {
     ...record,
-    id: r?.id ? String(r.id) : record.id,
-    name: r?.unit?.nama || r?.name || record.name,
+    id: String(r.id),
+    name: r.unit?.nama || r.nama || r.name || record.name,
     createdBy: r?.created_by_name || record.createdBy || "-",
     createdAt: formatDisplayDate(r?.created_at || record.createdAt),
   };
@@ -410,14 +429,13 @@ export async function fetchMasterBrands(): Promise<BrandRecord[] | null> {
   return res.data.map((r: any, idx: number) => ({
     id: String(r.id),
     no: idx + 1,
-    code: r.code || "",
     name: r.name || "",
     description: r.description || "",
     status: isTruthyStatus(r.status),
   }));
 }
 
-export async function saveBrandApi(record: BrandRecord, isEdit: boolean): Promise<BrandRecord | null> {
+export async function saveBrandApi(record: BrandRecord, isEdit: boolean): Promise<BrandRecord> {
   const payload = {
     code: record.code,
     name: record.name,
@@ -428,13 +446,16 @@ export async function saveBrandApi(record: BrandRecord, isEdit: boolean): Promis
     ? await apiPut<{ data: any }>(`/api/exim/master/brands/${toNumericOrCleanId(record.id)}`, payload)
     : await apiPost<{ data: any }>("/api/exim/master/brands", payload);
   const r = res?.data;
+  if (!r) {
+    throw new Error("Brand was not returned after saving.");
+  }
+
   return {
     ...record,
-    id: r?.id ? String(r.id) : record.id,
-    code: r?.code || record.code,
-    name: r?.name || record.name,
-    description: r?.description ?? record.description ?? "",
-    status: isTruthyStatus(r?.status ?? record.status),
+    id: String(r.id),
+    name: r.name || record.name,
+    description: r.description ?? record.description ?? "",
+    status: isTruthyStatus(r.status ?? record.status),
   };
 }
 
@@ -456,11 +477,13 @@ export async function fetchMasterClassifications(): Promise<ClassificationRecord
     code: r.code || "",
     name: r.name || "",
     description: r.description || "",
+    reportingTypeId: r.reporting_types_id == null ? "" : String(r.reporting_types_id),
     reportingType:
       r.reporting_type?.name ||
       (typeof r.reporting_type === "string" ? r.reporting_type : "") ||
       r.hs_group ||
       "-",
+    accountId: r.accounts_id == null ? "" : String(r.accounts_id),
     account: r.account
       ? typeof r.account === "object"
         ? `${r.account.code || ""} - ${r.account.name || ""}`.replace(/^ - | - $/g, "")
@@ -470,31 +493,56 @@ export async function fetchMasterClassifications(): Promise<ClassificationRecord
   }));
 }
 
-export async function saveClassificationApi(record: ClassificationRecord, isEdit: boolean): Promise<ClassificationRecord | null> {
+export async function fetchMasterReportingTypes(): Promise<ReportingTypeOption[] | null> {
+  const res = await apiGet<{ data: ReportingTypeOption[] }>("/api/exim/master/reporting-types", {
+    per_page: 500,
+  });
+  if (!Array.isArray(res?.data)) {
+    throw new Error("Reporting Types could not be loaded.");
+  }
+  return res.data.map((record) => ({
+    id: String(record.id),
+    name: record.name || "",
+  }));
+}
+
+export async function saveClassificationApi(record: ClassificationRecord, isEdit: boolean): Promise<ClassificationRecord> {
   const payload = {
     code: record.code,
     name: record.name,
     description: record.description,
-    reporting_type: record.reportingType,
-    account_name: record.account,
+    ...(record.reportingTypeId ? { reporting_types_id: Number(record.reportingTypeId) } : {}),
+    ...(record.accountId ? { accounts_id: Number(record.accountId) } : {}),
     status: record.status ? 1 : 0,
   };
   const res = isEdit
     ? await apiPut<{ data: any }>(`/api/exim/master/classifications/${toNumericOrCleanId(record.id)}`, payload)
     : await apiPost<{ data: any }>("/api/exim/master/classifications", payload);
   const r = res?.data;
+  if (!r) {
+    throw new Error("Classification was not returned after saving.");
+  }
+
+  const accountLabel = r.account
+    ? `${r.account.code || ""} - ${r.account.name || ""}`.replace(/^ - | - $/g, "")
+    : record.account;
+
   return {
     ...record,
-    id: r?.id ? String(r.id) : record.id,
-    code: r?.code || record.code,
-    name: r?.name || record.name,
-    description: r?.description ?? record.description ?? "",
+    id: String(r.id),
+    code: r.code || record.code,
+    name: r.name || record.name,
+    description: r.description ?? record.description ?? "",
+    reportingTypeId:
+      r.reporting_types_id == null ? record.reportingTypeId : String(r.reporting_types_id),
     reportingType:
-      r?.reporting_type?.name ||
-      (typeof r?.reporting_type === "string" ? r.reporting_type : "") ||
+      r.reporting_type?.name ||
+      (typeof r.reporting_type === "string" ? r.reporting_type : "") ||
       record.reportingType ||
       "-",
-    status: isTruthyStatus(r?.status ?? record.status),
+    accountId: r.accounts_id == null ? record.accountId : String(r.accounts_id),
+    account: accountLabel,
+    status: isTruthyStatus(r.status ?? record.status),
   };
 }
 
@@ -514,14 +562,15 @@ export async function fetchMasterDepartments(): Promise<DepartmentRecord[] | nul
     id: String(r.id),
     no: idx + 1,
     sectionName: r.name || r.section_name || "",
-    unit: r.code || r.unit || "",
+    unit: r.unit?.nama || r.unit?.name || "",
+    unitId: r.units_id == null ? "" : String(r.units_id),
     status: isTruthyStatus(r.status),
   }));
 }
 
-export async function saveDepartmentApi(record: DepartmentRecord, isEdit: boolean): Promise<DepartmentRecord | null> {
+export async function saveDepartmentApi(record: DepartmentRecord, isEdit: boolean): Promise<DepartmentRecord> {
   const payload = {
-    code: record.unit,
+    units_id: record.unitId || null,
     name: record.sectionName,
     status: record.status ? 1 : 0,
   };
@@ -529,12 +578,17 @@ export async function saveDepartmentApi(record: DepartmentRecord, isEdit: boolea
     ? await apiPut<{ data: any }>(`/api/exim/master/departments/${toNumericOrCleanId(record.id)}`, payload)
     : await apiPost<{ data: any }>("/api/exim/master/departments", payload);
   const r = res?.data;
+  if (!r) {
+    throw new Error("Department was not returned after saving.");
+  }
+
   return {
     ...record,
-    id: r?.id ? String(r.id) : record.id,
-    sectionName: r?.name || record.sectionName,
-    unit: r?.code || record.unit,
-    status: isTruthyStatus(r?.status ?? record.status),
+    id: String(r.id),
+    sectionName: r.name || record.sectionName,
+    unit: r.unit?.nama || r.unit?.name || record.unit,
+    unitId: r.units_id == null ? record.unitId || "" : String(r.units_id),
+    status: isTruthyStatus(r.status ?? record.status),
   };
 }
 
@@ -582,7 +636,7 @@ export async function fetchMasterFacilities(): Promise<FacilityRecord[] | null> 
   }));
 }
 
-export async function saveFacilityApi(record: FacilityRecord, isEdit: boolean): Promise<FacilityRecord | null> {
+export async function saveFacilityApi(record: FacilityRecord, isEdit: boolean): Promise<FacilityRecord> {
   const payload = {
     name: record.name,
     description: record.description,
@@ -592,12 +646,16 @@ export async function saveFacilityApi(record: FacilityRecord, isEdit: boolean): 
     ? await apiPut<{ data: any }>(`/api/exim/master/facilities/${toNumericOrCleanId(record.id)}`, payload)
     : await apiPost<{ data: any }>("/api/exim/master/facilities", payload);
   const r = res?.data;
+  if (!r) {
+    throw new Error("Facility was not returned after saving.");
+  }
+
   return {
     ...record,
-    id: r?.id ? String(r.id) : record.id,
-    name: r?.name || record.name,
-    description: r?.description ?? record.description ?? "",
-    status: isTruthyStatus(r?.status ?? record.status),
+    id: String(r.id),
+    name: r.name || record.name,
+    description: r.description ?? record.description ?? "",
+    status: isTruthyStatus(r.status ?? record.status),
   };
 }
 
@@ -684,7 +742,7 @@ export async function fetchMasterCategories(): Promise<CategoryRecord[] | null> 
   }));
 }
 
-export async function saveCategoryApi(record: CategoryRecord, isEdit: boolean): Promise<CategoryRecord | null> {
+export async function saveCategoryApi(record: CategoryRecord, isEdit: boolean): Promise<CategoryRecord> {
   const payload = {
     code: record.code,
     name: record.name,
@@ -695,13 +753,17 @@ export async function saveCategoryApi(record: CategoryRecord, isEdit: boolean): 
     ? await apiPut<{ data: any }>(`/api/exim/master/categories/${toNumericOrCleanId(record.id)}`, payload)
     : await apiPost<{ data: any }>("/api/exim/master/categories", payload);
   const r = res?.data;
+  if (!r) {
+    throw new Error("Category was not returned after saving.");
+  }
+
   return {
     ...record,
-    id: r?.id ? String(r.id) : record.id,
-    code: r?.code || record.code,
-    name: r?.name || record.name,
-    description: r?.description ?? record.description ?? "",
-    status: isTruthyStatus(r?.status ?? record.status),
+    id: String(r.id),
+    code: r.code || record.code,
+    name: r.name || record.name,
+    description: r.description ?? record.description ?? "",
+    status: isTruthyStatus(r.status ?? record.status),
   };
 }
 
@@ -727,7 +789,7 @@ export async function fetchMasterStyles(): Promise<StyleRecord[] | null> {
   }));
 }
 
-export async function saveStyleApi(record: StyleRecord, isEdit: boolean): Promise<StyleRecord | null> {
+export async function saveStyleApi(record: StyleRecord, isEdit: boolean): Promise<StyleRecord> {
   const payload = {
     code: record.code,
     name: record.name,
@@ -738,13 +800,17 @@ export async function saveStyleApi(record: StyleRecord, isEdit: boolean): Promis
     ? await apiPut<{ data: any }>(`/api/exim/master/styles/${toNumericOrCleanId(record.id)}`, payload)
     : await apiPost<{ data: any }>("/api/exim/master/styles", payload);
   const r = res?.data;
+  if (!r) {
+    throw new Error("Style was not returned after saving.");
+  }
+
   return {
     ...record,
-    id: r?.id ? String(r.id) : record.id,
-    code: r?.code || record.code,
-    name: r?.name || record.name,
-    description: r?.description ?? record.description ?? "",
-    status: isTruthyStatus(r?.status ?? record.status),
+    id: String(r.id),
+    code: r.code || record.code,
+    name: r.name || record.name,
+    description: r.description ?? record.description ?? "",
+    status: isTruthyStatus(r.status ?? record.status),
   };
 }
 
@@ -768,7 +834,7 @@ export async function fetchMasterColours(): Promise<ColorRecord[] | null> {
   }));
 }
 
-export async function saveColorApi(record: ColorRecord, isEdit?: boolean): Promise<ColorRecord | null> {
+export async function saveColorApi(record: ColorRecord, isEdit?: boolean): Promise<ColorRecord> {
   const payload = {
     code: record.code,
     name: record.name,
@@ -778,11 +844,15 @@ export async function saveColorApi(record: ColorRecord, isEdit?: boolean): Promi
     ? await apiPut<{ data: any }>(`/api/exim/master/colours/${toNumericOrCleanId(record.id)}`, payload)
     : await apiPost<{ data: any }>("/api/exim/master/colours", payload);
   const r = res?.data;
+  if (!r) {
+    throw new Error("Colour was not returned after saving.");
+  }
+
   return {
     ...record,
-    id: r?.id ? String(r.id) : record.id,
-    code: r?.code || record.code,
-    name: r?.name || record.name,
+    id: String(r.id),
+    code: r.code || record.code,
+    name: r.name || record.name,
   };
 }
 
@@ -862,7 +932,7 @@ export async function fetchMasterItems(): Promise<ItemRecord[] | null> {
   return res.data.map((r: any, idx: number) => mapApiItemToRecord(r, idx));
 }
 
-export async function saveItemApi(record: ItemRecord, isEdit: boolean): Promise<ItemRecord | null> {
+export async function saveItemApi(record: ItemRecord, isEdit: boolean): Promise<ItemRecord> {
   const cleanCode = (val?: string) => (val && val.trim() !== "" && val.trim() !== "-" ? val.trim() : undefined);
   const payload: Record<string, any> = {
     code: cleanCode(record.itemCode),
@@ -893,7 +963,9 @@ export async function saveItemApi(record: ItemRecord, isEdit: boolean): Promise<
   const res = isEdit
     ? await apiPut<{ data: any }>(`/api/exim/master/items/${toNumericOrCleanId(record.id)}`, payload)
     : await apiPost<{ data: any }>("/api/exim/master/items", payload);
-  if (!res?.data) return null;
+  if (!res?.data?.id) {
+    throw new Error("Item was not returned after saving.");
+  }
   return mapApiItemToRecord(res.data, (record.no || 1) - 1);
 }
 
@@ -910,9 +982,10 @@ export async function toggleItemStatusApi(id: string): Promise<boolean> {
 // 3. WAREHOUSE MASTER, TYPE OF REQUEST, DESTINATION LOCATION
 // =========================================================================
 
-export async function fetchWarehouseTypesApi(): Promise<Array<{ id: number; name: string }>> {
+export async function fetchWarehouseTypesApi(): Promise<WarehouseTypeOption[] | null> {
   const res = await apiGet<{ data: any[] }>("/api/warehouse/master/warehouse-types");
-  return (res?.data || []).map((t: any) => ({ id: Number(t.id), name: t.name || t.nama || "" }));
+  if (!res?.data) return null;
+  return res.data.map((t: any) => ({ id: String(t.id), name: t.name || t.nama || "" }));
 }
 
 export async function fetchMasterWarehouses(): Promise<WarehouseMasterRecord[] | null> {
@@ -934,6 +1007,7 @@ export async function fetchMasterWarehouses(): Promise<WarehouseMasterRecord[] |
       no: idx + 1,
       name: r.name || "",
       type: rawType as WarehouseType,
+      warehouseTypeId: r.warehouse_types_id == null ? "" : String(r.warehouse_types_id),
       description: r.description || "",
       status: isTruthyStatus(r.status),
       coordinates: coords,
@@ -941,17 +1015,23 @@ export async function fetchMasterWarehouses(): Promise<WarehouseMasterRecord[] |
   });
 }
 
-export async function saveWarehouseMasterApi(record: WarehouseMasterRecord, isEdit?: boolean): Promise<WarehouseMasterRecord | null> {
+export async function saveWarehouseMasterApi(record: WarehouseMasterRecord, isEdit?: boolean): Promise<WarehouseMasterRecord> {
+  if (!record.warehouseTypeId) {
+    throw new Error("Please choose a valid Warehouse Type.");
+  }
+
   const payload = {
     name: record.name,
-    type_name: record.type,
+    warehouse_types_id: Number(record.warehouseTypeId),
     description: record.description,
     status: record.status ? 1 : 0,
   };
   const res = isEdit && record.id
     ? await apiPut<{ data: any }>(`/api/warehouse/master/warehouses/${toNumericOrCleanId(record.id)}`, payload)
     : await apiPost<{ data: any }>("/api/warehouse/master/warehouses", payload);
-  if (!res?.data) return null;
+  if (!res?.data) {
+    throw new Error("Warehouse was not returned after saving.");
+  }
   const r = res.data;
   return {
     ...record,
@@ -959,6 +1039,7 @@ export async function saveWarehouseMasterApi(record: WarehouseMasterRecord, isEd
     code: r.code || record.code || "",
     name: r.name || record.name,
     type: (r.type?.name || record.type) as WarehouseType,
+    warehouseTypeId: r.warehouse_types_id == null ? record.warehouseTypeId : String(r.warehouse_types_id),
     description: r.description ?? record.description ?? "",
     status: isTruthyStatus(r.status ?? record.status),
     coordinates: record.coordinates || [],
@@ -1003,11 +1084,10 @@ export async function fetchWarehouseTypesOfRequestApi(): Promise<TypeOfRequestRe
   return res.data.map((r: any, idx: number) => ({
     id: String(r.id),
     no: idx + 1,
-    code: r.code || "",
     name: r.name || "",
-    department: r.department || r.category || "ALL DEPARTMENTS",
-    requiresJobNumber: Boolean(r.requires_job_number),
-    requiresApproval2: r.requires_approval_2 !== undefined ? Boolean(r.requires_approval_2) : r.approval_tier !== "Tier 1 Only",
+    departmentId: String(r.departmentId ?? r.departments_id ?? ""),
+    department: typeof r.department === "string" ? r.department : r.department?.name || "",
+    requiresJobNumber: r.requiresJobNumber !== undefined ? Boolean(r.requiresJobNumber) : Boolean(r.requires_job_number),
     description: r.description || "",
     status: isTruthyStatus(r.status) ? "Active" : "Inactive",
     createdAt: formatDisplayDate(r.created_at),
@@ -1015,31 +1095,30 @@ export async function fetchWarehouseTypesOfRequestApi(): Promise<TypeOfRequestRe
   }));
 }
 
-export async function saveWarehouseTypeOfRequestApi(record: TypeOfRequestRecord, isEdit?: boolean): Promise<TypeOfRequestRecord | null> {
+export async function saveWarehouseTypeOfRequestApi(record: TypeOfRequestRecord, isEdit?: boolean): Promise<TypeOfRequestRecord> {
   const payload = {
-    code: record.code,
     name: record.name,
-    department: record.department,
-    category: record.department,
+    departments_id: record.departmentId ? Number(record.departmentId) : null,
     requires_job_number: Boolean(record.requiresJobNumber),
-    requires_approval_2: Boolean(record.requiresApproval2),
-    approval_tier: record.requiresApproval2 ? "Tier 1 + Tier 2" : "Tier 1 Only",
     description: record.description,
     status: record.status === "Active" ? 1 : 0,
   };
   const res = isEdit && record.id
     ? await apiPut<{ data: any }>(`/api/warehouse/master/type-of-requests/${toNumericOrCleanId(record.id)}`, payload)
     : await apiPost<{ data: any }>("/api/warehouse/master/type-of-requests", payload);
-  if (!res?.data) return null;
+  if (!res?.data) {
+    throw new Error("The Type of Request could not be saved.");
+  }
   const r = res.data;
   return {
     ...record,
     id: String(r.id),
-    code: r.code || record.code,
     name: r.name || record.name,
-    department: r.department || r.category || record.department,
-    requiresJobNumber: Boolean(r.requires_job_number ?? record.requiresJobNumber),
-    requiresApproval2: r.requires_approval_2 !== undefined ? Boolean(r.requires_approval_2) : record.requiresApproval2,
+    departmentId: String(r.departmentId ?? r.departments_id ?? record.departmentId),
+    department: typeof r.department === "string" ? r.department : r.department?.name || record.department,
+    requiresJobNumber: r.requiresJobNumber !== undefined
+      ? Boolean(r.requiresJobNumber)
+      : Boolean(r.requires_job_number ?? record.requiresJobNumber),
     status: isTruthyStatus(r.status) ? "Active" : "Inactive",
     createdAt: formatDisplayDate(r.created_at || record.createdAt),
     createdBy: r.created_by || record.createdBy || "-",
@@ -1075,26 +1154,27 @@ export async function fetchDestinationLocationsApi(): Promise<DestinationLocatio
   }));
 }
 
-export async function saveDestinationLocationApi(record: DestinationLocationRecord, isEdit?: boolean): Promise<DestinationLocationRecord | null> {
+export async function saveDestinationLocationApi(record: DestinationLocationRecord, isEdit?: boolean): Promise<DestinationLocationRecord> {
   const payload = {
-    code: record.code,
     name: record.name,
-    location_type: record.locationType,
-    department_name: (record as any).department,
-    pic: record.pic,
     description: record.description,
     status: record.status === "Active" ? 1 : 0,
   };
   const res = isEdit && record.id
     ? await apiPut<{ data: any }>(`/api/warehouse/master/destination-locations/${toNumericOrCleanId(record.id)}`, payload)
     : await apiPost<{ data: any }>("/api/warehouse/master/destination-locations", payload);
-  if (!res?.data) return null;
+  if (!res?.data) {
+    throw new Error("The Destination Location could not be saved.");
+  }
   const r = res.data;
   return {
     ...record,
     id: String(r.id),
     code: r.code || record.code,
     name: r.name || record.name,
+    locationType: r.locationType || r.location_type || record.locationType,
+    pic: r.pic ?? record.pic,
+    description: r.description ?? record.description,
     status: isTruthyStatus(r.status) ? "Active" : "Inactive",
     createdAt: formatDisplayDate(r.created_at || record.createdAt),
     createdBy: r.created_by || record.createdBy || "-",
@@ -1128,12 +1208,14 @@ export async function fetchMasterCountries(): Promise<CountryRecord[] | null> {
   }));
 }
 
-export async function saveCountryApi(data: { code?: string; name: string; status: boolean }, id?: string): Promise<CountryRecord | null> {
+export async function saveCountryApi(data: { code?: string; name: string; status: boolean }, id?: string): Promise<CountryRecord> {
   const payload = { code: data.code?.trim() || null, name: data.name, status: data.status ? 1 : 0 };
   const res = id
     ? await apiPut<{ data: any }>(`/api/procurement/master/countries/${toNumericOrCleanId(id)}`, payload)
     : await apiPost<{ data: any }>("/api/procurement/master/countries", payload);
-  if (!res?.data) return null;
+  if (!res?.data) {
+    throw new Error("Country was not returned after saving.");
+  }
   const r = res.data;
   return {
     id: String(r.id),
@@ -1173,7 +1255,7 @@ export async function fetchMasterRafaksiTypes(): Promise<RafaksiTypeRecord[] | n
 export async function saveRafaksiTypeApi(
   data: { code?: string; name: string; description?: string; status: boolean },
   id?: string
-): Promise<RafaksiTypeRecord | null> {
+): Promise<RafaksiTypeRecord> {
   const payload = {
     code: data.code?.trim() || null,
     name: data.name,
@@ -1183,7 +1265,9 @@ export async function saveRafaksiTypeApi(
   const res = id
     ? await apiPut<{ data: any }>(`/api/procurement/master/rafaksi-types/${toNumericOrCleanId(id)}`, payload)
     : await apiPost<{ data: any }>("/api/procurement/master/rafaksi-types", payload);
-  if (!res?.data) return null;
+  if (!res?.data) {
+    throw new Error("Rafaksi type was not returned after saving.");
+  }
   const r = res.data;
   return {
     id: String(r.id),
@@ -1223,34 +1307,24 @@ export async function fetchMasterCurrencies(): Promise<CurrencyRecord[] | null> 
 }
 
 export async function saveCurrencyApi(
-  data: { currencyCode: string; currencyName: string; symbol?: string; syncStatus?: string; status?: boolean },
+  data: { currencyCode: string },
   id?: string
-): Promise<CurrencyRecord | null> {
-  const resolvedStatus =
-    data.status !== undefined
-      ? data.status ? 1 : 0
-      : data.syncStatus === "Not Synced" || data.syncStatus === "Failed"
-      ? 0
-      : 1;
-  const payload = {
-    code: data.currencyCode,
-    name: data.currencyName,
-    symbol: data.symbol || data.currencyCode,
-    sync_status: data.syncStatus || (resolvedStatus === 1 ? "Synced" : "Not Synced"),
-    status: resolvedStatus,
-  };
+): Promise<CurrencyRecord> {
+  const payload = { code: data.currencyCode };
   const res = id
     ? await apiPut<{ data: any }>(`/api/procurement/master/currencies/${toNumericOrCleanId(id)}`, payload)
     : await apiPost<{ data: any }>("/api/procurement/master/currencies", payload);
-  if (!res?.data) return null;
+  if (!res?.data) {
+    throw new Error("Currency was not returned after saving.");
+  }
   const r = res.data;
   return {
     id: String(r.id),
     no: 1,
     currencyCode: r.code || data.currencyCode,
-    currencyName: r.name || data.currencyName,
-    symbol: r.symbol || data.symbol || data.currencyCode,
-    syncStatus: (r.sync_status || (isTruthyStatus(r.status ?? 1) ? "Synced" : "Not Synced")) as CurrencyRecord["syncStatus"],
+    currencyName: r.name || r.code || data.currencyCode,
+    symbol: r.symbol || r.code || data.currencyCode,
+    syncStatus: (r.sync_status || "Synced") as CurrencyRecord["syncStatus"],
     lastSynced: formatDisplayDate(r.last_synced_at || r.updated_at || r.created_at),
     createdBy: r.created_by_name || r.created_by_user?.name || r.creator?.name || "-",
     createdAt: formatDisplayDate(r.created_at),
@@ -1268,7 +1342,9 @@ export async function toggleCurrencyStatusApi(id: string): Promise<boolean> {
 
 export async function fetchMasterAccounts(): Promise<AccountRecord[] | null> {
   const res = await apiGet<{ data: any[] }>("/api/exim/master/accounts", { per_page: 500 });
-  if (!res?.data) return null;
+  if (!Array.isArray(res?.data)) {
+    throw new Error("Accounts could not be loaded.");
+  }
   return res.data.map((r: any, idx: number) => ({
     id: String(r.id),
     no: idx + 1,
@@ -1282,26 +1358,27 @@ export async function fetchMasterAccounts(): Promise<AccountRecord[] | null> {
 }
 
 export async function saveAccountApi(
-  data: { accountCode: string; accountName: string; category?: string; status: boolean },
+  data: { accountCode: string; accountName: string; status: boolean },
   id?: string
-): Promise<AccountRecord | null> {
+): Promise<AccountRecord> {
   const payload = {
     code: data.accountCode,
     name: data.accountName,
-    category: data.category || "Inventory",
     status: data.status ? "active" : "inactive",
   };
   const res = id
     ? await apiPut<{ data: any }>(`/api/exim/master/accounts/${toNumericOrCleanId(id)}`, payload)
     : await apiPost<{ data: any }>("/api/exim/master/accounts", payload);
-  if (!res?.data) return null;
+  if (!res?.data) {
+    throw new Error("Account was not returned after saving.");
+  }
   const r = res.data;
   return {
     id: String(r.id),
     no: 1,
     accountCode: r.code || data.accountCode,
     accountName: r.name || data.accountName,
-    category: r.category || data.category || "Inventory",
+    category: r.category || "Inventory",
     status: isTruthyStatus(r.status),
     createdBy: r.created_by_name || r.creator?.name || "-",
     createdAt: formatDisplayDate(r.updated_at || r.created_at),
@@ -1326,6 +1403,7 @@ export async function fetchMasterJobNumbers(): Promise<JobNumberRecord[] | null>
     jobNumber: r.code || r.job_number || "",
     jobName: r.name || r.description || "",
     department: (typeof r.department === "string" ? r.department : r.department?.name) || r.department_name || "-",
+    departmentId: String(r.departments_id ?? r.department?.id ?? ""),
     status: isTruthyStatus(r.status),
     createdBy: r.created_by_name || r.creator?.name || "-",
     createdAt: formatDisplayDate(r.updated_at || r.created_at),
@@ -1333,13 +1411,13 @@ export async function fetchMasterJobNumbers(): Promise<JobNumberRecord[] | null>
 }
 
 export async function saveJobNumberApi(
-  data: { jobNumber: string; jobName?: string; department?: string; status: boolean },
+  data: { jobNumber: string; jobName?: string; department?: string; departmentId?: string; status: boolean },
   id?: string
 ): Promise<JobNumberRecord | null> {
   const payload = {
     code: data.jobNumber,
     name: data.jobName || data.jobNumber,
-    department: data.department || "",
+    departments_id: data.departmentId ? Number(data.departmentId) : null,
     status: data.status ? 1 : 0,
   };
   const res = id
@@ -1353,6 +1431,7 @@ export async function saveJobNumberApi(
     jobNumber: r.code || data.jobNumber,
     jobName: r.name || r.description || data.jobName || "",
     department: (typeof r.department === "string" ? r.department : r.department?.name) || r.department_name || data.department || "-",
+    departmentId: String(r.departments_id ?? r.department?.id ?? data.departmentId ?? ""),
     status: isTruthyStatus(r.status),
     createdBy: r.created_by_name || r.creator?.name || "-",
     createdAt: formatDisplayDate(r.updated_at || r.created_at),

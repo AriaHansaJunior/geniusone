@@ -3,6 +3,7 @@ export interface DepartmentRecord {
   no: number;
   sectionName: string;
   unit: string;
+  unitId?: string;
   status: boolean; // true = active, false = inactive/hidden
 }
 

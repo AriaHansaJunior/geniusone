@@ -1,12 +1,10 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Button } from "../../../../components/ui/Button";
-import { CustomSelect } from "../../../../components/ui/CustomSelect";
 import type { AccountRecord } from "./account-types";
 
 export interface AccountFormData {
   accountCode: string;
   accountName: string;
-  category: string;
   status: boolean;
 }
 
@@ -19,18 +17,6 @@ export interface AccountFormProps {
   onSave: (data: AccountFormData, id?: string) => Promise<void> | void;
   onCancel: () => void;
 }
-
-const DEFAULT_CATEGORIES = [
-  "Current Asset",
-  "Fixed Asset",
-  "Current Liability",
-  "Long Term Liability",
-  "Equity",
-  "Cost of Sales",
-  "Operating Expense",
-  "Other Income/Expense",
-  "Inventory",
-];
 
 export function AccountForm({
   mode,
@@ -49,7 +35,6 @@ export function AccountForm({
 
   const [accountCode, setAccountCode] = useState("");
   const [accountName, setAccountName] = useState("");
-  const [category, setCategory] = useState("");
   const [status, setStatus] = useState(true);
   const [errors, setErrors] = useState<{ accountCode?: string; accountName?: string }>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -59,29 +44,16 @@ export function AccountForm({
     if (mode === "edit" && resolvedRecord) {
       setAccountCode(resolvedRecord.accountCode || "");
       setAccountName(resolvedRecord.accountName || "");
-      setCategory(resolvedRecord.category || "");
       setStatus(resolvedRecord.status ?? true);
     } else if (mode === "create") {
       setAccountCode("");
       setAccountName("");
-      setCategory("");
       setStatus(true);
     }
     setErrors({});
     setSubmitError(null);
     setIsSubmitting(false);
   }, [mode, resolvedRecord]);
-
-  const categoryOptions = useMemo(() => {
-    const list = [...DEFAULT_CATEGORIES];
-    if (category && !list.includes(category)) {
-      list.unshift(category);
-    }
-    return [
-      { value: "", label: "Select Category . . ." },
-      ...list.map((c) => ({ value: c, label: c })),
-    ];
-  }, [category]);
 
   const validate = () => {
     const newErrors: { accountCode?: string; accountName?: string } = {};
@@ -106,7 +78,6 @@ export function AccountForm({
         {
           accountCode: accountCode.trim().toUpperCase(),
           accountName: accountName.trim().toUpperCase(),
-          category: category.trim(),
           status,
         },
         resolvedRecord?.id ?? recordId
@@ -153,7 +124,7 @@ export function AccountForm({
 
         {submitError && <div className="master-form-alert--error">{submitError}</div>}
 
-        <div className="master-form-grid-3">
+        <div className="master-form-grid-2">
           <div className="master-form-group">
             <label htmlFor="accountCode" className="master-form-label">
               Account Code <span className="master-required-star">*</span>
@@ -193,19 +164,6 @@ export function AccountForm({
             {errors.accountName && <span className="master-error-msg">{errors.accountName}</span>}
           </div>
 
-          <div className="master-form-group">
-            <label htmlFor="accountCategory" className="master-form-label">
-              Category / Classification
-            </label>
-            <CustomSelect
-              id="accountCategory"
-              searchable
-              value={category}
-              onChange={(val) => setCategory(val)}
-              placeholder="Select Category . . ."
-              options={categoryOptions}
-            />
-          </div>
         </div>
 
         <div className="master-form-group">

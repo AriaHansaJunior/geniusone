@@ -44,7 +44,6 @@ export function TypeOfRequestIndex({
     const query = search.toLowerCase().trim();
     return localRecords.filter((rec) => {
       return (
-        rec.code.toLowerCase().includes(query) ||
         rec.name.toLowerCase().includes(query) ||
         rec.department.toLowerCase().includes(query) ||
         rec.description.toLowerCase().includes(query) ||
@@ -128,7 +127,6 @@ export function TypeOfRequestIndex({
     try {
       const dataToExport = sortedRecords.map((r, idx) => ({
         No: idx + 1,
-        "Type Code": r.code,
         "Request Type Name": r.name,
         Department: r.department,
         Description: r.description || "-",
@@ -201,16 +199,6 @@ export function TypeOfRequestIndex({
                 <th className="wh-th-no">No</th>
                 <th
                   className="wh-th-sortable"
-                  onClick={() => handleToggleSort("code")}
-                  style={{ width: "130px" }}
-                >
-                  <div className="wh-th-content">
-                    <span>Type Code</span>
-                    {renderSortIndicator("code")}
-                  </div>
-                </th>
-                <th
-                  className="wh-th-sortable"
                   onClick={() => handleToggleSort("name")}
                   style={{ width: "170px" }}
                 >
@@ -249,7 +237,7 @@ export function TypeOfRequestIndex({
             <tbody>
               {paginatedRecords.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="wh-table-empty">
+                  <td colSpan={7} className="wh-table-empty">
                     No request type records found matching filters.
                   </td>
                 </tr>
@@ -261,14 +249,11 @@ export function TypeOfRequestIndex({
                     <tr key={item.id}>
                       <td className="wh-td-no text-center">{sequentialNo}</td>
                       <td>
-                        <span className="code-pill">{item.code}</span>
-                      </td>
-                      <td>
                         <strong>{item.name}</strong>
                       </td>
                       <td>
                         <span style={{ fontSize: "12px", color: "var(--ink-soft)" }}>
-                          {item.department}
+                          {item.department || "-"}
                         </span>
                       </td>
                       <td className="wh-td-desc">{item.description}</td>
@@ -335,7 +320,6 @@ export function TypeOfRequestIndex({
           isOpen={true}
           entityType="request type"
           entityName={recordToDelete.name}
-          entityCode={recordToDelete.code}
           onConfirm={handleConfirmDelete}
           onCancel={() => setRecordToDelete(null)}
         />

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Master\Finance\PaymentTerm;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class PaymentTermApiController extends Controller
 {
@@ -34,9 +35,16 @@ class PaymentTermApiController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'name' => 'required|string|max:500|unique:payment_terms,name',
+            'name' => [
+                'required',
+                'string',
+                'max:500',
+                Rule::unique('payment_terms', 'name')->withoutTrashed(),
+            ],
             'status' => 'nullable|integer',
         ]);
+
+        $validated['status'] = $request->input('status', 1);
 
         $record = PaymentTerm::create($validated);
 
@@ -58,7 +66,13 @@ class PaymentTermApiController extends Controller
         $record = PaymentTerm::findOrFail($id);
 
         $validated = $request->validate([
-            'name' => 'sometimes|required|string|max:500|unique:payment_terms,name,'.$id,
+            'name' => [
+                'sometimes',
+                'required',
+                'string',
+                'max:500',
+                Rule::unique('payment_terms', 'name')->ignore($id)->withoutTrashed(),
+            ],
             'status' => 'nullable|integer',
         ]);
 

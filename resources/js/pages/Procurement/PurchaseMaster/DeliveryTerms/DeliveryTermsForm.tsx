@@ -4,17 +4,18 @@ import { Icon } from "../../../../components/ui/Icon";
 
 interface DeliveryTermsFormProps {
   onBack: () => void;
-  onSave?: (data: { name: string }) => void;
+  onSave?: (data: { name: string }) => void | Promise<any>;
 }
 
 export function DeliveryTermsForm({ onBack, onSave }: DeliveryTermsFormProps) {
   const [name, setName] = useState("");
+  const [saving, setSaving] = useState(false);
   const [notification, setNotification] = useState<{
     type: "info" | "warning";
     message: string;
   } | null>(null);
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!name.trim()) {
@@ -26,13 +27,19 @@ export function DeliveryTermsForm({ onBack, onSave }: DeliveryTermsFormProps) {
     }
 
     if (onSave) {
-      onSave({ name: name.trim() });
+      try {
+        setSaving(true);
+        setNotification(null);
+        await onSave({ name: name.trim() });
+      } catch (err: any) {
+        setNotification({
+          type: "warning",
+          message: err?.message || "Failed to save delivery term to database.",
+        });
+      } finally {
+        setSaving(false);
+      }
     }
-
-    setNotification({
-      type: "info",
-      message: "Delivery term saved successfully and synchronized with database.",
-    });
   };
 
   return (
@@ -93,11 +100,11 @@ export function DeliveryTermsForm({ onBack, onSave }: DeliveryTermsFormProps) {
 
         {/* Action Buttons Footer */}
         <div className="master-form-actions">
-          <Button type="button" variant="ghost" onClick={onBack}>
+          <Button type="button" variant="ghost" onClick={onBack} disabled={saving}>
             Cancel
           </Button>
-          <Button type="submit" variant="primary" icon="check">
-            Save
+          <Button type="submit" variant="primary" disabled={saving}>
+            {saving ? "Saving..." : "Save"}
           </Button>
         </div>
       </form>

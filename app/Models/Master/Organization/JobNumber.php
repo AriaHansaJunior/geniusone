@@ -19,7 +19,7 @@ class JobNumber extends Model
     protected $fillable = [
         'code',
         'name',
-        'department',
+        'departments_id',
         'status',
         'created_by',
         'updated_by',
@@ -33,6 +33,11 @@ class JobNumber extends Model
     public function updatedByUser(): BelongsTo
     {
         return $this->belongsTo(User::class, 'updated_by');
+    }
+
+    public function department(): BelongsTo
+    {
+        return $this->belongsTo(Department::class, 'departments_id');
     }
 
     public function items(): HasMany

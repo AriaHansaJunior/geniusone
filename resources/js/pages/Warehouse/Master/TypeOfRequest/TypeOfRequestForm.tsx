@@ -2,52 +2,45 @@ import React, { useState } from "react";
 import { Button } from "../../../../components/ui/Button";
 import { Icon } from "../../../../components/ui/Icon";
 import { CustomSelect } from "../../../../components/ui/CustomSelect";
+import type { DepartmentRecord } from "../../../Exim/Master/Department/department-types";
 import type { TypeOfRequestRecord } from "./type-of-request-types";
 
 interface TypeOfRequestFormProps {
   initialRecord?: TypeOfRequestRecord | null;
+  departments: DepartmentRecord[];
+  isDepartmentsLoading?: boolean;
   onBack: () => void;
   onSave: (record: TypeOfRequestRecord, isEdit: boolean) => void;
 }
 
-const departmentOptions = [
-  "ALL",
-  "PRODUKSI",
-  "MAINTENANCE",
-  "EXIM",
-  "PPIC",
-  "LOGISTIK",
-  "QUALITY CONTROL",
-];
-
 export function TypeOfRequestForm({
   initialRecord,
+  departments,
+  isDepartmentsLoading = false,
   onBack,
   onSave,
 }: TypeOfRequestFormProps) {
   const isEdit = !!initialRecord;
 
-  const [code, setCode] = useState(initialRecord?.code || "");
   const [name, setName] = useState(initialRecord?.name || "");
-  const [department, setDepartment] = useState(initialRecord?.department || "PRODUKSI");
+  const [departmentId, setDepartmentId] = useState(initialRecord?.departmentId || "");
   const [description, setDescription] = useState(initialRecord?.description || "");
   const [requiresJobNumber, setRequiresJobNumber] = useState(initialRecord ? initialRecord.requiresJobNumber : true);
-  const [requiresApproval2, setRequiresApproval2] = useState(initialRecord ? initialRecord.requiresApproval2 : true);
   const [status, setStatus] = useState<"Active" | "Inactive">(initialRecord?.status || "Active");
   const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    const trimmedCode = code.trim();
     const trimmedName = name.trim();
 
-    if (!trimmedCode) {
-      setError("Request Type Code is required.");
-      return;
-    }
     if (!trimmedName) {
       setError("Request Type Name is required.");
+      return;
+    }
+    const selectedDepartment = departments.find((department) => department.id === departmentId);
+    if (!selectedDepartment) {
+      setError("Please select a valid Department.");
       return;
     }
 
@@ -56,12 +49,11 @@ export function TypeOfRequestForm({
     const record: TypeOfRequestRecord = {
       id: initialRecord ? initialRecord.id : `trq-${Date.now()}`,
       no: initialRecord ? initialRecord.no : 1,
-      code: trimmedCode.toUpperCase(),
       name: trimmedName,
-      department,
+      departmentId: selectedDepartment.id,
+      department: selectedDepartment.sectionName,
       description: description.trim(),
       requiresJobNumber,
-      requiresApproval2,
       status,
       createdAt: initialRecord?.createdAt || new Date().toISOString().replace("T", " ").substring(0, 19),
       createdBy: initialRecord?.createdBy || "ADMINISTRATOR",
@@ -90,21 +82,8 @@ export function TypeOfRequestForm({
           </div>
         )}
 
-        <div className="master-form-grid-3">
+        <div className="master-form-grid-2">
           <div className="master-form-group">
-            <label className="master-form-label">
-              Type Code <span className="required-mark">*</span>
-            </label>
-            <input
-              type="text"
-              className="master-form-input"
-              placeholder="e.g. REQ-TYP-08"
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-              autoFocus
-            />
-          </div>
-          <div className="master-form-group master-form-col-span-2">
             <label className="master-form-label">
               Type Name <span className="required-mark">*</span>
             </label>
@@ -114,21 +93,34 @@ export function TypeOfRequestForm({
               placeholder="e.g. Quality Inspection Batch"
               value={name}
               onChange={(e) => setName(e.target.value)}
+              autoFocus
+            />
+          </div>
+          <div className="master-form-group">
+            <label className="master-form-label">
+              Department <span className="required-mark">*</span>
+            </label>
+            <CustomSelect
+              searchable
+              value={departmentId}
+              onChange={setDepartmentId}
+              options={[
+                {
+                  value: "",
+                  label: isDepartmentsLoading
+                    ? "Loading departments..."
+                    : departments.length > 0 ? "-- Select Department --" : "No departments available",
+                },
+                ...departments.map((department) => ({
+                  value: department.id,
+                  label: department.sectionName,
+                })),
+              ]}
             />
           </div>
         </div>
 
-        <div className="master-form-grid-4">
-          <div className="master-form-group">
-            <label className="master-form-label">Department / Scope</label>
-            <CustomSelect
-              searchable
-              value={department}
-              onChange={(val) => setDepartment(val)}
-              options={departmentOptions.map((dept) => ({ value: dept, label: dept }))}
-            />
-          </div>
-
+        <div className="master-form-grid-2">
           <div className="master-form-group">
             <label className="master-form-label">Requires Job Number</label>
             <CustomSelect
@@ -137,18 +129,6 @@ export function TypeOfRequestForm({
               options={[
                 { value: "true", label: "Yes (Mandatory Job Number)" },
                 { value: "false", label: "No (General Stock)" },
-              ]}
-            />
-          </div>
-
-          <div className="master-form-group">
-            <label className="master-form-label">Requires 2nd Level Approval</label>
-            <CustomSelect
-              value={requiresApproval2 ? "true" : "false"}
-              onChange={(val) => setRequiresApproval2(val === "true")}
-              options={[
-                { value: "true", label: "Yes (Dept Head + Warehouse Manager)" },
-                { value: "false", label: "No (Single Approval)" },
               ]}
             />
           </div>

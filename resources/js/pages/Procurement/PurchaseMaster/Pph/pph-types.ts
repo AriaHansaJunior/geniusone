@@ -4,5 +4,6 @@ export interface PphRecord {
   rate: number;
   deduction: string;
   type?: string;
+  typeId?: number | string;
   hidden?: boolean;
 }

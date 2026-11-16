@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Master\Finance\RafaksiType;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class RafaksiTypeApiController extends Controller
 {
@@ -40,12 +41,13 @@ class RafaksiTypeApiController extends Controller
         $actorId = $this->requireActorId($request);
 
         $validated = $request->validate([
-            'code' => 'nullable|string|max:45|unique:rafaksi_types,code',
-            'name' => 'required|string|max:45|unique:rafaksi_types,name',
+            'code' => ['nullable', 'string', 'max:45', Rule::unique('rafaksi_types', 'code')->withoutTrashed()],
+            'name' => ['required', 'string', 'max:45', Rule::unique('rafaksi_types', 'name')->withoutTrashed()],
             'description' => 'nullable|string|max:255',
             'status' => 'nullable|integer',
         ]);
 
+        $validated['status'] = $request->input('status', 1);
         $validated['created_by'] = $actorId;
         $validated['updated_by'] = $actorId;
 
@@ -70,8 +72,8 @@ class RafaksiTypeApiController extends Controller
         $record = RafaksiType::findOrFail($id);
 
         $validated = $request->validate([
-            'code' => 'nullable|string|max:45|unique:rafaksi_types,code,'.$id,
-            'name' => 'sometimes|required|string|max:45|unique:rafaksi_types,name,'.$id,
+            'code' => ['nullable', 'string', 'max:45', Rule::unique('rafaksi_types', 'code')->ignore($id)->withoutTrashed()],
+            'name' => ['sometimes', 'required', 'string', 'max:45', Rule::unique('rafaksi_types', 'name')->ignore($id)->withoutTrashed()],
             'description' => 'nullable|string|max:255',
             'status' => 'nullable|integer',
         ]);

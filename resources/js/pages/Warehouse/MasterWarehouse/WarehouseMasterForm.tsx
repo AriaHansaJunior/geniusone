@@ -2,23 +2,26 @@ import React, { useState } from "react";
 import { Button } from "../../../components/ui/Button";
 import { Icon } from "../../../components/ui/Icon";
 import { CustomSelect } from "../../../components/ui/CustomSelect";
-import { warehouseTypesList } from "./warehouse-master-data";
 import type {
   WarehouseMasterRecord,
-  WarehouseType,
+  WarehouseTypeOption,
 } from "./warehouse-master-types";
 
 interface WarehouseMasterFormProps {
+  warehouseTypes: WarehouseTypeOption[];
+  isWarehouseTypesLoading?: boolean;
   onBack: () => void;
   onSave?: (newRecord: WarehouseMasterRecord) => void;
 }
 
 export function WarehouseMasterForm({
+  warehouseTypes,
+  isWarehouseTypesLoading = false,
   onBack,
   onSave,
 }: WarehouseMasterFormProps) {
   const [name, setName] = useState("");
-  const [type, setType] = useState<WarehouseType | "">("");
+  const [warehouseTypeId, setWarehouseTypeId] = useState("");
   const [description, setDescription] = useState("");
 
   const [errors, setErrors] = useState<{
@@ -40,7 +43,8 @@ export function WarehouseMasterForm({
       newErrors.name = "Warehouse Name is required.";
     }
 
-    if (!type) {
+    const selectedType = warehouseTypes.find((warehouseType) => warehouseType.id === warehouseTypeId);
+    if (!selectedType) {
       newErrors.type = "Please choose a Warehouse Type.";
     }
 
@@ -52,6 +56,7 @@ export function WarehouseMasterForm({
       });
       return;
     }
+    if (!selectedType) return;
 
     setErrors({});
     setNotification(null);
@@ -60,7 +65,8 @@ export function WarehouseMasterForm({
       id: `wh-${Date.now()}`,
       no: 1,
       name: name.trim(),
-      type: type as WarehouseType,
+      type: selectedType.name,
+      warehouseTypeId: selectedType.id,
       description: description.trim(),
       status: true,
       coordinates: [],
@@ -144,21 +150,25 @@ export function WarehouseMasterForm({
               <CustomSelect
                 id="wh-type"
                 searchable
-                value={type}
+                value={warehouseTypeId}
                 onChange={(val) => {
-                  setType(val as WarehouseType);
+                  setWarehouseTypeId(val);
                   if (errors.type) {
                     setErrors((prev) => ({ ...prev, type: undefined }));
                   }
                 }}
-                placeholder="Choose Warehouse Type"
-                options={[
-                  { value: "", label: "Choose Warehouse Type" },
-                  ...warehouseTypesList.map((wt) => ({ value: wt, label: wt })),
-                ]}
+                disabled={isWarehouseTypesLoading || warehouseTypes.length === 0}
+                placeholder={isWarehouseTypesLoading ? "Loading Warehouse Types..." : "Choose Warehouse Type"}
+                options={warehouseTypes.map((warehouseType) => ({
+                  value: warehouseType.id,
+                  label: warehouseType.name,
+                }))}
               />
               {errors.type && (
                 <span className="wh-form-error">{errors.type}</span>
+              )}
+              {!isWarehouseTypesLoading && warehouseTypes.length === 0 && (
+                <span className="wh-form-error">No warehouse types are available.</span>
               )}
             </div>
           </div>

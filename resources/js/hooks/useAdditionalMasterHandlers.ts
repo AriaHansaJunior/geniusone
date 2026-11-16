@@ -138,9 +138,6 @@ export function useAdditionalMasterHandlers({
   const handleSaveAccount = useCallback(
     async (data: AccountFormData, id?: string) => {
       const saved = await saveAccountApi(data, id);
-      if (!saved) {
-        throw new Error("Failed to save account record to database.");
-      }
       if (id) {
         setAccountRecords((prev) => prev.map((a) => (a.id === saved.id ? saved : a)));
       } else {
@@ -320,9 +317,6 @@ export function useAdditionalMasterHandlers({
       const saved = await saveCurrencyApi(
         {
           currencyCode: data.currencyCode,
-          currencyName: data.currencyName,
-          symbol: data.symbol,
-          syncStatus: data.syncStatus,
         },
         id
       );

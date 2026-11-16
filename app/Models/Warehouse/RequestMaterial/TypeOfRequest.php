@@ -3,6 +3,7 @@
 namespace App\Models\Warehouse\RequestMaterial;
 
 use App\Models\System\Auth\User;
+use App\Models\Master\Organization\Department;
 use App\Traits\LogsActivity;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -17,12 +18,10 @@ class TypeOfRequest extends Model
     protected $table = 'type_of_request';
 
     protected $fillable = [
-        'code',
         'name',
-        'department',
+        'departments_id',
         'description',
         'requires_job_number',
-        'requires_approval_2',
         'status',
         'created_by',
         'updated_by',
@@ -30,7 +29,6 @@ class TypeOfRequest extends Model
 
     protected $casts = [
         'requires_job_number' => 'boolean',
-        'requires_approval_2' => 'boolean',
         'status' => 'integer',
     ];
 
@@ -42,6 +40,11 @@ class TypeOfRequest extends Model
     public function updatedByUser(): BelongsTo
     {
         return $this->belongsTo(User::class, 'updated_by');
+    }
+
+    public function department(): BelongsTo
+    {
+        return $this->belongsTo(Department::class, 'departments_id');
     }
 
     public function materialRequests(): HasMany

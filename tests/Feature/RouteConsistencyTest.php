@@ -8,6 +8,7 @@ use App\Models\Master\Material\Classification;
 use App\Models\Master\Material\Item;
 use App\Models\Master\Material\ItemType;
 use App\Models\Master\Material\UnitOfMeasurement;
+use App\Models\Master\Organization\Department;
 use App\Models\Master\Organization\ReportingType;
 use App\Models\System\Auth\User;
 use App\Models\Warehouse\Facility\Warehouse;
@@ -269,17 +270,25 @@ class RouteConsistencyTest extends TestCase
             ->assertStatus(200);
 
         // 4. Job Number CRUD (including frontend-aligned field mapping)
+        $maintenanceDepartment = Department::query()->create([
+            'name' => 'MAINTENANCE',
+            'status' => 1,
+        ]);
+        $technicalDepartment = Department::query()->create([
+            'name' => 'TEKNIK',
+            'status' => 1,
+        ]);
         $jobRes = $this->actingAs($user, 'web')->postJson('/api/procurement/master/job-numbers', [
             'code' => 'JOB-2026-001',
             'name' => 'Furnace Overhaul',
-            'department' => 'MAINTENANCE',
+            'departments_id' => $maintenanceDepartment->id,
             'status' => 1,
         ])->assertStatus(201);
         $jobId = $jobRes->json('data.id');
         $this->actingAs($user, 'web')->putJson("/api/procurement/master/job-numbers/{$jobId}", [
             'code' => 'JOB-2026-001',
             'description' => 'Furnace Overhaul Phase 2',
-            'department_name' => 'TEKNIK',
+            'departments_id' => $technicalDepartment->id,
             'status' => 0,
         ])->assertStatus(200);
         $this->actingAs($user, 'web')->patchJson("/api/procurement/master/job-numbers/{$jobId}/toggle-status")

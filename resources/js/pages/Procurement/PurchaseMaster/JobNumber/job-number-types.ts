@@ -4,6 +4,7 @@ export interface JobNumberRecord {
   jobNumber: string;
   jobName: string;
   department: string;
+  departmentId?: string;
   status: boolean;
   createdAt: string;
   createdBy: string;
