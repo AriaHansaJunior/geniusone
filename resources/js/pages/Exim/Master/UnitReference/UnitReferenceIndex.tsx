@@ -4,7 +4,6 @@ import { SearchField } from "../../../../components/ui/SearchField";
 import { Pagination } from "../../../../components/ui/Pagination";
 import { Icon } from "../../../../components/ui/Icon";
 import { StatusToggle } from "../../../../components/ui/StatusToggle";
-import { ConfirmDialog } from "../../../../components/ui/ConfirmDialog";
 import { useNotification } from "../../../../context/NotificationContext";
 import { initialUnitReferenceRecords } from "./unit-reference-data";
 import type {
@@ -16,16 +15,12 @@ import type {
 interface UnitReferenceIndexProps {
   records?: UnitReferenceRecord[];
   onAddNew?: () => void;
-  onEdit?: (record: UnitReferenceRecord) => void;
-  onDelete?: (id: string) => Promise<void> | void;
   onToggleStatus?: (id: string) => Promise<void> | void;
 }
 
 export function UnitReferenceIndex({
   records = initialUnitReferenceRecords,
   onAddNew,
-  onEdit,
-  onDelete,
   onToggleStatus,
 }: UnitReferenceIndexProps) {
   const { notifySuccess, notifyError, notifyWarning } = useNotification();
@@ -35,8 +30,6 @@ export function UnitReferenceIndex({
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [sortField, setSortField] = useState<UnitReferenceSortField | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>("none");
-  const [recordToEdit, setRecordToEdit] = useState<UnitReferenceRecord | null>(null);
-  const [recordToDelete, setRecordToDelete] = useState<UnitReferenceRecord | null>(null);
 
   const filteredRecords = useMemo(() => {
     if (!search.trim()) return records;
@@ -113,15 +106,6 @@ export function UnitReferenceIndex({
         )}
       </span>
     );
-  };
-
-  const handleConfirmDelete = async () => {
-    if (!recordToDelete) return;
-    const target = recordToDelete;
-    setRecordToDelete(null);
-    if (onDelete) {
-      await onDelete(target.id);
-    }
   };
 
   const handleExportToExcel = () => {
@@ -231,9 +215,6 @@ export function UnitReferenceIndex({
                     <span>Status</span>
                     {renderSortIndicator("status")}
                   </th>
-                  <th className="master-col-actions">
-                    <span>Option</span>
-                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -253,38 +234,12 @@ export function UnitReferenceIndex({
                             ariaLabel={`Toggle status for ${item.name || item.code}`}
                           />
                         </td>
-                        <td className="master-cell-center">
-                          <div className="master-actions-group">
-                            {onEdit && (
-                              <button
-                                type="button"
-                                className="btn-action-edit"
-                                title={`Edit ${item.name || item.code}`}
-                                aria-label={`Edit ${item.name || item.code}`}
-                                onClick={() => setRecordToEdit(item)}
-                              >
-                                <Icon name="edit" size={13} />
-                              </button>
-                            )}
-                            {onDelete && (
-                              <button
-                                type="button"
-                                className="btn-action-delete"
-                                title={`Delete ${item.name || item.code}`}
-                                aria-label={`Delete ${item.name || item.code}`}
-                                onClick={() => setRecordToDelete(item)}
-                              >
-                                <Icon name="trash" size={13} />
-                              </button>
-                            )}
-                          </div>
-                        </td>
                       </tr>
                     );
                   })
                 ) : (
                   <tr>
-                    <td colSpan={6} className="empty-table-cell">
+                    <td colSpan={5} className="empty-table-cell">
                       <div className="empty master-empty-box">
                         <div className="empty__icon master-empty-icon">
                           <Icon name="search" size={24} />
@@ -314,31 +269,6 @@ export function UnitReferenceIndex({
           />
         </div>
       </div>
-
-      <ConfirmDialog
-        isOpen={!!recordToEdit}
-        title="Edit Record"
-        message={`Do you want to edit unit reference "${recordToEdit?.name || recordToEdit?.code}"?`}
-        confirmLabel="Continue"
-        cancelLabel="Cancel"
-        confirmVariant="primary"
-        icon="edit"
-        onConfirm={() => {
-          if (recordToEdit && onEdit) {
-            onEdit(recordToEdit);
-          }
-          setRecordToEdit(null);
-        }}
-        onCancel={() => setRecordToEdit(null)}
-      />
-
-      <ConfirmDialog
-        isOpen={!!recordToDelete}
-        entityType="unit reference"
-        entityName={recordToDelete?.name || recordToDelete?.code}
-        onConfirm={handleConfirmDelete}
-        onCancel={() => setRecordToDelete(null)}
-      />
     </div>
   );
 }

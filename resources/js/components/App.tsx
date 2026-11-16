@@ -182,6 +182,12 @@ const REFERENCE_FETCHER_MAP: Record<
   "warehouse-type": fetchWarehouseTypesListApi,
 };
 
+function flipOptimisticStatusValue(current: unknown): boolean | "Active" | "Inactive" {
+  if (current === "Active") return "Inactive";
+  if (current === "Inactive") return "Active";
+  return !Boolean(current);
+}
+
 async function runOptimisticStatusToggle<T extends { id: string }>(
   id: string,
   field: "hidden" | "status",
@@ -194,7 +200,7 @@ async function runOptimisticStatusToggle<T extends { id: string }>(
   setRecords((prev) =>
     prev.map((row) =>
       row.id === id
-        ? { ...row, [field]: !Boolean((row as Record<string, unknown>)[field]) }
+        ? { ...row, [field]: flipOptimisticStatusValue((row as Record<string, unknown>)[field]) }
         : row
     )
   );
@@ -208,7 +214,7 @@ async function runOptimisticStatusToggle<T extends { id: string }>(
     setRecords((prev) =>
       prev.map((row) =>
         row.id === id
-          ? { ...row, [field]: !Boolean((row as Record<string, unknown>)[field]) }
+          ? { ...row, [field]: flipOptimisticStatusValue((row as Record<string, unknown>)[field]) }
           : row
       )
     );

@@ -795,8 +795,6 @@ export function AppViewRenderer({
         <UnitIndex
           records={unitRecords}
           onAddNew={() => handleNavigateCreate("unit")}
-          onEdit={handleNavigateUnitEdit}
-          onDelete={handleDeleteUnit}
           onToggleStatus={handleToggleUnitStatus}
         />
       )}
@@ -806,8 +804,6 @@ export function AppViewRenderer({
         <UnitReferenceIndex
           records={unitReferenceRecords}
           onAddNew={handleNavigateUnitReferenceCreate}
-          onEdit={handleNavigateUnitReferenceEdit}
-          onDelete={handleDeleteUnitReference}
           onToggleStatus={handleToggleUnitReferenceStatus}
         />
       )}
@@ -817,8 +813,6 @@ export function AppViewRenderer({
         <ClassificationIndex
           records={classificationRecords}
           onAddNew={() => handleNavigateCreate("classification")}
-          onEdit={handleNavigateClassificationEdit}
-          onDelete={handleDeleteClassification}
           onToggleStatus={handleToggleClassificationStatus}
         />
       )}
@@ -828,8 +822,6 @@ export function AppViewRenderer({
         <DepartmentIndex
           records={departmentRecords}
           onAddNew={() => handleNavigateCreate("department")}
-          onEdit={handleNavigateDepartmentEdit}
-          onDelete={handleDeleteDepartment}
           onToggleStatus={handleToggleDepartmentStatus}
         />
       )}
@@ -839,8 +831,6 @@ export function AppViewRenderer({
         <BrandIndex
           records={brandRecords}
           onAddNew={() => handleNavigateCreate("brand")}
-          onEdit={handleNavigateBrandEdit}
-          onDelete={handleDeleteBrand}
           onToggleStatus={handleToggleBrandStatus}
         />
       )}
@@ -850,8 +840,6 @@ export function AppViewRenderer({
         <FacilityIndex
           records={facilityRecords}
           onAddNew={() => handleNavigateCreate("facility")}
-          onEdit={handleNavigateFacilityEdit}
-          onDelete={handleDeleteFacility}
           onToggleStatus={handleToggleFacilityStatus}
         />
       )}
@@ -861,8 +849,6 @@ export function AppViewRenderer({
         <HsIndex
           records={hsRecords}
           onAddNew={() => handleNavigateCreate("hs")}
-          onEdit={handleNavigateHsEdit}
-          onDelete={handleDeleteHs}
         />
       )}
 
@@ -871,8 +857,6 @@ export function AppViewRenderer({
         <CategoryIndex
           records={categoryRecords}
           onAddNew={() => handleNavigateCreate("category")}
-          onEdit={handleNavigateCategoryEdit}
-          onDelete={handleDeleteCategory}
           onToggleStatus={handleToggleCategoryStatus}
         />
       )}
@@ -883,8 +867,6 @@ export function AppViewRenderer({
           records={styleRecords}
           onAddNew={() => handleNavigateCreate("style")}
           onImportExcel={handleNavigateStyleImport}
-          onEdit={handleNavigateStyleEdit}
-          onDelete={handleDeleteStyle}
           onToggleStatus={handleToggleStyleStatus}
         />
       )}
@@ -894,8 +876,6 @@ export function AppViewRenderer({
         <ColorIndex
           records={colorRecords}
           onAddNew={() => handleNavigateCreate("colour")}
-          onEdit={handleNavigateColorEdit}
-          onDelete={handleDeleteColor}
           onToggleStatus={handleToggleColorStatus}
         />
       )}
@@ -906,8 +886,6 @@ export function AppViewRenderer({
           records={itemRecords}
           onAddNew={() => handleNavigateCreate("item")}
           onGenerateQr={handleNavigateGenerateQr}
-          onEdit={handleNavigateItemEdit}
-          onDelete={handleDeleteItem}
           onToggleStatus={handleToggleItemStatus}
         />
       )}
@@ -955,8 +933,6 @@ export function AppViewRenderer({
         <CountryIndex
           records={countryRecords}
           onAddNew={handleNavigateCountryCreate}
-          onEdit={handleNavigateCountryEdit}
-          onDelete={handleDeleteCountry}
           onToggleStatus={handleToggleCountryStatus}
         />
       )}
@@ -966,8 +942,6 @@ export function AppViewRenderer({
         <AccountIndex
           records={accountRecords}
           onAddNew={handleNavigateAccountCreate}
-          onEdit={handleNavigateAccountEdit}
-          onDelete={handleDeleteAccount}
           onToggleStatus={handleToggleAccountStatus}
         />
       )}
@@ -999,8 +973,6 @@ export function AppViewRenderer({
         <CurrencyIndex
           records={currencyRecords}
           onAddNew={handleNavigateCurrencyCreate}
-          onEdit={handleNavigateCurrencyEdit}
-          onDelete={handleDeleteCurrency}
           onToggleStatus={handleToggleCurrencyStatus}
         />
       )}

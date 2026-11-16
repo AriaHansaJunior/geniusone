@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Button } from "../../../../components/ui/Button";
 import { SearchField } from "../../../../components/ui/SearchField";
 import { Icon } from "../../../../components/ui/Icon";
-import { ConfirmDialog } from "../../../../components/ui/ConfirmDialog";
 import { Pagination } from "../../../../components/ui/Pagination";
 import { StatusToggle } from "../../../../components/ui/StatusToggle";
 import { initialStyleRecords } from "./style-data";
@@ -16,8 +15,6 @@ interface StyleIndexProps {
   records?: StyleRecord[];
   onAddNew: () => void;
   onImportExcel: () => void;
-  onEdit?: (record: StyleRecord) => void;
-  onDelete?: (id: string) => void;
   onToggleStatus?: (id: string) => void;
 }
 
@@ -25,8 +22,6 @@ export function StyleIndex({
   records = initialStyleRecords,
   onAddNew,
   onImportExcel,
-  onEdit,
-  onDelete,
   onToggleStatus,
 }: StyleIndexProps) {
   const [localRecords, setLocalRecords] = useState<StyleRecord[]>(records);
@@ -35,8 +30,6 @@ export function StyleIndex({
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [sortField, setSortField] = useState<StyleSortField>("code");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
-  const [styleToDelete, setStyleToDelete] = useState<StyleRecord | null>(null);
-  const [styleToEdit, setStyleToEdit] = useState<StyleRecord | null>(null);
   const [exportNotice, setExportNotice] = useState<string | null>(null);
 
   useEffect(() => {
@@ -141,17 +134,6 @@ export function StyleIndex({
     if (onToggleStatus) {
       onToggleStatus(id);
     }
-  };
-
-  // Row delete confirmation
-  const handleConfirmDelete = () => {
-    if (!styleToDelete) return;
-    const idToDelete = styleToDelete.id;
-    setLocalRecords((prev) => prev.filter((item) => item.id !== idToDelete));
-    if (onDelete) {
-      onDelete(idToDelete);
-    }
-    setStyleToDelete(null);
   };
 
   // Export to Excel-compatible CSV with UTF-8 BOM
@@ -310,11 +292,6 @@ export function StyleIndex({
                     <span>Status</span>
                     {renderSortIndicator("status")}
                   </th>
-
-                  {/* 6. Option */}
-                  <th className="master-col-actions-wide">
-                    <span>Option</span>
-                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -348,36 +325,12 @@ export function StyleIndex({
                             ariaLabel={`Toggle status for ${item.name}`}
                           />
                         </td>
-
-                        {/* 6. Option Column */}
-                        <td className="master-cell-center">
-                          <div className="style-row-actions">
-                            {onEdit && (
-                              <button
-                                type="button"
-                                className="style-action-btn style-action-btn--edit"
-                                title={`Edit ${item.name}`}
-                                onClick={() => setStyleToEdit(item)}
-                              >
-                                <Icon name="edit" size={13} />
-                              </button>
-                            )}
-                            <button
-                              type="button"
-                              className="style-action-btn style-action-btn--delete"
-                              title={`Delete ${item.name}`}
-                              onClick={() => setStyleToDelete(item)}
-                            >
-                              <Icon name="trash" size={13} />
-                            </button>
-                          </div>
-                        </td>
                       </tr>
                     );
                   })
                 ) : (
                   <tr>
-                    <td colSpan={6} className="empty-table-cell">
+                    <td colSpan={5} className="empty-table-cell">
                       <div className="empty">
                         <div className="empty__icon">
                           <Icon name="search" />
@@ -406,34 +359,6 @@ export function StyleIndex({
           />
         </div>
       </div>
-
-      {/* Edit Confirmation Dialog */}
-      <ConfirmDialog
-        isOpen={!!styleToEdit}
-        title="Edit Record"
-        message={`Do you want to edit specification/model "${styleToEdit?.name}"?`}
-        confirmLabel="Continue"
-        cancelLabel="Cancel"
-        confirmVariant="primary"
-        icon="edit"
-        onConfirm={() => {
-          if (styleToEdit && onEdit) {
-            onEdit(styleToEdit);
-          }
-          setStyleToEdit(null);
-        }}
-        onCancel={() => setStyleToEdit(null)}
-      />
-
-      {/* Delete Confirmation Dialog */}
-      <ConfirmDialog
-        isOpen={!!styleToDelete}
-        entityType="specification/model"
-        entityName={styleToDelete?.name}
-        entityCode={styleToDelete?.code}
-        onConfirm={handleConfirmDelete}
-        onCancel={() => setStyleToDelete(null)}
-      />
     </div>
   );
 }

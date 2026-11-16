@@ -4,15 +4,12 @@ import { SearchField } from "../../../../components/ui/SearchField";
 import { Pagination } from "../../../../components/ui/Pagination";
 import { Icon } from "../../../../components/ui/Icon";
 import { StatusToggle } from "../../../../components/ui/StatusToggle";
-import { ConfirmDialog } from "../../../../components/ui/ConfirmDialog";
 import { initialUnitRecords } from "./unit-data";
 import type { UnitRecord } from "./unit-types";
 
 interface UnitIndexProps {
   records?: UnitRecord[];
   onAddNew: () => void;
-  onEdit?: (record: UnitRecord) => void;
-  onDelete?: (id: string) => void;
   onToggleStatus?: (id: string) => void;
 }
 
@@ -21,8 +18,6 @@ type SortDirection = "none" | "asc" | "desc";
 export function UnitIndex({
   records = initialUnitRecords,
   onAddNew,
-  onEdit,
-  onDelete,
   onToggleStatus,
 }: UnitIndexProps) {
   const [localRecords, setLocalRecords] = useState<UnitRecord[]>(records);
@@ -30,8 +25,6 @@ export function UnitIndex({
   const [pageSize, setPageSize] = useState<number>(25);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [sortDirection, setSortDirection] = useState<SortDirection>("none");
-  const [unitToDelete, setUnitToDelete] = useState<UnitRecord | null>(null);
-  const [unitToEdit, setUnitToEdit] = useState<UnitRecord | null>(null);
 
   useEffect(() => {
     setLocalRecords(records);
@@ -75,15 +68,6 @@ export function UnitIndex({
       if (prev === "asc") return "desc";
       return "none";
     });
-  };
-
-  const handleConfirmDelete = () => {
-    if (!unitToDelete) return;
-    const idToDelete = unitToDelete.id;
-    setUnitToDelete(null);
-    if (onDelete) {
-      onDelete(idToDelete);
-    }
   };
 
   return (
@@ -136,9 +120,6 @@ export function UnitIndex({
                   <th className="master-col-status">
                     <span>Status</span>
                   </th>
-                  <th className="master-col-actions">
-                    <span>Option</span>
-                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -156,38 +137,12 @@ export function UnitIndex({
                             ariaLabel={`Toggle status for ${item.name}`}
                           />
                         </td>
-                        <td className="master-cell-center">
-                          <div className="master-actions-group">
-                            {onEdit && (
-                              <button
-                                type="button"
-                                className="btn-action-edit"
-                                title={`Edit ${item.name}`}
-                                aria-label={`Edit ${item.name}`}
-                                onClick={() => setUnitToEdit(item)}
-                              >
-                                <Icon name="edit" size={13} />
-                              </button>
-                            )}
-                            {onDelete && (
-                              <button
-                                type="button"
-                                className="btn-action-delete"
-                                title={`Delete ${item.name}`}
-                                aria-label={`Delete ${item.name}`}
-                                onClick={() => setUnitToDelete(item)}
-                              >
-                                <Icon name="trash" size={13} />
-                              </button>
-                            )}
-                          </div>
-                        </td>
                       </tr>
                     );
                   })
                 ) : (
                   <tr>
-                    <td colSpan={4} className="empty-table-cell">
+                    <td colSpan={3} className="empty-table-cell">
                       <div className="empty master-empty-box">
                         <div className="empty__icon master-empty-icon">
                           <Icon name="search" size={24} />
@@ -217,31 +172,6 @@ export function UnitIndex({
           />
         </div>
       </div>
-
-      <ConfirmDialog
-        isOpen={!!unitToEdit}
-        title="Edit Record"
-        message={`Do you want to edit unit "${unitToEdit?.name}"?`}
-        confirmLabel="Continue"
-        cancelLabel="Cancel"
-        confirmVariant="primary"
-        icon="edit"
-        onConfirm={() => {
-          if (unitToEdit && onEdit) {
-            onEdit(unitToEdit);
-          }
-          setUnitToEdit(null);
-        }}
-        onCancel={() => setUnitToEdit(null)}
-      />
-
-      <ConfirmDialog
-        isOpen={!!unitToDelete}
-        entityType="unit"
-        entityName={unitToDelete?.name}
-        onConfirm={handleConfirmDelete}
-        onCancel={() => setUnitToDelete(null)}
-      />
     </div>
   );
 }

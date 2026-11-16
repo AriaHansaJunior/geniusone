@@ -12,6 +12,7 @@ export interface HsRecord {
   ratesPpn: number; // percentage
   ratesPph: number; // percentage
   ratesPpnbm: number; // percentage
+  status?: boolean;
 }
 
 export type HsSortField =
@@ -23,6 +24,7 @@ export type HsSortField =
   | "ratesCukai"
   | "ratesPpn"
   | "ratesPph"
-  | "ratesPpnbm";
+  | "ratesPpnbm"
+  | "status";
 
 export type SortDirection = "none" | "asc" | "desc";

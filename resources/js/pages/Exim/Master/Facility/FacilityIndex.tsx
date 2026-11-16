@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Button } from "../../../../components/ui/Button";
 import { SearchField } from "../../../../components/ui/SearchField";
 import { Icon } from "../../../../components/ui/Icon";
-import { ConfirmDialog } from "../../../../components/ui/ConfirmDialog";
 import { Pagination } from "../../../../components/ui/Pagination";
 import { StatusToggle } from "../../../../components/ui/StatusToggle";
 import { initialFacilityRecords } from "./facility-data";
@@ -15,16 +14,12 @@ import type {
 interface FacilityIndexProps {
   records?: FacilityRecord[];
   onAddNew: () => void;
-  onEdit?: (record: FacilityRecord) => void;
-  onDelete?: (id: string) => void;
   onToggleStatus?: (id: string) => void;
 }
 
 export function FacilityIndex({
   records = initialFacilityRecords,
   onAddNew,
-  onEdit,
-  onDelete,
   onToggleStatus,
 }: FacilityIndexProps) {
   const [localRecords, setLocalRecords] = useState<FacilityRecord[]>(records);
@@ -33,10 +28,6 @@ export function FacilityIndex({
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [sortField, setSortField] = useState<FacilitySortField>("name");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
-  const [facilityToDelete, setFacilityToDelete] =
-    useState<FacilityRecord | null>(null);
-  const [facilityToEdit, setFacilityToEdit] =
-    useState<FacilityRecord | null>(null);
   const [exportNotice, setExportNotice] = useState<string | null>(null);
 
   useEffect(() => {
@@ -113,17 +104,6 @@ export function FacilityIndex({
     if (onToggleStatus) {
       onToggleStatus(id);
     }
-  };
-
-  // Delete confirmed
-  const handleConfirmDelete = () => {
-    if (!facilityToDelete) return;
-    const idToDelete = facilityToDelete.id;
-    setLocalRecords((prev) => prev.filter((f) => f.id !== idToDelete));
-    if (onDelete) {
-      onDelete(idToDelete);
-    }
-    setFacilityToDelete(null);
   };
 
   // Export to Excel-compatible CSV with UTF-8 BOM
@@ -280,9 +260,6 @@ export function FacilityIndex({
                     <span>Status</span>
                     {renderSortIndicator("status")}
                   </th>
-                  <th className="master-col-actions-wide">
-                    <span>Option</span>
-                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -315,36 +292,12 @@ export function FacilityIndex({
                             ariaLabel={`Toggle status for ${item.name}`}
                           />
                         </td>
-
-                        {/* 5. Option Row Actions */}
-                        <td className="master-cell-center">
-                          <div className="facility-row-actions">
-                            {onEdit && (
-                              <button
-                                type="button"
-                                className="facility-action-btn facility-action-btn--edit"
-                                title={`Edit ${item.name}`}
-                                onClick={() => setFacilityToEdit(item)}
-                              >
-                                <Icon name="edit" size={13} />
-                              </button>
-                            )}
-                            <button
-                              type="button"
-                              className="facility-action-btn facility-action-btn--delete"
-                              title={`Delete ${item.name}`}
-                              onClick={() => setFacilityToDelete(item)}
-                            >
-                              <Icon name="trash" size={13} />
-                            </button>
-                          </div>
-                        </td>
                       </tr>
                     );
                   })
                 ) : (
                   <tr>
-                    <td colSpan={5} className="empty-table-cell">
+                    <td colSpan={4} className="empty-table-cell">
                       <div className="empty">
                         <div className="empty__icon">
                           <Icon name="search" />
@@ -373,33 +326,6 @@ export function FacilityIndex({
           />
         </div>
       </div>
-
-      {/* Edit Confirmation Dialog */}
-      <ConfirmDialog
-        isOpen={!!facilityToEdit}
-        title="Edit Record"
-        message={`Do you want to edit facility "${facilityToEdit?.name}"?`}
-        confirmLabel="Continue"
-        cancelLabel="Cancel"
-        confirmVariant="primary"
-        icon="edit"
-        onConfirm={() => {
-          if (facilityToEdit && onEdit) {
-            onEdit(facilityToEdit);
-          }
-          setFacilityToEdit(null);
-        }}
-        onCancel={() => setFacilityToEdit(null)}
-      />
-
-      {/* Delete Confirmation Dialog */}
-      <ConfirmDialog
-        isOpen={!!facilityToDelete}
-        entityType="facility"
-        entityName={facilityToDelete?.name}
-        onConfirm={handleConfirmDelete}
-        onCancel={() => setFacilityToDelete(null)}
-      />
     </div>
   );
 }

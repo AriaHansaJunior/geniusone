@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Button } from "../../../../components/ui/Button";
 import { SearchField } from "../../../../components/ui/SearchField";
 import { Icon } from "../../../../components/ui/Icon";
-import { ConfirmDialog } from "../../../../components/ui/ConfirmDialog";
 import { Pagination } from "../../../../components/ui/Pagination";
 import { StatusToggle } from "../../../../components/ui/StatusToggle";
 import { initialDepartmentRecords } from "./department-data";
@@ -15,16 +14,12 @@ import type {
 interface DepartmentIndexProps {
   records?: DepartmentRecord[];
   onAddNew: () => void;
-  onEdit?: (record: DepartmentRecord) => void;
-  onDelete?: (id: string) => void;
   onToggleStatus?: (id: string) => void;
 }
 
 export function DepartmentIndex({
   records = initialDepartmentRecords,
   onAddNew,
-  onEdit,
-  onDelete,
   onToggleStatus,
 }: DepartmentIndexProps) {
   const [localRecords, setLocalRecords] = useState<DepartmentRecord[]>(records);
@@ -33,10 +28,6 @@ export function DepartmentIndex({
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [sortField, setSortField] = useState<DepartmentSortField>("sectionName");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
-  const [departmentToDelete, setDepartmentToDelete] =
-    useState<DepartmentRecord | null>(null);
-  const [departmentToEdit, setDepartmentToEdit] =
-    useState<DepartmentRecord | null>(null);
   const [exportNotice, setExportNotice] = useState<string | null>(null);
 
   useEffect(() => {
@@ -113,17 +104,6 @@ export function DepartmentIndex({
     if (onToggleStatus) {
       onToggleStatus(id);
     }
-  };
-
-  // Delete confirmed
-  const handleConfirmDelete = () => {
-    if (!departmentToDelete) return;
-    const idToDelete = departmentToDelete.id;
-    setLocalRecords((prev) => prev.filter((d) => d.id !== idToDelete));
-    if (onDelete) {
-      onDelete(idToDelete);
-    }
-    setDepartmentToDelete(null);
   };
 
   // Export to Excel-compatible CSV with UTF-8 BOM
@@ -279,9 +259,6 @@ export function DepartmentIndex({
                     <span>Status</span>
                     {renderSortIndicator("status")}
                   </th>
-                  <th className="master-col-actions-wide">
-                    <span>Option</span>
-                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -314,36 +291,12 @@ export function DepartmentIndex({
                             ariaLabel={`Toggle status for ${item.sectionName}`}
                           />
                         </td>
-
-                        {/* 5. Option Row Actions */}
-                        <td className="master-cell-center">
-                          <div className="department-row-actions">
-                            {onEdit && (
-                              <button
-                                type="button"
-                                className="department-action-btn department-action-btn--edit"
-                                title={`Edit ${item.sectionName}`}
-                                onClick={() => setDepartmentToEdit(item)}
-                              >
-                                <Icon name="edit" size={13} />
-                              </button>
-                            )}
-                            <button
-                              type="button"
-                              className="department-action-btn department-action-btn--delete"
-                              title={`Delete ${item.sectionName}`}
-                              onClick={() => setDepartmentToDelete(item)}
-                            >
-                              <Icon name="trash" size={13} />
-                            </button>
-                          </div>
-                        </td>
                       </tr>
                     );
                   })
                 ) : (
                   <tr>
-                    <td colSpan={5} className="empty-table-cell">
+                    <td colSpan={4} className="empty-table-cell">
                       <div className="empty">
                         <div className="empty__icon">
                           <Icon name="search" />
@@ -372,33 +325,6 @@ export function DepartmentIndex({
           />
         </div>
       </div>
-
-      {/* Edit Confirmation Dialog */}
-      <ConfirmDialog
-        isOpen={!!departmentToEdit}
-        title="Edit Record"
-        message={`Do you want to edit department "${departmentToEdit?.sectionName}"?`}
-        confirmLabel="Continue"
-        cancelLabel="Cancel"
-        confirmVariant="primary"
-        icon="edit"
-        onConfirm={() => {
-          if (departmentToEdit && onEdit) {
-            onEdit(departmentToEdit);
-          }
-          setDepartmentToEdit(null);
-        }}
-        onCancel={() => setDepartmentToEdit(null)}
-      />
-
-      {/* Delete Confirmation Dialog */}
-      <ConfirmDialog
-        isOpen={!!departmentToDelete}
-        entityType="department"
-        entityName={departmentToDelete?.sectionName}
-        onConfirm={handleConfirmDelete}
-        onCancel={() => setDepartmentToDelete(null)}
-      />
     </div>
   );
 }

@@ -1,4 +1,4 @@
-﻿import type { ItemRecord, ItemColumnConfig } from "./item-types";
+import type { ItemRecord, ItemColumnConfig } from "./item-types";
 
 export const defaultItemColumns: ItemColumnConfig[] = [
   { key: "itemCode", label: "Item Code", visible: true, minWidth: 140 },
@@ -21,7 +21,6 @@ export const defaultItemColumns: ItemColumnConfig[] = [
   { key: "status", label: "Status", visible: true, minWidth: 90 },
   { key: "createdAt", label: "Created at", visible: true, minWidth: 160 },
   { key: "updatedAt", label: "Updated at", visible: true, minWidth: 160 },
-  { key: "option", label: "Option", visible: true, minWidth: 80 },
 ];
 
 export const initialItemRecords: ItemRecord[] = [];

@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Button } from "../../../../components/ui/Button";
 import { SearchField } from "../../../../components/ui/SearchField";
 import { Icon } from "../../../../components/ui/Icon";
-import { ConfirmDialog } from "../../../../components/ui/ConfirmDialog";
 import { Pagination } from "../../../../components/ui/Pagination";
 import { CustomSelect } from "../../../../components/ui/CustomSelect";
 import { StatusToggle } from "../../../../components/ui/StatusToggle";
@@ -24,8 +23,6 @@ interface ItemIndexProps {
   records?: ItemRecord[];
   onAddNew: () => void;
   onGenerateQr: () => void;
-  onEdit?: (record: ItemRecord) => void;
-  onDelete?: (id: string) => void;
   onToggleStatus?: (id: string) => void;
 }
 
@@ -42,14 +39,10 @@ export function ItemIndex({
   records = initialItemRecords,
   onAddNew,
   onGenerateQr,
-  onEdit,
-  onDelete,
   onToggleStatus,
 }: ItemIndexProps) {
   const { can, currentUser } = useAuthPermission();
   const canCreateMasterItem = can("master_item", "create");
-  const canUpdateMasterItem = can("master_item", "update");
-  const canDeleteMasterItem = can("master_item", "delete");
 
   const [localRecords, setLocalRecords] = useState<ItemRecord[]>(records);
   const [columns, setColumns] = useState<ItemColumnConfig[]>(defaultItemColumns);
@@ -62,8 +55,6 @@ export function ItemIndex({
   const [sortField, setSortField] = useState<string>("itemCode");
   const [sortDirection, setSortDirection] = useState<SortDirection>("none");
   const [selectedCodes, setSelectedCodes] = useState<Set<string>>(new Set());
-  const [itemToDelete, setItemToDelete] = useState<ItemRecord | null>(null);
-  const [itemToEdit, setItemToEdit] = useState<ItemRecord | null>(null);
   const [exportNotice, setExportNotice] = useState<string | null>(null);
 
   useEffect(() => {
@@ -171,15 +162,6 @@ export function ItemIndex({
     });
   };
 
-  // Delete
-  const handleConfirmDelete = () => {
-    if (!itemToDelete) return;
-    const idToDelete = itemToDelete.id;
-    setLocalRecords((prev) => prev.filter((i) => i.id !== idToDelete));
-    if (onDelete) onDelete(idToDelete);
-    setItemToDelete(null);
-  };
-
   // Export to Excel (CSV with UTF-8 BOM)
   const handleExportToExcel = () => {
     if (sortedRecords.length === 0) {
@@ -189,7 +171,7 @@ export function ItemIndex({
     }
 
     try {
-      const visibleCols = columns.filter((c) => c.visible && c.key !== "option");
+      const visibleCols = columns.filter((c) => c.visible);
       const headers = ["No", ...visibleCols.map((c) => c.label)];
       const csvRows = [headers.join(",")];
 
@@ -565,10 +547,6 @@ export function ItemIndex({
                     {renderSortIndicator("updatedAt")}
                   </th>
                 )}
-
-                {visibleMap.option && (
-                  <th className="master-col-option-md">Option</th>
-                )}
               </tr>
             </thead>
             <tbody>
@@ -699,36 +677,6 @@ export function ItemIndex({
                           {item.updatedAt}
                         </td>
                       )}
-
-                      {visibleMap.option && (
-                        <td className="master-cell-center">
-                          <div className="item-row-actions">
-                            {onEdit && canUpdateMasterItem && (
-                              <button
-                                type="button"
-                                className="item-action-btn item-action-btn--edit"
-                                title={`Edit ${item.itemName}`}
-                                onClick={() => setItemToEdit(item)}
-                              >
-                                <Icon name="edit" size={12} />
-                              </button>
-                            )}
-                            {canDeleteMasterItem && (
-                              <button
-                                type="button"
-                                className="item-action-btn item-action-btn--delete"
-                                title={`Delete ${item.itemName}`}
-                                onClick={() => setItemToDelete(item)}
-                              >
-                                <Icon name="trash" size={12} />
-                              </button>
-                            )}
-                            {!canUpdateMasterItem && !canDeleteMasterItem && (
-                              <span className="master-cell-audit">—</span>
-                            )}
-                          </div>
-                        </td>
-                      )}
                     </tr>
                   );
                 })
@@ -767,34 +715,6 @@ export function ItemIndex({
           }}
         />
       </div>
-
-      {/* Edit Confirmation Dialog */}
-      <ConfirmDialog
-        isOpen={!!itemToEdit}
-        title="Edit Record"
-        message={`Do you want to edit item "${itemToEdit?.itemName}"?`}
-        confirmLabel="Continue"
-        cancelLabel="Cancel"
-        confirmVariant="primary"
-        icon="edit"
-        onConfirm={() => {
-          if (itemToEdit && onEdit) {
-            onEdit(itemToEdit);
-          }
-          setItemToEdit(null);
-        }}
-        onCancel={() => setItemToEdit(null)}
-      />
-
-      {/* Delete Confirmation Dialog */}
-      <ConfirmDialog
-        isOpen={!!itemToDelete}
-        entityType="item"
-        entityName={itemToDelete?.itemName}
-        entityCode={itemToDelete?.itemCode}
-        onConfirm={handleConfirmDelete}
-        onCancel={() => setItemToDelete(null)}
-      />
     </div>
   );
 }

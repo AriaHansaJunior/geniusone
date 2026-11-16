@@ -3,7 +3,7 @@ import { Button } from "../../../../components/ui/Button";
 import { SearchField } from "../../../../components/ui/SearchField";
 import { Pagination } from "../../../../components/ui/Pagination";
 import { Icon } from "../../../../components/ui/Icon";
-import { ConfirmDialog } from "../../../../components/ui/ConfirmDialog";
+import { StatusToggle } from "../../../../components/ui/StatusToggle";
 import {
   type AccountRecord,
   type AccountSortField,
@@ -13,16 +13,12 @@ import {
 interface AccountIndexProps {
   records?: AccountRecord[];
   onAddNew?: () => void;
-  onEdit?: (record: AccountRecord) => void;
-  onDelete?: (id: string) => Promise<boolean | void> | void;
   onToggleStatus?: (id: string) => Promise<void> | void;
 }
 
 export function AccountIndex({
   records = [],
   onAddNew,
-  onEdit,
-  onDelete,
   onToggleStatus,
 }: AccountIndexProps) {
   const [localRecords, setLocalRecords] = useState<AccountRecord[]>(records);
@@ -32,8 +28,6 @@ export function AccountIndex({
   const [sortField, setSortField] = useState<AccountSortField>("accountCode");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
 
-  const [accountToDelete, setAccountToDelete] = useState<AccountRecord | null>(null);
-  const [accountToConfirmEdit, setAccountToConfirmEdit] = useState<AccountRecord | null>(null);
   const [banner, setBanner] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
   useEffect(() => {
@@ -112,23 +106,6 @@ export function AccountIndex({
       }
     } catch (err: any) {
       setBanner({ type: "error", message: err?.message || "Failed to toggle status." });
-    }
-  };
-
-  const handleConfirmDelete = async () => {
-    if (!accountToDelete) return;
-    const target = accountToDelete;
-    setAccountToDelete(null);
-    try {
-      if (onDelete) {
-        await onDelete(target.id);
-      }
-      setLocalRecords((prev) => prev.filter((a) => a.id !== target.id));
-    } catch (err: any) {
-      setBanner({
-        type: "error",
-        message: err?.message || `Failed to delete ${target.accountCode}.`,
-      });
     }
   };
 
@@ -285,9 +262,6 @@ export function AccountIndex({
                     <span>Status</span>
                     {renderSortIndicator("status")}
                   </th>
-                  <th className="master-col-actions">
-                    <span>Option</span>
-                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -301,47 +275,18 @@ export function AccountIndex({
                         <td className="master-cell-name">{item.accountName}</td>
                         <td className="master-cell-muted">{item.category || "—"}</td>
                         <td className="master-cell-center">
-                          <button
-                            type="button"
-                            className={`master-status-pill ${
-                              item.status
-                                ? "master-status-pill--active"
-                                : "master-status-pill--inactive"
-                            }`}
-                            onClick={() => handleToggleStatus(item.id)}
-                            title="Click to toggle status"
-                          >
-                            {item.status ? "Active" : "Inactive"}
-                          </button>
-                        </td>
-                        <td className="master-cell-center">
-                          <div className="master-actions-group">
-                            <button
-                              type="button"
-                              className="btn-action-edit"
-                              onClick={() => setAccountToConfirmEdit(item)}
-                              title={`Edit ${item.accountCode}`}
-                              aria-label={`Edit ${item.accountCode}`}
-                            >
-                              <Icon name="edit" size={13} />
-                            </button>
-                            <button
-                              type="button"
-                              className="btn-action-delete"
-                              onClick={() => setAccountToDelete(item)}
-                              title={`Delete ${item.accountCode}`}
-                              aria-label={`Delete ${item.accountCode}`}
-                            >
-                              <Icon name="trash" size={13} />
-                            </button>
-                          </div>
+                          <StatusToggle
+                            active={item.status}
+                            onToggle={() => handleToggleStatus(item.id)}
+                            ariaLabel={`Toggle status for ${item.accountCode}`}
+                          />
                         </td>
                       </tr>
                     );
                   })
                 ) : (
                   <tr>
-                    <td colSpan={6} className="empty-table-cell">
+                    <td colSpan={5} className="empty-table-cell">
                       <div className="empty master-empty-box">
                         <div className="empty__icon master-empty-icon">
                           <Icon name="search" size={24} />
@@ -371,31 +316,6 @@ export function AccountIndex({
           />
         </div>
       </div>
-
-      <ConfirmDialog
-        isOpen={Boolean(accountToConfirmEdit)}
-        onCancel={() => setAccountToConfirmEdit(null)}
-        onConfirm={() => {
-          const target = accountToConfirmEdit;
-          setAccountToConfirmEdit(null);
-          if (target) onEdit?.(target);
-        }}
-        title="Edit Account"
-        message={`Open edit page for "${accountToConfirmEdit?.accountCode} - ${accountToConfirmEdit?.accountName}"?`}
-        confirmLabel="Yes, Edit"
-        cancelLabel="Cancel"
-      />
-
-      <ConfirmDialog
-        isOpen={Boolean(accountToDelete)}
-        onCancel={() => setAccountToDelete(null)}
-        onConfirm={handleConfirmDelete}
-        title="Delete Account"
-        message={`Are you sure you want to delete "${accountToDelete?.accountCode} - ${accountToDelete?.accountName}"? This action cannot be undone.`}
-        confirmLabel="Yes, Delete"
-        cancelLabel="Cancel"
-        variant="danger"
-      />
     </div>
   );
 }

@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Button } from "../../../../components/ui/Button";
 import { SearchField } from "../../../../components/ui/SearchField";
 import { Icon } from "../../../../components/ui/Icon";
-import { ConfirmDialog } from "../../../../components/ui/ConfirmDialog";
 import { Pagination } from "../../../../components/ui/Pagination";
 import { StatusToggle } from "../../../../components/ui/StatusToggle";
 import { initialBrandRecords } from "./brand-data";
@@ -15,16 +14,12 @@ import type {
 interface BrandIndexProps {
   records?: BrandRecord[];
   onAddNew: () => void;
-  onEdit?: (record: BrandRecord) => void;
-  onDelete?: (id: string) => void;
   onToggleStatus?: (id: string) => void;
 }
 
 export function BrandIndex({
   records = initialBrandRecords,
   onAddNew,
-  onEdit,
-  onDelete,
   onToggleStatus,
 }: BrandIndexProps) {
   const [localRecords, setLocalRecords] = useState<BrandRecord[]>(records);
@@ -33,8 +28,6 @@ export function BrandIndex({
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [sortField, setSortField] = useState<BrandSortField>("code");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
-  const [brandToDelete, setBrandToDelete] = useState<BrandRecord | null>(null);
-  const [brandToEdit, setBrandToEdit] = useState<BrandRecord | null>(null);
   const [exportNotice, setExportNotice] = useState<string | null>(null);
 
   useEffect(() => {
@@ -115,17 +108,6 @@ export function BrandIndex({
     if (onToggleStatus) {
       onToggleStatus(id);
     }
-  };
-
-  // Delete confirmed
-  const handleConfirmDelete = () => {
-    if (!brandToDelete) return;
-    const idToDelete = brandToDelete.id;
-    setLocalRecords((prev) => prev.filter((b) => b.id !== idToDelete));
-    if (onDelete) {
-      onDelete(idToDelete);
-    }
-    setBrandToDelete(null);
   };
 
   // Export to Excel-compatible CSV with UTF-8 BOM
@@ -289,9 +271,6 @@ export function BrandIndex({
                     <span>Status</span>
                     {renderSortIndicator("status")}
                   </th>
-                  <th className="master-col-actions-wide">
-                    <span>Option</span>
-                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -329,36 +308,12 @@ export function BrandIndex({
                             ariaLabel={`Toggle status for ${item.name}`}
                           />
                         </td>
-
-                        {/* 6. Option Row Actions */}
-                        <td className="master-cell-center">
-                          <div className="brand-row-actions">
-                            {onEdit && (
-                              <button
-                                type="button"
-                                className="brand-action-btn brand-action-btn--edit"
-                                title={`Edit ${item.name}`}
-                                onClick={() => setBrandToEdit(item)}
-                              >
-                                <Icon name="edit" size={13} />
-                              </button>
-                            )}
-                            <button
-                              type="button"
-                              className="brand-action-btn brand-action-btn--delete"
-                              title={`Delete ${item.name}`}
-                              onClick={() => setBrandToDelete(item)}
-                            >
-                              <Icon name="trash" size={13} />
-                            </button>
-                          </div>
-                        </td>
                       </tr>
                     );
                   })
                 ) : (
                   <tr>
-                    <td colSpan={6} className="empty-table-cell">
+                    <td colSpan={5} className="empty-table-cell">
                       <div className="empty">
                         <div className="empty__icon">
                           <Icon name="search" />
@@ -387,34 +342,6 @@ export function BrandIndex({
           />
         </div>
       </div>
-
-      {/* Edit Confirmation Dialog */}
-      <ConfirmDialog
-        isOpen={!!brandToEdit}
-        title="Edit Record"
-        message={`Do you want to edit brand "${brandToEdit?.name}"?`}
-        confirmLabel="Continue"
-        cancelLabel="Cancel"
-        confirmVariant="primary"
-        icon="edit"
-        onConfirm={() => {
-          if (brandToEdit && onEdit) {
-            onEdit(brandToEdit);
-          }
-          setBrandToEdit(null);
-        }}
-        onCancel={() => setBrandToEdit(null)}
-      />
-
-      {/* Delete Confirmation Dialog */}
-      <ConfirmDialog
-        isOpen={!!brandToDelete}
-        entityType="brand"
-        entityName={brandToDelete?.name}
-        entityCode={brandToDelete?.code}
-        onConfirm={handleConfirmDelete}
-        onCancel={() => setBrandToDelete(null)}
-      />
     </div>
   );
 }

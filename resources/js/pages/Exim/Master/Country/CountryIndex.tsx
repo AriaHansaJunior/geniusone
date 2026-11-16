@@ -3,7 +3,7 @@ import { Button } from "../../../../components/ui/Button";
 import { SearchField } from "../../../../components/ui/SearchField";
 import { Pagination } from "../../../../components/ui/Pagination";
 import { Icon } from "../../../../components/ui/Icon";
-import { ConfirmDialog } from "../../../../components/ui/ConfirmDialog";
+import { StatusToggle } from "../../../../components/ui/StatusToggle";
 import {
   type CountryRecord,
   type CountrySortField,
@@ -13,16 +13,12 @@ import {
 interface CountryIndexProps {
   records?: CountryRecord[];
   onAddNew?: () => void;
-  onEdit?: (record: CountryRecord) => void;
-  onDelete?: (id: string) => Promise<boolean | void> | void;
   onToggleStatus?: (id: string) => Promise<void> | void;
 }
 
 export function CountryIndex({
   records = [],
   onAddNew,
-  onEdit,
-  onDelete,
   onToggleStatus,
 }: CountryIndexProps) {
   const [localRecords, setLocalRecords] = useState<CountryRecord[]>(records);
@@ -32,8 +28,6 @@ export function CountryIndex({
   const [sortField, setSortField] = useState<CountrySortField>("code");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
 
-  const [countryToDelete, setCountryToDelete] = useState<CountryRecord | null>(null);
-  const [countryToConfirmEdit, setCountryToConfirmEdit] = useState<CountryRecord | null>(null);
   const [banner, setBanner] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
   useEffect(() => {
@@ -98,20 +92,6 @@ export function CountryIndex({
       }
     } catch (err: any) {
       setBanner({ type: "error", message: err?.message || "Failed to toggle status." });
-    }
-  };
-
-  const handleConfirmDelete = async () => {
-    if (!countryToDelete) return;
-    const target = countryToDelete;
-    setCountryToDelete(null);
-    try {
-      if (onDelete) {
-        await onDelete(target.id);
-      }
-      setLocalRecords((prev) => prev.filter((c) => c.id !== target.id));
-    } catch (err: any) {
-      setBanner({ type: "error", message: err?.message || `Failed to delete ${target.name}.` });
     }
   };
 
@@ -252,9 +232,6 @@ export function CountryIndex({
                     <span>Status</span>
                     {renderSortIndicator("status")}
                   </th>
-                  <th className="master-col-actions">
-                    <span>Option</span>
-                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -267,47 +244,18 @@ export function CountryIndex({
                         <td className="master-cell-code">{item.code || "—"}</td>
                         <td className="master-cell-name">{item.name}</td>
                         <td className="master-cell-center">
-                          <button
-                            type="button"
-                            className={`master-status-pill ${
-                              item.status
-                                ? "master-status-pill--active"
-                                : "master-status-pill--inactive"
-                            }`}
-                            onClick={() => handleToggleStatus(item.id)}
-                            title="Click to toggle status"
-                          >
-                            {item.status ? "Active" : "Inactive"}
-                          </button>
-                        </td>
-                        <td className="master-cell-center">
-                          <div className="master-actions-group">
-                            <button
-                              type="button"
-                              className="btn-action-edit"
-                              onClick={() => setCountryToConfirmEdit(item)}
-                              title={`Edit ${item.name}`}
-                              aria-label={`Edit ${item.name}`}
-                            >
-                              <Icon name="edit" size={13} />
-                            </button>
-                            <button
-                              type="button"
-                              className="btn-action-delete"
-                              onClick={() => setCountryToDelete(item)}
-                              title={`Delete ${item.name}`}
-                              aria-label={`Delete ${item.name}`}
-                            >
-                              <Icon name="trash" size={13} />
-                            </button>
-                          </div>
+                          <StatusToggle
+                            active={item.status}
+                            onToggle={() => handleToggleStatus(item.id)}
+                            ariaLabel={`Toggle status for ${item.name}`}
+                          />
                         </td>
                       </tr>
                     );
                   })
                 ) : (
                   <tr>
-                    <td colSpan={5} className="empty-table-cell">
+                    <td colSpan={4} className="empty-table-cell">
                       <div className="empty master-empty-box">
                         <div className="empty__icon master-empty-icon">
                           <Icon name="search" size={24} />
@@ -337,31 +285,6 @@ export function CountryIndex({
           />
         </div>
       </div>
-
-      <ConfirmDialog
-        isOpen={Boolean(countryToConfirmEdit)}
-        onCancel={() => setCountryToConfirmEdit(null)}
-        onConfirm={() => {
-          const target = countryToConfirmEdit;
-          setCountryToConfirmEdit(null);
-          if (target) onEdit?.(target);
-        }}
-        title="Edit Country"
-        message={`Open edit page for "${countryToConfirmEdit?.name}"?`}
-        confirmLabel="Yes, Edit"
-        cancelLabel="Cancel"
-      />
-
-      <ConfirmDialog
-        isOpen={Boolean(countryToDelete)}
-        onCancel={() => setCountryToDelete(null)}
-        onConfirm={handleConfirmDelete}
-        title="Delete Country"
-        message={`Are you sure you want to delete "${countryToDelete?.name}"? This action cannot be undone.`}
-        confirmLabel="Yes, Delete"
-        cancelLabel="Cancel"
-        variant="danger"
-      />
     </div>
   );
 }

@@ -4,7 +4,6 @@ import { SearchField } from "../../../../components/ui/SearchField";
 import { Pagination } from "../../../../components/ui/Pagination";
 import { Icon } from "../../../../components/ui/Icon";
 import { StatusToggle } from "../../../../components/ui/StatusToggle";
-import { ConfirmDialog } from "../../../../components/ui/ConfirmDialog";
 import { useNotification } from "../../../../context/NotificationContext";
 import {
   type CurrencyRecord,
@@ -15,16 +14,12 @@ import {
 interface CurrencyIndexProps {
   records?: CurrencyRecord[];
   onAddNew?: () => void;
-  onEdit?: (record: CurrencyRecord) => void;
-  onDelete?: (id: string) => Promise<boolean | void> | void;
   onToggleStatus?: (id: string) => Promise<void> | void;
 }
 
 export function CurrencyIndex({
   records = [],
   onAddNew,
-  onEdit,
-  onDelete,
   onToggleStatus,
 }: CurrencyIndexProps) {
   const { notifySuccess, notifyError, notifyWarning } = useNotification();
@@ -35,9 +30,6 @@ export function CurrencyIndex({
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [sortField, setSortField] = useState<CurrencySortField>("currencyCode");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
-
-  const [currencyToDelete, setCurrencyToDelete] = useState<CurrencyRecord | null>(null);
-  const [currencyToConfirmEdit, setCurrencyToConfirmEdit] = useState<CurrencyRecord | null>(null);
 
   useEffect(() => {
     setLocalRecords(records);
@@ -88,15 +80,6 @@ export function CurrencyIndex({
       setSortDirection("asc");
     }
     setCurrentPage(1);
-  };
-
-  const handleConfirmDelete = async () => {
-    if (!currencyToDelete) return;
-    const target = currencyToDelete;
-    setCurrencyToDelete(null);
-    if (onDelete) {
-      await onDelete(target.id);
-    }
   };
 
   const handleExportToExcel = () => {
@@ -208,9 +191,6 @@ export function CurrencyIndex({
                     <span>Status</span>
                     {renderSortIndicator("status")}
                   </th>
-                  <th className="master-col-actions">
-                    <span>Option</span>
-                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -228,38 +208,12 @@ export function CurrencyIndex({
                             ariaLabel={`Toggle status for ${item.currencyCode}`}
                           />
                         </td>
-                        <td className="master-cell-center">
-                          <div className="master-actions-group">
-                            {onEdit && (
-                              <button
-                                type="button"
-                                className="btn-action-edit"
-                                onClick={() => setCurrencyToConfirmEdit(item)}
-                                title={`Edit ${item.currencyCode}`}
-                                aria-label={`Edit ${item.currencyCode}`}
-                              >
-                                <Icon name="edit" size={13} />
-                              </button>
-                            )}
-                            {onDelete && (
-                              <button
-                                type="button"
-                                className="btn-action-delete"
-                                onClick={() => setCurrencyToDelete(item)}
-                                title={`Delete ${item.currencyCode}`}
-                                aria-label={`Delete ${item.currencyCode}`}
-                              >
-                                <Icon name="trash" size={13} />
-                              </button>
-                            )}
-                          </div>
-                        </td>
                       </tr>
                     );
                   })
                 ) : (
                   <tr>
-                    <td colSpan={4} className="empty-table-cell">
+                    <td colSpan={3} className="empty-table-cell">
                       <div className="empty master-empty-box">
                         <div className="empty__icon master-empty-icon">
                           <Icon name="search" size={24} />
@@ -288,31 +242,6 @@ export function CurrencyIndex({
           />
         </div>
       </div>
-
-      <ConfirmDialog
-        isOpen={!!currencyToConfirmEdit}
-        title="Edit Currency"
-        message={`Do you want to edit currency "${currencyToConfirmEdit?.currencyCode}"?`}
-        confirmLabel="Continue"
-        cancelLabel="Cancel"
-        confirmVariant="primary"
-        icon="edit"
-        onConfirm={() => {
-          if (currencyToConfirmEdit && onEdit) {
-            onEdit(currencyToConfirmEdit);
-          }
-          setCurrencyToConfirmEdit(null);
-        }}
-        onCancel={() => setCurrencyToConfirmEdit(null)}
-      />
-
-      <ConfirmDialog
-        isOpen={!!currencyToDelete}
-        entityType="currency"
-        entityName={currencyToDelete?.currencyCode}
-        onConfirm={handleConfirmDelete}
-        onCancel={() => setCurrencyToDelete(null)}
-      />
     </div>
   );
 }

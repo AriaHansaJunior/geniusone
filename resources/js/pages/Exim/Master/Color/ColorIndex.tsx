@@ -5,7 +5,6 @@ import { SearchField } from "../../../../components/ui/SearchField";
 import { Icon } from "../../../../components/ui/Icon";
 import { Pagination } from "../../../../components/ui/Pagination";
 import { StatusToggle } from "../../../../components/ui/StatusToggle";
-import { ConfirmDialog } from "../../../../components/ui/ConfirmDialog";
 import { useNotification } from "../../../../context/NotificationContext";
 import { initialColorRecords } from "./color-data";
 import type {
@@ -17,16 +16,12 @@ import type {
 interface ColorIndexProps {
   records?: ColorRecord[];
   onAddNew: () => void;
-  onEdit?: (record: ColorRecord) => void;
-  onDelete?: (id: string) => Promise<void> | void;
   onToggleStatus?: (id: string) => Promise<void> | void;
 }
 
 export function ColorIndex({
   records = initialColorRecords,
   onAddNew,
-  onEdit,
-  onDelete,
   onToggleStatus,
 }: ColorIndexProps) {
   const { notifySuccess, notifyError, notifyWarning } = useNotification();
@@ -37,8 +32,6 @@ export function ColorIndex({
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [sortField, setSortField] = useState<ColorSortField>("code");
   const [sortDirection, setSortDirection] = useState<SortDirection>("none");
-  const [colorToEdit, setColorToEdit] = useState<ColorRecord | null>(null);
-  const [colorToDelete, setColorToDelete] = useState<ColorRecord | null>(null);
 
   useEffect(() => {
     setLocalRecords(records);
@@ -126,15 +119,6 @@ export function ColorIndex({
       setLocalRecords((prev) =>
         prev.map((rec) => (rec.id === id ? { ...rec, status: !rec.status } : rec))
       );
-    }
-  };
-
-  const handleConfirmDelete = async () => {
-    if (!colorToDelete) return;
-    const target = colorToDelete;
-    setColorToDelete(null);
-    if (onDelete) {
-      await onDelete(target.id);
     }
   };
 
@@ -233,9 +217,6 @@ export function ColorIndex({
                     <span>Status</span>
                     {renderSortIndicator("status")}
                   </th>
-                  <th className="master-col-actions">
-                    <span>Option</span>
-                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -254,38 +235,12 @@ export function ColorIndex({
                             ariaLabel={`Toggle status for ${item.name}`}
                           />
                         </td>
-                        <td className="master-cell-center">
-                          <div className="master-actions-group">
-                            {onEdit && (
-                              <button
-                                type="button"
-                                className="btn-action-edit"
-                                title={`Edit ${item.name}`}
-                                aria-label={`Edit ${item.name}`}
-                                onClick={() => setColorToEdit(item)}
-                              >
-                                <Icon name="edit" size={13} />
-                              </button>
-                            )}
-                            {onDelete && (
-                              <button
-                                type="button"
-                                className="btn-action-delete"
-                                title={`Delete ${item.name}`}
-                                aria-label={`Delete ${item.name}`}
-                                onClick={() => setColorToDelete(item)}
-                              >
-                                <Icon name="trash" size={13} />
-                              </button>
-                            )}
-                          </div>
-                        </td>
                       </tr>
                     );
                   })
                 ) : (
                   <tr>
-                    <td colSpan={5} className="empty-table-cell">
+                    <td colSpan={4} className="empty-table-cell">
                       <div className="empty master-empty-box">
                         <div className="empty__icon master-empty-icon">
                           <Icon name="search" size={24} />
@@ -315,31 +270,6 @@ export function ColorIndex({
           />
         </div>
       </div>
-
-      <ConfirmDialog
-        isOpen={!!colorToEdit}
-        title="Edit Record"
-        message={`Do you want to edit colour "${colorToEdit?.name}"?`}
-        confirmLabel="Continue"
-        cancelLabel="Cancel"
-        confirmVariant="primary"
-        icon="edit"
-        onConfirm={() => {
-          if (colorToEdit && onEdit) {
-            onEdit(colorToEdit);
-          }
-          setColorToEdit(null);
-        }}
-        onCancel={() => setColorToEdit(null)}
-      />
-
-      <ConfirmDialog
-        isOpen={!!colorToDelete}
-        entityType="colour"
-        entityName={colorToDelete?.name}
-        onConfirm={handleConfirmDelete}
-        onCancel={() => setColorToDelete(null)}
-      />
     </div>
   );
 }

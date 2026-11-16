@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Button } from "../../../../components/ui/Button";
 import { SearchField } from "../../../../components/ui/SearchField";
 import { Icon } from "../../../../components/ui/Icon";
-import { ConfirmDialog } from "../../../../components/ui/ConfirmDialog";
 import { Pagination } from "../../../../components/ui/Pagination";
 import { StatusToggle } from "../../../../components/ui/StatusToggle";
 import { initialClassificationRecords } from "./classification-data";
@@ -15,16 +14,12 @@ import type {
 interface ClassificationIndexProps {
   records?: ClassificationRecord[];
   onAddNew: () => void;
-  onEdit?: (record: ClassificationRecord) => void;
-  onDelete?: (id: string) => void;
   onToggleStatus?: (id: string) => void;
 }
 
 export function ClassificationIndex({
   records = initialClassificationRecords,
   onAddNew,
-  onEdit,
-  onDelete,
   onToggleStatus,
 }: ClassificationIndexProps) {
   const [localRecords, setLocalRecords] = useState<ClassificationRecord[]>(records);
@@ -33,10 +28,6 @@ export function ClassificationIndex({
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [sortField, setSortField] = useState<ClassificationSortField>("code");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
-  const [classificationToDelete, setClassificationToDelete] =
-    useState<ClassificationRecord | null>(null);
-  const [classificationToEdit, setClassificationToEdit] =
-    useState<ClassificationRecord | null>(null);
   const [exportNotice, setExportNotice] = useState<string | null>(null);
 
   useEffect(() => {
@@ -121,17 +112,6 @@ export function ClassificationIndex({
     if (onToggleStatus) {
       onToggleStatus(id);
     }
-  };
-
-  // Delete confirmed
-  const handleConfirmDelete = () => {
-    if (!classificationToDelete) return;
-    const idToDelete = classificationToDelete.id;
-    setLocalRecords((prev) => prev.filter((c) => c.id !== idToDelete));
-    if (onDelete) {
-      onDelete(idToDelete);
-    }
-    setClassificationToDelete(null);
   };
 
   // Export to Excel-compatible CSV with UTF-8 BOM
@@ -312,9 +292,6 @@ export function ClassificationIndex({
                     <span>Status</span>
                     {renderSortIndicator("status")}
                   </th>
-                  <th className="master-col-actions-wide">
-                    <span>Option</span>
-                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -357,36 +334,12 @@ export function ClassificationIndex({
                             ariaLabel={`Toggle status for ${item.name}`}
                           />
                         </td>
-
-                        {/* 7. Option Row Actions */}
-                        <td className="master-cell-center">
-                          <div className="classification-row-actions">
-                            {onEdit && (
-                              <button
-                                type="button"
-                                className="classification-action-btn classification-action-btn--edit"
-                                title={`Edit ${item.name}`}
-                                onClick={() => setClassificationToEdit(item)}
-                              >
-                                <Icon name="edit" size={13} />
-                              </button>
-                            )}
-                            <button
-                              type="button"
-                              className="classification-action-btn classification-action-btn--delete"
-                              title={`Delete ${item.name}`}
-                              onClick={() => setClassificationToDelete(item)}
-                            >
-                              <Icon name="trash" size={13} />
-                            </button>
-                          </div>
-                        </td>
                       </tr>
                     );
                   })
                 ) : (
                   <tr>
-                    <td colSpan={7} className="empty-table-cell">
+                    <td colSpan={6} className="empty-table-cell">
                       <div className="empty">
                         <div className="empty__icon">
                           <Icon name="search" />
@@ -415,34 +368,6 @@ export function ClassificationIndex({
           />
         </div>
       </div>
-
-      {/* Edit Confirmation Dialog */}
-      <ConfirmDialog
-        isOpen={!!classificationToEdit}
-        title="Edit Record"
-        message={`Do you want to edit classification "${classificationToEdit?.name}"?`}
-        confirmLabel="Continue"
-        cancelLabel="Cancel"
-        confirmVariant="primary"
-        icon="edit"
-        onConfirm={() => {
-          if (classificationToEdit && onEdit) {
-            onEdit(classificationToEdit);
-          }
-          setClassificationToEdit(null);
-        }}
-        onCancel={() => setClassificationToEdit(null)}
-      />
-
-      {/* Delete Confirmation Dialog */}
-      <ConfirmDialog
-        isOpen={!!classificationToDelete}
-        entityType="classification"
-        entityName={classificationToDelete?.name}
-        entityCode={classificationToDelete?.code}
-        onConfirm={handleConfirmDelete}
-        onCancel={() => setClassificationToDelete(null)}
-      />
     </div>
   );
 }

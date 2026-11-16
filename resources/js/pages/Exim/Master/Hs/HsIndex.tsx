@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Button } from "../../../../components/ui/Button";
 import { SearchField } from "../../../../components/ui/SearchField";
 import { Icon } from "../../../../components/ui/Icon";
-import { ConfirmDialog } from "../../../../components/ui/ConfirmDialog";
+import { StatusToggle } from "../../../../components/ui/StatusToggle";
 import { Pagination } from "../../../../components/ui/Pagination";
 import { useNotification } from "../../../../context/NotificationContext";
 import { initialHsRecords } from "./hs-data";
@@ -15,15 +15,11 @@ import type {
 interface HsIndexProps {
   records?: HsRecord[];
   onAddNew: () => void;
-  onEdit?: (record: HsRecord) => void;
-  onDelete?: (id: string) => void;
 }
 
 export function HsIndex({
   records = initialHsRecords,
   onAddNew,
-  onEdit,
-  onDelete,
 }: HsIndexProps) {
   const { notifySuccess, notifyError, notifyWarning } = useNotification();
 
@@ -33,8 +29,6 @@ export function HsIndex({
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [sortField, setSortField] = useState<HsSortField>("name");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
-  const [hsToDelete, setHsToDelete] = useState<HsRecord | null>(null);
-  const [hsToEdit, setHsToEdit] = useState<HsRecord | null>(null);
 
   useEffect(() => {
     setLocalRecords(records);
@@ -93,6 +87,9 @@ export function HsIndex({
       } else if (sortField === "ratesPpnbm") {
         aVal = a.ratesPpnbm;
         bVal = b.ratesPpnbm;
+      } else if (sortField === "status") {
+        aVal = a.status === false ? 0 : 1;
+        bVal = b.status === false ? 0 : 1;
       }
 
       if (typeof aVal === "number" && typeof bVal === "number") {
@@ -123,15 +120,6 @@ export function HsIndex({
     } else {
       setSortField(field);
       setSortDirection("asc");
-    }
-  };
-
-  const handleConfirmDelete = () => {
-    if (!hsToDelete) return;
-    const idToDelete = hsToDelete.id;
-    setHsToDelete(null);
-    if (onDelete) {
-      onDelete(idToDelete);
     }
   };
 
@@ -285,8 +273,12 @@ export function HsIndex({
                     <span>Cukai (%)</span>
                     {renderSortIndicator("ratesCukai")}
                   </th>
-                  <th className="master-col-actions">
-                    <span>Option</span>
+                  <th
+                    className="sortable-th master-sortable-th master-col-status"
+                    onClick={() => handleToggleSort("status")}
+                  >
+                    <span>Status</span>
+                    {renderSortIndicator("status")}
                   </th>
                 </tr>
               </thead>
@@ -318,30 +310,16 @@ export function HsIndex({
                           </span>
                         </td>
                         <td className="master-cell-center">
-                          <div className="master-actions-group">
-                            {onEdit && (
-                              <button
-                                type="button"
-                                className="btn-action-edit"
-                                title={`Edit ${item.name}`}
-                                aria-label={`Edit ${item.name}`}
-                                onClick={() => setHsToEdit(item)}
-                              >
-                                <Icon name="edit" size={13} />
-                              </button>
-                            )}
-                            {onDelete && (
-                              <button
-                                type="button"
-                                className="btn-action-delete"
-                                title={`Delete ${item.name}`}
-                                aria-label={`Delete ${item.name}`}
-                                onClick={() => setHsToDelete(item)}
-                              >
-                                <Icon name="trash" size={13} />
-                              </button>
-                            )}
-                          </div>
+                          <StatusToggle
+                            active={item.status ?? true}
+                            onToggle={() =>
+                              notifyError(
+                                "Status Toggle Unavailable",
+                                `Cannot change status for HS Code "${item.name}": table \`hs_code\` has no status column and backend endpoint PATCH /api/exim/master/hs-codes/{id}/toggle-status is not yet registered in routes/api.php.`
+                              )
+                            }
+                            ariaLabel={`Toggle status for ${item.name}`}
+                          />
                         </td>
                       </tr>
                     );
@@ -378,31 +356,6 @@ export function HsIndex({
           />
         </div>
       </div>
-
-      <ConfirmDialog
-        isOpen={!!hsToEdit}
-        title="Edit Record"
-        message={`Do you want to edit HS Code "${hsToEdit?.name}"?`}
-        confirmLabel="Continue"
-        cancelLabel="Cancel"
-        confirmVariant="primary"
-        icon="edit"
-        onConfirm={() => {
-          if (hsToEdit && onEdit) {
-            onEdit(hsToEdit);
-          }
-          setHsToEdit(null);
-        }}
-        onCancel={() => setHsToEdit(null)}
-      />
-
-      <ConfirmDialog
-        isOpen={!!hsToDelete}
-        entityType="HS code"
-        entityName={hsToDelete?.name}
-        onConfirm={handleConfirmDelete}
-        onCancel={() => setHsToDelete(null)}
-      />
     </div>
   );
 }

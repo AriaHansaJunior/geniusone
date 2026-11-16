@@ -70,8 +70,7 @@ export type ItemColumnKey =
   | "traceByLot"
   | "status"
   | "createdAt"
-  | "updatedAt"
-  | "option";
+  | "updatedAt";
 
 export interface ItemColumnConfig {
   key: ItemColumnKey;

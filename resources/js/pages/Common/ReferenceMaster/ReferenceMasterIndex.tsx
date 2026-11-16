@@ -3,7 +3,7 @@ import { Button } from "../../../components/ui/Button";
 import { SearchField } from "../../../components/ui/SearchField";
 import { Pagination } from "../../../components/ui/Pagination";
 import { Icon } from "../../../components/ui/Icon";
-import { Badge } from "../../../components/ui/Badge";
+import { StatusToggle } from "../../../components/ui/StatusToggle";
 import { useNotification } from "../../../context/NotificationContext";
 import type {
   ReferenceMasterConfig,
@@ -235,9 +235,16 @@ export function ReferenceMasterIndex({
                         <td className="master-cell-name">{item.name}</td>
                         {config.hasStatus && (
                           <td className="master-cell-center">
-                            <Badge tone={item.status ? "green" : "gray"}>
-                              {item.status ? "Active" : "Inactive"}
-                            </Badge>
+                            <StatusToggle
+                              active={item.status}
+                              onToggle={() =>
+                                notifyError(
+                                  "Status Toggle Unavailable",
+                                  `Cannot change status for ${config.singularLabel} "${item.name}" in table \`${config.dbTable}\`: backend endpoint ${config.expectedWriteEndpoint.replace(/^POST\s+/i, "PATCH ")}/{id}/toggle-status is not yet registered in routes/api.php.`
+                                )
+                              }
+                              ariaLabel={`Toggle status for ${item.name}`}
+                            />
                           </td>
                         )}
                       </tr>

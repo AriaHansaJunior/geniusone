@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Button } from "../../../../components/ui/Button";
 import { SearchField } from "../../../../components/ui/SearchField";
 import { Icon } from "../../../../components/ui/Icon";
-import { ConfirmDialog } from "../../../../components/ui/ConfirmDialog";
 import { Pagination } from "../../../../components/ui/Pagination";
 import { StatusToggle } from "../../../../components/ui/StatusToggle";
 import { initialCategoryRecords } from "./category-data";
@@ -15,16 +14,12 @@ import type {
 interface CategoryIndexProps {
   records?: CategoryRecord[];
   onAddNew: () => void;
-  onEdit?: (record: CategoryRecord) => void;
-  onDelete?: (id: string) => void;
   onToggleStatus?: (id: string) => void;
 }
 
 export function CategoryIndex({
   records = initialCategoryRecords,
   onAddNew,
-  onEdit,
-  onDelete,
   onToggleStatus,
 }: CategoryIndexProps) {
   const [localRecords, setLocalRecords] = useState<CategoryRecord[]>(records);
@@ -33,10 +28,6 @@ export function CategoryIndex({
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [sortField, setSortField] = useState<CategorySortField>("name");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
-  const [categoryToDelete, setCategoryToDelete] =
-    useState<CategoryRecord | null>(null);
-  const [categoryToEdit, setCategoryToEdit] =
-    useState<CategoryRecord | null>(null);
   const [exportNotice, setExportNotice] = useState<string | null>(null);
 
   useEffect(() => {
@@ -117,17 +108,6 @@ export function CategoryIndex({
     if (onToggleStatus) {
       onToggleStatus(id);
     }
-  };
-
-  // Delete confirmed
-  const handleConfirmDelete = () => {
-    if (!categoryToDelete) return;
-    const idToDelete = categoryToDelete.id;
-    setLocalRecords((prev) => prev.filter((c) => c.id !== idToDelete));
-    if (onDelete) {
-      onDelete(idToDelete);
-    }
-    setCategoryToDelete(null);
   };
 
   // Export to Excel-compatible CSV with UTF-8 BOM
@@ -301,11 +281,6 @@ export function CategoryIndex({
                     <span>Status</span>
                     {renderSortIndicator("status")}
                   </th>
-
-                  {/* 6. Option */}
-                  <th className="master-col-actions-wide">
-                    <span>Option</span>
-                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -343,36 +318,12 @@ export function CategoryIndex({
                             ariaLabel={`Toggle status for ${item.name}`}
                           />
                         </td>
-
-                        {/* 6. Option Actions */}
-                        <td className="master-cell-center">
-                          <div className="category-row-actions">
-                            {onEdit && (
-                              <button
-                                type="button"
-                                className="category-action-btn category-action-btn--edit"
-                                title={`Edit ${item.name}`}
-                                onClick={() => setCategoryToEdit(item)}
-                              >
-                                <Icon name="edit" size={13} />
-                              </button>
-                            )}
-                            <button
-                              type="button"
-                              className="category-action-btn category-action-btn--delete"
-                              title={`Delete ${item.name}`}
-                              onClick={() => setCategoryToDelete(item)}
-                            >
-                              <Icon name="trash" size={13} />
-                            </button>
-                          </div>
-                        </td>
                       </tr>
                     );
                   })
                 ) : (
                   <tr>
-                    <td colSpan={6} className="empty-table-cell">
+                    <td colSpan={5} className="empty-table-cell">
                       <div className="empty">
                         <div className="empty__icon">
                           <Icon name="search" />
@@ -401,34 +352,6 @@ export function CategoryIndex({
           />
         </div>
       </div>
-
-      {/* Edit Confirmation Dialog */}
-      <ConfirmDialog
-        isOpen={!!categoryToEdit}
-        title="Edit Record"
-        message={`Do you want to edit category "${categoryToEdit?.name}"?`}
-        confirmLabel="Continue"
-        cancelLabel="Cancel"
-        confirmVariant="primary"
-        icon="edit"
-        onConfirm={() => {
-          if (categoryToEdit && onEdit) {
-            onEdit(categoryToEdit);
-          }
-          setCategoryToEdit(null);
-        }}
-        onCancel={() => setCategoryToEdit(null)}
-      />
-
-      {/* Delete Confirmation Dialog */}
-      <ConfirmDialog
-        isOpen={!!categoryToDelete}
-        entityType="category"
-        entityName={categoryToDelete?.name}
-        entityCode={categoryToDelete?.code}
-        onConfirm={handleConfirmDelete}
-        onCancel={() => setCategoryToDelete(null)}
-      />
     </div>
   );
 }
