@@ -57,6 +57,11 @@ export const pageMeta: Record<PageKey, PageMeta> = {
     title: "PPH",
     description: "Configure withholding tax schedules and corporate deduction rates.",
   },
+  "pph-type": {
+    eyebrow: "PURCHASE MASTER",
+    title: "PPH Type",
+    description: "Withholding tax reference types registered in the master database.",
+  },
   "rafaksi-type": {
     eyebrow: "PURCHASE MASTER",
     title: "Master Rafaksi Type",
@@ -134,6 +139,36 @@ export const pageMeta: Record<PageKey, PageMeta> = {
     title: "Master HS",
     description: "Harmonized tariff schedule codes and duty assessment parameters.",
   },
+  "type-rates-bm": {
+    eyebrow: "EXIM MASTER",
+    title: "Type Rates BM",
+    description: "Import duty calculation method types registered for HS tariffs.",
+  },
+  "type-rates-cukai": {
+    eyebrow: "EXIM MASTER",
+    title: "Type Rates Cukai",
+    description: "Excise calculation method types registered for customs tariffs.",
+  },
+  "custom-report": {
+    eyebrow: "EXIM MASTER",
+    title: "Custom Report",
+    description: "Customs reporting document types linked to EXIM items and declarations.",
+  },
+  "item-type": {
+    eyebrow: "EXIM MASTER",
+    title: "Item Type",
+    description: "Material category and item type classifications.",
+  },
+  "group-scrap-item": {
+    eyebrow: "EXIM MASTER",
+    title: "Group Scrap Item",
+    description: "Scrap grouping references for industrial waste and by-product items.",
+  },
+  specification: {
+    eyebrow: "EXIM MASTER",
+    title: "Specification",
+    description: "Technical specification references used across item master records.",
+  },
   category: {
     eyebrow: "EXIM MASTER",
     title: "Master Category",
@@ -185,6 +220,11 @@ export const pageMeta: Record<PageKey, PageMeta> = {
     eyebrow: "WAREHOUSE MASTER",
     title: "Master Warehouse",
     description: "Storage facility records, zones, bin allocations, and supervisor assignments.",
+  },
+  "warehouse-type": {
+    eyebrow: "WAREHOUSE MASTER",
+    title: "Warehouse Type",
+    description: "Facility classification types registered for warehouse master setup.",
   },
   "type-of-mutation": {
     eyebrow: "WAREHOUSE MASTER",

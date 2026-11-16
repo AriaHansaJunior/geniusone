@@ -4,6 +4,7 @@ import { SearchField } from "../../../../components/ui/SearchField";
 import { Icon } from "../../../../components/ui/Icon";
 import { ConfirmDialog } from "../../../../components/ui/ConfirmDialog";
 import { Pagination } from "../../../../components/ui/Pagination";
+import { StatusToggle } from "../../../../components/ui/StatusToggle";
 import { initialStyleRecords } from "./style-data";
 import type {
   StyleRecord,
@@ -113,12 +114,9 @@ export function StyleIndex({
     const isActive = sortField === field && sortDirection !== "none";
     return (
       <span
-        style={{
-          marginLeft: "6px",
-          display: "inline-flex",
-          alignItems: "center",
-          color: isActive ? "var(--blue-600)" : "var(--muted-2)",
-        }}
+        className={`master-sort-indicator ${
+          isActive ? "master-sort-indicator--active" : ""
+        }`}
       >
         {isActive ? (
           sortDirection === "asc" ? (
@@ -235,7 +233,7 @@ export function StyleIndex({
       {/* Main Table Panel */}
       <div className="style-table-panel panel">
         {/* Table Toolbar: Search on Left, Actions on Right */}
-        <div className="style-toolbar" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" }}>
+        <div className="style-toolbar master-table-toolbar">
           <SearchField
             value={search}
             onChange={(val) => {
@@ -245,7 +243,7 @@ export function StyleIndex({
             placeholder="Search..."
           />
 
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <div className="master-toolbar-actions">
             <Button variant="primary" onClick={onAddNew}>
               Add New
             </Button>
@@ -273,14 +271,13 @@ export function StyleIndex({
               <thead>
                 <tr>
                   {/* 1. No */}
-                  <th style={{ width: "60px", textAlign: "center" }}>
+                  <th className="master-col-no">
                     <span>No</span>
                   </th>
 
                   {/* 2. Code */}
                   <th
-                    className="sortable-th"
-                    style={{ minWidth: "120px" }}
+                    className="sortable-th master-col-mw120"
                     onClick={() => handleToggleSort("code")}
                   >
                     <span>Code</span>
@@ -289,8 +286,7 @@ export function StyleIndex({
 
                   {/* 3. Name */}
                   <th
-                    className="sortable-th"
-                    style={{ minWidth: "240px" }}
+                    className="sortable-th master-col-mw240"
                     onClick={() => handleToggleSort("name")}
                   >
                     <span>Name</span>
@@ -299,8 +295,7 @@ export function StyleIndex({
 
                   {/* 4. Description */}
                   <th
-                    className="sortable-th"
-                    style={{ minWidth: "260px" }}
+                    className="sortable-th master-col-mw260"
                     onClick={() => handleToggleSort("description")}
                   >
                     <span>Description</span>
@@ -309,8 +304,7 @@ export function StyleIndex({
 
                   {/* 5. Status */}
                   <th
-                    className="sortable-th"
-                    style={{ width: "90px", textAlign: "center" }}
+                    className="sortable-th master-col-status-md"
                     onClick={() => handleToggleSort("status")}
                   >
                     <span>Status</span>
@@ -318,7 +312,7 @@ export function StyleIndex({
                   </th>
 
                   {/* 6. Option */}
-                  <th style={{ width: "140px", textAlign: "center" }}>
+                  <th className="master-col-actions-wide">
                     <span>Option</span>
                   </th>
                 </tr>
@@ -331,13 +325,7 @@ export function StyleIndex({
                     return (
                       <tr key={item.id}>
                         {/* 1. No (Sequential) */}
-                        <td
-                          style={{
-                            textAlign: "center",
-                            color: "var(--muted)",
-                            fontWeight: 600,
-                          }}
-                        >
+                        <td className="master-cell-no">
                           {rowNumber}
                         </td>
 
@@ -352,31 +340,17 @@ export function StyleIndex({
                           {item.description || "-"}
                         </td>
 
-                        {/* 5. Status Checkbox Toggle */}
-                        <td style={{ textAlign: "center" }}>
-                          <button
-                            type="button"
-                            className="style-status-toggle"
-                            onClick={() => handleToggleStatus(item.id)}
-                            title={`Click to ${
-                              item.status ? "deactivate" : "activate"
-                            } ${item.name}`}
-                            aria-label={`Status for ${item.name}: ${
-                              item.status ? "Active" : "Inactive"
-                            }`}
-                          >
-                            <span
-                              className={`style-status-checkbox ${
-                                item.status ? "checked" : "unchecked"
-                              }`}
-                            >
-                              {item.status && <Icon name="check" size={13} />}
-                            </span>
-                          </button>
+                        {/* 5. Status Toggle */}
+                        <td className="master-cell-center">
+                          <StatusToggle
+                            active={item.status}
+                            onToggle={() => handleToggleStatus(item.id)}
+                            ariaLabel={`Toggle status for ${item.name}`}
+                          />
                         </td>
 
                         {/* 6. Option Column */}
-                        <td style={{ textAlign: "center" }}>
+                        <td className="master-cell-center">
                           <div className="style-row-actions">
                             {onEdit && (
                               <button

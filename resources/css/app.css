@@ -23,6 +23,7 @@
 @import "./components/column-settings.css";
 @import "./components/pagination.css";
 @import "./components/dialogs.css";
+@import "./components/notifications.css";
 @import "./components/print.css";
 
 /* Page-Specific Styles */

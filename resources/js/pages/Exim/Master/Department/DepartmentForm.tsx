@@ -9,7 +9,7 @@ interface DepartmentFormProps {
   initialRecord?: DepartmentRecord | null;
   units: UnitRecord[];
   onBack: () => void;
-  onSave?: (record: DepartmentRecord, isEdit: boolean) => void;
+  onSave?: (record: DepartmentRecord, isEdit: boolean) => Promise<void> | void;
 }
 
 export function DepartmentForm({
@@ -24,6 +24,7 @@ export function DepartmentForm({
     initialRecord?.sectionName || ""
   );
   const [unitId, setUnitId] = useState(initialRecord?.unitId || "");
+  const [saving, setSaving] = useState(false);
 
   const [error, setError] = useState<string | null>(null);
 
@@ -32,8 +33,9 @@ export function DepartmentForm({
     message: string;
   } | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (saving) return;
 
     const trimmedName = sectionName.trim();
 
@@ -59,7 +61,16 @@ export function DepartmentForm({
     };
 
     if (onSave) {
-      onSave(updatedRecord, isEdit);
+      try {
+        setSaving(true);
+        await onSave(updatedRecord, isEdit);
+      } catch (err: any) {
+        setNotification({
+          type: "warning",
+          message: err?.message || "Failed to save department to database.",
+        });
+        setSaving(false);
+      }
     }
   };
 
@@ -150,11 +161,11 @@ export function DepartmentForm({
 
         {/* Form Action Buttons: Cancel and Save */}
         <div className="department-form-actions">
-          <Button type="button" variant="ghost" onClick={onBack}>
+          <Button type="button" variant="ghost" onClick={onBack} disabled={saving}>
             Cancel
           </Button>
-          <Button type="submit" variant="primary">
-            Save
+          <Button type="submit" variant="primary" disabled={saving}>
+            {saving ? "Saving..." : "Save"}
           </Button>
         </div>
       </form>

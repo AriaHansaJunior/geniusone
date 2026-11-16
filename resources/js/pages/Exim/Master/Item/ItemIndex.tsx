@@ -5,6 +5,7 @@ import { Icon } from "../../../../components/ui/Icon";
 import { ConfirmDialog } from "../../../../components/ui/ConfirmDialog";
 import { Pagination } from "../../../../components/ui/Pagination";
 import { CustomSelect } from "../../../../components/ui/CustomSelect";
+import { StatusToggle } from "../../../../components/ui/StatusToggle";
 import { useAuthPermission } from "../../../../context/AuthPermissionContext";
 import { ColumnSettingsPanel } from "./ColumnSettingsPanel";
 import {
@@ -25,6 +26,7 @@ interface ItemIndexProps {
   onGenerateQr: () => void;
   onEdit?: (record: ItemRecord) => void;
   onDelete?: (id: string) => void;
+  onToggleStatus?: (id: string) => void;
 }
 
 type SortDirection = "none" | "asc" | "desc";
@@ -42,6 +44,7 @@ export function ItemIndex({
   onGenerateQr,
   onEdit,
   onDelete,
+  onToggleStatus,
 }: ItemIndexProps) {
   const { can, currentUser } = useAuthPermission();
   const canCreateMasterItem = can("master_item", "create");
@@ -235,12 +238,9 @@ export function ItemIndex({
     const isActive = sortField === field && sortDirection !== "none";
     return (
       <span
-        style={{
-          marginLeft: "6px",
-          display: "inline-flex",
-          alignItems: "center",
-          color: isActive ? "var(--blue-600)" : "var(--muted-2)",
-        }}
+        className={`master-sort-indicator ${
+          isActive ? "master-sort-indicator--active" : ""
+        }`}
       >
         {isActive ? (
           sortDirection === "asc" ? (
@@ -339,7 +339,7 @@ export function ItemIndex({
             />
           </div>
 
-          <div className="item-toolbar-right" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <div className="item-toolbar-right master-toolbar-actions">
             {/* Positive Green Utility Button for Generate QR Code */}
             <button
               type="button"
@@ -356,14 +356,7 @@ export function ItemIndex({
               </Button>
             ) : (
               <span
-                style={{
-                  fontSize: "11px",
-                  color: "var(--muted)",
-                  padding: "4px 8px",
-                  border: "1px solid var(--line)",
-                  borderRadius: "6px",
-                  background: "var(--canvas)",
-                }}
+                className="master-view-only-pill"
                 title={`Role '${currentUser?.role || "User"}' has View-Only access to Master Item`}
               >
                 View Only ({currentUser?.role_label || currentUser?.role || "Role"})
@@ -379,7 +372,7 @@ export function ItemIndex({
             </Button>
 
             {/* Standard GeniusOne Table Column Settings Button */}
-            <div style={{ position: "relative" }}>
+            <div className="master-relative">
               <button
                 type="button"
                 className={`item-column-btn ${isColumnSettingsOpen ? "active" : ""}`}
@@ -409,7 +402,7 @@ export function ItemIndex({
             <thead>
               <tr>
                 {/* Row selection checkbox */}
-                <th style={{ width: "40px", textAlign: "center" }}>
+                <th className="master-col-check">
                   <input
                     type="checkbox"
                     checked={isAllCurrentPageSelected}
@@ -419,12 +412,11 @@ export function ItemIndex({
                 </th>
 
                 {/* No column */}
-                <th style={{ width: "50px", textAlign: "center" }}>No</th>
+                <th className="master-col-no-sm">No</th>
 
                 {visibleMap.itemCode && (
                   <th
-                    className="sortable-th"
-                    style={{ minWidth: "140px" }}
+                    className="sortable-th master-col-mw140"
                     onClick={() => handleToggleSort("itemCode")}
                   >
                     <span>Item Code</span>
@@ -434,8 +426,7 @@ export function ItemIndex({
 
                 {visibleMap.kodeEksternal && (
                   <th
-                    className="sortable-th"
-                    style={{ minWidth: "130px" }}
+                    className="sortable-th master-col-mw130"
                     onClick={() => handleToggleSort("kodeEksternal")}
                   >
                     <span>Kode Eksternal</span>
@@ -445,8 +436,7 @@ export function ItemIndex({
 
                 {visibleMap.itemName && (
                   <th
-                    className="sortable-th"
-                    style={{ minWidth: "260px" }}
+                    className="sortable-th master-col-mw260"
                     onClick={() => handleToggleSort("itemName")}
                   >
                     <span>Item Name</span>
@@ -456,8 +446,7 @@ export function ItemIndex({
 
                 {visibleMap.classification && (
                   <th
-                    className="sortable-th"
-                    style={{ minWidth: "180px" }}
+                    className="sortable-th master-col-mw180"
                     onClick={() => handleToggleSort("classification")}
                   >
                     <span>Classification</span>
@@ -467,8 +456,7 @@ export function ItemIndex({
 
                 {visibleMap.category && (
                   <th
-                    className="sortable-th"
-                    style={{ minWidth: "120px" }}
+                    className="sortable-th master-col-mw120"
                     onClick={() => handleToggleSort("category")}
                   >
                     <span>Category</span>
@@ -478,8 +466,7 @@ export function ItemIndex({
 
                 {visibleMap.hsCode && (
                   <th
-                    className="sortable-th"
-                    style={{ minWidth: "120px" }}
+                    className="sortable-th master-col-mw120"
                     onClick={() => handleToggleSort("hsCode")}
                   >
                     <span>HS Code</span>
@@ -488,17 +475,16 @@ export function ItemIndex({
                 )}
 
                 {visibleMap.smallestUnit && (
-                  <th style={{ minWidth: "110px" }}>Smallest Unit</th>
+                  <th className="master-col-mw110">Smallest Unit</th>
                 )}
 
                 {visibleMap.greatestUnit && (
-                  <th style={{ minWidth: "110px" }}>Greatest Unit</th>
+                  <th className="master-col-mw110">Greatest Unit</th>
                 )}
 
                 {visibleMap.facility && (
                   <th
-                    className="sortable-th"
-                    style={{ minWidth: "130px" }}
+                    className="sortable-th master-col-mw130"
                     onClick={() => handleToggleSort("facility")}
                   >
                     <span>Facility</span>
@@ -507,25 +493,24 @@ export function ItemIndex({
                 )}
 
                 {visibleMap.groupScrap && (
-                  <th style={{ minWidth: "120px" }}>Group Scrap</th>
+                  <th className="master-col-mw120">Group Scrap</th>
                 )}
 
                 {visibleMap.specification && (
-                  <th style={{ minWidth: "140px" }}>Specification</th>
+                  <th className="master-col-mw140">Specification</th>
                 )}
 
                 {visibleMap.origin && (
-                  <th style={{ minWidth: "100px" }}>Origin</th>
+                  <th className="master-col-mw100">Origin</th>
                 )}
 
                 {visibleMap.colour && (
-                  <th style={{ minWidth: "100px" }}>Colour</th>
+                  <th className="master-col-mw100">Colour</th>
                 )}
 
                 {visibleMap.brand && (
                   <th
-                    className="sortable-th"
-                    style={{ minWidth: "120px" }}
+                    className="sortable-th master-col-mw120"
                     onClick={() => handleToggleSort("brand")}
                   >
                     <span>Brand</span>
@@ -534,17 +519,16 @@ export function ItemIndex({
                 )}
 
                 {visibleMap.style && (
-                  <th style={{ minWidth: "110px" }}>Style</th>
+                  <th className="master-col-mw110">Style</th>
                 )}
 
                 {visibleMap.customReport && (
-                  <th style={{ minWidth: "140px" }}>Custom Report</th>
+                  <th className="master-col-mw140">Custom Report</th>
                 )}
 
                 {visibleMap.traceByLot && (
                   <th
-                    className="sortable-th"
-                    style={{ minWidth: "110px", textAlign: "center" }}
+                    className="sortable-th master-col-lot"
                     onClick={() => handleToggleSort("traceByLot")}
                   >
                     <span>Trace By Lot</span>
@@ -554,8 +538,7 @@ export function ItemIndex({
 
                 {visibleMap.status && (
                   <th
-                    className="sortable-th"
-                    style={{ minWidth: "90px", textAlign: "center" }}
+                    className="sortable-th master-col-status-mw"
                     onClick={() => handleToggleSort("status")}
                   >
                     <span>Status</span>
@@ -565,8 +548,7 @@ export function ItemIndex({
 
                 {visibleMap.createdAt && (
                   <th
-                    className="sortable-th"
-                    style={{ minWidth: "160px" }}
+                    className="sortable-th master-col-mw160"
                     onClick={() => handleToggleSort("createdAt")}
                   >
                     <span>Created at</span>
@@ -576,8 +558,7 @@ export function ItemIndex({
 
                 {visibleMap.updatedAt && (
                   <th
-                    className="sortable-th"
-                    style={{ minWidth: "160px" }}
+                    className="sortable-th master-col-mw160"
                     onClick={() => handleToggleSort("updatedAt")}
                   >
                     <span>Updated at</span>
@@ -586,7 +567,7 @@ export function ItemIndex({
                 )}
 
                 {visibleMap.option && (
-                  <th style={{ minWidth: "90px", textAlign: "center" }}>Option</th>
+                  <th className="master-col-option-md">Option</th>
                 )}
               </tr>
             </thead>
@@ -599,7 +580,7 @@ export function ItemIndex({
                   return (
                     <tr key={item.id} className={isChecked ? "selected" : ""}>
                       {/* Row Checkbox */}
-                      <td style={{ textAlign: "center" }}>
+                      <td className="master-cell-center">
                         <input
                           type="checkbox"
                           checked={isChecked}
@@ -609,13 +590,7 @@ export function ItemIndex({
                       </td>
 
                       {/* No */}
-                      <td
-                        style={{
-                          textAlign: "center",
-                          color: "var(--muted)",
-                          fontWeight: 600,
-                        }}
-                      >
+                      <td className="master-cell-no">
                         {rowNumber}
                       </td>
 
@@ -630,14 +605,7 @@ export function ItemIndex({
                       )}
 
                       {visibleMap.itemName && (
-                        <td
-                          style={{
-                            fontWeight: 700,
-                            color: "var(--ink)",
-                            whiteSpace: "normal",
-                            minWidth: "240px",
-                          }}
-                        >
+                        <td className="master-cell-item-name">
                           {item.itemName}
                         </td>
                       )}
@@ -651,7 +619,7 @@ export function ItemIndex({
                       )}
 
                       {visibleMap.hsCode && (
-                        <td style={{ fontFamily: "var(--font-mono, monospace)" }}>
+                        <td className="master-cell-mono">
                           {safeStr(item.hsCode)}
                         </td>
                       )}
@@ -687,7 +655,7 @@ export function ItemIndex({
                       )}
 
                       {visibleMap.specification && (
-                        <td style={{ whiteSpace: "normal", maxWidth: "200px" }}>
+                        <td className="master-cell-spec-wrap">
                           {safeStr(item.specification)}
                         </td>
                       )}
@@ -705,40 +673,35 @@ export function ItemIndex({
                       )}
 
                       {visibleMap.traceByLot && (
-                        <td style={{ textAlign: "center" }}>
+                        <td className="master-cell-center">
                           {item.traceByLot ? "Yes" : "No"}
                         </td>
                       )}
 
                       {visibleMap.status && (
-                        <td style={{ textAlign: "center" }}>
-                          <span
-                            className={`item-status-pill ${
-                              item.status === "Active"
-                                ? "item-status-pill--active"
-                                : "item-status-pill--inactive"
-                            }`}
-                          >
-                            <span className="item-status-dot" />
-                            {item.status}
-                          </span>
+                        <td className="master-cell-center">
+                          <StatusToggle
+                            active={item.status === "Active"}
+                            onToggle={() => onToggleStatus?.(item.id)}
+                            ariaLabel={`Toggle status for ${item.itemName}`}
+                          />
                         </td>
                       )}
 
                       {visibleMap.createdAt && (
-                        <td style={{ color: "var(--muted)", fontSize: "11px" }}>
+                        <td className="master-cell-audit">
                           {item.createdAt}
                         </td>
                       )}
 
                       {visibleMap.updatedAt && (
-                        <td style={{ color: "var(--muted)", fontSize: "11px" }}>
+                        <td className="master-cell-audit">
                           {item.updatedAt}
                         </td>
                       )}
 
                       {visibleMap.option && (
-                        <td style={{ textAlign: "center" }}>
+                        <td className="master-cell-center">
                           <div className="item-row-actions">
                             {onEdit && canUpdateMasterItem && (
                               <button
@@ -761,7 +724,7 @@ export function ItemIndex({
                               </button>
                             )}
                             {!canUpdateMasterItem && !canDeleteMasterItem && (
-                              <span style={{ fontSize: "11px", color: "var(--muted)" }}>—</span>
+                              <span className="master-cell-audit">—</span>
                             )}
                           </div>
                         </td>

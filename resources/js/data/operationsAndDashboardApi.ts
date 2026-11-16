@@ -341,28 +341,41 @@ export async function deleteDocumentHistoryApi(id: string | number): Promise<boo
 export async function fetchMasterUnitReferences(): Promise<UnitReferenceRecord[] | null> {
   const res = await apiGet<{ data: any[] }>("/api/exim/master/unit-references", { per_page: 500 });
   if (!res?.data) return null;
-  return res.data.map((r: any) => ({
+  return res.data.map((r: any, idx: number) => ({
     id: String(r.id),
-    code: r.code || r.unit?.nama || "",
-    description: r.name || r.description || r.unit?.nama || "",
+    no: idx + 1,
+    code: r.code || "",
+    name: r.name || "",
+    description: r.description || "",
+    status: r.status === undefined || r.status === null ? true : Number(r.status) === 1 || String(r.status).toLowerCase() === "active" || r.status === true,
+    createdBy: r.created_by_user?.name || r.created_by_name || "-",
+    createdAt: formatDisplayDate(r.created_at),
   }));
 }
 
-export async function saveUnitReferenceApi(record: Partial<UnitReferenceRecord>, isEdit?: boolean): Promise<UnitReferenceRecord | null> {
+export async function saveUnitReferenceApi(record: Partial<UnitReferenceRecord>, isEdit?: boolean): Promise<UnitReferenceRecord> {
   const payload = {
-    code: record.code,
-    name: record.description,
-    status: 1,
+    code: record.code?.trim() ? record.code.trim() : null,
+    name: (record.name || "").trim(),
+    description: record.description?.trim() ? record.description.trim() : null,
+    status: record.status === false ? 0 : 1,
   };
   const res = isEdit && record.id
     ? await apiPut<{ data: any }>(`/api/exim/master/unit-references/${toNumericOrCleanId(record.id)}`, payload)
     : await apiPost<{ data: any }>("/api/exim/master/unit-references", payload);
-  if (!res?.data) return null;
+  if (!res?.data) {
+    throw new Error("Unit reference was not returned after saving.");
+  }
   const r = res.data;
   return {
     id: String(r.id),
-    code: r.code || record.code || "",
-    description: r.name || r.description || record.description || "",
+    no: 1,
+    code: r.code || "",
+    name: r.name || payload.name,
+    description: r.description || "",
+    status: r.status === undefined || r.status === null ? true : Number(r.status) === 1 || String(r.status).toLowerCase() === "active" || r.status === true,
+    createdBy: r.created_by_user?.name || r.created_by_name || "-",
+    createdAt: formatDisplayDate(r.created_at),
   };
 }
 

@@ -1,81 +1,75 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Button } from "../../../../components/ui/Button";
 import { Icon } from "../../../../components/ui/Icon";
+import type { PurchaseCategoryRecord } from "./purchase-category-types";
 
 interface PurchaseCategoryFormProps {
+  initialRecord?: PurchaseCategoryRecord | null;
   onBack: () => void;
-  onSave?: (data: { code: string; name: string }) => void;
+  onSave?: (data: { code: string; name: string }, editId?: string) => void | Promise<any>;
 }
 
-export function PurchaseCategoryForm({ onBack, onSave }: PurchaseCategoryFormProps) {
-  const [categoryCode, setCategoryCode] = useState("");
-  const [categoryName, setCategoryName] = useState("");
-  const [notification, setNotification] = useState<{
-    type: "info" | "warning";
-    message: string;
-  } | null>(null);
+export function PurchaseCategoryForm({
+  initialRecord,
+  onBack,
+  onSave,
+}: PurchaseCategoryFormProps) {
+  const isEdit = Boolean(initialRecord);
+  const [categoryCode, setCategoryCode] = useState(initialRecord?.categoryCode || "");
+  const [categoryName, setCategoryName] = useState(initialRecord?.categoryName || "");
+  const [saving, setSaving] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
-  const handleSave = (e: React.FormEvent) => {
+  useEffect(() => {
+    setCategoryCode(initialRecord?.categoryCode || "");
+    setCategoryName(initialRecord?.categoryName || "");
+    setSubmitError(null);
+    setSaving(false);
+  }, [initialRecord]);
+
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (saving) return;
 
     if (!categoryCode.trim() || !categoryName.trim()) {
-      setNotification({
-        type: "warning",
-        message: "Please enter both Category Code and Category Name before proceeding.",
-      });
+      setSubmitError("Please enter both Category Code and Category Name before proceeding.");
       return;
     }
 
     if (onSave) {
-      onSave({ code: categoryCode.trim(), name: categoryName.trim() });
+      try {
+        setSaving(true);
+        setSubmitError(null);
+        await onSave(
+          { code: categoryCode.trim(), name: categoryName.trim() },
+          initialRecord?.id
+        );
+      } catch (err: any) {
+        setSubmitError(err?.message || "Failed to save purchase category to database.");
+        setSaving(false);
+      }
     }
-
-    setNotification({
-      type: "info",
-      message: "Purchase category saved successfully and synchronized with database.",
-    });
   };
 
   return (
     <div className="purchase-category-form-page master-form-page">
-      {/* Page Header */}
       <div className="master-form-header">
         <h1 className="master-form-page-title">
-          Add Purchase Category
+          {isEdit ? "Edit Purchase Category" : "Add Purchase Category"}
         </h1>
       </div>
 
-      {/* Status Notice Banner */}
-      {notification && (
-        <div
-          className={`supplier-form-alert supplier-form-alert--${notification.type}`}
-        >
-          <Icon
-            name={notification.type === "info" ? "check" : "alertTriangle"}
-            size={16}
-          />
-          <div className="supplier-form-alert__content">
-            <strong>
-              {notification.type === "info"
-                ? "Form Validated"
-                : "Required Information Missing"}
-            </strong>
-            <p>{notification.message}</p>
+      {submitError && (
+        <div className="master-form-alert--error" role="alert">
+          <div className="master-form-alert-row">
+            <Icon name="alertTriangle" size={16} />
+            <span>{submitError}</span>
           </div>
-          <button
-            type="button"
-            className="alert-close-btn"
-            onClick={() => setNotification(null)}
-          >
-            ×
-          </button>
         </div>
       )}
 
-      {/* Main Form Card */}
-      <form onSubmit={handleSave} className="master-form-card">
+      <form onSubmit={handleSave} className="master-form-card" noValidate>
         <div className="master-form-grid-2">
-          {/* Field 1: Category Code */}
           <div className="master-form-group">
             <label htmlFor="categoryCode" className="master-form-label">
               Category Code <span className="required-mark">*</span>
@@ -83,6 +77,7 @@ export function PurchaseCategoryForm({ onBack, onSave }: PurchaseCategoryFormPro
             <input
               id="categoryCode"
               type="text"
+              maxLength={45}
               className="master-form-input font-mono"
               placeholder="Purchase Category Code"
               value={categoryCode}
@@ -92,7 +87,6 @@ export function PurchaseCategoryForm({ onBack, onSave }: PurchaseCategoryFormPro
             />
           </div>
 
-          {/* Field 2: Category Name */}
           <div className="master-form-group">
             <label htmlFor="categoryName" className="master-form-label">
               Category Name <span className="required-mark">*</span>
@@ -100,6 +94,7 @@ export function PurchaseCategoryForm({ onBack, onSave }: PurchaseCategoryFormPro
             <input
               id="categoryName"
               type="text"
+              maxLength={45}
               className="master-form-input"
               placeholder="Purchase Category Name"
               value={categoryName}
@@ -109,13 +104,12 @@ export function PurchaseCategoryForm({ onBack, onSave }: PurchaseCategoryFormPro
           </div>
         </div>
 
-        {/* Action Buttons Footer */}
         <div className="master-form-actions">
-          <Button type="button" variant="ghost" onClick={onBack}>
+          <Button type="button" variant="ghost" onClick={onBack} disabled={saving}>
             Cancel
           </Button>
-          <Button type="submit" variant="primary" icon="check">
-            Save
+          <Button type="submit" variant="primary" disabled={saving}>
+            {saving ? "Saving..." : "Save"}
           </Button>
         </div>
       </form>

@@ -102,16 +102,16 @@ export function WarehouseCoordinateIndex({
   return (
     <div className="wh-page">
       {/* Page Header */}
-      <div className="page-header" style={{ marginBottom: "16px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "12px" }}>
+      <div className="wh-page-header">
         <div>
-          <span className="eyebrow" style={{ textTransform: "uppercase", fontSize: "11px", fontWeight: 700, color: "var(--primary, #0071e3)", letterSpacing: "0.5px" }}>
+          <span className="wh-page-eyebrow">
             WAREHOUSE MASTER
           </span>
-          <h1 style={{ margin: "2px 0 0", fontSize: "20px", fontWeight: 800, color: "var(--ink, #0f172a)", letterSpacing: "-0.3px" }}>
-            Warehouse Coordinates <span style={{ fontWeight: 400, color: "var(--muted, #64748b)", fontSize: "16px" }}>— {warehouse?.name || "Warehouse"}</span>
+          <h1 className="wh-page-heading">
+            Warehouse Coordinates <span className="wh-page-subtitle">— {warehouse?.name || "Warehouse"}</span>
           </h1>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+        <div className="wh-header-actions">
           <Button variant="outline" onClick={onBack}>
             Back
           </Button>
@@ -121,8 +121,8 @@ export function WarehouseCoordinateIndex({
       {/* Content Card */}
       <div className="wh-table-card">
         {/* Filter and Page-Size Controls Bar */}
-        <div className="wh-controls-bar" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 18px", borderBottom: "1px solid var(--line)", background: "#ffffff", gap: "16px" }}>
-          <div className="wh-search-box" style={{ maxWidth: "320px", width: "100%" }}>
+        <div className="wh-controls-bar">
+          <div className="wh-search-box wh-search-box--compact">
             <SearchField
               value={search}
               onChange={(val) => {
@@ -132,7 +132,7 @@ export function WarehouseCoordinateIndex({
               placeholder="Search coordinate name..."
             />
           </div>
-          <div className="wh-header-actions" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <div className="wh-header-actions">
             <Button
               variant="primary"
               onClick={onAddNew}

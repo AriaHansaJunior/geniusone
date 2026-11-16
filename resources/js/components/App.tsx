@@ -19,8 +19,14 @@ import { pageMeta } from "../config/pageMeta";
 import { docToSlug } from "../utils/docSlug";
 import { ALL_SIDEBAR_MENU_ITEMS } from "../config/navigation";
 import { useAuthPermission } from "../context/AuthPermissionContext";
+import { useNotification } from "../context/NotificationContext";
 
 const SIDEBAR_GUARDED_PAGES = new Set(ALL_SIDEBAR_MENU_ITEMS.map((item) => item.id));
+import type {
+  ReferenceMasterPageKey,
+  ReferenceMasterRecord,
+} from "../pages/Common/ReferenceMaster/reference-master-types";
+import { REFERENCE_MASTER_CONFIGS } from "../pages/Common/ReferenceMaster/reference-master-config";
 import type { PphRecord } from "../pages/Procurement/PurchaseMaster/Pph/pph-types";
 import type { SupplierRecord } from "../pages/Procurement/PurchaseMaster/Supplier/supplier-types";
 import type { PaymentTermRecord } from "../pages/Procurement/PurchaseMaster/PaymentTerm/payment-term-types";
@@ -59,24 +65,31 @@ import type { PageKey, ViewState, TableRow } from "../types";
 import {
   fetchMasterSuppliers,
   saveSupplierApi,
+  deleteSupplierApi,
   toggleSupplierStatusApi,
   fetchMasterPaymentTerms,
   savePaymentTermApi,
+  deletePaymentTermApi,
   togglePaymentTermStatusApi,
   fetchMasterPurchaseCategories,
   savePurchaseCategoryApi,
+  deletePurchaseCategoryApi,
   togglePurchaseCategoryStatusApi,
   fetchMasterDeliveryTerms,
   saveDeliveryTermApi,
+  deleteDeliveryTermApi,
   toggleDeliveryTermStatusApi,
   fetchMasterAdditionalCosts,
   saveAdditionalCostApi,
+  deleteAdditionalCostApi,
   toggleAdditionalCostStatusApi,
   fetchMasterPph,
   savePphApi,
+  deletePphApi,
   togglePphStatusApi,
   fetchMasterUnits,
   saveUnitApi,
+  toggleUnitStatusApi,
   deleteUnitApi,
   fetchMasterBrands,
   saveBrandApi,
@@ -108,14 +121,27 @@ import {
   deleteStyleApi,
   fetchMasterColours,
   saveColorApi,
+  deleteColorApi,
+  toggleColorStatusApi,
   fetchMasterItems,
   saveItemApi,
+  toggleItemStatusApi,
   deleteItemApi,
   fetchMasterWarehouses,
   fetchWarehouseTypesApi,
   saveWarehouseMasterApi,
+  deleteWarehouseMasterApi,
+  toggleWarehouseMasterStatusApi,
   saveWarehouseCoordinateApi,
   deleteWarehouseCoordinateApi,
+  fetchPphTypesMasterApi,
+  fetchTypeRatesBmMasterApi,
+  fetchTypeRatesCukaiMasterApi,
+  fetchCustomsReportsMasterApi,
+  fetchItemTypesMasterApi,
+  fetchGroupScrapItemsMasterApi,
+  fetchSpecificationsMasterApi,
+  fetchWarehouseTypesListApi,
   fetchMasterCountries,
   fetchMasterRafaksiTypes,
   fetchMasterCurrencies,
@@ -134,11 +160,61 @@ import {
   fetchWarehouseTypesOfRequestApi,
   saveWarehouseTypeOfRequestApi,
   deleteWarehouseTypeOfRequestApi,
+  toggleWarehouseTypeOfRequestStatusApi,
   fetchDestinationLocationsApi,
   saveDestinationLocationApi,
   deleteDestinationLocationApi,
+  toggleDestinationLocationStatusApi,
 } from "../data/masterApi";
 import { clearApiCache, createReceiveNote } from "../data/api";
+
+const REFERENCE_FETCHER_MAP: Record<
+  ReferenceMasterPageKey,
+  () => Promise<ReferenceMasterRecord[]>
+> = {
+  "pph-type": fetchPphTypesMasterApi,
+  "type-rates-bm": fetchTypeRatesBmMasterApi,
+  "type-rates-cukai": fetchTypeRatesCukaiMasterApi,
+  "custom-report": fetchCustomsReportsMasterApi,
+  "item-type": fetchItemTypesMasterApi,
+  "group-scrap-item": fetchGroupScrapItemsMasterApi,
+  specification: fetchSpecificationsMasterApi,
+  "warehouse-type": fetchWarehouseTypesListApi,
+};
+
+async function runOptimisticStatusToggle<T extends { id: string }>(
+  id: string,
+  field: "hidden" | "status",
+  label: string,
+  setRecords: React.Dispatch<React.SetStateAction<T[]>>,
+  apiToggle: (recordId: string, flag: boolean) => Promise<boolean>,
+  notifySuccess: (title: string, message?: string) => void,
+  notifyError: (title: string, err?: unknown) => void
+) {
+  setRecords((prev) =>
+    prev.map((row) =>
+      row.id === id
+        ? { ...row, [field]: !Boolean((row as Record<string, unknown>)[field]) }
+        : row
+    )
+  );
+  try {
+    const ok = await apiToggle(id, true);
+    if (!ok) {
+      throw new Error(`Failed to update ${label} status.`);
+    }
+    notifySuccess("Status Updated", `${label} status updated.`);
+  } catch (err) {
+    setRecords((prev) =>
+      prev.map((row) =>
+        row.id === id
+          ? { ...row, [field]: !Boolean((row as Record<string, unknown>)[field]) }
+          : row
+      )
+    );
+    notifyError("Status Update Failed", err);
+  }
+}
 
 interface AppProps {
   initialPage?: string;
@@ -147,6 +223,7 @@ interface AppProps {
 
 export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
   const { isAuthenticated, authReady, logoutUser, canAccessSidebarItem } = useAuthPermission();
+  const { notifySuccess, notifyError } = useNotification();
   const [viewState, setViewState] = useState<ViewState>(() =>
     resolveInitialViewState(initialPage, initialCode)
   );
@@ -231,11 +308,17 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
 
   // Master & transaction datasets state synchronized from backend database
   const [pphRecords, setPphRecords] = useState<PphRecord[]>([]);
+  const [editingPph, setEditingPph] = useState<PphRecord | null>(null);
   const [supplierRecords, setSupplierRecords] = useState<SupplierRecord[]>([]);
+  const [editingSupplier, setEditingSupplier] = useState<SupplierRecord | null>(null);
   const [paymentTermRecords, setPaymentTermRecords] = useState<PaymentTermRecord[]>([]);
+  const [editingPaymentTerm, setEditingPaymentTerm] = useState<PaymentTermRecord | null>(null);
   const [purchaseCategoryRecords, setPurchaseCategoryRecords] = useState<PurchaseCategoryRecord[]>([]);
+  const [editingPurchaseCategory, setEditingPurchaseCategory] = useState<PurchaseCategoryRecord | null>(null);
   const [deliveryTermRecords, setDeliveryTermRecords] = useState<DeliveryTermRecord[]>([]);
+  const [editingDeliveryTerm, setEditingDeliveryTerm] = useState<DeliveryTermRecord | null>(null);
   const [additionalCostRecords, setAdditionalCostRecords] = useState<AdditionalCostRecord[]>([]);
+  const [editingAdditionalCost, setEditingAdditionalCost] = useState<AdditionalCostRecord | null>(null);
   const [unitRecords, setUnitRecords] = useState<UnitRecord[]>([]);
   const [editingUnit, setEditingUnit] = useState<UnitRecord | null>(null);
   const [classificationRecords, setClassificationRecords] = useState<ClassificationRecord[]>([]);
@@ -254,11 +337,16 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
   const [styleRecords, setStyleRecords] = useState<StyleRecord[]>([]);
   const [editingStyle, setEditingStyle] = useState<StyleRecord | null>(null);
   const [colorRecords, setColorRecords] = useState<ColorRecord[]>([]);
+  const [editingColor, setEditingColor] = useState<ColorRecord | null>(null);
   const [receiveNoteRecords, setReceiveNoteRecords] = useState<ReceiveNoteRecord[]>([]);
   const [receiveNoteReturnRecords, setReceiveNoteReturnRecords] = useState<ReceiveNoteReturnRecord[]>([]);
   const [documentHistoryRecords, setDocumentHistoryRecords] = useState<DocumentHistoryRecord[]>([]);
   const [warehouseMasterRecords, setWarehouseMasterRecords] = useState<WarehouseMasterRecord[]>([]);
+  const [editingWarehouseMaster, setEditingWarehouseMaster] = useState<WarehouseMasterRecord | null>(null);
   const [warehouseTypeRecords, setWarehouseTypeRecords] = useState<WarehouseTypeOption[]>([]);
+  const [referenceRecordsMap, setReferenceRecordsMap] = useState<
+    Partial<Record<ReferenceMasterPageKey, ReferenceMasterRecord[]>>
+  >({});
   const [itemRecords, setItemRecords] = useState<ItemRecord[]>([]);
   const [editingItem, setEditingItem] = useState<ItemRecord | null>(null);
   const [countryRecords, setCountryRecords] = useState<CountryRecord[]>([]);
@@ -323,28 +411,42 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
         });
     };
 
-    if (page === "supplier" || type === "supplier-create") {
+    if (page === "supplier" || type === "supplier-create" || type === "supplier-edit") {
       loadOnce("suppliers", fetchMasterSuppliers, setSupplierRecords);
     }
-    if (page === "payment-term" || type === "payment-term-create") {
+    if (page === "payment-term" || type === "payment-term-create" || type === "payment-term-edit") {
       loadOnce("payment-terms", fetchMasterPaymentTerms, setPaymentTermRecords);
     }
-    if (page === "purchase-category" || type === "purchase-category-create") {
+    if (
+      page === "purchase-category" ||
+      type === "purchase-category-create" ||
+      type === "purchase-category-edit"
+    ) {
       loadOnce("purchase-categories", fetchMasterPurchaseCategories, setPurchaseCategoryRecords);
     }
-    if (page === "delivery-terms" || type === "delivery-terms-create") {
+    if (page === "delivery-terms" || type === "delivery-terms-create" || type === "delivery-terms-edit") {
       loadOnce("delivery-terms", fetchMasterDeliveryTerms, setDeliveryTermRecords);
     }
-    if (page === "additional-costs" || type === "additional-costs-create" || type === "po-create") {
+    if (
+      page === "additional-costs" ||
+      type === "additional-costs-create" ||
+      type === "additional-costs-edit" ||
+      type === "po-create"
+    ) {
       loadOnce("additional-costs", fetchMasterAdditionalCosts, setAdditionalCostRecords);
     }
-    if (page === "pph" || type === "pph-create") {
+    if (page === "pph" || type === "pph-create" || type === "pph-edit") {
       loadOnce("pph", fetchMasterPph, setPphRecords);
     }
     if (page === "unit" || type === "unit-create" || type === "unit-edit") {
       loadOnce("units", fetchMasterUnits, setUnitRecords);
     }
-    if (page === "satuan" || page === "unit-reference") {
+    if (
+      page === "satuan" ||
+      page === "unit-reference" ||
+      type === "unit-reference-create" ||
+      type === "unit-reference-edit"
+    ) {
       loadOnce("unit-references", fetchMasterUnitReferences, setUnitReferenceRecords);
     }
     if (page === "classification" || type === "classification-create" || type === "classification-edit") {
@@ -384,7 +486,7 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
     if (page === "style" || type === "style-create" || type === "style-edit") {
       loadOnce("styles", fetchMasterStyles, setStyleRecords);
     }
-    if (page === "colour" || type === "colour-create") {
+    if (page === "colour" || type === "colour-create" || type === "colour-edit") {
       loadOnce("colours", fetchMasterColours, setColorRecords);
     }
     if (page === "item" || type === "item-create" || type === "item-edit" || type === "item-qr" || type === "pr-create" || type === "po-create") {
@@ -394,6 +496,7 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
       page === "warehouse-master" ||
       type === "warehouse-coordinate" ||
       type === "warehouse-master-create" ||
+      type === "warehouse-master-edit" ||
       type === "warehouse-coordinate-create"
     ) {
       loadOnce("warehouses", fetchMasterWarehouses, setWarehouseMasterRecords);
@@ -445,6 +548,27 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
       loadOnce("wh-destination-locations", fetchDestinationLocationsApi, setDestinationLocationRecords);
     }
 
+    const activeRefPage: ReferenceMasterPageKey | null =
+      page && page in REFERENCE_FETCHER_MAP
+        ? (page as ReferenceMasterPageKey)
+        : viewState.type === "reference-master-create" &&
+            viewState.page in REFERENCE_FETCHER_MAP
+          ? (viewState.page as ReferenceMasterPageKey)
+          : null;
+    if (activeRefPage) {
+      const fetcher = REFERENCE_FETCHER_MAP[activeRefPage];
+      loadOnce(
+        `ref-${activeRefPage}`,
+        fetcher,
+        (data) => {
+          setReferenceRecordsMap((prev) => ({ ...prev, [activeRefPage]: data }));
+        },
+        (err) => {
+          notifyError(`Failed to load ${REFERENCE_MASTER_CONFIGS[activeRefPage].title}`, err);
+        }
+      );
+    }
+
     return () => {
       isMounted = false;
     };
@@ -468,152 +592,368 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
     return () => window.removeEventListener("geniusone_approval_changed", handleApprovalChanged);
   }, [isAuthenticated]);
 
-  const handleTogglePphHide = useCallback((id: string) => {
-    setPphRecords((prev) => {
-      const target = prev.find((r) => r.id === id);
-      if (target) {
-        togglePphStatusApi(id, Boolean(target.hidden)).catch(console.warn);
-      }
-      return prev.map((r) => (r.id === id ? { ...r, hidden: !r.hidden } : r));
-    });
+  const handleTogglePphHide = useCallback(
+    (id: string) =>
+      runOptimisticStatusToggle(
+        id,
+        "hidden",
+        "PPH",
+        setPphRecords,
+        togglePphStatusApi,
+        notifySuccess,
+        notifyError
+      ),
+    [notifySuccess, notifyError]
+  );
+
+  const handleToggleSupplierHide = useCallback(
+    (id: string) =>
+      runOptimisticStatusToggle(
+        id,
+        "hidden",
+        "Supplier",
+        setSupplierRecords,
+        toggleSupplierStatusApi,
+        notifySuccess,
+        notifyError
+      ),
+    [notifySuccess, notifyError]
+  );
+
+  const handleTogglePaymentTermHide = useCallback(
+    (id: string) =>
+      runOptimisticStatusToggle(
+        id,
+        "hidden",
+        "Payment Term",
+        setPaymentTermRecords,
+        togglePaymentTermStatusApi,
+        notifySuccess,
+        notifyError
+      ),
+    [notifySuccess, notifyError]
+  );
+
+  const handleTogglePurchaseCategoryHide = useCallback(
+    (id: string) =>
+      runOptimisticStatusToggle(
+        id,
+        "hidden",
+        "Purchase Category",
+        setPurchaseCategoryRecords,
+        togglePurchaseCategoryStatusApi,
+        notifySuccess,
+        notifyError
+      ),
+    [notifySuccess, notifyError]
+  );
+
+  const handleToggleDeliveryTermHide = useCallback(
+    (id: string) =>
+      runOptimisticStatusToggle(
+        id,
+        "hidden",
+        "Delivery Term",
+        setDeliveryTermRecords,
+        toggleDeliveryTermStatusApi,
+        notifySuccess,
+        notifyError
+      ),
+    [notifySuccess, notifyError]
+  );
+
+  const handleToggleAdditionalCostHide = useCallback(
+    (id: string) =>
+      runOptimisticStatusToggle(
+        id,
+        "hidden",
+        "Additional Cost",
+        setAdditionalCostRecords,
+        toggleAdditionalCostStatusApi,
+        notifySuccess,
+        notifyError
+      ),
+    [notifySuccess, notifyError]
+  );
+
+  const handleNavigateSupplierEdit = useCallback((record: SupplierRecord) => {
+    setEditingSupplier(record);
+    const nextState: ViewState = { type: "supplier-edit", id: record.id, record };
+    setViewState(nextState);
+    if (typeof window !== "undefined") {
+      window.scrollTo(0, 0);
+      window.history.pushState(nextState, "", `/procurement/purchase-master/supplier/edit/${encodeURIComponent(record.id)}`);
+    }
   }, []);
 
-  const handleToggleSupplierHide = useCallback((id: string) => {
-    setSupplierRecords((prev) => {
-      const target = prev.find((r) => r.id === id);
-      if (target) {
-        toggleSupplierStatusApi(id, Boolean(target.hidden)).catch((err) => {
-          console.error("Failed to toggle supplier status:", err);
-        });
-      }
-      return prev.map((r) => (r.id === id ? { ...r, hidden: !r.hidden } : r));
-    });
-  }, []);
-
-  const handleTogglePaymentTermHide = useCallback((id: string) => {
-    setPaymentTermRecords((prev) => {
-      const target = prev.find((r) => r.id === id);
-      if (target) {
-        togglePaymentTermStatusApi(id, Boolean(target.hidden)).catch(console.warn);
-      }
-      return prev.map((r) => (r.id === id ? { ...r, hidden: !r.hidden } : r));
-    });
-  }, []);
-
-  const handleTogglePurchaseCategoryHide = useCallback((id: string) => {
-    setPurchaseCategoryRecords((prev) => {
-      const target = prev.find((r) => r.id === id);
-      if (target) {
-        togglePurchaseCategoryStatusApi(id, Boolean(target.hidden)).catch(console.warn);
-      }
-      return prev.map((r) => (r.id === id ? { ...r, hidden: !r.hidden } : r));
-    });
-  }, []);
-
-  const handleToggleDeliveryTermHide = useCallback((id: string) => {
-    setDeliveryTermRecords((prev) => {
-      const target = prev.find((r) => r.id === id);
-      if (target) {
-        toggleDeliveryTermStatusApi(id, Boolean(target.hidden)).catch(console.warn);
-      }
-      return prev.map((r) => (r.id === id ? { ...r, hidden: !r.hidden } : r));
-    });
-  }, []);
-
-  const handleToggleAdditionalCostHide = useCallback((id: string) => {
-    setAdditionalCostRecords((prev) => {
-      const target = prev.find((r) => r.id === id);
-      if (target) {
-        toggleAdditionalCostStatusApi(id, Boolean(target.hidden)).catch(console.warn);
-      }
-      return prev.map((r) => (r.id === id ? { ...r, hidden: !r.hidden } : r));
-    });
-  }, []);
-
-  const handleSaveSupplier = useCallback(
-    async (formData: SupplierFormData) => {
+  const handleDeleteSupplier = useCallback(
+    async (id: string) => {
       try {
-        const saved = await saveSupplierApi(formData);
-        setSupplierRecords((prev) => [saved, ...prev.map((s, idx) => ({ ...s, no: idx + 2 }))]);
-        handleNavigateList("supplier", "/procurement/purchase-master/supplier");
+        await deleteSupplierApi(id);
+        setSupplierRecords((prev) =>
+          prev.filter((s) => s.id !== id).map((s, idx) => ({ ...s, no: idx + 1 }))
+        );
+        notifySuccess("Supplier Deleted", "Supplier deleted successfully.");
       } catch (err) {
-        console.error("Failed to persist supplier to backend:", err);
+        notifyError("Delete Supplier Failed", err);
         throw err;
       }
     },
-    [handleNavigateList]
+    [notifySuccess, notifyError]
+  );
+
+  const handleSaveSupplier = useCallback(
+    async (formData: SupplierFormData, editId?: string) => {
+      try {
+        const saved = await saveSupplierApi(formData, editId);
+        if (editId) {
+          setSupplierRecords((prev) => prev.map((s) => (s.id === saved.id ? saved : s)));
+        } else {
+          setSupplierRecords((prev) => [saved, ...prev.map((s, idx) => ({ ...s, no: idx + 2 }))]);
+        }
+        setEditingSupplier(null);
+        handleNavigateList("supplier", "/procurement/purchase-master/supplier");
+        notifySuccess(editId ? "Supplier Updated" : "Supplier Added", `${saved.supplierName} saved successfully.`);
+      } catch (err) {
+        notifyError("Save Supplier Failed", err);
+        throw err;
+      }
+    },
+    [handleNavigateList, notifySuccess, notifyError]
+  );
+
+  const handleNavigatePaymentTermEdit = useCallback((record: PaymentTermRecord) => {
+    setEditingPaymentTerm(record);
+    const nextState: ViewState = { type: "payment-term-edit", id: record.id, record };
+    setViewState(nextState);
+    if (typeof window !== "undefined") {
+      window.scrollTo(0, 0);
+      window.history.pushState(nextState, "", `/procurement/purchase-master/payment-term/edit/${encodeURIComponent(record.id)}`);
+    }
+  }, []);
+
+  const handleDeletePaymentTerm = useCallback(
+    async (id: string) => {
+      try {
+        await deletePaymentTermApi(id);
+        setPaymentTermRecords((prev) =>
+          prev.filter((p) => p.id !== id).map((p, idx) => ({ ...p, no: idx + 1 }))
+        );
+        notifySuccess("Payment Term Deleted", "Payment Term deleted successfully.");
+      } catch (err) {
+        notifyError("Delete Payment Term Failed", err);
+        throw err;
+      }
+    },
+    [notifySuccess, notifyError]
   );
 
   const handleSavePaymentTerm = useCallback(
-    async (data: { name: string }) => {
+    async (data: { name: string }, editId?: string) => {
       try {
-        const saved = await savePaymentTermApi(data.name);
-        setPaymentTermRecords((prev) => [saved, ...prev.map((p, idx) => ({ ...p, no: idx + 2 }))]);
+        const saved = await savePaymentTermApi(data.name, editId);
+        if (editId) {
+          setPaymentTermRecords((prev) => prev.map((p) => (p.id === saved.id ? saved : p)));
+        } else {
+          setPaymentTermRecords((prev) => [saved, ...prev.map((p, idx) => ({ ...p, no: idx + 2 }))]);
+        }
+        setEditingPaymentTerm(null);
         handleNavigateList("payment-term", "/procurement/purchase-master/payment-term");
+        notifySuccess(editId ? "Payment Term Updated" : "Payment Term Added", `${saved.name} saved successfully.`);
       } catch (err) {
-        console.error("Failed to persist payment term to backend:", err);
+        notifyError("Save Payment Term Failed", err);
         throw err;
       }
     },
-    [handleNavigateList]
+    [handleNavigateList, notifySuccess, notifyError]
+  );
+
+  const handleNavigatePurchaseCategoryEdit = useCallback((record: PurchaseCategoryRecord) => {
+    setEditingPurchaseCategory(record);
+    const nextState: ViewState = { type: "purchase-category-edit", id: record.id, record };
+    setViewState(nextState);
+    if (typeof window !== "undefined") {
+      window.scrollTo(0, 0);
+      window.history.pushState(nextState, "", `/procurement/purchase-master/purchase-category/edit/${encodeURIComponent(record.id)}`);
+    }
+  }, []);
+
+  const handleDeletePurchaseCategory = useCallback(
+    async (id: string) => {
+      try {
+        await deletePurchaseCategoryApi(id);
+        setPurchaseCategoryRecords((prev) =>
+          prev.filter((c) => c.id !== id).map((c, idx) => ({ ...c, no: idx + 1 }))
+        );
+        notifySuccess("Purchase Category Deleted", "Purchase Category deleted successfully.");
+      } catch (err) {
+        notifyError("Delete Purchase Category Failed", err);
+        throw err;
+      }
+    },
+    [notifySuccess, notifyError]
   );
 
   const handleSavePurchaseCategory = useCallback(
-    async (data: { code: string; name: string }) => {
+    async (data: { code: string; name: string }, editId?: string) => {
       try {
-        const saved = await savePurchaseCategoryApi(data.code, data.name);
-        if (saved) {
+        const saved = await savePurchaseCategoryApi(data.code, data.name, editId);
+        if (!saved) {
+          throw new Error("Failed to save Purchase Category.");
+        }
+        if (editId) {
+          setPurchaseCategoryRecords((prev) => prev.map((c) => (c.id === saved.id ? saved : c)));
+        } else {
           setPurchaseCategoryRecords((prev) => [saved, ...prev.map((c, idx) => ({ ...c, no: idx + 2 }))]);
         }
+        setEditingPurchaseCategory(null);
         handleNavigateList("purchase-category", "/procurement/purchase-master/purchase-category");
+        notifySuccess(
+          editId ? "Purchase Category Updated" : "Purchase Category Added",
+          `${saved.categoryName} saved successfully.`
+        );
       } catch (err) {
-        console.error("Failed to persist purchase category to backend:", err);
-        alert(err instanceof Error ? err.message : "Failed to save Purchase Category.");
+        notifyError("Save Purchase Category Failed", err);
+        throw err;
       }
     },
-    [handleNavigateList]
+    [handleNavigateList, notifySuccess, notifyError]
+  );
+
+  const handleNavigateDeliveryTermEdit = useCallback((record: DeliveryTermRecord) => {
+    setEditingDeliveryTerm(record);
+    const nextState: ViewState = { type: "delivery-terms-edit", id: record.id, record };
+    setViewState(nextState);
+    if (typeof window !== "undefined") {
+      window.scrollTo(0, 0);
+      window.history.pushState(nextState, "", `/procurement/purchase-master/delivery-terms/edit/${encodeURIComponent(record.id)}`);
+    }
+  }, []);
+
+  const handleDeleteDeliveryTerm = useCallback(
+    async (id: string) => {
+      try {
+        await deleteDeliveryTermApi(id);
+        setDeliveryTermRecords((prev) =>
+          prev.filter((d) => d.id !== id).map((d, idx) => ({ ...d, no: idx + 1 }))
+        );
+        notifySuccess("Delivery Term Deleted", "Delivery Term deleted successfully.");
+      } catch (err) {
+        notifyError("Delete Delivery Term Failed", err);
+        throw err;
+      }
+    },
+    [notifySuccess, notifyError]
   );
 
   const handleSaveDeliveryTerm = useCallback(
-    async (data: { name: string }) => {
+    async (data: { name: string }, editId?: string) => {
       try {
-        const saved = await saveDeliveryTermApi(data.name);
-        setDeliveryTermRecords((prev) => [saved, ...prev.map((d, idx) => ({ ...d, no: idx + 2 }))]);
+        const saved = await saveDeliveryTermApi(data.name, editId);
+        if (editId) {
+          setDeliveryTermRecords((prev) => prev.map((d) => (d.id === saved.id ? saved : d)));
+        } else {
+          setDeliveryTermRecords((prev) => [saved, ...prev.map((d, idx) => ({ ...d, no: idx + 2 }))]);
+        }
+        setEditingDeliveryTerm(null);
         handleNavigateList("delivery-terms", "/procurement/purchase-master/delivery-terms");
+        notifySuccess(editId ? "Delivery Term Updated" : "Delivery Term Added", `${saved.name} saved successfully.`);
       } catch (err) {
-        console.error("Failed to persist delivery term to backend:", err);
+        notifyError("Save Delivery Term Failed", err);
         throw err;
       }
     },
-    [handleNavigateList]
+    [handleNavigateList, notifySuccess, notifyError]
+  );
+
+  const handleNavigateAdditionalCostEdit = useCallback((record: AdditionalCostRecord) => {
+    setEditingAdditionalCost(record);
+    const nextState: ViewState = { type: "additional-costs-edit", id: record.id, record };
+    setViewState(nextState);
+    if (typeof window !== "undefined") {
+      window.scrollTo(0, 0);
+      window.history.pushState(nextState, "", `/procurement/purchase-master/additional-costs/edit/${encodeURIComponent(record.id)}`);
+    }
+  }, []);
+
+  const handleDeleteAdditionalCost = useCallback(
+    async (id: string) => {
+      try {
+        await deleteAdditionalCostApi(id);
+        setAdditionalCostRecords((prev) =>
+          prev.filter((a) => a.id !== id).map((a, idx) => ({ ...a, no: idx + 1 }))
+        );
+        notifySuccess("Additional Cost Deleted", "Additional Cost deleted successfully.");
+      } catch (err) {
+        notifyError("Delete Additional Cost Failed", err);
+        throw err;
+      }
+    },
+    [notifySuccess, notifyError]
   );
 
   const handleSaveAdditionalCost = useCallback(
-    async (data: { code: string; name: string }) => {
+    async (data: { code: string; name: string }, editId?: string) => {
       try {
-        const saved = await saveAdditionalCostApi(data.code, data.name);
-        setAdditionalCostRecords((prev) => [saved, ...prev.map((a, idx) => ({ ...a, no: idx + 2 }))]);
+        const saved = await saveAdditionalCostApi(data.code, data.name, editId);
+        if (editId) {
+          setAdditionalCostRecords((prev) => prev.map((a) => (a.id === saved.id ? saved : a)));
+        } else {
+          setAdditionalCostRecords((prev) => [saved, ...prev.map((a, idx) => ({ ...a, no: idx + 2 }))]);
+        }
+        setEditingAdditionalCost(null);
         handleNavigateList("additional-costs", "/procurement/purchase-master/additional-costs");
+        notifySuccess(editId ? "Additional Cost Updated" : "Additional Cost Added", `${saved.costName} saved successfully.`);
       } catch (err) {
-        console.error("Failed to persist additional cost to backend:", err);
+        notifyError("Save Additional Cost Failed", err);
         throw err;
       }
     },
-    [handleNavigateList]
+    [handleNavigateList, notifySuccess, notifyError]
+  );
+
+  const handleNavigatePphEdit = useCallback((record: PphRecord) => {
+    setEditingPph(record);
+    const nextState: ViewState = { type: "pph-edit", id: record.id, record };
+    setViewState(nextState);
+    if (typeof window !== "undefined") {
+      window.scrollTo(0, 0);
+      window.history.pushState(nextState, "", `/procurement/purchase-master/pph/edit/${encodeURIComponent(record.id)}`);
+    }
+  }, []);
+
+  const handleDeletePph = useCallback(
+    async (id: string) => {
+      try {
+        await deletePphApi(id);
+        setPphRecords((prev) => prev.filter((p) => p.id !== id));
+        notifySuccess("PPH Deleted", "PPH rate deleted successfully.");
+      } catch (err) {
+        notifyError("Delete PPH Failed", err);
+        throw err;
+      }
+    },
+    [notifySuccess, notifyError]
   );
 
   const handleSavePph = useCallback(
-    async (newRec: PphRecord) => {
+    async (newRec: PphRecord, isEdit?: boolean) => {
       try {
-        const saved = await savePphApi(newRec);
-        setPphRecords((prev) => [saved, ...prev]);
+        const saved = await savePphApi(newRec, isEdit);
+        if (isEdit) {
+          setPphRecords((prev) => prev.map((p) => (p.id === saved.id ? saved : p)));
+        } else {
+          setPphRecords((prev) => [saved, ...prev]);
+        }
+        setEditingPph(null);
         handleNavigateList("pph", "/procurement/purchase-master/pph");
+        notifySuccess(isEdit ? "PPH Updated" : "PPH Added", `${saved.name} saved successfully.`);
       } catch (err) {
-        console.error("Failed to persist PPH to backend:", err);
+        notifyError("Save PPH Failed", err);
         throw err;
       }
     },
-    [handleNavigateList]
+    [handleNavigateList, notifySuccess, notifyError]
   );
 
   const handleNavigatePrCreate = useCallback(() => {
@@ -667,11 +1007,13 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
         window.scrollTo(0, 0);
         window.history.pushState(nextState, "", "/warehouse/request/request-material");
       }
+      notifySuccess("Request Material Saved", "Request material saved successfully.");
     } catch (err) {
       console.error("Failed to save Request Material:", err);
+      notifyError("Save Request Material Failed", err);
       throw err;
     }
-  }, []);
+  }, [notifySuccess, notifyError]);
 
   // Navigate to create new record view
   const handleNavigateCreate = useCallback((
@@ -681,6 +1023,8 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
   ) => {
     const resetEditingMap: Partial<Record<typeof module, () => void>> = {
       item: () => setEditingItem(null),
+      colour: () => setEditingColor(null),
+      color: () => setEditingColor(null),
       style: () => setEditingStyle(null),
       category: () => setEditingCategory(null),
       hs: () => setEditingHs(null),
@@ -689,6 +1033,12 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
       department: () => setEditingDepartment(null),
       classification: () => setEditingClassification(null),
       unit: () => setEditingUnit(null),
+      supplier: () => setEditingSupplier(null),
+      "payment-term": () => setEditingPaymentTerm(null),
+      "purchase-category": () => setEditingPurchaseCategory(null),
+      "delivery-terms": () => setEditingDeliveryTerm(null),
+      "additional-costs": () => setEditingAdditionalCost(null),
+      pph: () => setEditingPph(null),
     };
     resetEditingMap[module]?.();
 
@@ -737,6 +1087,16 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
     }
   }, []);
 
+  const handleNavigateReferenceCreate = useCallback((refPage: ReferenceMasterPageKey) => {
+    const cfg = REFERENCE_MASTER_CONFIGS[refPage];
+    const nextState: ViewState = { type: "reference-master-create", page: refPage };
+    setViewState(nextState);
+    if (typeof window !== "undefined") {
+      window.scrollTo(0, 0);
+      window.history.pushState(nextState, "", cfg.createPath);
+    }
+  }, []);
+
   const handleNavigateUnitEdit = useCallback((unit: UnitRecord) => {
     setEditingUnit(unit);
     const nextState: ViewState = { type: "unit-edit", record: unit };
@@ -761,23 +1121,44 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
         }
         setEditingUnit(null);
         handleNavigateList("unit", "/exim/master/unit");
+        notifySuccess(isEdit ? "Unit Updated" : "Unit Added", `${record.name} saved successfully.`);
       } catch (err) {
         console.error("Unit API sync failed:", err);
-        alert(err instanceof Error ? err.message : "Failed to save Unit.");
+        notifyError("Save Unit Failed", err);
+        throw err;
       }
     },
-    [handleNavigateList]
+    [handleNavigateList, notifySuccess, notifyError]
   );
 
-  const handleDeleteUnit = useCallback(async (id: string) => {
-    try {
-      await deleteUnitApi(id);
-      setUnitRecords((prev) => prev.filter((u) => u.id !== id));
-    } catch (err) {
-      console.error("Unit API delete failed:", err);
-      alert(err instanceof Error ? err.message : "Failed to delete Unit.");
-    }
-  }, []);
+  const handleDeleteUnit = useCallback(
+    async (id: string) => {
+      try {
+        await deleteUnitApi(id);
+        setUnitRecords((prev) => prev.filter((u) => u.id !== id));
+        notifySuccess("Unit Deleted", "Unit deleted successfully.");
+      } catch (err) {
+        console.error("Unit API delete failed:", err);
+        notifyError("Delete Unit Failed", err);
+        throw err;
+      }
+    },
+    [notifySuccess, notifyError]
+  );
+
+  const handleToggleUnitStatus = useCallback(
+    (id: string) =>
+      runOptimisticStatusToggle(
+        id,
+        "status",
+        "Unit",
+        setUnitRecords,
+        toggleUnitStatusApi,
+        notifySuccess,
+        notifyError
+      ),
+    [notifySuccess, notifyError]
+  );
 
   const handleNavigateClassificationEdit = useCallback((cls: ClassificationRecord) => {
     setEditingClassification(cls);
@@ -803,33 +1184,47 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
         }
         setEditingClassification(null);
         handleNavigateList("classification", "/exim/master/classification");
+        notifySuccess(
+          isEdit ? "Classification Updated" : "Classification Added",
+          `${record.name} saved successfully.`
+        );
       } catch (err) {
         console.error("Classification API sync failed:", err);
-        alert(err instanceof Error ? err.message : "Failed to save Classification.");
+        notifyError("Save Classification Failed", err);
+        throw err;
       }
     },
-    [handleNavigateList]
+    [handleNavigateList, notifySuccess, notifyError]
   );
 
-  const handleDeleteClassification = useCallback(async (id: string) => {
-    try {
-      await deleteClassificationApi(id);
-      setClassificationRecords((prev) => prev.filter((c) => c.id !== id));
-    } catch (err) {
-      console.error("Classification delete failed:", err);
-      alert(err instanceof Error ? err.message : "Failed to delete Classification.");
-    }
-  }, []);
-
-  const handleToggleClassificationStatus = useCallback((id: string) => {
-    setClassificationRecords((prev) => {
-      const target = prev.find((c) => c.id === id);
-      if (target) {
-        toggleClassificationStatusApi(id, !target.status).catch(console.error);
+  const handleDeleteClassification = useCallback(
+    async (id: string) => {
+      try {
+        await deleteClassificationApi(id);
+        setClassificationRecords((prev) => prev.filter((c) => c.id !== id));
+        notifySuccess("Classification Deleted", "Classification deleted successfully.");
+      } catch (err) {
+        console.error("Classification delete failed:", err);
+        notifyError("Delete Classification Failed", err);
+        throw err;
       }
-      return prev.map((c) => (c.id === id ? { ...c, status: !c.status } : c));
-    });
-  }, []);
+    },
+    [notifySuccess, notifyError]
+  );
+
+  const handleToggleClassificationStatus = useCallback(
+    (id: string) =>
+      runOptimisticStatusToggle(
+        id,
+        "status",
+        "Classification",
+        setClassificationRecords,
+        toggleClassificationStatusApi,
+        notifySuccess,
+        notifyError
+      ),
+    [notifySuccess, notifyError]
+  );
 
   const handleNavigateDepartmentEdit = useCallback((dept: DepartmentRecord) => {
     setEditingDepartment(dept);
@@ -855,33 +1250,47 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
         }
         setEditingDepartment(null);
         handleNavigateList("department", "/exim/master/department");
+        notifySuccess(
+          isEdit ? "Department Updated" : "Department Added",
+          `${record.sectionName} saved successfully.`
+        );
       } catch (err) {
         console.error("Department API sync failed:", err);
-        alert(err instanceof Error ? err.message : "Failed to save Department.");
+        notifyError("Save Department Failed", err);
+        throw err;
       }
     },
-    [handleNavigateList]
+    [handleNavigateList, notifySuccess, notifyError]
   );
 
-  const handleDeleteDepartment = useCallback(async (id: string) => {
-    try {
-      await deleteDepartmentApi(id);
-      setDepartmentRecords((prev) => prev.filter((d) => d.id !== id));
-    } catch (err) {
-      console.error("Department delete failed:", err);
-      alert(err instanceof Error ? err.message : "Failed to delete Department.");
-    }
-  }, []);
-
-  const handleToggleDepartmentStatus = useCallback((id: string) => {
-    setDepartmentRecords((prev) => {
-      const target = prev.find((d) => d.id === id);
-      if (target) {
-        toggleDepartmentStatusApi(id, !target.status).catch(console.error);
+  const handleDeleteDepartment = useCallback(
+    async (id: string) => {
+      try {
+        await deleteDepartmentApi(id);
+        setDepartmentRecords((prev) => prev.filter((d) => d.id !== id));
+        notifySuccess("Department Deleted", "Department deleted successfully.");
+      } catch (err) {
+        console.error("Department delete failed:", err);
+        notifyError("Delete Department Failed", err);
+        throw err;
       }
-      return prev.map((d) => (d.id === id ? { ...d, status: !d.status } : d));
-    });
-  }, []);
+    },
+    [notifySuccess, notifyError]
+  );
+
+  const handleToggleDepartmentStatus = useCallback(
+    (id: string) =>
+      runOptimisticStatusToggle(
+        id,
+        "status",
+        "Department",
+        setDepartmentRecords,
+        toggleDepartmentStatusApi,
+        notifySuccess,
+        notifyError
+      ),
+    [notifySuccess, notifyError]
+  );
 
   const handleNavigateBrandEdit = useCallback((brand: BrandRecord) => {
     setEditingBrand(brand);
@@ -907,33 +1316,44 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
         }
         setEditingBrand(null);
         handleNavigateList("brand", "/exim/master/brand");
+        notifySuccess(isEdit ? "Brand Updated" : "Brand Added", `${record.name} saved successfully.`);
       } catch (err) {
         console.error("Brand API sync failed:", err);
-        alert(err instanceof Error ? err.message : "Failed to save Brand.");
+        notifyError("Save Brand Failed", err);
+        throw err;
       }
     },
-    [handleNavigateList]
+    [handleNavigateList, notifySuccess, notifyError]
   );
 
-  const handleDeleteBrand = useCallback(async (id: string) => {
-    try {
-      await deleteBrandApi(id);
-      setBrandRecords((prev) => prev.filter((b) => b.id !== id));
-    } catch (err) {
-      console.error("Brand delete failed:", err);
-      alert(err instanceof Error ? err.message : "Failed to delete Brand.");
-    }
-  }, []);
-
-  const handleToggleBrandStatus = useCallback((id: string) => {
-    setBrandRecords((prev) => {
-      const target = prev.find((b) => b.id === id);
-      if (target) {
-        toggleBrandStatusApi(id, !target.status).catch(console.error);
+  const handleDeleteBrand = useCallback(
+    async (id: string) => {
+      try {
+        await deleteBrandApi(id);
+        setBrandRecords((prev) => prev.filter((b) => b.id !== id));
+        notifySuccess("Brand Deleted", "Brand deleted successfully.");
+      } catch (err) {
+        console.error("Brand delete failed:", err);
+        notifyError("Delete Brand Failed", err);
+        throw err;
       }
-      return prev.map((b) => (b.id === id ? { ...b, status: !b.status } : b));
-    });
-  }, []);
+    },
+    [notifySuccess, notifyError]
+  );
+
+  const handleToggleBrandStatus = useCallback(
+    (id: string) =>
+      runOptimisticStatusToggle(
+        id,
+        "status",
+        "Brand",
+        setBrandRecords,
+        toggleBrandStatusApi,
+        notifySuccess,
+        notifyError
+      ),
+    [notifySuccess, notifyError]
+  );
 
   const handleNavigateFacilityEdit = useCallback((facility: FacilityRecord) => {
     setEditingFacility(facility);
@@ -959,33 +1379,47 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
         }
         setEditingFacility(null);
         handleNavigateList("facility", "/exim/master/facility");
+        notifySuccess(
+          isEdit ? "Facility Updated" : "Facility Added",
+          `${record.name} saved successfully.`
+        );
       } catch (err) {
         console.error("Facility API sync failed:", err);
-        alert(err instanceof Error ? err.message : "Failed to save Facility.");
+        notifyError("Save Facility Failed", err);
+        throw err;
       }
     },
-    [handleNavigateList]
+    [handleNavigateList, notifySuccess, notifyError]
   );
 
-  const handleDeleteFacility = useCallback(async (id: string) => {
-    try {
-      await deleteFacilityApi(id);
-      setFacilityRecords((prev) => prev.filter((f) => f.id !== id));
-    } catch (err) {
-      console.error("Facility delete failed:", err);
-      alert(err instanceof Error ? err.message : "Failed to delete Facility.");
-    }
-  }, []);
-
-  const handleToggleFacilityStatus = useCallback((id: string) => {
-    setFacilityRecords((prev) => {
-      const target = prev.find((f) => f.id === id);
-      if (target) {
-        toggleFacilityStatusApi(id, !target.status).catch(console.error);
+  const handleDeleteFacility = useCallback(
+    async (id: string) => {
+      try {
+        await deleteFacilityApi(id);
+        setFacilityRecords((prev) => prev.filter((f) => f.id !== id));
+        notifySuccess("Facility Deleted", "Facility deleted successfully.");
+      } catch (err) {
+        console.error("Facility delete failed:", err);
+        notifyError("Delete Facility Failed", err);
+        throw err;
       }
-      return prev.map((f) => (f.id === id ? { ...f, status: !f.status } : f));
-    });
-  }, []);
+    },
+    [notifySuccess, notifyError]
+  );
+
+  const handleToggleFacilityStatus = useCallback(
+    (id: string) =>
+      runOptimisticStatusToggle(
+        id,
+        "status",
+        "Facility",
+        setFacilityRecords,
+        toggleFacilityStatusApi,
+        notifySuccess,
+        notifyError
+      ),
+    [notifySuccess, notifyError]
+  );
 
   const handleNavigateHsEdit = useCallback((hs: HsRecord) => {
     setEditingHs(hs);
@@ -1011,23 +1445,30 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
         }
         setEditingHs(null);
         handleNavigateList("hs", "/exim/master/hs");
+        notifySuccess(isEdit ? "HS Code Updated" : "HS Code Added", `${record.name} saved successfully.`);
       } catch (err) {
         console.error("HS API sync failed:", err);
-        alert(err instanceof Error ? err.message : "Failed to save HS Code.");
+        notifyError("Save HS Code Failed", err);
+        throw err;
       }
     },
-    [handleNavigateList]
+    [handleNavigateList, notifySuccess, notifyError]
   );
 
-  const handleDeleteHs = useCallback(async (id: string) => {
-    try {
-      await deleteHsApi(id);
-      setHsRecords((prev) => prev.filter((h) => h.id !== id));
-    } catch (err) {
-      console.error("HS delete failed:", err);
-      alert(err instanceof Error ? err.message : "Failed to delete HS Code.");
-    }
-  }, []);
+  const handleDeleteHs = useCallback(
+    async (id: string) => {
+      try {
+        await deleteHsApi(id);
+        setHsRecords((prev) => prev.filter((h) => h.id !== id));
+        notifySuccess("HS Code Deleted", "HS Code deleted successfully.");
+      } catch (err) {
+        console.error("HS delete failed:", err);
+        notifyError("Delete HS Code Failed", err);
+        throw err;
+      }
+    },
+    [notifySuccess, notifyError]
+  );
 
   const handleNavigateCategoryEdit = useCallback((category: CategoryRecord) => {
     setEditingCategory(category);
@@ -1053,33 +1494,47 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
         }
         setEditingCategory(null);
         handleNavigateList("category", "/exim/master/category");
+        notifySuccess(
+          isEdit ? "Category Updated" : "Category Added",
+          `${record.name} saved successfully.`
+        );
       } catch (err) {
         console.error("Category API sync failed:", err);
-        alert(err instanceof Error ? err.message : "Failed to save Category.");
+        notifyError("Save Category Failed", err);
+        throw err;
       }
     },
-    [handleNavigateList]
+    [handleNavigateList, notifySuccess, notifyError]
   );
 
-  const handleDeleteCategory = useCallback(async (id: string) => {
-    try {
-      await deleteCategoryApi(id);
-      setCategoryRecords((prev) => prev.filter((c) => c.id !== id));
-    } catch (err) {
-      console.error("Category delete failed:", err);
-      alert(err instanceof Error ? err.message : "Failed to delete Category.");
-    }
-  }, []);
-
-  const handleToggleCategoryStatus = useCallback((id: string) => {
-    setCategoryRecords((prev) => {
-      const target = prev.find((c) => c.id === id);
-      if (target) {
-        toggleCategoryStatusApi(id, !target.status).catch(console.error);
+  const handleDeleteCategory = useCallback(
+    async (id: string) => {
+      try {
+        await deleteCategoryApi(id);
+        setCategoryRecords((prev) => prev.filter((c) => c.id !== id));
+        notifySuccess("Category Deleted", "Category deleted successfully.");
+      } catch (err) {
+        console.error("Category delete failed:", err);
+        notifyError("Delete Category Failed", err);
+        throw err;
       }
-      return prev.map((c) => (c.id === id ? { ...c, status: !c.status } : c));
-    });
-  }, []);
+    },
+    [notifySuccess, notifyError]
+  );
+
+  const handleToggleCategoryStatus = useCallback(
+    (id: string) =>
+      runOptimisticStatusToggle(
+        id,
+        "status",
+        "Category",
+        setCategoryRecords,
+        toggleCategoryStatusApi,
+        notifySuccess,
+        notifyError
+      ),
+    [notifySuccess, notifyError]
+  );
 
   const handleNavigateStyleEdit = useCallback((style: StyleRecord) => {
     setEditingStyle(style);
@@ -1115,48 +1570,106 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
         }
         setEditingStyle(null);
         handleNavigateList("style", "/exim/master/style");
+        notifySuccess(isEdit ? "Style Updated" : "Style Added", `${record.name} saved successfully.`);
       } catch (err) {
         console.error("Style API sync failed:", err);
-        alert(err instanceof Error ? err.message : "Failed to save Style.");
+        notifyError("Save Style Failed", err);
+        throw err;
       }
     },
-    [handleNavigateList]
+    [handleNavigateList, notifySuccess, notifyError]
   );
 
-  const handleDeleteStyle = useCallback(async (id: string) => {
-    try {
-      await deleteStyleApi(id);
-      setStyleRecords((prev) => prev.filter((s) => s.id !== id));
-    } catch (err) {
-      console.error("Style delete failed:", err);
-      alert(err instanceof Error ? err.message : "Failed to delete Style.");
+  const handleDeleteStyle = useCallback(
+    async (id: string) => {
+      try {
+        await deleteStyleApi(id);
+        setStyleRecords((prev) => prev.filter((s) => s.id !== id));
+        notifySuccess("Style Deleted", "Style deleted successfully.");
+      } catch (err) {
+        console.error("Style delete failed:", err);
+        notifyError("Delete Style Failed", err);
+        throw err;
+      }
+    },
+    [notifySuccess, notifyError]
+  );
+
+  const handleToggleStyleStatus = useCallback(
+    (id: string) =>
+      runOptimisticStatusToggle(
+        id,
+        "status",
+        "Style",
+        setStyleRecords,
+        toggleStyleStatusApi,
+        notifySuccess,
+        notifyError
+      ),
+    [notifySuccess, notifyError]
+  );
+
+  const handleNavigateColorEdit = useCallback((record: ColorRecord) => {
+    setEditingColor(record);
+    const nextState: ViewState = { type: "colour-edit", id: record.id, record };
+    setViewState(nextState);
+
+    if (typeof window !== "undefined") {
+      window.scrollTo(0, 0);
+      window.history.pushState(nextState, "", `/exim/master/colour/edit/${encodeURIComponent(record.id)}`);
     }
   }, []);
 
-  const handleToggleStyleStatus = useCallback((id: string) => {
-    setStyleRecords((prev) => {
-      const target = prev.find((s) => s.id === id);
-      if (target) {
-        toggleStyleStatusApi(id, !target.status).catch(console.error);
-      }
-      return prev.map((s) => (s.id === id ? { ...s, status: !s.status } : s));
-    });
-  }, []);
-
   const handleSaveColor = useCallback(
-    async (record: ColorRecord) => {
+    async (record: ColorRecord, isEdit = false) => {
       try {
-        const saved = await saveColorApi(record);
+        const saved = await saveColorApi(record, isEdit);
         if (saved) {
-          setColorRecords((prev) => [saved, ...prev]);
+          if (isEdit) {
+            setColorRecords((prev) => prev.map((c) => (c.id === saved.id ? saved : c)));
+          } else {
+            setColorRecords((prev) => [saved, ...prev]);
+          }
         }
+        setEditingColor(null);
         handleNavigateList("colour", "/exim/master/colour");
+        notifySuccess(isEdit ? "Colour Updated" : "Colour Added", `${record.name} saved successfully.`);
       } catch (err) {
         console.error("Color API sync failed:", err);
-        alert(err instanceof Error ? err.message : "Failed to save Colour.");
+        notifyError("Save Colour Failed", err);
+        throw err;
       }
     },
-    [handleNavigateList]
+    [handleNavigateList, notifySuccess, notifyError]
+  );
+
+  const handleDeleteColor = useCallback(
+    async (id: string) => {
+      try {
+        await deleteColorApi(id);
+        setColorRecords((prev) => prev.filter((c) => c.id !== id));
+        notifySuccess("Colour Deleted", "Colour deleted successfully.");
+      } catch (err) {
+        console.error("Colour delete failed:", err);
+        notifyError("Delete Colour Failed", err);
+        throw err;
+      }
+    },
+    [notifySuccess, notifyError]
+  );
+
+  const handleToggleColorStatus = useCallback(
+    (id: string) =>
+      runOptimisticStatusToggle(
+        id,
+        "status",
+        "Colour",
+        setColorRecords,
+        (recordId) => toggleColorStatusApi(recordId),
+        notifySuccess,
+        notifyError
+      ),
+    [notifySuccess, notifyError]
   );
 
   const handleNavigateReceiveNoteDetail = useCallback((rnNumber: string) => {
@@ -1234,11 +1747,13 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
         window.scrollTo(0, 0);
         window.history.pushState(nextState, "", "/exim/receive-note");
       }
+      notifySuccess("Receive Note Saved", "Receive note saved successfully.");
     } catch (err) {
       console.error("Failed to persist Receive Note to backend:", err);
-      alert(err instanceof Error ? err.message : "Failed to save Receive Note.");
+      notifyError("Save Receive Note Failed", err);
+      throw err;
     }
-  }, []);
+  }, [notifySuccess, notifyError]);
 
   const {
     handleNavigateCountryCreate,
@@ -1265,6 +1780,12 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
     handleNavigateCurrencyEdit,
     handleSaveCurrency,
     handleDeleteCurrency,
+    handleToggleCurrencyStatus,
+    handleNavigateUnitReferenceCreate,
+    handleNavigateUnitReferenceEdit,
+    handleSaveUnitReference,
+    handleDeleteUnitReference,
+    handleToggleUnitReferenceStatus,
     handleNavigateTransferStockReturnCreate,
     handleNavigateTransferStockReturnEdit,
     handleNavigateTransferStockReturnDetail,
@@ -1276,6 +1797,7 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
     setJobNumberRecords,
     setRafaksiTypeRecords,
     setCurrencyRecords,
+    setUnitReferenceRecords,
   });
 
   const handleNavigateReceiveNoteReturnDetail = useCallback((rnNumber: string) => {
@@ -1301,12 +1823,24 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
   }, []);
 
   const handleNavigateMasterWarehouseCreate = useCallback(() => {
+    setEditingWarehouseMaster(null);
     const nextState: ViewState = { type: "warehouse-master-create" };
     setViewState(nextState);
 
     if (typeof window !== "undefined") {
       window.scrollTo(0, 0);
       window.history.pushState(nextState, "", "/warehouse/master/warehouse/create");
+    }
+  }, []);
+
+  const handleNavigateWarehouseMasterEdit = useCallback((warehouse: WarehouseMasterRecord) => {
+    setEditingWarehouseMaster(warehouse);
+    const nextState: ViewState = { type: "warehouse-master-edit", id: warehouse.id, record: warehouse };
+    setViewState(nextState);
+
+    if (typeof window !== "undefined") {
+      window.scrollTo(0, 0);
+      window.history.pushState(nextState, "", `/warehouse/master/warehouse/edit/${encodeURIComponent(warehouse.id)}`);
     }
   }, []);
 
@@ -1333,13 +1867,18 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
   }, []);
 
   const handleSaveWarehouseMaster = useCallback(
-    async (newRecord: WarehouseMasterRecord) => {
+    async (newRecord: WarehouseMasterRecord, isEdit = false) => {
       try {
-        const saved = await saveWarehouseMasterApi(newRecord);
-        setWarehouseMasterRecords((prev) => [
-          { ...saved, no: 1 },
-          ...prev.map((w) => ({ ...w, no: w.no + 1 })),
-        ]);
+        const saved = await saveWarehouseMasterApi(newRecord, isEdit);
+        if (isEdit) {
+          setWarehouseMasterRecords((prev) => prev.map((w) => (w.id === saved.id ? saved : w)));
+        } else {
+          setWarehouseMasterRecords((prev) => [
+            { ...saved, no: 1 },
+            ...prev.map((w) => ({ ...w, no: w.no + 1 })),
+          ]);
+        }
+        setEditingWarehouseMaster(null);
         const nextState: ViewState = { type: "list", page: "warehouse-master" };
         setViewState(nextState);
 
@@ -1347,12 +1886,45 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
           window.scrollTo(0, 0);
           window.history.pushState(nextState, "", "/warehouse/master/warehouse");
         }
+        notifySuccess(isEdit ? "Warehouse Updated" : "Warehouse Added", `${saved.name} saved successfully.`);
       } catch (err) {
         console.error("Warehouse Master API sync failed:", err);
-        alert(err instanceof Error ? err.message : "Failed to save Warehouse.");
+        notifyError("Save Warehouse Failed", err);
+        throw err;
       }
     },
-    []
+    [notifySuccess, notifyError]
+  );
+
+  const handleDeleteWarehouseMaster = useCallback(
+    async (id: string) => {
+      try {
+        await deleteWarehouseMasterApi(id);
+        setWarehouseMasterRecords((prev) =>
+          prev.filter((w) => w.id !== id).map((w, idx) => ({ ...w, no: idx + 1 }))
+        );
+        notifySuccess("Warehouse Deleted", "Warehouse deleted successfully.");
+      } catch (err) {
+        console.error("Warehouse Master delete failed:", err);
+        notifyError("Delete Warehouse Failed", err);
+        throw err;
+      }
+    },
+    [notifySuccess, notifyError]
+  );
+
+  const handleToggleWarehouseMasterStatus = useCallback(
+    (id: string) =>
+      runOptimisticStatusToggle(
+        id,
+        "status",
+        "Warehouse",
+        setWarehouseMasterRecords,
+        (recordId) => toggleWarehouseMasterStatusApi(recordId),
+        notifySuccess,
+        notifyError
+      ),
+    [notifySuccess, notifyError]
   );
 
   const handleSaveWarehouseCoordinate = useCallback(
@@ -1395,12 +1967,14 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
             `/warehouse/master/warehouse/${whSlug}/coordinate`
           );
         }
+        notifySuccess("Coordinate Saved", "Warehouse coordinate saved successfully.");
       } catch (err) {
         console.error("Warehouse coordinate API sync failed:", err);
-        alert(err instanceof Error ? err.message : "Failed to save Warehouse Coordinate.");
+        notifyError("Save Coordinate Failed", err);
+        throw err;
       }
     },
-    []
+    [warehouseMasterRecords, notifySuccess, notifyError]
   );
 
   const handleDeleteWarehouseCoordinate = useCallback(
@@ -1418,12 +1992,14 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
             return w;
           })
         );
+        notifySuccess("Coordinate Deleted", "Warehouse coordinate deleted successfully.");
       } catch (err) {
         console.error("Warehouse coordinate delete failed:", err);
-        alert(err instanceof Error ? err.message : "Failed to delete Warehouse Coordinate.");
+        notifyError("Delete Coordinate Failed", err);
+        throw err;
       }
     },
-    []
+    [notifySuccess, notifyError]
   );
 
   const handleSaveReceiveNoteReturn = useCallback(async (newRecord: ReceiveNoteReturnRecord) => {
@@ -1445,11 +2021,13 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
         window.scrollTo(0, 0);
         window.history.pushState(nextState, "", "/exim/receive-note-return");
       }
+      notifySuccess("Receive Note Return Saved", "Receive note return saved successfully.");
     } catch (err) {
       console.error("Failed to persist Receive Note Return to backend:", err);
-      alert(err instanceof Error ? err.message : "Failed to save Receive Note Return.");
+      notifyError("Save Receive Note Return Failed", err);
+      throw err;
     }
-  }, []);
+  }, [notifySuccess, notifyError]);
 
   const handleNavigateGenerateQr = useCallback(() => {
     const nextState: ViewState = { type: "item-qr" };
@@ -1483,23 +2061,44 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
         }
         setEditingItem(null);
         handleNavigateList("item", "/exim/master/item");
+        notifySuccess(isEdit ? "Item Updated" : "Item Added", `${saved.itemName} saved successfully.`);
       } catch (err) {
         console.error("Item API sync failed:", err);
+        notifyError("Save Item Failed", err);
         throw err;
       }
     },
-    [handleNavigateList]
+    [handleNavigateList, notifySuccess, notifyError]
   );
 
-  const handleDeleteItem = useCallback(async (id: string) => {
-    try {
-      await deleteItemApi(id);
-      setItemRecords((prev) => prev.filter((i) => i.id !== id));
-    } catch (err) {
-      console.error("Item delete failed:", err);
-      alert(err instanceof Error ? err.message : "Failed to delete Item.");
-    }
-  }, []);
+  const handleDeleteItem = useCallback(
+    async (id: string) => {
+      try {
+        await deleteItemApi(id);
+        setItemRecords((prev) => prev.filter((i) => i.id !== id));
+        notifySuccess("Item Deleted", "Item deleted successfully.");
+      } catch (err) {
+        console.error("Item delete failed:", err);
+        notifyError("Delete Item Failed", err);
+        throw err;
+      }
+    },
+    [notifySuccess, notifyError]
+  );
+
+  const handleToggleItemStatus = useCallback(
+    (id: string) =>
+      runOptimisticStatusToggle(
+        id,
+        "status",
+        "Item",
+        setItemRecords,
+        (recordId) => toggleItemStatusApi(recordId),
+        notifySuccess,
+        notifyError
+      ),
+    [notifySuccess, notifyError]
+  );
 
   // Stock Notification Master Handlers
   const handleNavigateStockNotificationCreate = useCallback(() => {
@@ -1536,21 +2135,28 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
       }
       setEditingStockNotification(null);
       handleNavigateList("stock-notification-master", "/dashboard/stock-notification-master");
+      notifySuccess(
+        isEdit ? "Stock Notification Updated" : "Stock Notification Added",
+        "Stock notification rule saved successfully."
+      );
     } catch (err) {
       console.error("Stock Notification API sync failed:", err);
-      alert(err instanceof Error ? err.message : "Failed to save Stock Notification.");
+      notifyError("Save Stock Notification Failed", err);
+      throw err;
     }
-  }, [handleNavigateList]);
+  }, [handleNavigateList, notifySuccess, notifyError]);
 
   const handleDeleteStockNotification = useCallback(async (id: string) => {
     try {
       await deleteStockNotificationApi(id);
       setStockNotificationRecords((prev) => prev.filter((r) => r.id !== id));
+      notifySuccess("Stock Notification Deleted", "Stock notification deleted successfully.");
     } catch (err) {
       console.error("Stock Notification delete failed:", err);
-      alert(err instanceof Error ? err.message : "Failed to delete Stock Notification.");
+      notifyError("Delete Stock Notification Failed", err);
+      throw err;
     }
-  }, []);
+  }, [notifySuccess, notifyError]);
 
   // Type of Request Master Handlers
   const handleNavigateTypeOfRequestCreate = useCallback(() => {
@@ -1585,21 +2191,42 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
       }
       setEditingTypeOfRequest(null);
       handleNavigateList("wh-type-of-request", "/warehouse/master/type-of-request");
+      notifySuccess(
+        isEdit ? "Type of Request Updated" : "Type of Request Added",
+        `${record.name} saved successfully.`
+      );
     } catch (err) {
       console.error("Type of Request API sync failed:", err);
-      alert(err instanceof Error ? err.message : "Failed to save Type of Request.");
+      notifyError("Save Type of Request Failed", err);
+      throw err;
     }
-  }, [handleNavigateList]);
+  }, [handleNavigateList, notifySuccess, notifyError]);
 
   const handleDeleteTypeOfRequest = useCallback(async (id: string) => {
     try {
       await deleteWarehouseTypeOfRequestApi(id);
       setTypeOfRequestRecords((prev) => prev.filter((r) => r.id !== id));
+      notifySuccess("Type of Request Deleted", "Type of request deleted successfully.");
     } catch (err) {
       console.error("Type of Request delete failed:", err);
-      alert(err instanceof Error ? err.message : "Failed to delete Type of Request.");
+      notifyError("Delete Type of Request Failed", err);
+      throw err;
     }
-  }, []);
+  }, [notifySuccess, notifyError]);
+
+  const handleToggleTypeOfRequestStatus = useCallback(
+    (id: string) =>
+      runOptimisticStatusToggle(
+        id,
+        "status",
+        "Type of Request",
+        setTypeOfRequestRecords,
+        (recordId) => toggleWarehouseTypeOfRequestStatusApi(recordId),
+        notifySuccess,
+        notifyError
+      ),
+    [notifySuccess, notifyError]
+  );
 
   // Destination Location Master Handlers
   const handleNavigateDestinationLocationCreate = useCallback(() => {
@@ -1634,21 +2261,42 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
       }
       setEditingDestinationLocation(null);
       handleNavigateList("wh-destination-location", "/warehouse/master/destination-location");
+      notifySuccess(
+        isEdit ? "Destination Location Updated" : "Destination Location Added",
+        `${record.name} saved successfully.`
+      );
     } catch (err) {
       console.error("Destination Location API sync failed:", err);
-      alert(err instanceof Error ? err.message : "Failed to save Destination Location.");
+      notifyError("Save Destination Location Failed", err);
+      throw err;
     }
-  }, [handleNavigateList]);
+  }, [handleNavigateList, notifySuccess, notifyError]);
 
   const handleDeleteDestinationLocation = useCallback(async (id: string) => {
     try {
       await deleteDestinationLocationApi(id);
       setDestinationLocationRecords((prev) => prev.filter((r) => r.id !== id));
+      notifySuccess("Destination Location Deleted", "Destination location deleted successfully.");
     } catch (err) {
       console.error("Destination Location delete failed:", err);
-      alert(err instanceof Error ? err.message : "Failed to delete Destination Location.");
+      notifyError("Delete Destination Location Failed", err);
+      throw err;
     }
-  }, []);
+  }, [notifySuccess, notifyError]);
+
+  const handleToggleDestinationLocationStatus = useCallback(
+    (id: string) =>
+      runOptimisticStatusToggle(
+        id,
+        "status",
+        "Destination Location",
+        setDestinationLocationRecords,
+        (recordId) => toggleDestinationLocationStatusApi(recordId),
+        notifySuccess,
+        notifyError
+      ),
+    [notifySuccess, notifyError]
+  );
 
   // Navigate to edit profile view
   const handleNavigateProfile = useCallback(() => {
@@ -1783,6 +2431,7 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
             handleNavigateList={handleNavigateList}
             handleNavigateDetail={handleNavigateDetail}
             handleNavigateCreate={handleNavigateCreate}
+            handleNavigateReferenceCreate={handleNavigateReferenceCreate}
             handleNavigatePrCreate={handleNavigatePrCreate}
             handleNavigatePoCreate={handleNavigatePoCreate}
             handleNavigateReceiveNoteDetail={handleNavigateReceiveNoteDetail}
@@ -1793,164 +2442,211 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
             handleNavigateTransferStockReturnCreate={handleNavigateTransferStockReturnCreate}
             handleNavigateTransferStockReturnEdit={handleNavigateTransferStockReturnEdit}
             handleNavigateTransferStockReturnDetail={handleNavigateTransferStockReturnDetail}
-          handleNavigateMasterWarehouseCreate={handleNavigateMasterWarehouseCreate}
-          handleNavigateWarehouseCoordinates={handleNavigateWarehouseCoordinates}
-          handleNavigateWarehouseCoordinateCreate={handleNavigateWarehouseCoordinateCreate}
-          handleNavigateStockNotificationCreate={handleNavigateStockNotificationCreate}
-          handleEditStockNotification={handleEditStockNotification}
-          handleSaveStockNotification={handleSaveStockNotification}
-          handleDeleteStockNotification={handleDeleteStockNotification}
-          handleNavigateTypeOfRequestCreate={handleNavigateTypeOfRequestCreate}
-          handleEditTypeOfRequest={handleEditTypeOfRequest}
-          handleSaveTypeOfRequest={handleSaveTypeOfRequest}
-          handleDeleteTypeOfRequest={handleDeleteTypeOfRequest}
-          handleNavigateDestinationLocationCreate={handleNavigateDestinationLocationCreate}
-          handleEditDestinationLocation={handleEditDestinationLocation}
-          handleSaveDestinationLocation={handleSaveDestinationLocation}
-          handleDeleteDestinationLocation={handleDeleteDestinationLocation}
-          handleToggleSupplierHide={handleToggleSupplierHide}
-          handleTogglePaymentTermHide={handleTogglePaymentTermHide}
-          handleTogglePurchaseCategoryHide={handleTogglePurchaseCategoryHide}
-          handleToggleDeliveryTermHide={handleToggleDeliveryTermHide}
-          handleToggleAdditionalCostHide={handleToggleAdditionalCostHide}
-          handleTogglePphHide={handleTogglePphHide}
-          handleSaveSupplier={handleSaveSupplier}
-          handleSavePaymentTerm={handleSavePaymentTerm}
-          handleSavePurchaseCategory={handleSavePurchaseCategory}
-          handleSaveDeliveryTerm={handleSaveDeliveryTerm}
-          handleSaveAdditionalCost={handleSaveAdditionalCost}
-          handleSavePph={handleSavePph}
-          handleNavigateUnitEdit={handleNavigateUnitEdit}
-          handleSaveUnit={handleSaveUnit}
-          handleDeleteUnit={handleDeleteUnit}
-          handleNavigateClassificationEdit={handleNavigateClassificationEdit}
-          handleSaveClassification={handleSaveClassification}
-          handleDeleteClassification={handleDeleteClassification}
-          handleToggleClassificationStatus={handleToggleClassificationStatus}
-          handleNavigateDepartmentEdit={handleNavigateDepartmentEdit}
-          handleSaveDepartment={handleSaveDepartment}
-          handleDeleteDepartment={handleDeleteDepartment}
-          handleToggleDepartmentStatus={handleToggleDepartmentStatus}
-          handleNavigateBrandEdit={handleNavigateBrandEdit}
-          handleSaveBrand={handleSaveBrand}
-          handleDeleteBrand={handleDeleteBrand}
-          handleToggleBrandStatus={handleToggleBrandStatus}
-          handleNavigateFacilityEdit={handleNavigateFacilityEdit}
-          handleSaveFacility={handleSaveFacility}
-          handleDeleteFacility={handleDeleteFacility}
-          handleToggleFacilityStatus={handleToggleFacilityStatus}
-          handleNavigateHsEdit={handleNavigateHsEdit}
-          handleSaveHs={handleSaveHs}
-          handleDeleteHs={handleDeleteHs}
-          handleNavigateCategoryEdit={handleNavigateCategoryEdit}
-          handleSaveCategory={handleSaveCategory}
-          handleDeleteCategory={handleDeleteCategory}
-          handleToggleCategoryStatus={handleToggleCategoryStatus}
-          handleNavigateStyleEdit={handleNavigateStyleEdit}
-          handleNavigateStyleImport={handleNavigateStyleImport}
-          handleSaveStyle={handleSaveStyle}
-          handleDeleteStyle={handleDeleteStyle}
-          handleToggleStyleStatus={handleToggleStyleStatus}
-          handleSaveColor={handleSaveColor}
-          handleSaveReceiveNote={handleSaveReceiveNote}
-          handleSaveReceiveNoteReturn={handleSaveReceiveNoteReturn}
-          handleSaveWarehouseMaster={handleSaveWarehouseMaster}
-          handleSaveWarehouseCoordinate={handleSaveWarehouseCoordinate}
-          handleDeleteWarehouseCoordinate={handleDeleteWarehouseCoordinate}
-          handleNavigateCountryCreate={handleNavigateCountryCreate}
-          handleNavigateCountryEdit={handleNavigateCountryEdit}
-          handleSaveCountry={handleSaveCountry}
-          handleDeleteCountry={handleDeleteCountry}
-          handleToggleCountryStatus={handleToggleCountryStatus}
-          isCountriesLoading={masterFetchStates["countries"] !== "done"}
-          handleNavigateAccountCreate={handleNavigateAccountCreate}
-          handleNavigateAccountEdit={handleNavigateAccountEdit}
-          handleSaveAccount={handleSaveAccount}
-          handleDeleteAccount={handleDeleteAccount}
-          handleToggleAccountStatus={handleToggleAccountStatus}
-          isAccountsLoading={masterFetchStates["accounts"] !== "done"}
-          isReportingTypesLoading={masterFetchStates["reporting-types"] !== "done"}
-          handleNavigateJobNumberCreate={handleNavigateJobNumberCreate}
-          handleNavigateJobNumberEdit={handleNavigateJobNumberEdit}
-          handleSaveJobNumber={handleSaveJobNumber}
-          handleDeleteJobNumber={handleDeleteJobNumber}
-          handleToggleJobNumberStatus={handleToggleJobNumberStatus}
-          isJobNumbersLoading={masterFetchStates["job-numbers"] !== "done"}
-          handleNavigateRafaksiTypeCreate={handleNavigateRafaksiTypeCreate}
-          handleNavigateRafaksiTypeEdit={handleNavigateRafaksiTypeEdit}
-          handleSaveRafaksiType={handleSaveRafaksiType}
-          handleDeleteRafaksiType={handleDeleteRafaksiType}
-          handleToggleRafaksiTypeStatus={handleToggleRafaksiTypeStatus}
-          isRafaksiTypesLoading={masterFetchStates["rafaksi-types"] !== "done"}
-          handleNavigateCurrencyCreate={handleNavigateCurrencyCreate}
-          handleNavigateCurrencyEdit={handleNavigateCurrencyEdit}
-          handleSaveCurrency={handleSaveCurrency}
-          handleDeleteCurrency={handleDeleteCurrency}
-          isCurrenciesLoading={masterFetchStates["currencies"] !== "done"}
-          handleNavigateGenerateQr={handleNavigateGenerateQr}
-          handleNavigateItemEdit={handleNavigateItemEdit}
-          handleSaveItem={handleSaveItem}
-          handleDeleteItem={handleDeleteItem}
-          handleSaveRequestMaterial={handleSaveRequestMaterial}
-          handleProfileCancel={handleProfileCancel}
-          handleProfileSaveConfirmed={handleProfileSaveConfirmed}
-          supplierRecords={supplierRecords}
-          paymentTermRecords={paymentTermRecords}
-          purchaseCategoryRecords={purchaseCategoryRecords}
-          deliveryTermRecords={deliveryTermRecords}
-          additionalCostRecords={additionalCostRecords}
-          pphRecords={pphRecords}
-          unitRecords={unitRecords}
-          editingUnit={editingUnit}
-          setEditingUnit={setEditingUnit}
-          unitReferenceRecords={unitReferenceRecords}
-          classificationRecords={classificationRecords}
-          reportingTypeRecords={reportingTypeRecords}
-          editingClassification={editingClassification}
-          setEditingClassification={setEditingClassification}
-          departmentRecords={departmentRecords}
-          isDepartmentsLoading={masterFetchStates.departments === "loading"}
-          editingDepartment={editingDepartment}
-          setEditingDepartment={setEditingDepartment}
-          brandRecords={brandRecords}
-          editingBrand={editingBrand}
-          setEditingBrand={setEditingBrand}
-          facilityRecords={facilityRecords}
-          editingFacility={editingFacility}
-          setEditingFacility={setEditingFacility}
-          hsRecords={hsRecords}
-          editingHs={editingHs}
-          setEditingHs={setEditingHs}
-          categoryRecords={categoryRecords}
-          editingCategory={editingCategory}
-          setEditingCategory={setEditingCategory}
-          styleRecords={styleRecords}
-          editingStyle={editingStyle}
-          setEditingStyle={setEditingStyle}
-          colorRecords={colorRecords}
-          itemRecords={itemRecords}
-          editingItem={editingItem}
-          setEditingItem={setEditingItem}
-          receiveNoteRecords={receiveNoteRecords}
-          setReceiveNoteRecords={setReceiveNoteRecords}
-          receiveNoteReturnRecords={receiveNoteReturnRecords}
-          documentHistoryRecords={documentHistoryRecords}
-          warehouseMasterRecords={warehouseMasterRecords}
-          warehouseTypeRecords={warehouseTypeRecords}
-          isWarehouseTypesLoading={masterFetchStates["warehouse-types"] !== "done"}
-          countryRecords={countryRecords}
-          accountRecords={accountRecords}
-          jobNumberRecords={jobNumberRecords}
-          rafaksiTypeRecords={rafaksiTypeRecords}
-          currencyRecords={currencyRecords}
-          requestMaterialRecords={requestMaterialRecords}
-          stockNotificationRecords={stockNotificationRecords}
-          editingStockNotification={editingStockNotification}
-          setEditingStockNotification={setEditingStockNotification}
-          typeOfRequestRecords={typeOfRequestRecords}
-          editingTypeOfRequest={editingTypeOfRequest}
-          setEditingTypeOfRequest={setEditingTypeOfRequest}
-          destinationLocationRecords={destinationLocationRecords}
+            handleNavigateMasterWarehouseCreate={handleNavigateMasterWarehouseCreate}
+            handleNavigateWarehouseMasterEdit={handleNavigateWarehouseMasterEdit}
+            handleDeleteWarehouseMaster={handleDeleteWarehouseMaster}
+            handleToggleWarehouseMasterStatus={handleToggleWarehouseMasterStatus}
+            handleNavigateWarehouseCoordinates={handleNavigateWarehouseCoordinates}
+            handleNavigateWarehouseCoordinateCreate={handleNavigateWarehouseCoordinateCreate}
+            handleNavigateStockNotificationCreate={handleNavigateStockNotificationCreate}
+            handleEditStockNotification={handleEditStockNotification}
+            handleSaveStockNotification={handleSaveStockNotification}
+            handleDeleteStockNotification={handleDeleteStockNotification}
+            handleNavigateTypeOfRequestCreate={handleNavigateTypeOfRequestCreate}
+            handleEditTypeOfRequest={handleEditTypeOfRequest}
+            handleSaveTypeOfRequest={handleSaveTypeOfRequest}
+            handleDeleteTypeOfRequest={handleDeleteTypeOfRequest}
+            handleToggleTypeOfRequestStatus={handleToggleTypeOfRequestStatus}
+            handleNavigateDestinationLocationCreate={handleNavigateDestinationLocationCreate}
+            handleEditDestinationLocation={handleEditDestinationLocation}
+            handleSaveDestinationLocation={handleSaveDestinationLocation}
+            handleDeleteDestinationLocation={handleDeleteDestinationLocation}
+            handleToggleDestinationLocationStatus={handleToggleDestinationLocationStatus}
+            handleToggleSupplierHide={handleToggleSupplierHide}
+            handleTogglePaymentTermHide={handleTogglePaymentTermHide}
+            handleTogglePurchaseCategoryHide={handleTogglePurchaseCategoryHide}
+            handleToggleDeliveryTermHide={handleToggleDeliveryTermHide}
+            handleToggleAdditionalCostHide={handleToggleAdditionalCostHide}
+            handleTogglePphHide={handleTogglePphHide}
+            handleNavigateSupplierEdit={handleNavigateSupplierEdit}
+            handleDeleteSupplier={handleDeleteSupplier}
+            handleSaveSupplier={handleSaveSupplier}
+            handleNavigatePaymentTermEdit={handleNavigatePaymentTermEdit}
+            handleDeletePaymentTerm={handleDeletePaymentTerm}
+            handleSavePaymentTerm={handleSavePaymentTerm}
+            handleNavigatePurchaseCategoryEdit={handleNavigatePurchaseCategoryEdit}
+            handleDeletePurchaseCategory={handleDeletePurchaseCategory}
+            handleSavePurchaseCategory={handleSavePurchaseCategory}
+            handleNavigateDeliveryTermEdit={handleNavigateDeliveryTermEdit}
+            handleDeleteDeliveryTerm={handleDeleteDeliveryTerm}
+            handleSaveDeliveryTerm={handleSaveDeliveryTerm}
+            handleNavigateAdditionalCostEdit={handleNavigateAdditionalCostEdit}
+            handleDeleteAdditionalCost={handleDeleteAdditionalCost}
+            handleSaveAdditionalCost={handleSaveAdditionalCost}
+            handleNavigatePphEdit={handleNavigatePphEdit}
+            handleDeletePph={handleDeletePph}
+            handleSavePph={handleSavePph}
+            handleNavigateUnitEdit={handleNavigateUnitEdit}
+            handleSaveUnit={handleSaveUnit}
+            handleDeleteUnit={handleDeleteUnit}
+            handleToggleUnitStatus={handleToggleUnitStatus}
+            handleNavigateUnitReferenceCreate={handleNavigateUnitReferenceCreate}
+            handleNavigateUnitReferenceEdit={handleNavigateUnitReferenceEdit}
+            handleSaveUnitReference={handleSaveUnitReference}
+            handleDeleteUnitReference={handleDeleteUnitReference}
+            handleToggleUnitReferenceStatus={handleToggleUnitReferenceStatus}
+            isUnitReferencesLoading={masterFetchStates["unit-references"] !== "done"}
+            handleNavigateClassificationEdit={handleNavigateClassificationEdit}
+            handleSaveClassification={handleSaveClassification}
+            handleDeleteClassification={handleDeleteClassification}
+            handleToggleClassificationStatus={handleToggleClassificationStatus}
+            handleNavigateDepartmentEdit={handleNavigateDepartmentEdit}
+            handleSaveDepartment={handleSaveDepartment}
+            handleDeleteDepartment={handleDeleteDepartment}
+            handleToggleDepartmentStatus={handleToggleDepartmentStatus}
+            handleNavigateBrandEdit={handleNavigateBrandEdit}
+            handleSaveBrand={handleSaveBrand}
+            handleDeleteBrand={handleDeleteBrand}
+            handleToggleBrandStatus={handleToggleBrandStatus}
+            handleNavigateFacilityEdit={handleNavigateFacilityEdit}
+            handleSaveFacility={handleSaveFacility}
+            handleDeleteFacility={handleDeleteFacility}
+            handleToggleFacilityStatus={handleToggleFacilityStatus}
+            handleNavigateHsEdit={handleNavigateHsEdit}
+            handleSaveHs={handleSaveHs}
+            handleDeleteHs={handleDeleteHs}
+            handleNavigateCategoryEdit={handleNavigateCategoryEdit}
+            handleSaveCategory={handleSaveCategory}
+            handleDeleteCategory={handleDeleteCategory}
+            handleToggleCategoryStatus={handleToggleCategoryStatus}
+            handleNavigateStyleEdit={handleNavigateStyleEdit}
+            handleNavigateStyleImport={handleNavigateStyleImport}
+            handleSaveStyle={handleSaveStyle}
+            handleDeleteStyle={handleDeleteStyle}
+            handleToggleStyleStatus={handleToggleStyleStatus}
+            handleNavigateColorEdit={handleNavigateColorEdit}
+            handleSaveColor={handleSaveColor}
+            handleDeleteColor={handleDeleteColor}
+            handleToggleColorStatus={handleToggleColorStatus}
+            handleSaveReceiveNote={handleSaveReceiveNote}
+            handleSaveReceiveNoteReturn={handleSaveReceiveNoteReturn}
+            handleSaveWarehouseMaster={handleSaveWarehouseMaster}
+            handleSaveWarehouseCoordinate={handleSaveWarehouseCoordinate}
+            handleDeleteWarehouseCoordinate={handleDeleteWarehouseCoordinate}
+            handleNavigateCountryCreate={handleNavigateCountryCreate}
+            handleNavigateCountryEdit={handleNavigateCountryEdit}
+            handleSaveCountry={handleSaveCountry}
+            handleDeleteCountry={handleDeleteCountry}
+            handleToggleCountryStatus={handleToggleCountryStatus}
+            isCountriesLoading={masterFetchStates["countries"] !== "done"}
+            handleNavigateAccountCreate={handleNavigateAccountCreate}
+            handleNavigateAccountEdit={handleNavigateAccountEdit}
+            handleSaveAccount={handleSaveAccount}
+            handleDeleteAccount={handleDeleteAccount}
+            handleToggleAccountStatus={handleToggleAccountStatus}
+            isAccountsLoading={masterFetchStates["accounts"] !== "done"}
+            isReportingTypesLoading={masterFetchStates["reporting-types"] !== "done"}
+            handleNavigateJobNumberCreate={handleNavigateJobNumberCreate}
+            handleNavigateJobNumberEdit={handleNavigateJobNumberEdit}
+            handleSaveJobNumber={handleSaveJobNumber}
+            handleDeleteJobNumber={handleDeleteJobNumber}
+            handleToggleJobNumberStatus={handleToggleJobNumberStatus}
+            isJobNumbersLoading={masterFetchStates["job-numbers"] !== "done"}
+            handleNavigateRafaksiTypeCreate={handleNavigateRafaksiTypeCreate}
+            handleNavigateRafaksiTypeEdit={handleNavigateRafaksiTypeEdit}
+            handleSaveRafaksiType={handleSaveRafaksiType}
+            handleDeleteRafaksiType={handleDeleteRafaksiType}
+            handleToggleRafaksiTypeStatus={handleToggleRafaksiTypeStatus}
+            isRafaksiTypesLoading={masterFetchStates["rafaksi-types"] !== "done"}
+            handleNavigateCurrencyCreate={handleNavigateCurrencyCreate}
+            handleNavigateCurrencyEdit={handleNavigateCurrencyEdit}
+            handleSaveCurrency={handleSaveCurrency}
+            handleDeleteCurrency={handleDeleteCurrency}
+            handleToggleCurrencyStatus={handleToggleCurrencyStatus}
+            isCurrenciesLoading={masterFetchStates["currencies"] !== "done"}
+            handleNavigateGenerateQr={handleNavigateGenerateQr}
+            handleNavigateItemEdit={handleNavigateItemEdit}
+            handleSaveItem={handleSaveItem}
+            handleDeleteItem={handleDeleteItem}
+            handleToggleItemStatus={handleToggleItemStatus}
+            handleSaveRequestMaterial={handleSaveRequestMaterial}
+            handleProfileCancel={handleProfileCancel}
+            handleProfileSaveConfirmed={handleProfileSaveConfirmed}
+            supplierRecords={supplierRecords}
+            editingSupplier={editingSupplier}
+            setEditingSupplier={setEditingSupplier}
+            paymentTermRecords={paymentTermRecords}
+            editingPaymentTerm={editingPaymentTerm}
+            setEditingPaymentTerm={setEditingPaymentTerm}
+            purchaseCategoryRecords={purchaseCategoryRecords}
+            editingPurchaseCategory={editingPurchaseCategory}
+            setEditingPurchaseCategory={setEditingPurchaseCategory}
+            deliveryTermRecords={deliveryTermRecords}
+            editingDeliveryTerm={editingDeliveryTerm}
+            setEditingDeliveryTerm={setEditingDeliveryTerm}
+            additionalCostRecords={additionalCostRecords}
+            editingAdditionalCost={editingAdditionalCost}
+            setEditingAdditionalCost={setEditingAdditionalCost}
+            pphRecords={pphRecords}
+            editingPph={editingPph}
+            setEditingPph={setEditingPph}
+            unitRecords={unitRecords}
+            editingUnit={editingUnit}
+            setEditingUnit={setEditingUnit}
+            unitReferenceRecords={unitReferenceRecords}
+            classificationRecords={classificationRecords}
+            reportingTypeRecords={reportingTypeRecords}
+            editingClassification={editingClassification}
+            setEditingClassification={setEditingClassification}
+            departmentRecords={departmentRecords}
+            isDepartmentsLoading={masterFetchStates.departments === "loading"}
+            editingDepartment={editingDepartment}
+            setEditingDepartment={setEditingDepartment}
+            brandRecords={brandRecords}
+            editingBrand={editingBrand}
+            setEditingBrand={setEditingBrand}
+            facilityRecords={facilityRecords}
+            editingFacility={editingFacility}
+            setEditingFacility={setEditingFacility}
+            hsRecords={hsRecords}
+            editingHs={editingHs}
+            setEditingHs={setEditingHs}
+            categoryRecords={categoryRecords}
+            editingCategory={editingCategory}
+            setEditingCategory={setEditingCategory}
+            styleRecords={styleRecords}
+            editingStyle={editingStyle}
+            setEditingStyle={setEditingStyle}
+            colorRecords={colorRecords}
+            editingColor={editingColor}
+            setEditingColor={setEditingColor}
+            itemRecords={itemRecords}
+            editingItem={editingItem}
+            setEditingItem={setEditingItem}
+            receiveNoteRecords={receiveNoteRecords}
+            setReceiveNoteRecords={setReceiveNoteRecords}
+            receiveNoteReturnRecords={receiveNoteReturnRecords}
+            documentHistoryRecords={documentHistoryRecords}
+            warehouseMasterRecords={warehouseMasterRecords}
+            editingWarehouseMaster={editingWarehouseMaster}
+            setEditingWarehouseMaster={setEditingWarehouseMaster}
+            warehouseTypeRecords={warehouseTypeRecords}
+            isWarehouseTypesLoading={masterFetchStates["warehouse-types"] !== "done"}
+            referenceRecordsMap={referenceRecordsMap}
+            masterFetchStates={masterFetchStates}
+            countryRecords={countryRecords}
+            accountRecords={accountRecords}
+            jobNumberRecords={jobNumberRecords}
+            rafaksiTypeRecords={rafaksiTypeRecords}
+            currencyRecords={currencyRecords}
+            requestMaterialRecords={requestMaterialRecords}
+            stockNotificationRecords={stockNotificationRecords}
+            editingStockNotification={editingStockNotification}
+            setEditingStockNotification={setEditingStockNotification}
+            typeOfRequestRecords={typeOfRequestRecords}
+            editingTypeOfRequest={editingTypeOfRequest}
+            setEditingTypeOfRequest={setEditingTypeOfRequest}
+            destinationLocationRecords={destinationLocationRecords}
             editingDestinationLocation={editingDestinationLocation}
             setEditingDestinationLocation={setEditingDestinationLocation}
           />

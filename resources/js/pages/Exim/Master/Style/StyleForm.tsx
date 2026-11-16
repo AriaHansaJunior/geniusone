@@ -6,7 +6,7 @@ import type { StyleRecord } from "./style-types";
 interface StyleFormProps {
   initialRecord?: StyleRecord | null;
   onBack: () => void;
-  onSave?: (record: StyleRecord, isEdit: boolean) => void;
+  onSave?: (record: StyleRecord, isEdit: boolean) => Promise<void> | void;
 }
 
 export function StyleForm({
@@ -23,6 +23,7 @@ export function StyleForm({
       ? initialRecord.description
       : ""
   );
+  const [saving, setSaving] = useState(false);
 
   const [errors, setErrors] = useState<{
     code?: string;
@@ -34,8 +35,9 @@ export function StyleForm({
     message: string;
   } | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (saving) return;
 
     const trimmedCode = code.trim();
     const trimmedName = name.trim();
@@ -73,7 +75,16 @@ export function StyleForm({
     };
 
     if (onSave) {
-      onSave(updatedRecord, isEdit);
+      try {
+        setSaving(true);
+        await onSave(updatedRecord, isEdit);
+      } catch (err: any) {
+        setNotification({
+          type: "warning",
+          message: err?.message || "Failed to save style to database.",
+        });
+        setSaving(false);
+      }
     }
   };
 
@@ -182,11 +193,11 @@ export function StyleForm({
 
         {/* Form Action Buttons: Cancel and Save */}
         <div className="style-form-actions">
-          <Button type="button" variant="ghost" onClick={onBack}>
+          <Button type="button" variant="ghost" onClick={onBack} disabled={saving}>
             Cancel
           </Button>
-          <Button type="submit" variant="primary">
-            Save
+          <Button type="submit" variant="primary" disabled={saving}>
+            {saving ? "Saving..." : "Save"}
           </Button>
         </div>
       </form>

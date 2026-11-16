@@ -1,9 +1,12 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import * as XLSX from "xlsx";
 import { Button } from "../../../components/ui/Button";
 import { SearchField } from "../../../components/ui/SearchField";
 import { Icon } from "../../../components/ui/Icon";
 import { Pagination } from "../../../components/ui/Pagination";
+import { StatusToggle } from "../../../components/ui/StatusToggle";
+import { ConfirmDialog } from "../../../components/ui/ConfirmDialog";
+import { useNotification } from "../../../context/NotificationContext";
 import { initialWarehouseMasterRecords } from "./warehouse-master-data";
 import type {
   WarehouseMasterRecord,
@@ -14,42 +17,55 @@ import type {
 interface MasterWarehouseIndexProps {
   records?: WarehouseMasterRecord[];
   onAddNew: () => void;
+  onEdit?: (warehouse: WarehouseMasterRecord) => void;
+  onDelete?: (id: string) => Promise<void> | void;
+  onToggleStatus?: (id: string) => Promise<void> | void;
   onViewCoordinates: (warehouse: WarehouseMasterRecord) => void;
 }
 
 export function MasterWarehouseIndex({
   records = initialWarehouseMasterRecords,
   onAddNew,
+  onEdit,
+  onDelete,
+  onToggleStatus,
   onViewCoordinates,
 }: MasterWarehouseIndexProps) {
+  const { notifySuccess, notifyError, notifyWarning } = useNotification();
+
+  const [localRecords, setLocalRecords] = useState<WarehouseMasterRecord[]>(records);
   const [search, setSearch] = useState("");
-  const [pageSize, setPageSize] = useState<number>(25); // Screenshot 1 shows 25 by default
+  const [pageSize, setPageSize] = useState<number>(25);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [sortField, setSortField] =
     useState<WarehouseMasterSortField>("name");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
-  const [exportNotice, setExportNotice] = useState<string | null>(null);
+  const [warehouseToEdit, setWarehouseToEdit] =
+    useState<WarehouseMasterRecord | null>(null);
+  const [warehouseToDelete, setWarehouseToDelete] =
+    useState<WarehouseMasterRecord | null>(null);
 
-  // Helper to extract clean type string
+  useEffect(() => {
+    setLocalRecords(records);
+  }, [records]);
+
   const getWarehouseTypeString = (val: any): string => {
     if (!val) return "Raw Material";
     if (typeof val === "object") return val.name || val.type || "Raw Material";
     return String(val);
   };
 
-  // Search filter across Name, Type, and Description
   const filteredRecords = useMemo(() => {
-    if (!search.trim()) return records;
+    if (!search.trim()) return localRecords;
     const query = search.toLowerCase().trim();
-    return records.filter((rec) => {
+    return localRecords.filter((rec) => {
       const matchName = String(rec.name || "").toLowerCase().includes(query);
       const matchType = getWarehouseTypeString(rec.type).toLowerCase().includes(query);
       const matchDesc = String(rec.description || "").toLowerCase().includes(query);
       return matchName || matchType || matchDesc;
     });
-  }, [records, search]);
+  }, [localRecords, search]);
 
-  // Sorting
   const sortedRecords = useMemo(() => {
     if (sortDirection === "none") return filteredRecords;
 
@@ -88,7 +104,6 @@ export function MasterWarehouseIndex({
     return list;
   }, [filteredRecords, sortField, sortDirection]);
 
-  // Pagination calculation
   const totalRecords = sortedRecords.length;
   const totalPages = Math.max(1, Math.ceil(totalRecords / pageSize));
   const safeCurrentPage = Math.min(currentPage, totalPages);
@@ -98,7 +113,6 @@ export function MasterWarehouseIndex({
     return sortedRecords.slice(start, start + pageSize);
   }, [sortedRecords, safeCurrentPage, pageSize]);
 
-  // Sorting toggle handler
   const handleSort = (field: WarehouseMasterSortField) => {
     if (sortField === field) {
       if (sortDirection === "asc") setSortDirection("desc");
@@ -111,31 +125,46 @@ export function MasterWarehouseIndex({
   };
 
   const renderSortIndicator = (field: WarehouseMasterSortField) => {
-    if (sortField !== field || sortDirection === "none") {
-      return (
-        <span className="wh-sort-icon opacity-40">
-          <Icon name="arrowUpDown" size={13} />
-        </span>
-      );
-    }
+    const isActive = sortField === field && sortDirection !== "none";
     return (
-      <span className="wh-sort-icon text-primary font-bold">
-        {sortDirection === "asc" ? (
-          <Icon name="arrowUp" size={13} />
+      <span
+        className={`master-sort-indicator ${
+          isActive ? "master-sort-indicator--active" : ""
+        }`}
+      >
+        {isActive ? (
+          sortDirection === "asc" ? (
+            <Icon name="arrowUp" size={12} />
+          ) : (
+            <Icon name="arrowDown" size={12} />
+          )
         ) : (
-          <Icon name="arrowDown" size={13} />
+          <Icon name="arrowUpDown" size={12} />
         )}
       </span>
     );
   };
 
-  // Export to Excel handler using SheetJS
+  const handleConfirmDelete = async () => {
+    if (!warehouseToDelete) return;
+    const target = warehouseToDelete;
+    setWarehouseToDelete(null);
+    if (onDelete) {
+      await onDelete(target.id);
+    }
+  };
+
   const handleExportExcel = () => {
+    if (sortedRecords.length === 0) {
+      notifyWarning("Nothing to Export", "No warehouse records match your current filter.");
+      return;
+    }
+
     try {
       const dataToExport = sortedRecords.map((r, idx) => ({
         No: idx + 1,
         Name: r.name,
-        "Warehouse Type": r.type,
+        "Warehouse Type": getWarehouseTypeString(r.type),
         Description: r.description || "-",
         Status: r.status ? "Active" : "Inactive",
         "Coordinate Count": r.coordinates?.length || 0,
@@ -147,38 +176,16 @@ export function MasterWarehouseIndex({
 
       XLSX.writeFile(workbook, "Master_Warehouse.xlsx");
 
-      setExportNotice("Master Warehouse exported successfully as Excel.");
-      setTimeout(() => setExportNotice(null), 4000);
+      notifySuccess("Export Completed", `Exported ${sortedRecords.length} warehouse record(s).`);
     } catch {
-      setExportNotice("Failed to generate Excel export.");
-      setTimeout(() => setExportNotice(null), 4000);
+      notifyError("Export Failed", "Failed to generate Excel export.");
     }
   };
 
   return (
-    <div className="wh-page">
-      {/* Export / Informational Notice */}
-      {exportNotice && (
-        <div className="wh-alert wh-alert--info" role="status">
-          <Icon name="checkCircle" size={16} />
-          <div className="wh-alert__content">
-            <p>{exportNotice}</p>
-          </div>
-          <button
-            type="button"
-            className="wh-alert-close"
-            onClick={() => setExportNotice(null)}
-            aria-label="Close alert"
-          >
-            &times;
-          </button>
-        </div>
-      )}
-
-      {/* White Content Card */}
-      <div className="wh-table-card">
-        {/* Top Filter and Controls Bar */}
-        <div className="wh-controls-bar" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 18px", borderBottom: "1px solid var(--line)", background: "#ffffff", gap: "16px" }}>
+    <div className="master-page-shell wh-page">
+      <div className="panel table-panel wh-table-card">
+        <div className="master-table-toolbar">
           <div className="wh-search-box">
             <SearchField
               value={search}
@@ -186,145 +193,169 @@ export function MasterWarehouseIndex({
                 setSearch(val);
                 setCurrentPage(1);
               }}
-              placeholder="Search..."
+              placeholder="Search warehouse name, type, description..."
             />
           </div>
-          <div className="wh-header-actions" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <Button
-              variant="primary"
-              onClick={onAddNew}
-              className="wh-btn-add-new"
-            >
+          <div className="master-toolbar-actions">
+            <Button variant="primary" onClick={onAddNew}>
               Add New
             </Button>
-            <Button
-              variant="excel"
-              onClick={handleExportExcel}
-              className="wh-btn-export-excel"
-            >
-              Export To Excel
+            <Button variant="excel" onClick={handleExportExcel}>
+              Export to Excel
             </Button>
           </div>
         </div>
 
-        {/* 6-Column Warehouse Table */}
-        <div className="wh-table-wrapper">
-          <table className="wh-table">
-            <thead>
-              <tr>
-                <th className="wh-th-no">No</th>
-                <th
-                  className="wh-th-sortable"
-                  onClick={() => handleSort("name")}
-                >
-                  <div className="wh-th-content">
+        <div className="table-frame">
+          <div className="table-scroll">
+            <table className="data-table wh-table">
+              <thead>
+                <tr>
+                  <th className="master-col-no">No</th>
+                  <th
+                    className="sortable-th master-sortable-th master-col-name"
+                    onClick={() => handleSort("name")}
+                  >
                     <span>Name</span>
                     {renderSortIndicator("name")}
-                  </div>
-                </th>
-                <th
-                  className="wh-th-sortable"
-                  onClick={() => handleSort("type")}
-                >
-                  <div className="wh-th-content">
+                  </th>
+                  <th
+                    className="sortable-th master-sortable-th master-col-type"
+                    onClick={() => handleSort("type")}
+                  >
                     <span>Warehouse Type</span>
                     {renderSortIndicator("type")}
-                  </div>
-                </th>
-                <th
-                  className="wh-th-sortable"
-                  onClick={() => handleSort("description")}
-                >
-                  <div className="wh-th-content">
+                  </th>
+                  <th
+                    className="sortable-th master-sortable-th master-col-description"
+                    onClick={() => handleSort("description")}
+                  >
                     <span>Description</span>
                     {renderSortIndicator("description")}
-                  </div>
-                </th>
-                <th
-                  className="wh-th-sortable text-center"
-                  onClick={() => handleSort("status")}
-                >
-                  <div className="wh-th-content justify-center">
+                  </th>
+                  <th
+                    className="sortable-th master-sortable-th master-col-status"
+                    onClick={() => handleSort("status")}
+                  >
                     <span>Status</span>
                     {renderSortIndicator("status")}
-                  </div>
-                </th>
-                <th className="wh-th-option text-center">Option</th>
-              </tr>
-            </thead>
-            <tbody>
-              {paginatedRecords.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="wh-table-empty">
-                    No warehouse records found matching filters.
-                  </td>
+                  </th>
+                  <th className="master-col-actions">Option</th>
                 </tr>
-              ) : (
-                paginatedRecords.map((wh, idx) => {
-                  const sequentialNumber =
-                    (safeCurrentPage - 1) * pageSize + idx + 1;
-
-                  return (
-                    <tr key={wh.id}>
-                      <td className="wh-td-no text-center">
-                        {sequentialNumber}
-                      </td>
-                      <td className="font-medium text-ink">{wh.name}</td>
-                      <td>{getWarehouseTypeString(wh.type)}</td>
-                      <td className="wh-td-desc">
-                        {wh.description || "-"}
-                      </td>
-                      <td className="text-center">
-                        {wh.status ? (
-                          <span
-                            className="wh-status-checkbox wh-status-checkbox--checked"
-                            title="Active Status"
-                            aria-label="Active Status"
-                          >
-                            <Icon name="check" size={13} />
-                          </span>
-                        ) : (
-                          <span
-                            className="wh-status-checkbox wh-status-checkbox--unchecked"
-                            title="Inactive Status"
-                            aria-label="Inactive Status"
-                          />
-                        )}
-                      </td>
-                      <td className="wh-td-option text-center">
-                        <div className="wh-row-actions">
-                          <button
-                            type="button"
-                            className="wh-action-btn wh-btn-view-coordinate"
-                            onClick={() => onViewCoordinates(wh)}
-                            title={`View coordinates for ${wh.name}`}
-                            aria-label={`View coordinates for ${wh.name}`}
-                          >
-                            <Icon name="list" size={14} />
-                          </button>
+              </thead>
+              <tbody>
+                {paginatedRecords.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="empty-table-cell">
+                      <div className="empty master-empty-box">
+                        <div className="empty__icon master-empty-icon">
+                          <Icon name="search" size={24} />
                         </div>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
+                        <strong>No warehouse records found</strong>
+                        <span className="master-empty-subtitle">
+                          Try adjusting your search filter.
+                        </span>
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  paginatedRecords.map((wh, idx) => {
+                    const sequentialNumber = (safeCurrentPage - 1) * pageSize + idx + 1;
 
-        {/* Unified Bottom Pagination */}
-        <Pagination
-          totalRecords={totalRecords}
-          currentPage={safeCurrentPage}
-          pageSize={pageSize}
-          showPageSize={true}
-          onPageChange={setCurrentPage}
-          onPageSizeChange={(newSize) => {
-            setPageSize(newSize);
-            setCurrentPage(1);
-          }}
-        />
+                    return (
+                      <tr key={wh.id}>
+                        <td className="master-cell-no">{sequentialNumber}</td>
+                        <td className="master-cell-name">{wh.name}</td>
+                        <td>{getWarehouseTypeString(wh.type)}</td>
+                        <td className="master-cell-muted">{wh.description || "-"}</td>
+                        <td className="master-cell-center">
+                          <StatusToggle
+                            active={wh.status}
+                            onToggle={() => onToggleStatus?.(wh.id)}
+                            ariaLabel={`Toggle status for ${wh.name}`}
+                          />
+                        </td>
+                        <td className="master-cell-center">
+                          <div className="master-actions-group">
+                            <button
+                              type="button"
+                              className="wh-action-btn wh-btn-view-coordinate"
+                              onClick={() => onViewCoordinates(wh)}
+                              title={`View coordinates for ${wh.name}`}
+                              aria-label={`View coordinates for ${wh.name}`}
+                            >
+                              <Icon name="list" size={13} />
+                            </button>
+                            {onEdit && (
+                              <button
+                                type="button"
+                                className="btn-action-edit"
+                                onClick={() => setWarehouseToEdit(wh)}
+                                title={`Edit ${wh.name}`}
+                                aria-label={`Edit ${wh.name}`}
+                              >
+                                <Icon name="edit" size={13} />
+                              </button>
+                            )}
+                            {onDelete && (
+                              <button
+                                type="button"
+                                className="btn-action-delete"
+                                onClick={() => setWarehouseToDelete(wh)}
+                                title={`Delete ${wh.name}`}
+                                aria-label={`Delete ${wh.name}`}
+                              >
+                                <Icon name="trash" size={13} />
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          <Pagination
+            totalRecords={totalRecords}
+            currentPage={safeCurrentPage}
+            pageSize={pageSize}
+            showPageSize={true}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={(newSize) => {
+              setPageSize(newSize);
+              setCurrentPage(1);
+            }}
+          />
+        </div>
       </div>
+
+      <ConfirmDialog
+        isOpen={!!warehouseToEdit}
+        title="Edit Warehouse"
+        message={`Do you want to edit warehouse "${warehouseToEdit?.name}"?`}
+        confirmLabel="Continue"
+        cancelLabel="Cancel"
+        confirmVariant="primary"
+        icon="edit"
+        onConfirm={() => {
+          if (warehouseToEdit && onEdit) {
+            onEdit(warehouseToEdit);
+          }
+          setWarehouseToEdit(null);
+        }}
+        onCancel={() => setWarehouseToEdit(null)}
+      />
+
+      <ConfirmDialog
+        isOpen={!!warehouseToDelete}
+        entityType="warehouse"
+        entityName={warehouseToDelete?.name}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setWarehouseToDelete(null)}
+      />
     </div>
   );
 }

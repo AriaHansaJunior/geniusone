@@ -6,7 +6,7 @@ import type { FacilityRecord } from "./facility-types";
 interface FacilityFormProps {
   initialRecord?: FacilityRecord | null;
   onBack: () => void;
-  onSave?: (record: FacilityRecord, isEdit: boolean) => void;
+  onSave?: (record: FacilityRecord, isEdit: boolean) => Promise<void> | void;
 }
 
 export function FacilityForm({
@@ -20,6 +20,7 @@ export function FacilityForm({
   const [description, setDescription] = useState(
     initialRecord?.description || ""
   );
+  const [saving, setSaving] = useState(false);
 
   const [error, setError] = useState<string | null>(null);
 
@@ -28,8 +29,9 @@ export function FacilityForm({
     message: string;
   } | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (saving) return;
 
     const trimmedName = name.trim();
     const trimmedDesc = description.trim();
@@ -55,7 +57,16 @@ export function FacilityForm({
     };
 
     if (onSave) {
-      onSave(updatedRecord, isEdit);
+      try {
+        setSaving(true);
+        await onSave(updatedRecord, isEdit);
+      } catch (err: any) {
+        setNotification({
+          type: "warning",
+          message: err?.message || "Failed to save facility to database.",
+        });
+        setSaving(false);
+      }
     }
   };
 
@@ -141,11 +152,11 @@ export function FacilityForm({
 
         {/* Form Action Buttons: Cancel and Save */}
         <div className="facility-form-actions">
-          <Button type="button" variant="ghost" onClick={onBack}>
+          <Button type="button" variant="ghost" onClick={onBack} disabled={saving}>
             Cancel
           </Button>
-          <Button type="submit" variant="primary">
-            Save
+          <Button type="submit" variant="primary" disabled={saving}>
+            {saving ? "Saving..." : "Save"}
           </Button>
         </div>
       </form>

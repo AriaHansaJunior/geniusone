@@ -1,8 +1,13 @@
 export interface UnitReferenceRecord {
   id: string;
+  no?: number;
   code: string;
+  name: string;
   description: string;
+  status: boolean;
+  createdAt?: string;
+  createdBy?: string;
 }
 
-export type UnitReferenceSortField = "code" | "description";
+export type UnitReferenceSortField = "code" | "name" | "description" | "status";
 export type SortDirection = "none" | "asc" | "desc";

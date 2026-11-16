@@ -5,7 +5,10 @@ import { SearchField } from "../../../../components/ui/SearchField";
 import { Pagination } from "../../../../components/ui/Pagination";
 import { Badge } from "../../../../components/ui/Badge";
 import { Icon } from "../../../../components/ui/Icon";
+import { StatusToggle } from "../../../../components/ui/StatusToggle";
 import { ConfirmDialog } from "../../../../components/ui/ConfirmDialog";
+import { toggleDestinationLocationStatusApi } from "../../../../data/masterApi";
+import { useNotification } from "../../../../context/NotificationContext";
 import { initialDestinationLocationRecords } from "./destination-location-data";
 import type { DestinationLocationRecord, DestinationLocationSortField } from "./destination-location-types";
 
@@ -117,11 +120,23 @@ export function DestinationLocationIndex({
     setRecordToDelete(null);
   };
 
-  const handleToggleStatus = (record: DestinationLocationRecord) => {
-    const nextStatus = record.status === "Active" ? "Inactive" : "Active";
+  const { notifySuccess, notifyError } = useNotification();
+
+  const handleToggleStatus = async (record: DestinationLocationRecord) => {
+    const previousStatus = record.status;
+    const nextStatus = previousStatus === "Active" ? "Inactive" : "Active";
     setLocalRecords((prev) =>
       prev.map((r) => (r.id === record.id ? { ...r, status: nextStatus } : r))
     );
+    try {
+      await toggleDestinationLocationStatusApi(record.id);
+      notifySuccess("Status Updated", `${record.name} is now ${nextStatus}.`);
+    } catch (err) {
+      setLocalRecords((prev) =>
+        prev.map((r) => (r.id === record.id ? { ...r, status: previousStatus } : r))
+      );
+      notifyError("Status Update Failed", err);
+    }
   };
 
   const getLocationTypeBadgeTone = (type: string) => {
@@ -187,7 +202,7 @@ export function DestinationLocationIndex({
       {/* White Content Card */}
       <div className="wh-table-card">
         {/* Top Controls Bar */}
-        <div className="wh-controls-bar" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 18px", borderBottom: "1px solid var(--line)", background: "#ffffff", gap: "16px" }}>
+        <div className="wh-controls-bar">
           <div className="wh-search-box">
             <SearchField
               value={search}
@@ -198,7 +213,7 @@ export function DestinationLocationIndex({
               placeholder="Search..."
             />
           </div>
-          <div className="wh-header-actions" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <div className="wh-header-actions">
             <Button variant="primary" onClick={onAddNew}>
               Add New
             </Button>
@@ -215,9 +230,8 @@ export function DestinationLocationIndex({
               <tr>
                 <th className="wh-th-no">No</th>
                 <th
-                  className="wh-th-sortable"
+                  className="wh-th-sortable wh-col-code"
                   onClick={() => handleToggleSort("code")}
-                  style={{ width: "130px" }}
                 >
                   <div className="wh-th-content">
                     <span>Location Code</span>
@@ -225,9 +239,8 @@ export function DestinationLocationIndex({
                   </div>
                 </th>
                 <th
-                  className="wh-th-sortable"
+                  className="wh-th-sortable wh-col-item-name"
                   onClick={() => handleToggleSort("name")}
-                  style={{ minWidth: "180px" }}
                 >
                   <div className="wh-th-content">
                     <span>Destination Name</span>
@@ -235,9 +248,8 @@ export function DestinationLocationIndex({
                   </div>
                 </th>
                 <th
-                  className="wh-th-sortable"
+                  className="wh-th-sortable wh-col-meta"
                   onClick={() => handleToggleSort("locationType")}
-                  style={{ width: "150px" }}
                 >
                   <div className="wh-th-content">
                     <span>Location Type</span>
@@ -245,27 +257,25 @@ export function DestinationLocationIndex({
                   </div>
                 </th>
                 <th
-                  className="wh-th-sortable"
+                  className="wh-th-sortable wh-col-meta"
                   onClick={() => handleToggleSort("pic")}
-                  style={{ width: "150px" }}
                 >
                   <div className="wh-th-content">
                     <span>Supervisor / PIC</span>
                     {renderSortIndicator("pic")}
                   </div>
                 </th>
-                <th style={{ minWidth: "220px" }}>Description</th>
+                <th className="wh-col-desc">Description</th>
                 <th
-                  className="wh-th-sortable text-center"
+                  className="wh-th-sortable text-center wh-col-status"
                   onClick={() => handleToggleSort("status")}
-                  style={{ width: "80px" }}
                 >
                   <div className="wh-th-content justify-center">
                     <span>Status</span>
                     {renderSortIndicator("status")}
                   </div>
                 </th>
-                <th className="wh-th-option text-center" style={{ width: "80px" }}>
+                <th className="wh-th-option text-center wh-col-option">
                   Option
                 </th>
               </tr>
@@ -296,31 +306,17 @@ export function DestinationLocationIndex({
                         </Badge>
                       </td>
                       <td>
-                        <span style={{ fontSize: "12px", color: "var(--ink)", fontWeight: 600 }}>
+                        <span className="wh-cell-pic">
                           {item.pic}
                         </span>
                       </td>
                       <td className="wh-td-desc">{item.description}</td>
                       <td className="text-center">
-                        <button
-                          type="button"
-                          className="wh-status-toggle"
-                          onClick={() => handleToggleStatus(item)}
-                          title={`Click to toggle status (${
-                            item.status === "Active" ? "Active" : "Inactive"
-                          })`}
-                          aria-label={`Toggle status for ${item.name}`}
-                        >
-                          <span
-                            className={`wh-status-checkbox ${
-                              item.status === "Active"
-                                ? "wh-status-checkbox--checked"
-                                : "wh-status-checkbox--unchecked"
-                            }`}
-                          >
-                            {item.status === "Active" && <Icon name="check" size={13} />}
-                          </span>
-                        </button>
+                        <StatusToggle
+                          active={item.status === "Active"}
+                          onToggle={() => handleToggleStatus(item)}
+                          ariaLabel={`Toggle status for ${item.name}`}
+                        />
                       </td>
                       <td className="text-center">
                         <div className="wh-row-actions">

@@ -64,6 +64,7 @@ export type PageKey =
   | "delivery-terms"
   | "additional-costs"
   | "pph"
+  | "pph-type"
   | "rafaksi-type"
   | "job-number"
   // Procurement Reports
@@ -85,6 +86,12 @@ export type PageKey =
   | "country"
   | "currency"
   | "account"
+  | "type-rates-bm"
+  | "type-rates-cukai"
+  | "custom-report"
+  | "item-type"
+  | "group-scrap-item"
+  | "specification"
   // Transaction create keys
   | "pr-create"
   | "po-create"
@@ -94,6 +101,7 @@ export type PageKey =
   | "document-history"
   // Warehouse Master
   | "warehouse-master"
+  | "warehouse-type"
   | "type-of-mutation"
   | "wh-type-of-request"
   | "wh-destination-location"
@@ -142,13 +150,21 @@ export type ViewState =
   | { type: "warehouse-detail"; code: string }
   | { type: "warehouse-create"; poNumber?: string; rnNumber?: string }
   | { type: "supplier-create" }
+  | { type: "supplier-edit"; id?: string; record?: any }
   | { type: "payment-term-create" }
+  | { type: "payment-term-edit"; id?: string; record?: any }
   | { type: "purchase-category-create" }
+  | { type: "purchase-category-edit"; id?: string; record?: any }
   | { type: "delivery-terms-create" }
+  | { type: "delivery-terms-edit"; id?: string; record?: any }
   | { type: "additional-costs-create" }
+  | { type: "additional-costs-edit"; id?: string; record?: any }
   | { type: "pph-create" }
+  | { type: "pph-edit"; id?: string; record?: any }
   | { type: "unit-create" }
   | { type: "unit-edit"; record?: any }
+  | { type: "unit-reference-create" }
+  | { type: "unit-reference-edit"; id?: string; record?: any }
   | { type: "classification-create" }
   | { type: "classification-edit"; record?: any }
   | { type: "department-create" }
@@ -165,14 +181,17 @@ export type ViewState =
   | { type: "style-edit"; record?: any }
   | { type: "style-import" }
   | { type: "colour-create" }
+  | { type: "colour-edit"; id?: string; record?: any }
   | { type: "receive-note-create" }
   | { type: "receive-note-detail"; code: string }
   | { type: "receive-note-return-create" }
   | { type: "receive-note-return-detail"; code: string }
   | { type: "document-history-detail"; code: string }
   | { type: "warehouse-master-create" }
+  | { type: "warehouse-master-edit"; id?: string; record?: any }
   | { type: "warehouse-coordinate"; warehouseId: string }
   | { type: "warehouse-coordinate-create"; warehouseId: string }
+  | { type: "reference-master-create"; page: PageKey }
   | { type: "item-create" }
   | { type: "item-edit"; record?: any }
   | { type: "item-qr" }

@@ -6,6 +6,7 @@ import { Pagination } from "../../../components/ui/Pagination";
 import { Badge } from "../../../components/ui/Badge";
 import { Icon } from "../../../components/ui/Icon";
 import { ConfirmDialog } from "../../../components/ui/ConfirmDialog";
+import { StatusToggle } from "../../../components/ui/StatusToggle";
 import { toggleStockNotificationStatusApi } from "../../../data/masterApi";
 import type { StockNotificationRecord, StockNotificationSortField } from "./stock-notification-types";
 
@@ -187,7 +188,7 @@ export function StockNotificationIndex({
       {/* White Table Card */}
       <div className="wh-table-card">
         {/* Controls Bar */}
-        <div className="wh-controls-bar" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 18px", borderBottom: "1px solid var(--line)", background: "#ffffff", gap: "16px" }}>
+        <div className="wh-controls-bar">
           <div className="wh-search-box">
             <SearchField
               value={search}
@@ -198,7 +199,7 @@ export function StockNotificationIndex({
               placeholder="Search item code, name, category..."
             />
           </div>
-          <div className="wh-header-actions" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <div className="wh-header-actions">
             <Button variant="primary" onClick={onAddNew}>
               Add New
             </Button>
@@ -215,9 +216,8 @@ export function StockNotificationIndex({
               <tr>
                 <th className="wh-th-no">No</th>
                 <th
-                  className="wh-th-sortable"
+                  className="wh-th-sortable wh-col-item-code"
                   onClick={() => handleToggleSort("itemCode")}
-                  style={{ width: "140px" }}
                 >
                   <div className="wh-th-content">
                     <span>Item Code</span>
@@ -225,9 +225,8 @@ export function StockNotificationIndex({
                   </div>
                 </th>
                 <th
-                  className="wh-th-sortable"
+                  className="wh-th-sortable wh-col-item-name"
                   onClick={() => handleToggleSort("itemName")}
-                  style={{ minWidth: "180px" }}
                 >
                   <div className="wh-th-content">
                     <span>Item Name</span>
@@ -235,48 +234,44 @@ export function StockNotificationIndex({
                   </div>
                 </th>
                 <th
-                  className="wh-th-sortable"
+                  className="wh-th-sortable wh-col-meta"
                   onClick={() => handleToggleSort("category")}
-                  style={{ width: "150px" }}
                 >
                   <div className="wh-th-content">
                     <span>Category</span>
                     {renderSortIndicator("category")}
                   </div>
                 </th>
-                <th style={{ width: "70px", textAlign: "center" }}>Unit</th>
+                <th className="wh-col-unit">Unit</th>
                 <th
-                  className="wh-th-sortable"
+                  className="wh-th-sortable wh-col-stock"
                   onClick={() => handleToggleSort("currentStock")}
-                  style={{ width: "120px", textAlign: "right" }}
                 >
-                  <div className="wh-th-content justify-end" style={{ justifyContent: "flex-end" }}>
+                  <div className="wh-th-content wh-th-content--end">
                     <span>Current Stock</span>
                     {renderSortIndicator("currentStock")}
                   </div>
                 </th>
                 <th
-                  className="wh-th-sortable"
+                  className="wh-th-sortable wh-col-buffer"
                   onClick={() => handleToggleSort("bufferQuantity")}
-                  style={{ width: "130px", textAlign: "right" }}
                 >
-                  <div className="wh-th-content justify-end" style={{ justifyContent: "flex-end" }}>
+                  <div className="wh-th-content wh-th-content--end">
                     <span>Buffer Threshold</span>
                     {renderSortIndicator("bufferQuantity")}
                   </div>
                 </th>
-                <th style={{ width: "120px", textAlign: "center" }}>Alert Status</th>
+                <th className="wh-col-alert">Alert Status</th>
                 <th
-                  className="wh-th-sortable text-center"
+                  className="wh-th-sortable text-center wh-col-rule-status"
                   onClick={() => handleToggleSort("status")}
-                  style={{ width: "90px" }}
                 >
                   <div className="wh-th-content justify-center">
                     <span>Rule Status</span>
                     {renderSortIndicator("status")}
                   </div>
                 </th>
-                <th className="wh-th-option text-center" style={{ width: "80px" }}>
+                <th className="wh-th-option text-center wh-col-option">
                   Option
                 </th>
               </tr>
@@ -304,20 +299,18 @@ export function StockNotificationIndex({
                         <strong>{item.itemName}</strong>
                       </td>
                       <td>
-                        <span style={{ fontSize: "12px", color: "var(--ink-soft)" }}>
+                        <span className="wh-cell-sub">
                           {item.category}
                         </span>
                       </td>
-                      <td style={{ textAlign: "center", fontWeight: 600 }}>{item.unit}</td>
-                      <td style={{ textAlign: "right", fontWeight: 700 }}>
-                        <span style={{ color: isTriggered ? "var(--red-600)" : "var(--ink)" }}>
-                          {item.currentStock.toLocaleString("en-US")}
-                        </span>
+                      <td className="wh-cell-unit">{item.unit}</td>
+                      <td className={isTriggered ? "wh-cell-stock--triggered" : "wh-cell-stock"}>
+                        {item.currentStock.toLocaleString("en-US")}
                       </td>
-                      <td style={{ textAlign: "right", fontWeight: 700, color: "var(--blue-600)" }}>
+                      <td className="wh-cell-buffer">
                         {item.bufferQuantity.toLocaleString("en-US")}
                       </td>
-                      <td style={{ textAlign: "center" }}>
+                      <td className="master-cell-center">
                         {isTriggered ? (
                           <Badge tone={isCritical ? "red" : "orange"}>
                             {isCritical ? "Critical Low" : "Triggered"}
@@ -327,25 +320,11 @@ export function StockNotificationIndex({
                         )}
                       </td>
                       <td className="text-center">
-                        <button
-                          type="button"
-                          className="wh-status-toggle"
-                          onClick={() => handleToggleStatus(item)}
-                          title={`Click to toggle status (${
-                            item.status === "Active" ? "Active" : "Inactive"
-                          })`}
-                          aria-label={`Toggle status for ${item.itemName}`}
-                        >
-                          <span
-                            className={`wh-status-checkbox ${
-                              item.status === "Active"
-                                ? "wh-status-checkbox--checked"
-                                : "wh-status-checkbox--unchecked"
-                            }`}
-                          >
-                            {item.status === "Active" && <Icon name="check" size={13} />}
-                          </span>
-                        </button>
+                        <StatusToggle
+                          active={item.status === "Active"}
+                          onToggle={() => handleToggleStatus(item)}
+                          ariaLabel={`Toggle status for ${item.itemName}`}
+                        />
                       </td>
                       <td className="text-center">
                         <div className="wh-row-actions">

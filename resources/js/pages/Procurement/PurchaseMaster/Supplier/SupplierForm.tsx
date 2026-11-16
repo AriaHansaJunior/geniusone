@@ -2,12 +2,15 @@ import React, { useState, useEffect } from "react";
 import { Button } from "../../../../components/ui/Button";
 import { Icon } from "../../../../components/ui/Icon";
 import { CustomSelect } from "../../../../components/ui/CustomSelect";
-import { fetchMasterLookupsApi } from "../../../../data/masterApi";
-import type { SupplierFormData } from "./supplier-types";
+import { fetchMasterLookupsApi, fetchSupplierDetailApi } from "../../../../data/masterApi";
+import type { SupplierFormData, SupplierRecord } from "./supplier-types";
 
 interface SupplierFormProps {
+  mode?: "create" | "edit";
+  initialRecord?: SupplierRecord | null;
+  recordId?: string;
   onBack: () => void;
-  onSave?: (data: SupplierFormData) => void | Promise<any>;
+  onSave?: (data: SupplierFormData, editId?: string) => void | Promise<any>;
 }
 
 interface LookupRow {
@@ -25,7 +28,16 @@ interface SupplierLookupState {
   ports: LookupRow[];
 }
 
-export function SupplierForm({ onBack, onSave }: SupplierFormProps) {
+export function SupplierForm({
+  mode = "create",
+  initialRecord,
+  recordId,
+  onBack,
+  onSave,
+}: SupplierFormProps) {
+  const isEdit = mode === "edit";
+  const resolvedEditId = initialRecord?.id ?? recordId;
+
   const [lookups, setLookups] = useState<SupplierLookupState>({
     countries: [],
     paymentTerms: [],
@@ -35,29 +47,36 @@ export function SupplierForm({ onBack, onSave }: SupplierFormProps) {
     ports: [],
   });
   const [loadingLookups, setLoadingLookups] = useState(true);
+  const [loadingDetail, setLoadingDetail] = useState(isEdit && Boolean(resolvedEditId));
   const [saving, setSaving] = useState(false);
 
   const [formData, setFormData] = useState<SupplierFormData>({
-    autoGenerateCode: true,
-    supplierCode: "",
-    supplierName: "",
-    address: "",
-    contactPerson: "",
-    city: "",
-    state: "",
-    country: "",
-    zipcode: "",
-    email: "",
-    telephoneNumber: "",
-    paymentTerm: "",
-    paymentMethod: "",
-    typeRafaksi: "-",
-    currency: "",
-    port: "",
-    npwp: "",
-    nitku: "",
-    whatsapp: "",
-    wechatId: "",
+    autoGenerateCode: !isEdit,
+    supplierCode: initialRecord?.supplierCode || "",
+    supplierName: initialRecord?.supplierName || "",
+    address: initialRecord?.address && initialRecord.address !== "-" ? initialRecord.address : "",
+    contactPerson: initialRecord?.contactPerson || "",
+    city: initialRecord?.city || "",
+    state: initialRecord?.state || "",
+    country: initialRecord?.country && initialRecord.country !== "-" ? initialRecord.country : "",
+    zipcode: initialRecord?.zipcode || "",
+    email: initialRecord?.email || "",
+    telephoneNumber: initialRecord?.telephoneNumber || "",
+    paymentTerm: initialRecord?.paymentTerm || "",
+    paymentMethod: initialRecord?.paymentMethod || "",
+    typeRafaksi: initialRecord?.typeRafaksi || "-",
+    currency: initialRecord?.currency || "",
+    port: initialRecord?.port || "",
+    npwp: initialRecord?.npwp && initialRecord.npwp !== "-" ? initialRecord.npwp : "",
+    nitku: initialRecord?.nitku && initialRecord.nitku !== "-" ? initialRecord.nitku : "",
+    whatsapp: initialRecord?.whatsapp || "",
+    wechatId: initialRecord?.wechatId || "",
+    countries_id: initialRecord?.countries_id,
+    payment_terms_id: initialRecord?.payment_terms_id,
+    payment_methods_id: initialRecord?.payment_methods_id,
+    rafaksi_types_id: initialRecord?.rafaksi_types_id,
+    currencies_id: initialRecord?.currencies_id,
+    ports_id: initialRecord?.ports_id,
   });
 
   const [notification, setNotification] = useState<{
@@ -94,10 +113,54 @@ export function SupplierForm({ onBack, onSave }: SupplierFormProps) {
         if (!cancelled) setLoadingLookups(false);
       });
 
+    if (isEdit && resolvedEditId) {
+      setLoadingDetail(true);
+      fetchSupplierDetailApi(resolvedEditId)
+        .then((detail) => {
+          if (cancelled || !detail) return;
+          setFormData({
+            autoGenerateCode: false,
+            supplierCode: detail.supplierCode || "",
+            supplierName: detail.supplierName || "",
+            address: detail.address && detail.address !== "-" ? detail.address : "",
+            contactPerson: detail.contactPerson || "",
+            city: detail.city || "",
+            state: detail.state || "",
+            country: detail.country && detail.country !== "-" ? detail.country : "",
+            zipcode: detail.zipcode || "",
+            email: detail.email || "",
+            telephoneNumber: detail.telephoneNumber || "",
+            paymentTerm: detail.paymentTerm || "",
+            paymentMethod: detail.paymentMethod || "",
+            typeRafaksi: detail.typeRafaksi || "-",
+            currency: detail.currency || "",
+            port: detail.port || "",
+            npwp: detail.npwp && detail.npwp !== "-" ? detail.npwp : "",
+            nitku: detail.nitku && detail.nitku !== "-" ? detail.nitku : "",
+            whatsapp: detail.whatsapp || "",
+            wechatId: detail.wechatId || "",
+            countries_id: detail.countries_id,
+            payment_terms_id: detail.payment_terms_id,
+            payment_methods_id: detail.payment_methods_id,
+            rafaksi_types_id: detail.rafaksi_types_id,
+            currencies_id: detail.currencies_id,
+            ports_id: detail.ports_id,
+          });
+        })
+        .catch(() => {
+          // Keep fallback initialRecord fields if detail call fails
+        })
+        .finally(() => {
+          if (!cancelled) setLoadingDetail(false);
+        });
+    } else {
+      setLoadingDetail(false);
+    }
+
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [isEdit, resolvedEditId]);
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
@@ -133,7 +196,7 @@ export function SupplierForm({ onBack, onSave }: SupplierFormProps) {
       try {
         setSaving(true);
         setNotification(null);
-        await onSave(formData);
+        await onSave(formData, isEdit ? resolvedEditId : undefined);
       } catch (err: any) {
         setNotification({
           type: "warning",
@@ -146,11 +209,23 @@ export function SupplierForm({ onBack, onSave }: SupplierFormProps) {
     }
   };
 
+  if (isEdit && loadingDetail) {
+    return (
+      <div className="supplier-form-page master-form-page">
+        <div className="master-form-card">
+          <div className="master-form-loading">Loading supplier details...</div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="supplier-form-page">
       {/* Page Header */}
       <div className="supplier-form-header">
-        <h1 className="supplier-page-title">Add Supplier</h1>
+        <h1 className="supplier-page-title">
+          {isEdit ? "Edit Supplier" : "Add Supplier"}
+        </h1>
       </div>
 
 

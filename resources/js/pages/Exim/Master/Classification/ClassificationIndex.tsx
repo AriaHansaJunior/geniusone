@@ -4,6 +4,7 @@ import { SearchField } from "../../../../components/ui/SearchField";
 import { Icon } from "../../../../components/ui/Icon";
 import { ConfirmDialog } from "../../../../components/ui/ConfirmDialog";
 import { Pagination } from "../../../../components/ui/Pagination";
+import { StatusToggle } from "../../../../components/ui/StatusToggle";
 import { initialClassificationRecords } from "./classification-data";
 import type {
   ClassificationRecord,
@@ -195,12 +196,9 @@ export function ClassificationIndex({
     const isActive = sortField === field && sortDirection !== "none";
     return (
       <span
-        style={{
-          marginLeft: "6px",
-          display: "inline-flex",
-          alignItems: "center",
-          color: isActive ? "var(--blue-600)" : "var(--muted-2)",
-        }}
+        className={`master-sort-indicator ${
+          isActive ? "master-sort-indicator--active" : ""
+        }`}
       >
         {isActive ? (
           sortDirection === "asc" ? (
@@ -246,7 +244,7 @@ export function ClassificationIndex({
       {/* Main Table Panel */}
       <div className="classification-table-panel panel">
         {/* Table Toolbar: Search on Left, Actions on Right */}
-        <div className="classification-toolbar" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" }}>
+        <div className="classification-toolbar master-table-toolbar">
           <SearchField
             value={search}
             onChange={(val) => {
@@ -256,7 +254,7 @@ export function ClassificationIndex({
             placeholder="Search..."
           />
 
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <div className="master-toolbar-actions">
             <Button variant="primary" onClick={onAddNew}>
               Add New
             </Button>
@@ -276,50 +274,45 @@ export function ClassificationIndex({
             <table className="classification-data-table data-table">
               <thead>
                 <tr>
-                  <th style={{ width: "60px", textAlign: "center" }}>
+                  <th className="master-col-no">
                     <span>No</span>
                   </th>
                   <th
-                    className="sortable-th"
-                    style={{ width: "90px" }}
+                    className="sortable-th master-col-w90"
                     onClick={() => handleToggleSort("code")}
                   >
                     <span>Code</span>
                     {renderSortIndicator("code")}
                   </th>
                   <th
-                    className="sortable-th"
-                    style={{ minWidth: "220px" }}
+                    className="sortable-th master-col-mw220"
                     onClick={() => handleToggleSort("name")}
                   >
                     <span>Name</span>
                     {renderSortIndicator("name")}
                   </th>
                   <th
-                    className="sortable-th"
-                    style={{ minWidth: "220px" }}
+                    className="sortable-th master-col-mw220"
                     onClick={() => handleToggleSort("description")}
                   >
                     <span>Description</span>
                     {renderSortIndicator("description")}
                   </th>
                   <th
-                    className="sortable-th"
-                    style={{ minWidth: "240px" }}
+                    className="sortable-th master-col-mw240"
                     onClick={() => handleToggleSort("reportingType")}
                   >
                     <span>Reporting Type</span>
                     {renderSortIndicator("reportingType")}
                   </th>
                   <th
-                    className="sortable-th"
-                    style={{ width: "80px", textAlign: "center" }}
+                    className="sortable-th master-col-status-sm"
                     onClick={() => handleToggleSort("status")}
                   >
                     <span>Status</span>
                     {renderSortIndicator("status")}
                   </th>
-                  <th style={{ width: "140px", textAlign: "center" }}>
+                  <th className="master-col-actions-wide">
                     <span>Option</span>
                   </th>
                 </tr>
@@ -332,13 +325,7 @@ export function ClassificationIndex({
                     return (
                       <tr key={item.id}>
                         {/* 1. Sequential No */}
-                        <td
-                          style={{
-                            textAlign: "center",
-                            color: "var(--muted)",
-                            fontWeight: 600,
-                          }}
-                        >
+                        <td className="master-cell-no">
                           {rowNumber}
                         </td>
 
@@ -362,29 +349,17 @@ export function ClassificationIndex({
                           {item.reportingType || "-"}
                         </td>
 
-                        {/* 6. Status Checkbox Toggle */}
-                        <td style={{ textAlign: "center" }}>
-                          <button
-                            type="button"
-                            className="classification-status-toggle"
-                            onClick={() => handleToggleStatus(item.id)}
-                            title={`Click to toggle status (${
-                              item.status ? "Active" : "Inactive"
-                            })`}
-                            aria-label={`Toggle status for ${item.name}`}
-                          >
-                            <span
-                              className={`classification-status-checkbox ${
-                                item.status ? "checked" : "unchecked"
-                              }`}
-                            >
-                              {item.status && <Icon name="check" size={13} />}
-                            </span>
-                          </button>
+                        {/* 6. Status Toggle */}
+                        <td className="master-cell-center">
+                          <StatusToggle
+                            active={item.status}
+                            onToggle={() => handleToggleStatus(item.id)}
+                            ariaLabel={`Toggle status for ${item.name}`}
+                          />
                         </td>
 
                         {/* 7. Option Row Actions */}
-                        <td style={{ textAlign: "center" }}>
+                        <td className="master-cell-center">
                           <div className="classification-row-actions">
                             {onEdit && (
                               <button

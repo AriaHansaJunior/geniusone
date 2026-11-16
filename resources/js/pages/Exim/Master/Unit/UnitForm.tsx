@@ -6,20 +6,22 @@ import type { UnitRecord } from "./unit-types";
 interface UnitFormProps {
   initialRecord?: UnitRecord | null;
   onBack: () => void;
-  onSave?: (record: UnitRecord, isEdit: boolean) => void;
+  onSave?: (record: UnitRecord, isEdit: boolean) => Promise<void> | void;
 }
 
 export function UnitForm({ initialRecord, onBack, onSave }: UnitFormProps) {
   const isEdit = !!initialRecord;
   const [name, setName] = useState(initialRecord?.name || "");
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notification, setNotification] = useState<{
     type: "info" | "warning" | "success";
     message: string;
   } | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (saving) return;
 
     const trimmed = name.trim();
     if (!trimmed) {
@@ -32,11 +34,13 @@ export function UnitForm({ initialRecord, onBack, onSave }: UnitFormProps) {
     }
 
     setError(null);
+    setNotification(null);
 
     const updatedRecord: UnitRecord = {
       id: initialRecord ? initialRecord.id : `unit-${Date.now()}`,
       no: initialRecord ? initialRecord.no : 1,
       name: trimmed,
+      status: initialRecord?.status ?? true,
       createdAt:
         initialRecord?.createdAt ||
         new Date().toISOString().replace("T", " ").substring(0, 19),
@@ -44,7 +48,16 @@ export function UnitForm({ initialRecord, onBack, onSave }: UnitFormProps) {
     };
 
     if (onSave) {
-      onSave(updatedRecord, isEdit);
+      try {
+        setSaving(true);
+        await onSave(updatedRecord, isEdit);
+      } catch (err: any) {
+        setNotification({
+          type: "warning",
+          message: err?.message || "Failed to save unit to database.",
+        });
+        setSaving(false);
+      }
     }
   };
 
@@ -113,11 +126,11 @@ export function UnitForm({ initialRecord, onBack, onSave }: UnitFormProps) {
 
         {/* Consistently aligned action buttons */}
         <div className="unit-form-actions">
-          <Button type="button" variant="ghost" onClick={onBack}>
+          <Button type="button" variant="ghost" onClick={onBack} disabled={saving}>
             Cancel
           </Button>
-          <Button type="submit" variant="primary">
-            Save
+          <Button type="submit" variant="primary" disabled={saving}>
+            {saving ? "Saving..." : "Save"}
           </Button>
         </div>
       </form>

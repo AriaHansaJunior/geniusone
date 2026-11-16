@@ -3,12 +3,13 @@ import { Button } from "../../../../components/ui/Button";
 import { SearchField } from "../../../../components/ui/SearchField";
 import { Pagination } from "../../../../components/ui/Pagination";
 import { Icon } from "../../../../components/ui/Icon";
+import { StatusToggle } from "../../../../components/ui/StatusToggle";
 import { ConfirmDialog } from "../../../../components/ui/ConfirmDialog";
+import { useNotification } from "../../../../context/NotificationContext";
 import {
   type CurrencyRecord,
   type CurrencySortField,
   type SortDirection,
-  type SyncStatus,
 } from "./currency-types";
 
 interface CurrencyIndexProps {
@@ -16,6 +17,7 @@ interface CurrencyIndexProps {
   onAddNew?: () => void;
   onEdit?: (record: CurrencyRecord) => void;
   onDelete?: (id: string) => Promise<boolean | void> | void;
+  onToggleStatus?: (id: string) => Promise<void> | void;
 }
 
 export function CurrencyIndex({
@@ -23,7 +25,10 @@ export function CurrencyIndex({
   onAddNew,
   onEdit,
   onDelete,
+  onToggleStatus,
 }: CurrencyIndexProps) {
+  const { notifySuccess, notifyError, notifyWarning } = useNotification();
+
   const [localRecords, setLocalRecords] = useState<CurrencyRecord[]>(records);
   const [search, setSearch] = useState("");
   const [pageSize, setPageSize] = useState<number>(25);
@@ -33,7 +38,6 @@ export function CurrencyIndex({
 
   const [currencyToDelete, setCurrencyToDelete] = useState<CurrencyRecord | null>(null);
   const [currencyToConfirmEdit, setCurrencyToConfirmEdit] = useState<CurrencyRecord | null>(null);
-  const [banner, setBanner] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
   useEffect(() => {
     setLocalRecords(records);
@@ -42,36 +46,22 @@ export function CurrencyIndex({
   const filteredRecords = useMemo(() => {
     if (!search.trim()) return localRecords;
     const q = search.toLowerCase().trim();
-    return localRecords.filter((rec) => {
-      return (
-        rec.currencyCode.toLowerCase().includes(q) ||
-        rec.currencyName.toLowerCase().includes(q) ||
-        rec.syncStatus.toLowerCase().includes(q)
-      );
-    });
+    return localRecords.filter((rec) =>
+      (rec.currencyCode || "").toLowerCase().includes(q)
+    );
   }, [localRecords, search]);
 
   const sortedRecords = useMemo(() => {
     if (sortDirection === "none") return filteredRecords;
     const list = [...filteredRecords];
     list.sort((a, b) => {
-      const aVal =
-        sortField === "currencyCode"
-          ? a.currencyCode
-          : sortField === "currencyName"
-          ? a.currencyName.toLowerCase()
-          : sortField === "syncStatus"
-          ? a.syncStatus
-          : a.lastSynced;
-      const bVal =
-        sortField === "currencyCode"
-          ? b.currencyCode
-          : sortField === "currencyName"
-          ? b.currencyName.toLowerCase()
-          : sortField === "syncStatus"
-          ? b.syncStatus
-          : b.lastSynced;
-
+      if (sortField === "status") {
+        const aVal = a.status === false ? 0 : 1;
+        const bVal = b.status === false ? 0 : 1;
+        return sortDirection === "asc" ? aVal - bVal : bVal - aVal;
+      }
+      const aVal = (a.currencyCode || "").toLowerCase();
+      const bVal = (b.currencyCode || "").toLowerCase();
       if (aVal < bVal) return sortDirection === "asc" ? -1 : 1;
       if (aVal > bVal) return sortDirection === "asc" ? 1 : -1;
       return 0;
@@ -90,7 +80,9 @@ export function CurrencyIndex({
 
   const handleToggleSort = (field: CurrencySortField) => {
     if (sortField === field) {
-      setSortDirection((prev) => (prev === "asc" ? "desc" : prev === "desc" ? "none" : "asc"));
+      setSortDirection((prev) =>
+        prev === "asc" ? "desc" : prev === "desc" ? "none" : "asc"
+      );
     } else {
       setSortField(field);
       setSortDirection("asc");
@@ -102,47 +94,26 @@ export function CurrencyIndex({
     if (!currencyToDelete) return;
     const target = currencyToDelete;
     setCurrencyToDelete(null);
-    try {
-      if (onDelete) {
-        await onDelete(target.id);
-      }
-      setLocalRecords((prev) => prev.filter((c) => c.id !== target.id));
-    } catch (err: any) {
-      setBanner({
-        type: "error",
-        message: err?.message || `Failed to delete ${target.currencyCode}.`,
-      });
+    if (onDelete) {
+      await onDelete(target.id);
     }
   };
 
   const handleExportToExcel = () => {
     if (sortedRecords.length === 0) {
-      setBanner({ type: "error", message: "No records available to export." });
-      setTimeout(() => setBanner(null), 3000);
+      notifyWarning("Nothing to Export", "No currency records match the current filter.");
       return;
     }
 
     try {
-      const headers = [
-        "No",
-        "Currency Code",
-        "Currency Name",
-        "Symbol",
-        "Sync Status",
-        "Last Synced",
-        "Created At",
-      ];
+      const headers = ["No", "Currency Code", "Status"];
       const csvRows = [headers.join(",")];
 
       sortedRecords.forEach((row, index) => {
         const values = [
           index + 1,
           `"${(row.currencyCode || "").replace(/"/g, '""')}"`,
-          `"${(row.currencyName || "").replace(/"/g, '""')}"`,
-          `"${(row.symbol || "").replace(/"/g, '""')}"`,
-          `"${row.syncStatus || ""}"`,
-          `"${row.lastSynced || ""}"`,
-          `"${row.createdAt || ""}"`,
+          row.status === false ? "Inactive" : "Active",
         ];
         csvRows.push(values.join(","));
       });
@@ -161,14 +132,9 @@ export function CurrencyIndex({
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
 
-      setBanner({
-        type: "success",
-        message: `Exported ${sortedRecords.length} currency record(s) to CSV.`,
-      });
-      setTimeout(() => setBanner(null), 4000);
+      notifySuccess("Export Completed", `Exported ${sortedRecords.length} currency record(s).`);
     } catch {
-      setBanner({ type: "error", message: "Failed to export data. Please try again." });
-      setTimeout(() => setBanner(null), 4000);
+      notifyError("Export Failed", "Failed to export currency records.");
     }
   };
 
@@ -176,7 +142,9 @@ export function CurrencyIndex({
     const isActive = sortField === field && sortDirection !== "none";
     return (
       <span
-        className={`master-sort-indicator ${isActive ? "master-sort-indicator--active" : ""}`}
+        className={`master-sort-indicator ${
+          isActive ? "master-sort-indicator--active" : ""
+        }`}
       >
         {isActive ? (
           sortDirection === "asc" ? (
@@ -191,36 +159,8 @@ export function CurrencyIndex({
     );
   };
 
-  const renderSyncBadge = (status: SyncStatus) => {
-    switch (status) {
-      case "Synced":
-        return <span className="sync-status-badge sync-status-badge--synced">Synced</span>;
-      case "Pending":
-        return <span className="sync-status-badge sync-status-badge--pending">Pending</span>;
-      case "Failed":
-        return <span className="sync-status-badge sync-status-badge--failed">Failed</span>;
-      case "Not Synced":
-      default:
-        return <span className="sync-status-badge sync-status-badge--not-synced">Not Synced</span>;
-    }
-  };
-
   return (
-    <div className="currency-page">
-      {banner && (
-        <div className={`master-banner master-banner--${banner.type}`}>
-          <span>{banner.message}</span>
-          <button
-            type="button"
-            className="master-banner-close"
-            onClick={() => setBanner(null)}
-            aria-label="Dismiss notification"
-          >
-            ×
-          </button>
-        </div>
-      )}
-
+    <div className="master-page-shell currency-page">
       <div className="panel table-panel">
         <div className="master-table-toolbar">
           <SearchField
@@ -229,7 +169,7 @@ export function CurrencyIndex({
               setSearch(val);
               setCurrentPage(1);
             }}
-            placeholder="Search currency code, name, status..."
+            placeholder="Search currency code..."
           />
           <div className="master-toolbar-actions">
             <Button type="button" variant="primary" onClick={() => onAddNew?.()}>
@@ -255,35 +195,18 @@ export function CurrencyIndex({
                     <span>No</span>
                   </th>
                   <th
-                    className="sortable-th master-sortable-th master-col-code"
+                    className="sortable-th master-sortable-th"
                     onClick={() => handleToggleSort("currencyCode")}
                   >
                     <span>Currency Code</span>
                     {renderSortIndicator("currencyCode")}
                   </th>
                   <th
-                    className="sortable-th master-sortable-th"
-                    onClick={() => handleToggleSort("currencyName")}
+                    className="sortable-th master-sortable-th master-col-status"
+                    onClick={() => handleToggleSort("status")}
                   >
-                    <span>Currency Name</span>
-                    {renderSortIndicator("currencyName")}
-                  </th>
-                  <th className="master-col-symbol">
-                    <span>Symbol</span>
-                  </th>
-                  <th
-                    className="sortable-th master-sortable-th master-col-sync"
-                    onClick={() => handleToggleSort("syncStatus")}
-                  >
-                    <span>Sync Status</span>
-                    {renderSortIndicator("syncStatus")}
-                  </th>
-                  <th
-                    className="sortable-th master-sortable-th master-col-date"
-                    onClick={() => handleToggleSort("lastSynced")}
-                  >
-                    <span>Last Synced</span>
-                    {renderSortIndicator("lastSynced")}
+                    <span>Status</span>
+                    {renderSortIndicator("status")}
                   </th>
                   <th className="master-col-actions">
                     <span>Option</span>
@@ -298,30 +221,37 @@ export function CurrencyIndex({
                       <tr key={item.id}>
                         <td className="master-cell-no">{rowNumber}</td>
                         <td className="master-cell-code">{item.currencyCode}</td>
-                        <td className="master-cell-name">{item.currencyName}</td>
-                        <td className="master-cell-symbol">{item.symbol || "—"}</td>
-                        <td className="master-cell-center">{renderSyncBadge(item.syncStatus)}</td>
-                        <td className="master-cell-timestamp">{item.lastSynced || "—"}</td>
+                        <td className="master-cell-center">
+                          <StatusToggle
+                            active={item.status !== false}
+                            onToggle={() => onToggleStatus?.(item.id)}
+                            ariaLabel={`Toggle status for ${item.currencyCode}`}
+                          />
+                        </td>
                         <td className="master-cell-center">
                           <div className="master-actions-group">
-                            <button
-                              type="button"
-                              className="btn-action-edit"
-                              onClick={() => setCurrencyToConfirmEdit(item)}
-                              title={`Edit ${item.currencyName}`}
-                              aria-label={`Edit ${item.currencyName}`}
-                            >
-                              <Icon name="edit" size={13} />
-                            </button>
-                            <button
-                              type="button"
-                              className="btn-action-delete"
-                              onClick={() => setCurrencyToDelete(item)}
-                              title={`Delete ${item.currencyName}`}
-                              aria-label={`Delete ${item.currencyName}`}
-                            >
-                              <Icon name="trash" size={13} />
-                            </button>
+                            {onEdit && (
+                              <button
+                                type="button"
+                                className="btn-action-edit"
+                                onClick={() => setCurrencyToConfirmEdit(item)}
+                                title={`Edit ${item.currencyCode}`}
+                                aria-label={`Edit ${item.currencyCode}`}
+                              >
+                                <Icon name="edit" size={13} />
+                              </button>
+                            )}
+                            {onDelete && (
+                              <button
+                                type="button"
+                                className="btn-action-delete"
+                                onClick={() => setCurrencyToDelete(item)}
+                                title={`Delete ${item.currencyCode}`}
+                                aria-label={`Delete ${item.currencyCode}`}
+                              >
+                                <Icon name="trash" size={13} />
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -329,7 +259,7 @@ export function CurrencyIndex({
                   })
                 ) : (
                   <tr>
-                    <td colSpan={7} className="empty-table-cell">
+                    <td colSpan={4} className="empty-table-cell">
                       <div className="empty master-empty-box">
                         <div className="empty__icon master-empty-icon">
                           <Icon name="search" size={24} />
@@ -350,7 +280,6 @@ export function CurrencyIndex({
             totalRecords={totalRecords}
             currentPage={safeCurrentPage}
             pageSize={pageSize}
-            showPageSize={true}
             onPageChange={setCurrentPage}
             onPageSizeChange={(newSize) => {
               setPageSize(newSize);
@@ -361,28 +290,28 @@ export function CurrencyIndex({
       </div>
 
       <ConfirmDialog
-        isOpen={Boolean(currencyToConfirmEdit)}
-        onCancel={() => setCurrencyToConfirmEdit(null)}
-        onConfirm={() => {
-          const target = currencyToConfirmEdit;
-          setCurrencyToConfirmEdit(null);
-          if (target) onEdit?.(target);
-        }}
+        isOpen={!!currencyToConfirmEdit}
         title="Edit Currency"
-        message={`Open edit page for "${currencyToConfirmEdit?.currencyCode} - ${currencyToConfirmEdit?.currencyName}"?`}
-        confirmLabel="Yes, Edit"
+        message={`Do you want to edit currency "${currencyToConfirmEdit?.currencyCode}"?`}
+        confirmLabel="Continue"
         cancelLabel="Cancel"
+        confirmVariant="primary"
+        icon="edit"
+        onConfirm={() => {
+          if (currencyToConfirmEdit && onEdit) {
+            onEdit(currencyToConfirmEdit);
+          }
+          setCurrencyToConfirmEdit(null);
+        }}
+        onCancel={() => setCurrencyToConfirmEdit(null)}
       />
 
       <ConfirmDialog
-        isOpen={Boolean(currencyToDelete)}
-        onCancel={() => setCurrencyToDelete(null)}
+        isOpen={!!currencyToDelete}
+        entityType="currency"
+        entityName={currencyToDelete?.currencyCode}
         onConfirm={handleConfirmDelete}
-        title="Delete Currency"
-        message={`Are you sure you want to delete "${currencyToDelete?.currencyCode} - ${currencyToDelete?.currencyName}"? This action cannot be undone.`}
-        confirmLabel="Yes, Delete"
-        cancelLabel="Cancel"
-        variant="danger"
+        onCancel={() => setCurrencyToDelete(null)}
       />
     </div>
   );

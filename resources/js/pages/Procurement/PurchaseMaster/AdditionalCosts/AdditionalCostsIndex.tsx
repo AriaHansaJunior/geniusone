@@ -4,13 +4,14 @@ import { SearchField } from "../../../../components/ui/SearchField";
 import { Pagination } from "../../../../components/ui/Pagination";
 import { Icon } from "../../../../components/ui/Icon";
 import { StatusToggle } from "../../../../components/ui/StatusToggle";
-import {
-  type AdditionalCostRecord,
-} from "./additional-costs-types";
+import { ConfirmDialog } from "../../../../components/ui/ConfirmDialog";
+import { type AdditionalCostRecord } from "./additional-costs-types";
 
 interface AdditionalCostsIndexProps {
   records?: AdditionalCostRecord[];
   onAddNew: () => void;
+  onEdit?: (record: AdditionalCostRecord) => void;
+  onDelete?: (id: string) => Promise<void> | void;
   onToggleHide?: (id: string) => void;
 }
 
@@ -20,9 +21,13 @@ type SortDirection = "asc" | "desc";
 export function AdditionalCostsIndex({
   records = [],
   onAddNew,
+  onEdit,
+  onDelete,
   onToggleHide,
 }: AdditionalCostsIndexProps) {
   const [localRecords, setLocalRecords] = useState<AdditionalCostRecord[]>(records);
+  const [recordToEdit, setRecordToEdit] = useState<AdditionalCostRecord | null>(null);
+  const [recordToDelete, setRecordToDelete] = useState<AdditionalCostRecord | null>(null);
 
   useEffect(() => {
     setLocalRecords(records);
@@ -43,7 +48,15 @@ export function AdditionalCostsIndex({
     }
   };
 
-  // Filter records based on search query (Cost Code and Cost Name)
+  const handleConfirmDelete = async () => {
+    if (!recordToDelete) return;
+    const target = recordToDelete;
+    setRecordToDelete(null);
+    if (onDelete) {
+      await onDelete(target.id);
+    }
+  };
+
   const filteredRecords = useMemo(() => {
     if (!search.trim()) return localRecords;
     const query = search.toLowerCase().trim();
@@ -55,7 +68,6 @@ export function AdditionalCostsIndex({
     });
   }, [localRecords, search]);
 
-  // Sort records by Cost Code or Cost Name
   const sortedRecords = useMemo(() => {
     if (!sortField) return filteredRecords;
     const list = [...filteredRecords];
@@ -69,7 +81,6 @@ export function AdditionalCostsIndex({
     return list;
   }, [filteredRecords, sortField, sortDirection]);
 
-  // Pagination calculation
   const totalRecords = sortedRecords.length;
   const totalPages = Math.max(1, Math.ceil(totalRecords / pageSize));
   const safeCurrentPage = Math.min(Math.max(1, currentPage), totalPages);
@@ -79,7 +90,6 @@ export function AdditionalCostsIndex({
     return sortedRecords.slice(startIdx, startIdx + pageSize);
   }, [sortedRecords, safeCurrentPage, pageSize]);
 
-  // Toggle sorting on a field
   const handleToggleSort = (field: SortField) => {
     if (sortField === field) {
       if (sortDirection === "asc") {
@@ -115,12 +125,12 @@ export function AdditionalCostsIndex({
     );
   };
 
+  const hasActions = Boolean(onEdit || onDelete);
+
   return (
-    <div className="additional-costs-page">
-      {/* Main Table Container Card */}
+    <div className="master-page-shell additional-costs-page">
       <div className="panel table-panel">
-        {/* Table Toolbar: Search on left, Single Add New action on right */}
-        <div className="table-toolbar master-table-toolbar">
+        <div className="master-table-toolbar">
           <SearchField
             value={search}
             onChange={(val) => {
@@ -130,14 +140,13 @@ export function AdditionalCostsIndex({
             placeholder="Search cost code, name..."
           />
 
-          <div className="button-row master-toolbar-actions">
+          <div className="master-toolbar-actions">
             <Button variant="primary" onClick={onAddNew}>
               Add New
             </Button>
           </div>
         </div>
 
-        {/* Responsive Table Scroll Container */}
         <div className="table-frame">
           <div className="table-scroll">
             <table className="data-table">
@@ -163,6 +172,11 @@ export function AdditionalCostsIndex({
                   <th className="master-col-status">
                     <span>Status</span>
                   </th>
+                  {hasActions && (
+                    <th className="master-col-actions">
+                      <span>Option</span>
+                    </th>
+                  )}
                 </tr>
               </thead>
               <tbody>
@@ -171,15 +185,9 @@ export function AdditionalCostsIndex({
                     const rowNumber = (safeCurrentPage - 1) * pageSize + index + 1;
                     return (
                       <tr key={item.id} className={item.hidden ? "row--hidden" : ""}>
-                        <td className="master-cell-no">
-                          {rowNumber}
-                        </td>
-                        <td className="master-cell-code">
-                          {item.costCode}
-                        </td>
-                        <td className="master-cell-name">
-                          {item.costName}
-                        </td>
+                        <td className="master-cell-no">{rowNumber}</td>
+                        <td className="master-cell-code">{item.costCode}</td>
+                        <td className="master-cell-name">{item.costName}</td>
                         <td className="master-cell-center">
                           <StatusToggle
                             hidden={item.hidden}
@@ -187,18 +195,48 @@ export function AdditionalCostsIndex({
                             ariaLabel={`Toggle status for ${item.costName}`}
                           />
                         </td>
+                        {hasActions && (
+                          <td className="master-cell-center">
+                            <div className="master-actions-group">
+                              {onEdit && (
+                                <button
+                                  type="button"
+                                  className="btn-action-edit"
+                                  title={`Edit ${item.costName}`}
+                                  aria-label={`Edit ${item.costName}`}
+                                  onClick={() => setRecordToEdit(item)}
+                                >
+                                  <Icon name="edit" size={13} />
+                                </button>
+                              )}
+                              {onDelete && (
+                                <button
+                                  type="button"
+                                  className="btn-action-delete"
+                                  title={`Delete ${item.costName}`}
+                                  aria-label={`Delete ${item.costName}`}
+                                  onClick={() => setRecordToDelete(item)}
+                                >
+                                  <Icon name="trash" size={13} />
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        )}
                       </tr>
                     );
                   })
                 ) : (
                   <tr>
-                    <td colSpan={4} className="empty-table-cell">
-                      <div className="empty">
-                        <div className="empty__icon">
-                          <Icon name="search" />
+                    <td colSpan={hasActions ? 5 : 4} className="empty-table-cell">
+                      <div className="empty master-empty-box">
+                        <div className="empty__icon master-empty-icon">
+                          <Icon name="search" size={24} />
                         </div>
                         <strong>No additional costs found</strong>
-                        <span>Try adjusting your search query.</span>
+                        <span className="master-empty-subtitle">
+                          Try adjusting your search query.
+                        </span>
                       </div>
                     </td>
                   </tr>
@@ -207,7 +245,6 @@ export function AdditionalCostsIndex({
             </table>
           </div>
 
-          {/* Unified Bottom Pagination */}
           <Pagination
             totalRecords={totalRecords}
             currentPage={safeCurrentPage}
@@ -220,6 +257,32 @@ export function AdditionalCostsIndex({
           />
         </div>
       </div>
+
+      <ConfirmDialog
+        isOpen={!!recordToEdit}
+        title="Edit Additional Cost"
+        message={`Do you want to edit additional cost "${recordToEdit?.costName}"?`}
+        confirmLabel="Continue"
+        cancelLabel="Cancel"
+        confirmVariant="primary"
+        icon="edit"
+        onConfirm={() => {
+          if (recordToEdit && onEdit) {
+            onEdit(recordToEdit);
+          }
+          setRecordToEdit(null);
+        }}
+        onCancel={() => setRecordToEdit(null)}
+      />
+
+      <ConfirmDialog
+        isOpen={!!recordToDelete}
+        entityType="additional cost"
+        entityName={recordToDelete?.costName}
+        entityCode={recordToDelete?.costCode}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setRecordToDelete(null)}
+      />
     </div>
   );
 }

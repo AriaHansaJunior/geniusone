@@ -1,42 +1,46 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Button } from "../../../../components/ui/Button";
 import { Icon } from "../../../../components/ui/Icon";
+import type { PaymentTermRecord } from "./payment-term-types";
 
 interface PaymentTermFormProps {
+  initialRecord?: PaymentTermRecord | null;
   onBack: () => void;
-  onSave?: (data: { name: string }) => void | Promise<any>;
+  onSave?: (data: { name: string }, editId?: string) => void | Promise<any>;
 }
 
-export function PaymentTermForm({ onBack, onSave }: PaymentTermFormProps) {
-  const [name, setName] = useState("");
+export function PaymentTermForm({
+  initialRecord,
+  onBack,
+  onSave,
+}: PaymentTermFormProps) {
+  const isEdit = Boolean(initialRecord);
+  const [name, setName] = useState(initialRecord?.name || "");
   const [saving, setSaving] = useState(false);
-  const [notification, setNotification] = useState<{
-    type: "info" | "warning";
-    message: string;
-  } | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setName(initialRecord?.name || "");
+    setSubmitError(null);
+    setSaving(false);
+  }, [initialRecord]);
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (saving) return;
 
     if (!name.trim()) {
-      setNotification({
-        type: "warning",
-        message: "Please enter the Payment Term Name before proceeding.",
-      });
+      setSubmitError("Please enter the Payment Term Name before proceeding.");
       return;
     }
 
     if (onSave) {
       try {
         setSaving(true);
-        setNotification(null);
-        await onSave({ name: name.trim() });
+        setSubmitError(null);
+        await onSave({ name: name.trim() }, initialRecord?.id);
       } catch (err: any) {
-        setNotification({
-          type: "warning",
-          message: err?.message || "Failed to save payment term to database.",
-        });
-      } finally {
+        setSubmitError(err?.message || "Failed to save payment term to database.");
         setSaving(false);
       }
     }
@@ -44,42 +48,22 @@ export function PaymentTermForm({ onBack, onSave }: PaymentTermFormProps) {
 
   return (
     <div className="payment-term-form-page master-form-page">
-      {/* Page Header */}
       <div className="master-form-header">
         <h1 className="master-form-page-title">
-          Add Payment Term
+          {isEdit ? "Edit Payment Term" : "Add Payment Term"}
         </h1>
       </div>
 
-      {/* Status Notice Banner */}
-      {notification && (
-        <div
-          className={`supplier-form-alert supplier-form-alert--${notification.type}`}
-        >
-          <Icon
-            name={notification.type === "info" ? "check" : "alertTriangle"}
-            size={16}
-          />
-          <div className="supplier-form-alert__content">
-            <strong>
-              {notification.type === "info"
-                ? "Form Validated"
-                : "Required Information Missing"}
-            </strong>
-            <p>{notification.message}</p>
+      {submitError && (
+        <div className="master-form-alert--error" role="alert">
+          <div className="master-form-alert-row">
+            <Icon name="alertTriangle" size={16} />
+            <span>{submitError}</span>
           </div>
-          <button
-            type="button"
-            className="alert-close-btn"
-            onClick={() => setNotification(null)}
-          >
-            ×
-          </button>
         </div>
       )}
 
-      {/* Main Form Card */}
-      <form onSubmit={handleSave} className="master-form-card">
+      <form onSubmit={handleSave} className="master-form-card" noValidate>
         <div className="master-form-group">
           <label htmlFor="paymentTermName" className="master-form-label">
             Payment Term Name <span className="required-mark">*</span>
@@ -96,7 +80,6 @@ export function PaymentTermForm({ onBack, onSave }: PaymentTermFormProps) {
           />
         </div>
 
-        {/* Action Buttons Footer */}
         <div className="master-form-actions">
           <Button type="button" variant="ghost" onClick={onBack} disabled={saving}>
             Cancel

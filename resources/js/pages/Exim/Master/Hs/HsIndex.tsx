@@ -4,6 +4,7 @@ import { SearchField } from "../../../../components/ui/SearchField";
 import { Icon } from "../../../../components/ui/Icon";
 import { ConfirmDialog } from "../../../../components/ui/ConfirmDialog";
 import { Pagination } from "../../../../components/ui/Pagination";
+import { useNotification } from "../../../../context/NotificationContext";
 import { initialHsRecords } from "./hs-data";
 import type {
   HsRecord,
@@ -24,6 +25,8 @@ export function HsIndex({
   onEdit,
   onDelete,
 }: HsIndexProps) {
+  const { notifySuccess, notifyError, notifyWarning } = useNotification();
+
   const [localRecords, setLocalRecords] = useState<HsRecord[]>(records);
   const [search, setSearch] = useState("");
   const [pageSize, setPageSize] = useState<number>(25);
@@ -32,30 +35,28 @@ export function HsIndex({
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   const [hsToDelete, setHsToDelete] = useState<HsRecord | null>(null);
   const [hsToEdit, setHsToEdit] = useState<HsRecord | null>(null);
-  const [exportNotice, setExportNotice] = useState<string | null>(null);
 
   useEffect(() => {
     setLocalRecords(records);
   }, [records]);
 
-  // Format percentage number neatly
   const formatPercent = (val: number | undefined | null) => {
     if (val === undefined || val === null || isNaN(val)) return "0%";
     return `${val}%`;
   };
 
-  // Search filter across HS Code Name and Description
   const filteredRecords = useMemo(() => {
     if (!search.trim()) return localRecords;
     const query = search.toLowerCase().trim();
     return localRecords.filter((rec) => {
       const matchName = rec.name.toLowerCase().includes(query);
       const matchDesc = (rec.description || "").toLowerCase().includes(query);
-      return matchName || matchDesc;
+      const matchBm = (rec.typeRateBm || "").toLowerCase().includes(query);
+      const matchCukai = (rec.typeRateCukai || "").toLowerCase().includes(query);
+      return matchName || matchDesc || matchBm || matchCukai;
     });
   }, [localRecords, search]);
 
-  // Sorting
   const sortedRecords = useMemo(() => {
     if (sortDirection === "none") {
       return filteredRecords;
@@ -71,6 +72,12 @@ export function HsIndex({
       } else if (sortField === "description") {
         aVal = (a.description || "").toLowerCase();
         bVal = (b.description || "").toLowerCase();
+      } else if (sortField === "typeRateBm") {
+        aVal = (a.typeRateBm || "").toLowerCase();
+        bVal = (b.typeRateBm || "").toLowerCase();
+      } else if (sortField === "typeRateCukai") {
+        aVal = (a.typeRateCukai || "").toLowerCase();
+        bVal = (b.typeRateCukai || "").toLowerCase();
       } else if (sortField === "ratesBm") {
         aVal = a.ratesBm;
         bVal = b.ratesBm;
@@ -99,7 +106,6 @@ export function HsIndex({
     return list;
   }, [filteredRecords, sortField, sortDirection]);
 
-  // Pagination calculation
   const totalRecords = sortedRecords.length;
   const totalPages = Math.max(1, Math.ceil(totalRecords / pageSize));
   const safeCurrentPage = Math.min(Math.max(1, currentPage), totalPages);
@@ -109,7 +115,6 @@ export function HsIndex({
     return sortedRecords.slice(startIdx, startIdx + pageSize);
   }, [sortedRecords, safeCurrentPage, pageSize]);
 
-  // Toggle sorting for columns
   const handleToggleSort = (field: HsSortField) => {
     if (sortField === field) {
       if (sortDirection === "asc") setSortDirection("desc");
@@ -121,37 +126,30 @@ export function HsIndex({
     }
   };
 
-  // Delete confirmed
   const handleConfirmDelete = () => {
     if (!hsToDelete) return;
     const idToDelete = hsToDelete.id;
-    setLocalRecords((prev) => prev.filter((h) => h.id !== idToDelete));
+    setHsToDelete(null);
     if (onDelete) {
       onDelete(idToDelete);
     }
-    setHsToDelete(null);
   };
 
-  // Export to Excel-compatible CSV with UTF-8 BOM
   const handleExportToExcel = () => {
     if (sortedRecords.length === 0) {
-      setExportNotice("No records available to export.");
-      setTimeout(() => setExportNotice(null), 3000);
+      notifyWarning("Nothing to Export", "No HS records match your filter.");
       return;
     }
 
     try {
       const headers = [
         "No",
-        "Name",
+        "HS Code",
         "Description",
-        "BM Rate (%)",
         "BM Type",
-        "Cukai Rate (%)",
+        "BM Rate (%)",
         "Cukai Type",
-        "PPN (%)",
-        "PPH (%)",
-        "PPNBM (%)",
+        "Cukai Rate (%)",
       ];
 
       const csvRows = [headers.join(",")];
@@ -161,18 +159,14 @@ export function HsIndex({
           index + 1,
           `"${(row.name || "").replace(/"/g, '""')}"`,
           `"${(row.description || "").replace(/"/g, '""')}"`,
-          row.ratesBm,
           `"${row.typeRateBm || "ADVOLORUM"}"`,
-          row.ratesCukai,
+          row.ratesBm,
           `"${row.typeRateCukai || "ADVOLORUM"}"`,
-          row.ratesPpn,
-          row.ratesPph,
-          row.ratesPpnbm,
+          row.ratesCukai,
         ];
         csvRows.push(values.join(","));
       });
 
-      // Prepend UTF-8 BOM so Excel opens special characters correctly
       const csvString = "\uFEFF" + csvRows.join("\r\n");
       const blob = new Blob([csvString], { type: "text/csv;charset=utf-8;" });
       const url = URL.createObjectURL(blob);
@@ -187,25 +181,19 @@ export function HsIndex({
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
 
-      setExportNotice(`Exported ${sortedRecords.length} HS record(s) to CSV.`);
-      setTimeout(() => setExportNotice(null), 4000);
+      notifySuccess("Export Completed", `Exported ${sortedRecords.length} HS Code record(s).`);
     } catch {
-      setExportNotice("Failed to export data. Please try again.");
-      setTimeout(() => setExportNotice(null), 4000);
+      notifyError("Export Failed", "Failed to export HS Code data.");
     }
   };
 
-  // Render sorting indicator icon
   const renderSortIndicator = (field: HsSortField) => {
     const isActive = sortField === field && sortDirection !== "none";
     return (
       <span
-        style={{
-          marginLeft: "6px",
-          display: "inline-flex",
-          alignItems: "center",
-          color: isActive ? "var(--blue-600)" : "var(--muted-2)",
-        }}
+        className={`master-sort-indicator ${
+          isActive ? "master-sort-indicator--active" : ""
+        }`}
       >
         {isActive ? (
           sortDirection === "asc" ? (
@@ -220,49 +208,20 @@ export function HsIndex({
     );
   };
 
-  const startEntry = totalRecords === 0 ? 0 : (safeCurrentPage - 1) * pageSize + 1;
-  const endEntry = Math.min(safeCurrentPage * pageSize, totalRecords);
-
-  // Generate pagination page list
-  const pageNumbers: number[] = [];
-  for (let i = 1; i <= totalPages; i++) {
-    pageNumbers.push(i);
-  }
-
   return (
-    <div className="hs-page">
-      {/* Export notification notice */}
-      {exportNotice && (
-        <div className="hs-alert hs-alert--info">
-          <Icon name="check" size={15} />
-          <div className="hs-alert__content">
-            <p>{exportNotice}</p>
-          </div>
-          <button
-            type="button"
-            className="hs-alert-close"
-            onClick={() => setExportNotice(null)}
-            aria-label="Dismiss export notice"
-          >
-            ×
-          </button>
-        </div>
-      )}
-
-      {/* Main Table Panel */}
-      <div className="hs-table-panel panel">
-        {/* Table Toolbar: Search on Left, Actions on Right */}
-        <div className="hs-toolbar" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px" }}>
+    <div className="master-page-shell hs-page">
+      <div className="panel table-panel hs-table-panel">
+        <div className="master-table-toolbar">
           <SearchField
             value={search}
             onChange={(val) => {
               setSearch(val);
               setCurrentPage(1);
             }}
-            placeholder="Search..."
+            placeholder="Search HS code, description, tariff type..."
           />
 
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <div className="master-toolbar-actions">
             <Button variant="primary" onClick={onAddNew}>
               Add New
             </Button>
@@ -271,94 +230,62 @@ export function HsIndex({
               onClick={handleExportToExcel}
               title="Export filtered records to Excel-compatible CSV"
             >
-              Export To Excel
+              Export to Excel
             </Button>
           </div>
         </div>
 
-        {/* Responsive Table Frame */}
         <div className="table-frame">
           <div className="table-scroll">
             <table className="hs-data-table data-table">
               <thead>
                 <tr>
-                  {/* 1. No */}
-                  <th style={{ width: "55px", textAlign: "center" }}>
+                  <th className="master-col-no">
                     <span>No</span>
                   </th>
-
-                  {/* 2. Name */}
                   <th
-                    className="sortable-th"
-                    style={{ minWidth: "130px" }}
+                    className="sortable-th master-sortable-th master-col-code-wide"
                     onClick={() => handleToggleSort("name")}
                   >
-                    <span>Name</span>
+                    <span>HS Code</span>
                     {renderSortIndicator("name")}
                   </th>
-
-                  {/* 3. Description */}
                   <th
-                    className="sortable-th"
-                    style={{ minWidth: "240px" }}
+                    className="sortable-th master-sortable-th master-col-description"
                     onClick={() => handleToggleSort("description")}
                   >
                     <span>Description</span>
                     {renderSortIndicator("description")}
                   </th>
-
-                  {/* 4. BM */}
                   <th
-                    className="sortable-th"
-                    style={{ minWidth: "110px", textAlign: "center" }}
+                    className="sortable-th master-sortable-th master-col-type"
+                    onClick={() => handleToggleSort("typeRateBm")}
+                  >
+                    <span>Type Rates BM</span>
+                    {renderSortIndicator("typeRateBm")}
+                  </th>
+                  <th
+                    className="sortable-th master-sortable-th master-col-num-rate"
                     onClick={() => handleToggleSort("ratesBm")}
                   >
-                    <span>BM</span>
+                    <span>BM (%)</span>
                     {renderSortIndicator("ratesBm")}
                   </th>
-
-                  {/* 5. cukai */}
                   <th
-                    className="sortable-th"
-                    style={{ minWidth: "110px", textAlign: "center" }}
+                    className="sortable-th master-sortable-th master-col-type"
+                    onClick={() => handleToggleSort("typeRateCukai")}
+                  >
+                    <span>Type Rates Cukai</span>
+                    {renderSortIndicator("typeRateCukai")}
+                  </th>
+                  <th
+                    className="sortable-th master-sortable-th master-col-num-rate"
                     onClick={() => handleToggleSort("ratesCukai")}
                   >
-                    <span>cukai</span>
+                    <span>Cukai (%)</span>
                     {renderSortIndicator("ratesCukai")}
                   </th>
-
-                  {/* 6. PPN */}
-                  <th
-                    className="sortable-th"
-                    style={{ minWidth: "90px", textAlign: "center" }}
-                    onClick={() => handleToggleSort("ratesPpn")}
-                  >
-                    <span>PPN</span>
-                    {renderSortIndicator("ratesPpn")}
-                  </th>
-
-                  {/* 7. PPH */}
-                  <th
-                    className="sortable-th"
-                    style={{ minWidth: "90px", textAlign: "center" }}
-                    onClick={() => handleToggleSort("ratesPph")}
-                  >
-                    <span>PPH</span>
-                    {renderSortIndicator("ratesPph")}
-                  </th>
-
-                  {/* 8. PPNBM */}
-                  <th
-                    className="sortable-th"
-                    style={{ minWidth: "90px", textAlign: "center" }}
-                    onClick={() => handleToggleSort("ratesPpnbm")}
-                  >
-                    <span>PPNBM</span>
-                    {renderSortIndicator("ratesPpnbm")}
-                  </th>
-
-                  {/* 9. Option */}
-                  <th style={{ width: "140px", textAlign: "center" }}>
+                  <th className="master-col-actions">
                     <span>Option</span>
                   </th>
                 </tr>
@@ -366,97 +293,54 @@ export function HsIndex({
               <tbody>
                 {paginatedRecords.length > 0 ? (
                   paginatedRecords.map((item, index) => {
-                    const rowNumber =
-                      (safeCurrentPage - 1) * pageSize + index + 1;
+                    const rowNumber = (safeCurrentPage - 1) * pageSize + index + 1;
                     return (
                       <tr key={item.id}>
-                        {/* 1. Sequential No */}
-                        <td
-                          style={{
-                            textAlign: "center",
-                            color: "var(--muted)",
-                            fontWeight: 600,
-                          }}
-                        >
-                          {rowNumber}
-                        </td>
-
-                        {/* 2. HS Code Name */}
-                        <td className="hs-name-cell">
-                          {item.name}
-                        </td>
-
-                        {/* 3. Description */}
-                        <td className="hs-desc-cell">
+                        <td className="master-cell-no">{rowNumber}</td>
+                        <td className="master-cell-code hs-name-cell">{item.name}</td>
+                        <td className="master-cell-muted hs-desc-cell">
                           {item.description || "-"}
                         </td>
-
-                        {/* 4. BM: Rate & Tariff Type */}
-                        <td style={{ textAlign: "center" }}>
-                          <div className="hs-tariff-cell">
-                            <span className="hs-tariff-rate">
-                              {formatPercent(item.ratesBm)}
-                            </span>
-                            <span className="hs-tariff-type">
-                              {item.typeRateBm || "ADVOLORUM"}
-                            </span>
-                          </div>
+                        <td className="master-cell-name">
+                          {item.typeRateBm || "ADVOLORUM"}
                         </td>
-
-                        {/* 5. Cukai: Rate & Tariff Type */}
-                        <td style={{ textAlign: "center" }}>
-                          <div className="hs-tariff-cell">
-                            <span className="hs-tariff-rate">
-                              {formatPercent(item.ratesCukai)}
-                            </span>
-                            <span className="hs-tariff-type">
-                              {item.typeRateCukai || "ADVOLORUM"}
-                            </span>
-                          </div>
-                        </td>
-
-                        {/* 6. PPN Rate */}
-                        <td style={{ textAlign: "center" }}>
-                          <span className="hs-rate-badge">
-                            {formatPercent(item.ratesPpn)}
+                        <td className="master-cell-center">
+                          <span className="hs-tariff-rate">
+                            {formatPercent(item.ratesBm)}
                           </span>
                         </td>
-
-                        {/* 7. PPH Rate */}
-                        <td style={{ textAlign: "center" }}>
-                          <span className="hs-rate-badge">
-                            {formatPercent(item.ratesPph)}
+                        <td className="master-cell-name">
+                          {item.typeRateCukai || "ADVOLORUM"}
+                        </td>
+                        <td className="master-cell-center">
+                          <span className="hs-tariff-rate">
+                            {formatPercent(item.ratesCukai)}
                           </span>
                         </td>
-
-                        {/* 8. PPNBM Rate */}
-                        <td style={{ textAlign: "center" }}>
-                          <span className="hs-rate-badge">
-                            {formatPercent(item.ratesPpnbm)}
-                          </span>
-                        </td>
-
-                        {/* 9. Option Actions */}
-                        <td style={{ textAlign: "center" }}>
-                          <div className="hs-row-actions">
+                        <td className="master-cell-center">
+                          <div className="master-actions-group">
                             {onEdit && (
                               <button
                                 type="button"
-                                className="hs-action-btn hs-action-btn--edit"
+                                className="btn-action-edit"
                                 title={`Edit ${item.name}`}
+                                aria-label={`Edit ${item.name}`}
                                 onClick={() => setHsToEdit(item)}
                               >
                                 <Icon name="edit" size={13} />
                               </button>
                             )}
-                            <button
-                              type="button"
-                              className="hs-action-btn hs-action-btn--delete"
-                              title={`Delete ${item.name}`}
-                              onClick={() => setHsToDelete(item)}
-                            >
-                              <Icon name="trash" size={13} />
-                            </button>
+                            {onDelete && (
+                              <button
+                                type="button"
+                                className="btn-action-delete"
+                                title={`Delete ${item.name}`}
+                                aria-label={`Delete ${item.name}`}
+                                onClick={() => setHsToDelete(item)}
+                              >
+                                <Icon name="trash" size={13} />
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -464,13 +348,15 @@ export function HsIndex({
                   })
                 ) : (
                   <tr>
-                    <td colSpan={9} className="empty-table-cell">
-                      <div className="empty">
-                        <div className="empty__icon">
-                          <Icon name="search" />
+                    <td colSpan={8} className="empty-table-cell">
+                      <div className="empty master-empty-box">
+                        <div className="empty__icon master-empty-icon">
+                          <Icon name="search" size={24} />
                         </div>
                         <strong>No HS records found</strong>
-                        <span>Try adjusting your search query.</span>
+                        <span className="master-empty-subtitle">
+                          Try adjusting your search query.
+                        </span>
                       </div>
                     </td>
                   </tr>
@@ -479,7 +365,6 @@ export function HsIndex({
             </table>
           </div>
 
-          {/* Unified Bottom Pagination */}
           <Pagination
             totalRecords={totalRecords}
             currentPage={safeCurrentPage}
@@ -494,7 +379,6 @@ export function HsIndex({
         </div>
       </div>
 
-      {/* Edit Confirmation Dialog */}
       <ConfirmDialog
         isOpen={!!hsToEdit}
         title="Edit Record"
@@ -512,7 +396,6 @@ export function HsIndex({
         onCancel={() => setHsToEdit(null)}
       />
 
-      {/* Delete Confirmation Dialog */}
       <ConfirmDialog
         isOpen={!!hsToDelete}
         entityType="HS code"

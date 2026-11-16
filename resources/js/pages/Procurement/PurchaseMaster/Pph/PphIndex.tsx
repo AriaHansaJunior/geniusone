@@ -4,21 +4,30 @@ import { SearchField } from "../../../../components/ui/SearchField";
 import { Pagination } from "../../../../components/ui/Pagination";
 import { Icon } from "../../../../components/ui/Icon";
 import { StatusToggle } from "../../../../components/ui/StatusToggle";
-import {
-  type PphRecord,
-} from "./pph-types";
+import { ConfirmDialog } from "../../../../components/ui/ConfirmDialog";
+import { type PphRecord } from "./pph-types";
 
 interface PphIndexProps {
   records?: PphRecord[];
   onAddNew: () => void;
+  onEdit?: (record: PphRecord) => void;
+  onDelete?: (id: string) => Promise<void> | void;
   onToggleHide?: (id: string) => void;
 }
 
 type SortField = "name" | "rate" | "deduction";
 type SortDirection = "asc" | "desc";
 
-export function PphIndex({ records = [], onAddNew, onToggleHide }: PphIndexProps) {
+export function PphIndex({
+  records = [],
+  onAddNew,
+  onEdit,
+  onDelete,
+  onToggleHide,
+}: PphIndexProps) {
   const [localRecords, setLocalRecords] = useState<PphRecord[]>(records);
+  const [recordToEdit, setRecordToEdit] = useState<PphRecord | null>(null);
+  const [recordToDelete, setRecordToDelete] = useState<PphRecord | null>(null);
 
   useEffect(() => {
     setLocalRecords(records);
@@ -39,7 +48,15 @@ export function PphIndex({ records = [], onAddNew, onToggleHide }: PphIndexProps
     }
   };
 
-  // Filter records based on search query
+  const handleConfirmDelete = async () => {
+    if (!recordToDelete) return;
+    const target = recordToDelete;
+    setRecordToDelete(null);
+    if (onDelete) {
+      await onDelete(target.id);
+    }
+  };
+
   const filteredRecords = useMemo(() => {
     if (!search.trim()) return localRecords;
     const query = search.toLowerCase().trim();
@@ -52,7 +69,6 @@ export function PphIndex({ records = [], onAddNew, onToggleHide }: PphIndexProps
     });
   }, [localRecords, search]);
 
-  // Sort records by Name, Rate, or Deduction
   const sortedRecords = useMemo(() => {
     if (!sortField) return filteredRecords;
     const list = [...filteredRecords];
@@ -72,7 +88,6 @@ export function PphIndex({ records = [], onAddNew, onToggleHide }: PphIndexProps
     return list;
   }, [filteredRecords, sortField, sortDirection]);
 
-  // Pagination calculation
   const totalRecords = sortedRecords.length;
   const totalPages = Math.max(1, Math.ceil(totalRecords / pageSize));
   const safeCurrentPage = Math.min(Math.max(1, currentPage), totalPages);
@@ -82,7 +97,6 @@ export function PphIndex({ records = [], onAddNew, onToggleHide }: PphIndexProps
     return sortedRecords.slice(startIdx, startIdx + pageSize);
   }, [sortedRecords, safeCurrentPage, pageSize]);
 
-  // Toggle sorting on a field
   const handleToggleSort = (field: SortField) => {
     if (sortField === field) {
       if (sortDirection === "asc") {
@@ -118,12 +132,12 @@ export function PphIndex({ records = [], onAddNew, onToggleHide }: PphIndexProps
     );
   };
 
+  const hasActions = Boolean(onEdit || onDelete);
+
   return (
-    <div className="pph-page">
-      {/* Main Table Container Card */}
+    <div className="master-page-shell pph-page">
       <div className="panel table-panel">
-        {/* Table Toolbar: Search on left, Single Add New action on right */}
-        <div className="table-toolbar master-table-toolbar">
+        <div className="master-table-toolbar">
           <SearchField
             value={search}
             onChange={(val) => {
@@ -133,14 +147,13 @@ export function PphIndex({ records = [], onAddNew, onToggleHide }: PphIndexProps
             placeholder="Search PPH name, rate, deduction..."
           />
 
-          <div className="button-row master-toolbar-actions">
+          <div className="master-toolbar-actions">
             <Button variant="primary" onClick={onAddNew}>
               Add New
             </Button>
           </div>
         </div>
 
-        {/* Responsive Table Scroll Container */}
         <div className="table-frame">
           <div className="table-scroll">
             <table className="data-table">
@@ -173,6 +186,11 @@ export function PphIndex({ records = [], onAddNew, onToggleHide }: PphIndexProps
                   <th className="master-col-status">
                     <span>Status</span>
                   </th>
+                  {hasActions && (
+                    <th className="master-col-actions">
+                      <span>Option</span>
+                    </th>
+                  )}
                 </tr>
               </thead>
               <tbody>
@@ -181,18 +199,10 @@ export function PphIndex({ records = [], onAddNew, onToggleHide }: PphIndexProps
                     const rowNumber = (safeCurrentPage - 1) * pageSize + index + 1;
                     return (
                       <tr key={item.id} className={item.hidden ? "row--hidden" : ""}>
-                        <td className="master-cell-no">
-                          {rowNumber}
-                        </td>
-                        <td className="master-cell-name">
-                          {item.name}
-                        </td>
-                        <td className="master-cell-code">
-                          {item.rate.toFixed(4)}
-                        </td>
-                        <td className="master-cell-center">
-                          {item.deduction}
-                        </td>
+                        <td className="master-cell-no">{rowNumber}</td>
+                        <td className="master-cell-name">{item.name}</td>
+                        <td className="master-cell-code">{item.rate.toFixed(4)}</td>
+                        <td className="master-cell-center">{item.deduction}</td>
                         <td className="master-cell-center">
                           <StatusToggle
                             hidden={item.hidden}
@@ -200,18 +210,48 @@ export function PphIndex({ records = [], onAddNew, onToggleHide }: PphIndexProps
                             ariaLabel={`Toggle status for ${item.name}`}
                           />
                         </td>
+                        {hasActions && (
+                          <td className="master-cell-center">
+                            <div className="master-actions-group">
+                              {onEdit && (
+                                <button
+                                  type="button"
+                                  className="btn-action-edit"
+                                  title={`Edit ${item.name}`}
+                                  aria-label={`Edit ${item.name}`}
+                                  onClick={() => setRecordToEdit(item)}
+                                >
+                                  <Icon name="edit" size={13} />
+                                </button>
+                              )}
+                              {onDelete && (
+                                <button
+                                  type="button"
+                                  className="btn-action-delete"
+                                  title={`Delete ${item.name}`}
+                                  aria-label={`Delete ${item.name}`}
+                                  onClick={() => setRecordToDelete(item)}
+                                >
+                                  <Icon name="trash" size={13} />
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        )}
                       </tr>
                     );
                   })
                 ) : (
                   <tr>
-                    <td colSpan={5} className="empty-table-cell">
-                      <div className="empty">
-                        <div className="empty__icon">
-                          <Icon name="search" />
+                    <td colSpan={hasActions ? 6 : 5} className="empty-table-cell">
+                      <div className="empty master-empty-box">
+                        <div className="empty__icon master-empty-icon">
+                          <Icon name="search" size={24} />
                         </div>
                         <strong>No PPH records found</strong>
-                        <span>Try adjusting your search query.</span>
+                        <span className="master-empty-subtitle">
+                          Try adjusting your search query.
+                        </span>
                       </div>
                     </td>
                   </tr>
@@ -220,7 +260,6 @@ export function PphIndex({ records = [], onAddNew, onToggleHide }: PphIndexProps
             </table>
           </div>
 
-          {/* Unified Bottom Pagination */}
           <Pagination
             totalRecords={totalRecords}
             currentPage={safeCurrentPage}
@@ -233,6 +272,31 @@ export function PphIndex({ records = [], onAddNew, onToggleHide }: PphIndexProps
           />
         </div>
       </div>
+
+      <ConfirmDialog
+        isOpen={!!recordToEdit}
+        title="Edit PPH Rate"
+        message={`Do you want to edit PPH rate "${recordToEdit?.name}"?`}
+        confirmLabel="Continue"
+        cancelLabel="Cancel"
+        confirmVariant="primary"
+        icon="edit"
+        onConfirm={() => {
+          if (recordToEdit && onEdit) {
+            onEdit(recordToEdit);
+          }
+          setRecordToEdit(null);
+        }}
+        onCancel={() => setRecordToEdit(null)}
+      />
+
+      <ConfirmDialog
+        isOpen={!!recordToDelete}
+        entityType="PPH rate"
+        entityName={recordToDelete?.name}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setRecordToDelete(null)}
+      />
     </div>
   );
 }

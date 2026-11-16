@@ -62,7 +62,6 @@ export function GenerateQrCodePage({
           </Button>
           <Button
             variant="primary"
-            icon="print"
             onClick={handlePrint}
             disabled={selectedItems.length === 0}
           >
@@ -107,25 +106,25 @@ export function GenerateQrCodePage({
           <table className="data-table qr-items-table">
             <thead>
               <tr>
-                <th style={{ width: "60px", textAlign: "center" }}>No</th>
-                <th style={{ width: "180px" }}>Item Code</th>
+                <th className="master-col-no">No</th>
+                <th className="master-col-w180">Item Code</th>
                 <th>Item Name</th>
-                <th style={{ width: "160px" }}>Classification</th>
-                <th style={{ width: "100px", textAlign: "center" }}>Unit</th>
-                <th style={{ width: "80px", textAlign: "center" }}>Action</th>
+                <th className="master-col-w160">Classification</th>
+                <th className="master-col-symbol">Unit</th>
+                <th className="master-col-option-sm">Action</th>
               </tr>
             </thead>
             <tbody>
               {selectedItems.length > 0 ? (
                 selectedItems.map((item, index) => (
                   <tr key={item.id}>
-                    <td style={{ textAlign: "center", color: "var(--muted)" }}>
+                    <td className="master-cell-no">
                       {index + 1}
                     </td>
                     <td>
                       <span className="code-pill">{item.itemCode}</span>
                     </td>
-                    <td style={{ fontWeight: 600, color: "var(--ink)" }}>
+                    <td className="master-cell-name">
                       {item.itemName}
                     </td>
                     <td>
@@ -133,10 +132,10 @@ export function GenerateQrCodePage({
                         {item.classification}
                       </span>
                     </td>
-                    <td style={{ textAlign: "center", fontWeight: 600 }}>
+                    <td className="master-cell-symbol">
                       {item.smallestUnitCode}
                     </td>
-                    <td style={{ textAlign: "center" }}>
+                    <td className="master-cell-center">
                       <button
                         type="button"
                         className="qr-remove-btn"

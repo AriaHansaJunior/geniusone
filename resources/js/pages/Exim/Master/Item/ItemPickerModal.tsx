@@ -191,7 +191,7 @@ export function ItemPickerModal({
           <table className="data-table item-picker-table">
             <thead>
               <tr>
-                <th style={{ width: "40px", textAlign: "center" }}>
+                <th className="master-col-check">
                   <input
                     type="checkbox"
                     checked={
@@ -217,16 +217,16 @@ export function ItemPickerModal({
                     }}
                   />
                 </th>
-                <th style={{ width: "50px", textAlign: "center" }}>No</th>
-                <th style={{ width: "135px" }}>Code</th>
-                <th style={{ width: "120px" }}>External Code</th>
-                <th style={{ minWidth: "220px" }}>Item Name</th>
-                <th style={{ width: "75px" }}>Unit</th>
-                <th style={{ width: "110px" }}>Category</th>
-                <th style={{ width: "160px" }}>Classification</th>
-                <th style={{ width: "100px" }}>Brand</th>
-                <th style={{ width: "120px" }}>Fas / Non Fas</th>
-                <th style={{ width: "140px", textAlign: "right" }}>Stock</th>
+                <th className="master-col-no-sm">No</th>
+                <th className="master-col-w135">Code</th>
+                <th className="master-col-w120">External Code</th>
+                <th className="master-col-mw220">Item Name</th>
+                <th className="master-col-w75">Unit</th>
+                <th className="master-col-w110">Category</th>
+                <th className="master-col-w160">Classification</th>
+                <th className="master-col-w100">Brand</th>
+                <th className="master-col-w120">Fas / Non Fas</th>
+                <th className="master-col-w140-right">Stock</th>
               </tr>
             </thead>
             <tbody>
@@ -238,12 +238,11 @@ export function ItemPickerModal({
                   return (
                     <tr
                       key={item.id}
-                      className={isChecked ? "row--selected" : ""}
+                      className={`master-row-clickable ${isChecked ? "row--selected" : ""}`}
                       onClick={() => handleToggleRow(item.itemCode)}
-                      style={{ cursor: "pointer" }}
                     >
                       <td
-                        style={{ textAlign: "center" }}
+                        className="master-cell-center"
                         onClick={(e) => e.stopPropagation()}
                       >
                         <input
@@ -252,14 +251,14 @@ export function ItemPickerModal({
                           onChange={() => handleToggleRow(item.itemCode)}
                         />
                       </td>
-                      <td style={{ textAlign: "center", color: "var(--muted)" }}>
+                      <td className="master-cell-no">
                         {rowNumber}
                       </td>
                       <td>
                         <span className="code-pill">{item.itemCode}</span>
                       </td>
                       <td>{item.kodeEksternal || "-"}</td>
-                      <td style={{ fontWeight: 600, color: "var(--ink)" }}>
+                      <td className="master-cell-name">
                         {item.itemName}
                       </td>
                       <td>{item.smallestUnitCode}</td>
@@ -278,15 +277,11 @@ export function ItemPickerModal({
                         </span>
                       </td>
                       <td
-                        style={{
-                          textAlign: "right",
-                          fontFamily: "var(--font-mono, monospace)",
-                          fontWeight: 700,
-                          color:
-                            (item.stock || 0) > 0
-                              ? "var(--green-700, #15803d)"
-                              : "var(--muted)",
-                        }}
+                        className={
+                          (item.stock || 0) > 0
+                            ? "master-cell-stock-positive"
+                            : "master-cell-stock-zero"
+                        }
                       >
                         {(item.stock || 0).toFixed(4)} {item.stockUnit || item.smallestUnitCode}
                       </td>

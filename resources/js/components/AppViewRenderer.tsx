@@ -21,6 +21,7 @@ import {
   UnitIndex,
   UnitForm,
   UnitReferenceIndex,
+  UnitReferenceForm,
   ClassificationIndex,
   ClassificationForm,
   DepartmentIndex,
@@ -90,8 +91,15 @@ import {
   TransferStockReturnDetail,
   UserPermissionAdmin,
   AuditLogAdmin,
+  ReferenceMasterIndex,
+  ReferenceMasterForm,
 } from "../pages";
 import { docToSlug } from "../utils/docSlug";
+import { REFERENCE_MASTER_CONFIGS } from "../pages/Common/ReferenceMaster/reference-master-config";
+import type {
+  ReferenceMasterPageKey,
+  ReferenceMasterRecord,
+} from "../pages/Common/ReferenceMaster/reference-master-types";
 import type { PageKey, ViewState, TableRow } from "../types";
 import type { RequestMaterialRecord } from "../pages/Warehouse/Request/RequestMaterial/request-material-types";
 import type { StockNotificationRecord } from "../pages/Dashboard/StockNotificationMaster/stock-notification-types";
@@ -177,36 +185,61 @@ export interface AppViewRendererProps {
   handleNavigateTransferStockReturnCreate: () => void;
   handleNavigateTransferStockReturnEdit: (recordOrCode: TransferStockReturnRecord | string) => void;
   handleNavigateTransferStockReturnDetail: (code: string) => void;
+  handleNavigateReferenceCreate: (page: ReferenceMasterPageKey) => void;
   handleNavigateMasterWarehouseCreate: () => void;
+  handleNavigateWarehouseMasterEdit: (warehouse: WarehouseMasterRecord) => void;
+  handleDeleteWarehouseMaster: (id: string) => Promise<void>;
+  handleToggleWarehouseMasterStatus: (id: string) => Promise<void> | void;
   handleNavigateWarehouseCoordinates: (warehouse: WarehouseMasterRecord) => void;
   handleNavigateWarehouseCoordinateCreate: (warehouseId: string) => void;
   handleNavigateStockNotificationCreate: () => void;
   handleEditStockNotification: (record: StockNotificationRecord) => void;
-  handleSaveStockNotification: (record: StockNotificationRecord, isEdit: boolean) => void;
-  handleDeleteStockNotification: (id: string) => void;
+  handleSaveStockNotification: (record: StockNotificationRecord, isEdit: boolean) => Promise<void> | void;
+  handleDeleteStockNotification: (id: string) => Promise<void> | void;
   handleNavigateTypeOfRequestCreate: () => void;
   handleEditTypeOfRequest: (record: TypeOfRequestRecord) => void;
-  handleSaveTypeOfRequest: (record: TypeOfRequestRecord, isEdit: boolean) => void;
-  handleDeleteTypeOfRequest: (id: string) => void;
+  handleSaveTypeOfRequest: (record: TypeOfRequestRecord, isEdit: boolean) => Promise<void> | void;
+  handleDeleteTypeOfRequest: (id: string) => Promise<void> | void;
+  handleToggleTypeOfRequestStatus?: (id: string) => Promise<void> | void;
   handleNavigateDestinationLocationCreate: () => void;
   handleEditDestinationLocation: (record: DestinationLocationRecord) => void;
-  handleSaveDestinationLocation: (record: DestinationLocationRecord, isEdit: boolean) => void;
-  handleDeleteDestinationLocation: (id: string) => void;
+  handleSaveDestinationLocation: (record: DestinationLocationRecord, isEdit: boolean) => Promise<void> | void;
+  handleDeleteDestinationLocation: (id: string) => Promise<void> | void;
+  handleToggleDestinationLocationStatus?: (id: string) => Promise<void> | void;
   handleToggleSupplierHide: (id: string) => void;
   handleTogglePaymentTermHide: (id: string) => void;
   handleTogglePurchaseCategoryHide: (id: string) => void;
   handleToggleDeliveryTermHide: (id: string) => void;
   handleToggleAdditionalCostHide: (id: string) => void;
   handleTogglePphHide: (id: string) => void;
-  handleSaveSupplier: (formData: SupplierFormData) => Promise<void>;
-  handleSavePaymentTerm: (data: { name: string }) => Promise<void>;
-  handleSavePurchaseCategory: (data: { code: string; name: string }) => Promise<void>;
-  handleSaveDeliveryTerm: (data: { name: string }) => Promise<void>;
-  handleSaveAdditionalCost: (data: { code: string; name: string }) => Promise<void>;
-  handleSavePph: (newRec: PphRecord) => Promise<void>;
+  handleNavigateSupplierEdit: (record: SupplierRecord) => void;
+  handleDeleteSupplier: (id: string) => Promise<void>;
+  handleSaveSupplier: (formData: SupplierFormData, editId?: string) => Promise<void>;
+  handleNavigatePaymentTermEdit: (record: PaymentTermRecord) => void;
+  handleDeletePaymentTerm: (id: string) => Promise<void>;
+  handleSavePaymentTerm: (data: { name: string }, editId?: string) => Promise<void>;
+  handleNavigatePurchaseCategoryEdit: (record: PurchaseCategoryRecord) => void;
+  handleDeletePurchaseCategory: (id: string) => Promise<void>;
+  handleSavePurchaseCategory: (data: { code: string; name: string }, editId?: string) => Promise<void>;
+  handleNavigateDeliveryTermEdit: (record: DeliveryTermRecord) => void;
+  handleDeleteDeliveryTerm: (id: string) => Promise<void>;
+  handleSaveDeliveryTerm: (data: { name: string }, editId?: string) => Promise<void>;
+  handleNavigateAdditionalCostEdit: (record: AdditionalCostRecord) => void;
+  handleDeleteAdditionalCost: (id: string) => Promise<void>;
+  handleSaveAdditionalCost: (data: { code: string; name: string }, editId?: string) => Promise<void>;
+  handleNavigatePphEdit: (record: PphRecord) => void;
+  handleDeletePph: (id: string) => Promise<void>;
+  handleSavePph: (newRec: PphRecord, isEdit?: boolean) => Promise<void>;
   handleNavigateUnitEdit: (unit: UnitRecord) => void;
   handleSaveUnit: (record: UnitRecord, isEdit: boolean) => Promise<void>;
   handleDeleteUnit: (id: string) => Promise<void>;
+  handleToggleUnitStatus: (id: string) => Promise<void> | void;
+  handleNavigateUnitReferenceCreate: () => void;
+  handleNavigateUnitReferenceEdit: (record: UnitReferenceRecord) => void;
+  handleSaveUnitReference: (data: Partial<UnitReferenceRecord>, id?: string) => Promise<void>;
+  handleDeleteUnitReference: (id: string) => Promise<void>;
+  handleToggleUnitReferenceStatus: (id: string) => Promise<void> | void;
+  isUnitReferencesLoading?: boolean;
   handleNavigateClassificationEdit: (cls: ClassificationRecord) => void;
   handleSaveClassification: (record: ClassificationRecord, isEdit: boolean) => Promise<void>;
   handleDeleteClassification: (id: string) => Promise<void>;
@@ -235,10 +268,13 @@ export interface AppViewRendererProps {
   handleSaveStyle: (record: StyleRecord, isEdit: boolean) => Promise<void>;
   handleDeleteStyle: (id: string) => Promise<void>;
   handleToggleStyleStatus: (id: string) => void;
-  handleSaveColor: (record: ColorRecord) => Promise<void>;
+  handleNavigateColorEdit: (record: ColorRecord) => void;
+  handleSaveColor: (record: ColorRecord, isEdit?: boolean) => Promise<void>;
+  handleDeleteColor: (id: string) => Promise<void>;
+  handleToggleColorStatus: (id: string) => Promise<void> | void;
   handleSaveReceiveNote: (newRecord: ReceiveNoteRecord) => Promise<void>;
   handleSaveReceiveNoteReturn: (newRecord: ReceiveNoteReturnRecord) => Promise<void>;
-  handleSaveWarehouseMaster: (newWarehouse: WarehouseMasterRecord) => Promise<void>;
+  handleSaveWarehouseMaster: (newWarehouse: WarehouseMasterRecord, isEdit?: boolean) => Promise<void>;
   isWarehouseTypesLoading?: boolean;
   handleSaveWarehouseCoordinate: (newCoordinate: WarehouseCoordinateRecord) => Promise<void>;
   handleDeleteWarehouseCoordinate: (warehouseId: string, coordinateId: string) => Promise<void>;
@@ -271,21 +307,35 @@ export interface AppViewRendererProps {
   handleNavigateCurrencyEdit: (record: CurrencyRecord) => void;
   handleSaveCurrency: (data: CurrencyFormData, id?: string) => Promise<void>;
   handleDeleteCurrency: (id: string) => Promise<void>;
+  handleToggleCurrencyStatus: (id: string) => Promise<void> | void;
   isCurrenciesLoading?: boolean;
   handleNavigateGenerateQr: () => void;
   handleNavigateItemEdit: (item: ItemRecord) => void;
   handleSaveItem: (record: ItemRecord, isEdit: boolean) => Promise<void>;
   handleDeleteItem: (id: string) => Promise<void>;
+  handleToggleItemStatus: (id: string) => Promise<void> | void;
   handleSaveRequestMaterial: (newRecord: RequestMaterialRecord) => Promise<void>;
   handleProfileCancel: () => void;
   handleProfileSaveConfirmed: () => void;
   // State Records & Setters
   supplierRecords: SupplierRecord[];
+  editingSupplier: SupplierRecord | null;
+  setEditingSupplier: React.Dispatch<React.SetStateAction<SupplierRecord | null>>;
   paymentTermRecords: PaymentTermRecord[];
+  editingPaymentTerm: PaymentTermRecord | null;
+  setEditingPaymentTerm: React.Dispatch<React.SetStateAction<PaymentTermRecord | null>>;
   purchaseCategoryRecords: PurchaseCategoryRecord[];
+  editingPurchaseCategory: PurchaseCategoryRecord | null;
+  setEditingPurchaseCategory: React.Dispatch<React.SetStateAction<PurchaseCategoryRecord | null>>;
   deliveryTermRecords: DeliveryTermRecord[];
+  editingDeliveryTerm: DeliveryTermRecord | null;
+  setEditingDeliveryTerm: React.Dispatch<React.SetStateAction<DeliveryTermRecord | null>>;
   additionalCostRecords: AdditionalCostRecord[];
+  editingAdditionalCost: AdditionalCostRecord | null;
+  setEditingAdditionalCost: React.Dispatch<React.SetStateAction<AdditionalCostRecord | null>>;
   pphRecords: PphRecord[];
+  editingPph: PphRecord | null;
+  setEditingPph: React.Dispatch<React.SetStateAction<PphRecord | null>>;
   unitRecords: UnitRecord[];
   editingUnit: UnitRecord | null;
   setEditingUnit: React.Dispatch<React.SetStateAction<UnitRecord | null>>;
@@ -314,6 +364,8 @@ export interface AppViewRendererProps {
   editingStyle: StyleRecord | null;
   setEditingStyle: React.Dispatch<React.SetStateAction<StyleRecord | null>>;
   colorRecords: ColorRecord[];
+  editingColor: ColorRecord | null;
+  setEditingColor: React.Dispatch<React.SetStateAction<ColorRecord | null>>;
   itemRecords: ItemRecord[];
   editingItem: ItemRecord | null;
   setEditingItem: React.Dispatch<React.SetStateAction<ItemRecord | null>>;
@@ -322,7 +374,11 @@ export interface AppViewRendererProps {
   receiveNoteReturnRecords: ReceiveNoteReturnRecord[];
   documentHistoryRecords: DocumentHistoryRecord[];
   warehouseMasterRecords: WarehouseMasterRecord[];
+  editingWarehouseMaster: WarehouseMasterRecord | null;
+  setEditingWarehouseMaster: React.Dispatch<React.SetStateAction<WarehouseMasterRecord | null>>;
   warehouseTypeRecords: WarehouseTypeOption[];
+  referenceRecordsMap: Partial<Record<ReferenceMasterPageKey, ReferenceMasterRecord[]>>;
+  masterFetchStates: Record<string, "loading" | "done">;
   countryRecords: CountryRecord[];
   accountRecords: AccountRecord[];
   jobNumberRecords: JobNumberRecord[];
@@ -356,7 +412,11 @@ export function AppViewRenderer({
   handleNavigateTransferStockReturnCreate,
   handleNavigateTransferStockReturnEdit,
   handleNavigateTransferStockReturnDetail,
+  handleNavigateReferenceCreate,
   handleNavigateMasterWarehouseCreate,
+  handleNavigateWarehouseMasterEdit,
+  handleDeleteWarehouseMaster,
+  handleToggleWarehouseMasterStatus,
   handleNavigateWarehouseCoordinates,
   handleNavigateWarehouseCoordinateCreate,
   handleNavigateStockNotificationCreate,
@@ -367,25 +427,46 @@ export function AppViewRenderer({
   handleEditTypeOfRequest,
   handleSaveTypeOfRequest,
   handleDeleteTypeOfRequest,
+  handleToggleTypeOfRequestStatus: _handleToggleTypeOfRequestStatus,
   handleNavigateDestinationLocationCreate,
   handleEditDestinationLocation,
   handleSaveDestinationLocation,
   handleDeleteDestinationLocation,
+  handleToggleDestinationLocationStatus: _handleToggleDestinationLocationStatus,
   handleToggleSupplierHide,
   handleTogglePaymentTermHide,
   handleTogglePurchaseCategoryHide,
   handleToggleDeliveryTermHide,
   handleToggleAdditionalCostHide,
   handleTogglePphHide,
+  handleNavigateSupplierEdit,
+  handleDeleteSupplier,
   handleSaveSupplier,
+  handleNavigatePaymentTermEdit,
+  handleDeletePaymentTerm,
   handleSavePaymentTerm,
+  handleNavigatePurchaseCategoryEdit,
+  handleDeletePurchaseCategory,
   handleSavePurchaseCategory,
+  handleNavigateDeliveryTermEdit,
+  handleDeleteDeliveryTerm,
   handleSaveDeliveryTerm,
+  handleNavigateAdditionalCostEdit,
+  handleDeleteAdditionalCost,
   handleSaveAdditionalCost,
+  handleNavigatePphEdit,
+  handleDeletePph,
   handleSavePph,
   handleNavigateUnitEdit,
   handleSaveUnit,
   handleDeleteUnit,
+  handleToggleUnitStatus,
+  handleNavigateUnitReferenceCreate,
+  handleNavigateUnitReferenceEdit,
+  handleSaveUnitReference,
+  handleDeleteUnitReference,
+  handleToggleUnitReferenceStatus,
+  isUnitReferencesLoading = false,
   handleNavigateClassificationEdit,
   handleSaveClassification,
   handleDeleteClassification,
@@ -414,7 +495,10 @@ export function AppViewRenderer({
   handleSaveStyle,
   handleDeleteStyle,
   handleToggleStyleStatus,
+  handleNavigateColorEdit,
   handleSaveColor,
+  handleDeleteColor,
+  handleToggleColorStatus,
   handleSaveReceiveNote,
   handleSaveReceiveNoteReturn,
   handleSaveWarehouseMaster,
@@ -450,20 +534,34 @@ export function AppViewRenderer({
   handleNavigateCurrencyEdit,
   handleSaveCurrency,
   handleDeleteCurrency,
+  handleToggleCurrencyStatus,
   isCurrenciesLoading = false,
   handleNavigateGenerateQr,
   handleNavigateItemEdit,
   handleSaveItem,
   handleDeleteItem,
+  handleToggleItemStatus,
   handleSaveRequestMaterial,
   handleProfileCancel,
   handleProfileSaveConfirmed,
   supplierRecords,
+  editingSupplier,
+  setEditingSupplier,
   paymentTermRecords,
+  editingPaymentTerm,
+  setEditingPaymentTerm,
   purchaseCategoryRecords,
+  editingPurchaseCategory,
+  setEditingPurchaseCategory,
   deliveryTermRecords,
+  editingDeliveryTerm,
+  setEditingDeliveryTerm,
   additionalCostRecords,
+  editingAdditionalCost,
+  setEditingAdditionalCost,
   pphRecords,
+  editingPph,
+  setEditingPph,
   unitRecords,
   editingUnit,
   setEditingUnit,
@@ -492,6 +590,8 @@ export function AppViewRenderer({
   editingStyle,
   setEditingStyle,
   colorRecords,
+  editingColor,
+  setEditingColor,
   itemRecords,
   editingItem,
   setEditingItem,
@@ -500,7 +600,11 @@ export function AppViewRenderer({
   receiveNoteReturnRecords,
   documentHistoryRecords,
   warehouseMasterRecords,
+  editingWarehouseMaster,
+  setEditingWarehouseMaster,
   warehouseTypeRecords,
+  referenceRecordsMap,
+  masterFetchStates,
   countryRecords,
   accountRecords,
   jobNumberRecords,
@@ -626,6 +730,8 @@ export function AppViewRenderer({
           records={supplierRecords}
           onToggleHide={handleToggleSupplierHide}
           onAddNew={() => handleNavigateCreate("supplier")}
+          onEdit={handleNavigateSupplierEdit}
+          onDelete={handleDeleteSupplier}
         />
       )}
 
@@ -635,6 +741,8 @@ export function AppViewRenderer({
           records={paymentTermRecords}
           onToggleHide={handleTogglePaymentTermHide}
           onAddNew={() => handleNavigateCreate("payment-term")}
+          onEdit={handleNavigatePaymentTermEdit}
+          onDelete={handleDeletePaymentTerm}
         />
       )}
 
@@ -644,6 +752,8 @@ export function AppViewRenderer({
           records={purchaseCategoryRecords}
           onToggleHide={handleTogglePurchaseCategoryHide}
           onAddNew={() => handleNavigateCreate("purchase-category")}
+          onEdit={handleNavigatePurchaseCategoryEdit}
+          onDelete={handleDeletePurchaseCategory}
         />
       )}
 
@@ -653,6 +763,8 @@ export function AppViewRenderer({
           records={deliveryTermRecords}
           onToggleHide={handleToggleDeliveryTermHide}
           onAddNew={() => handleNavigateCreate("delivery-terms")}
+          onEdit={handleNavigateDeliveryTermEdit}
+          onDelete={handleDeleteDeliveryTerm}
         />
       )}
 
@@ -662,6 +774,8 @@ export function AppViewRenderer({
           records={additionalCostRecords}
           onToggleHide={handleToggleAdditionalCostHide}
           onAddNew={() => handleNavigateCreate("additional-costs")}
+          onEdit={handleNavigateAdditionalCostEdit}
+          onDelete={handleDeleteAdditionalCost}
         />
       )}
 
@@ -671,6 +785,8 @@ export function AppViewRenderer({
           records={pphRecords}
           onToggleHide={handleTogglePphHide}
           onAddNew={() => handleNavigateCreate("pph")}
+          onEdit={handleNavigatePphEdit}
+          onDelete={handleDeletePph}
         />
       )}
 
@@ -681,12 +797,19 @@ export function AppViewRenderer({
           onAddNew={() => handleNavigateCreate("unit")}
           onEdit={handleNavigateUnitEdit}
           onDelete={handleDeleteUnit}
+          onToggleStatus={handleToggleUnitStatus}
         />
       )}
 
       {/* Exim Unit Reference (Satuan) Listing */}
       {viewState.type === "list" && (viewState.page === "satuan" || (viewState.page as string) === "unit-reference") && (
-        <UnitReferenceIndex records={unitReferenceRecords} />
+        <UnitReferenceIndex
+          records={unitReferenceRecords}
+          onAddNew={handleNavigateUnitReferenceCreate}
+          onEdit={handleNavigateUnitReferenceEdit}
+          onDelete={handleDeleteUnitReference}
+          onToggleStatus={handleToggleUnitReferenceStatus}
+        />
       )}
 
       {/* Exim Master Classification Listing */}
@@ -771,6 +894,9 @@ export function AppViewRenderer({
         <ColorIndex
           records={colorRecords}
           onAddNew={() => handleNavigateCreate("colour")}
+          onEdit={handleNavigateColorEdit}
+          onDelete={handleDeleteColor}
+          onToggleStatus={handleToggleColorStatus}
         />
       )}
 
@@ -782,6 +908,7 @@ export function AppViewRenderer({
           onGenerateQr={handleNavigateGenerateQr}
           onEdit={handleNavigateItemEdit}
           onDelete={handleDeleteItem}
+          onToggleStatus={handleToggleItemStatus}
         />
       )}
 
@@ -816,6 +943,9 @@ export function AppViewRenderer({
         <MasterWarehouseIndex
           records={warehouseMasterRecords}
           onAddNew={handleNavigateMasterWarehouseCreate}
+          onEdit={handleNavigateWarehouseMasterEdit}
+          onDelete={handleDeleteWarehouseMaster}
+          onToggleStatus={handleToggleWarehouseMasterStatus}
           onViewCoordinates={handleNavigateWarehouseCoordinates}
         />
       )}
@@ -871,6 +1001,7 @@ export function AppViewRenderer({
           onAddNew={handleNavigateCurrencyCreate}
           onEdit={handleNavigateCurrencyEdit}
           onDelete={handleDeleteCurrency}
+          onToggleStatus={handleToggleCurrencyStatus}
         />
       )}
 
@@ -932,8 +1063,24 @@ export function AppViewRenderer({
         />
       )}
 
+      {/* Read-Backed Reference Master Listings */}
+      {viewState.type === "list" &&
+        viewState.page in REFERENCE_MASTER_CONFIGS && (() => {
+          const refKey = viewState.page as ReferenceMasterPageKey;
+          const config = REFERENCE_MASTER_CONFIGS[refKey];
+          return (
+            <ReferenceMasterIndex
+              config={config}
+              records={referenceRecordsMap[refKey] || []}
+              isLoading={masterFetchStates[`ref-${refKey}`] === "loading"}
+              onAddNew={() => handleNavigateReferenceCreate(refKey)}
+            />
+          );
+        })()}
+
       {/* New Lightweight Placeholder Pages */}
       {viewState.type === "list" &&
+        !(viewState.page in REFERENCE_MASTER_CONFIGS) &&
         viewState.page !== "pr" &&
         viewState.page !== "po" &&
         viewState.page !== "report" &&
@@ -1131,12 +1278,24 @@ export function AppViewRenderer({
         />
       )}
 
-      {/* Master Warehouse - Add New Warehouse Form */}
-      {viewState.type === "warehouse-master-create" && (
+      {/* Master Warehouse - Add / Edit Warehouse Form */}
+      {(viewState.type === "warehouse-master-create" ||
+        viewState.type === "warehouse-master-edit") && (
         <WarehouseMasterForm
+          initialRecord={
+            viewState.type === "warehouse-master-edit"
+              ? viewState.record ??
+                editingWarehouseMaster ??
+                warehouseMasterRecords.find((w) => String(w.id) === String(viewState.id)) ??
+                null
+              : null
+          }
           warehouseTypes={warehouseTypeRecords}
           isWarehouseTypesLoading={isWarehouseTypesLoading}
-          onBack={() => handleNavigateList("warehouse-master", "/warehouse/master/warehouse")}
+          onBack={() => {
+            setEditingWarehouseMaster(null);
+            handleNavigateList("warehouse-master", "/warehouse/master/warehouse");
+          }}
           onSave={handleSaveWarehouseMaster}
         />
       )}
@@ -1205,44 +1364,121 @@ export function AppViewRenderer({
         />
       )}
 
-      {viewState.type === "supplier-create" && (
+      {(viewState.type === "supplier-create" || viewState.type === "supplier-edit") && (
         <SupplierForm
-          onBack={() => handleNavigateList("supplier", "/procurement/purchase-master/supplier")}
+          mode={viewState.type === "supplier-edit" ? "edit" : "create"}
+          recordId={viewState.type === "supplier-edit" ? viewState.id : undefined}
+          initialRecord={
+            viewState.type === "supplier-edit"
+              ? viewState.record ??
+                editingSupplier ??
+                supplierRecords.find((s) => String(s.id) === String(viewState.id)) ??
+                null
+              : null
+          }
+          onBack={() => {
+            setEditingSupplier(null);
+            handleNavigateList("supplier", "/procurement/purchase-master/supplier");
+          }}
           onSave={handleSaveSupplier}
         />
       )}
 
-      {viewState.type === "payment-term-create" && (
+      {(viewState.type === "payment-term-create" || viewState.type === "payment-term-edit") && (
         <PaymentTermForm
-          onBack={() => handleNavigateList("payment-term", "/procurement/purchase-master/payment-term")}
+          initialRecord={
+            viewState.type === "payment-term-edit"
+              ? viewState.record ??
+                editingPaymentTerm ??
+                paymentTermRecords.find((p) => String(p.id) === String(viewState.id)) ??
+                null
+              : null
+          }
+          onBack={() => {
+            setEditingPaymentTerm(null);
+            handleNavigateList("payment-term", "/procurement/purchase-master/payment-term");
+          }}
           onSave={handleSavePaymentTerm}
         />
       )}
 
-      {viewState.type === "purchase-category-create" && (
+      {(viewState.type === "purchase-category-create" ||
+        viewState.type === "purchase-category-edit") && (
         <PurchaseCategoryForm
-          onBack={() => handleNavigateList("purchase-category", "/procurement/purchase-master/purchase-category")}
+          initialRecord={
+            viewState.type === "purchase-category-edit"
+              ? viewState.record ??
+                editingPurchaseCategory ??
+                purchaseCategoryRecords.find((c) => String(c.id) === String(viewState.id)) ??
+                null
+              : null
+          }
+          onBack={() => {
+            setEditingPurchaseCategory(null);
+            handleNavigateList(
+              "purchase-category",
+              "/procurement/purchase-master/purchase-category"
+            );
+          }}
           onSave={handleSavePurchaseCategory}
         />
       )}
 
-      {viewState.type === "delivery-terms-create" && (
+      {(viewState.type === "delivery-terms-create" ||
+        viewState.type === "delivery-terms-edit") && (
         <DeliveryTermsForm
-          onBack={() => handleNavigateList("delivery-terms", "/procurement/purchase-master/delivery-terms")}
+          initialRecord={
+            viewState.type === "delivery-terms-edit"
+              ? viewState.record ??
+                editingDeliveryTerm ??
+                deliveryTermRecords.find((d) => String(d.id) === String(viewState.id)) ??
+                null
+              : null
+          }
+          onBack={() => {
+            setEditingDeliveryTerm(null);
+            handleNavigateList("delivery-terms", "/procurement/purchase-master/delivery-terms");
+          }}
           onSave={handleSaveDeliveryTerm}
         />
       )}
 
-      {viewState.type === "additional-costs-create" && (
+      {(viewState.type === "additional-costs-create" ||
+        viewState.type === "additional-costs-edit") && (
         <AdditionalCostsForm
-          onBack={() => handleNavigateList("additional-costs", "/procurement/purchase-master/additional-costs")}
+          initialRecord={
+            viewState.type === "additional-costs-edit"
+              ? viewState.record ??
+                editingAdditionalCost ??
+                additionalCostRecords.find((a) => String(a.id) === String(viewState.id)) ??
+                null
+              : null
+          }
+          onBack={() => {
+            setEditingAdditionalCost(null);
+            handleNavigateList(
+              "additional-costs",
+              "/procurement/purchase-master/additional-costs"
+            );
+          }}
           onSave={handleSaveAdditionalCost}
         />
       )}
 
-      {viewState.type === "pph-create" && (
+      {(viewState.type === "pph-create" || viewState.type === "pph-edit") && (
         <PphForm
-          onBack={() => handleNavigateList("pph", "/procurement/purchase-master/pph")}
+          initialRecord={
+            viewState.type === "pph-edit"
+              ? viewState.record ??
+                editingPph ??
+                pphRecords.find((p) => String(p.id) === String(viewState.id)) ??
+                null
+              : null
+          }
+          onBack={() => {
+            setEditingPph(null);
+            handleNavigateList("pph", "/procurement/purchase-master/pph");
+          }}
           onSave={handleSavePph}
         />
       )}
@@ -1389,10 +1625,19 @@ export function AppViewRenderer({
         />
       )}
 
-      {/* Dedicated Exim Color Form (Add Color) */}
-      {viewState.type === "colour-create" && (
+      {/* Dedicated Exim Color Form (Add / Edit Color) */}
+      {(viewState.type === "colour-create" || viewState.type === "colour-edit") && (
         <ColorForm
+          initialRecord={
+            viewState.type === "colour-edit"
+              ? viewState.record ??
+                editingColor ??
+                colorRecords.find((c) => String(c.id) === String(viewState.id)) ??
+                null
+              : null
+          }
           onBack={() => {
+            setEditingColor(null);
             handleNavigateList("colour", "/exim/master/colour");
           }}
           onSave={handleSaveColor}
@@ -1558,6 +1803,33 @@ export function AppViewRenderer({
           onCancel={() => handleNavigateList("currency", "/exim/master/currency")}
         />
       )}
+
+      {/* Dedicated Exim Unit Reference (Satuan) Form (Add / Edit) */}
+      {(viewState.type === "unit-reference-create" || viewState.type === "unit-reference-edit") && (
+        <UnitReferenceForm
+          mode={viewState.type === "unit-reference-edit" ? "edit" : "create"}
+          recordId={viewState.type === "unit-reference-edit" ? viewState.id : undefined}
+          initialRecord={
+            viewState.type === "unit-reference-edit" ? viewState.record ?? null : null
+          }
+          records={unitReferenceRecords}
+          isLoading={isUnitReferencesLoading}
+          onSave={handleSaveUnitReference}
+          onCancel={() => handleNavigateList("satuan", "/exim/master/satuan")}
+        />
+      )}
+
+      {/* Read-Backed Reference Master Create Forms */}
+      {viewState.type === "reference-master-create" &&
+        viewState.page in REFERENCE_MASTER_CONFIGS && (() => {
+          const config = REFERENCE_MASTER_CONFIGS[viewState.page as ReferenceMasterPageKey];
+          return (
+            <ReferenceMasterForm
+              config={config}
+              onCancel={() => handleNavigateList(config.pageKey, config.listPath)}
+            />
+          );
+        })()}
 
       {/* Dedicated Warehouse Incoming: Transfer Stock Return Form (Add / Edit) */}
       {(viewState.type === "transfer-stock-return-create" ||

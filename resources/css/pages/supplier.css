@@ -240,6 +240,72 @@
   gap: 10px;
 }
 
+.supplier-created-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 145px;
+}
+
+.supplier-creator {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1.3;
+}
+
+.supplier-timestamp {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  line-height: 1.25;
+}
+
+.supplier-data-table th.supplier-col-no {
+  width: 52px;
+  text-align: center;
+}
+
+.supplier-data-table th.supplier-col-code {
+  width: 120px;
+}
+
+.supplier-data-table th.supplier-col-name {
+  width: 220px;
+}
+
+.supplier-data-table th.supplier-col-address {
+  min-width: 240px;
+}
+
+.supplier-data-table th.supplier-col-country {
+  width: 100px;
+  text-align: center;
+}
+
+.supplier-data-table th.supplier-col-npwp {
+  width: 135px;
+}
+
+.supplier-data-table th.supplier-col-nitku {
+  width: 145px;
+}
+
+.supplier-data-table th.supplier-col-created {
+  width: 165px;
+}
+
+.supplier-data-table th.supplier-col-status {
+  width: 100px;
+  text-align: center;
+}
+
+.supplier-data-table th.supplier-col-option {
+  width: 96px;
+  text-align: center;
+}
+
 .field-label {
   font-size: 11px;
   font-weight: 700;

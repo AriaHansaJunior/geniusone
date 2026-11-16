@@ -31,6 +31,7 @@ import type { AccountRecord } from "../pages/Exim/Master/Account/account-types";
 import type { JobNumberRecord } from "../pages/Procurement/PurchaseMaster/JobNumber/job-number-types";
 import type { TypeOfRequestRecord } from "../pages/Warehouse/Master/TypeOfRequest/type-of-request-types";
 import type { DestinationLocationRecord } from "../pages/Warehouse/Master/DestinationLocation/destination-location-types";
+import type { ReferenceMasterRecord } from "../pages/Common/ReferenceMaster/reference-master-types";
 
 // =========================================================================
 // HELPERS
@@ -104,22 +105,51 @@ export async function fetchMasterLookupsApi(category?: string): Promise<Record<s
 // 1. PROCUREMENT MASTER API
 // =========================================================================
 
-export async function fetchMasterSuppliers(): Promise<SupplierRecord[] | null> {
-  const res = await apiGet<{ data: any[] }>("/api/procurement/master/suppliers", { per_page: 500 });
-  if (!res?.data) return null;
-  return res.data.map((r: any, idx: number) => ({
+function mapSupplierRecord(r: any, idx = 0): SupplierRecord {
+  return {
     id: String(r.id),
     no: idx + 1,
     supplierCode: r.code || "",
     supplierName: r.name || "",
     address: r.address || "-",
+    contactPerson: r.contact_person || "",
+    city: r.city || "",
+    state: r.state || "",
     country: r.country_name || r.country?.name || "-",
+    zipcode: r.zipcode || "",
+    email: r.email || "",
+    telephoneNumber: r.telephone_number || "",
+    paymentTerm: r.payment_term?.name || r.paymentTerm?.name || "",
+    paymentMethod: r.payment_method?.name || r.paymentMethod?.name || "",
+    typeRafaksi: r.rafaksi_type?.name || r.rafaksiType?.name || "-",
+    currency: r.currency?.code || r.currency?.name || "",
+    port: r.port?.name || "",
     npwp: r.npwp || "-",
     nitku: r.nitku || "-",
+    whatsapp: r.whatsapp || "",
+    wechatId: r.wechat_id || "",
+    countries_id: r.countries_id ? Number(r.countries_id) : undefined,
+    payment_terms_id: r.payment_terms_id ? Number(r.payment_terms_id) : undefined,
+    payment_methods_id: r.payment_methods_id ? Number(r.payment_methods_id) : undefined,
+    rafaksi_types_id: r.rafaksi_types_id ? Number(r.rafaksi_types_id) : undefined,
+    currencies_id: r.currencies_id ? Number(r.currencies_id) : undefined,
+    ports_id: r.ports_id ? Number(r.ports_id) : undefined,
     createdBy: r.created_by_name || r.created_by_user?.name || r.creator?.name || "-",
     createdAt: formatDisplayDate(r.created_at),
     hidden: !isTruthyStatus(r.status),
-  }));
+  };
+}
+
+export async function fetchMasterSuppliers(): Promise<SupplierRecord[] | null> {
+  const res = await apiGet<{ data: any[] }>("/api/procurement/master/suppliers", { per_page: 500 });
+  if (!res?.data) return null;
+  return res.data.map((r: any, idx: number) => mapSupplierRecord(r, idx));
+}
+
+export async function fetchSupplierDetailApi(id: string): Promise<SupplierRecord | null> {
+  const res = await apiGet<{ data: any }>(`/api/procurement/master/suppliers/${toNumericOrCleanId(id)}`);
+  if (!res?.data) return null;
+  return mapSupplierRecord(res.data, 0);
 }
 
 export async function saveSupplierApi(data: SupplierFormData, editId?: string): Promise<SupplierRecord> {
@@ -159,20 +189,7 @@ export async function saveSupplierApi(data: SupplierFormData, editId?: string): 
   if (!res?.data) {
     throw new Error("Supplier was not returned after saving.");
   }
-  const r = res.data;
-  return {
-    id: String(r.id),
-    no: 1,
-    supplierCode: r.code || data.supplierCode || "",
-    supplierName: r.name || data.supplierName || "",
-    address: r.address || data.address || "-",
-    country: r.country_name || r.country?.name || data.country || "-",
-    npwp: r.npwp || data.npwp || "-",
-    nitku: r.nitku || data.nitku || "-",
-    createdBy: r.created_by_name || r.created_by_user?.name || r.creator?.name || "-",
-    createdAt: formatDisplayDate(r.created_at),
-    hidden: !isTruthyStatus(r.status ?? 1),
-  };
+  return mapSupplierRecord(res.data, 0);
 }
 
 export async function deleteSupplierApi(id: string): Promise<boolean> {
@@ -386,7 +403,8 @@ export async function fetchMasterUnits(): Promise<UnitRecord[] | null> {
   return res.data.map((r: any, idx: number) => ({
     id: String(r.id),
     no: idx + 1,
-    name: r.unit?.nama || r.name || r.code || "",
+    name: r.unit?.nama || r.nama || r.name || r.code || "",
+    status: isTruthyStatus(r.status ?? 1),
     createdBy: r.created_by_name || r.creator?.name || "-",
     createdAt: formatDisplayDate(r.created_at),
   }));
@@ -395,7 +413,7 @@ export async function fetchMasterUnits(): Promise<UnitRecord[] | null> {
 export async function saveUnitApi(record: UnitRecord, isEdit: boolean): Promise<UnitRecord> {
   const payload = {
     name: record.name,
-    status: 1,
+    status: record.status === false ? 0 : 1,
   };
   const res = isEdit
     ? await apiPut<{ data: any }>(`/api/exim/master/units/${toNumericOrCleanId(record.id)}`, payload)
@@ -409,6 +427,7 @@ export async function saveUnitApi(record: UnitRecord, isEdit: boolean): Promise<
     ...record,
     id: String(r.id),
     name: r.unit?.nama || r.nama || r.name || record.name,
+    status: isTruthyStatus(r.status ?? record.status ?? 1),
     createdBy: r?.created_by_name || record.createdBy || "-",
     createdAt: formatDisplayDate(r?.created_at || record.createdAt),
   };
@@ -429,6 +448,7 @@ export async function fetchMasterBrands(): Promise<BrandRecord[] | null> {
   return res.data.map((r: any, idx: number) => ({
     id: String(r.id),
     no: idx + 1,
+    code: r.code || "",
     name: r.name || "",
     description: r.description || "",
     status: isTruthyStatus(r.status),
@@ -669,10 +689,12 @@ export async function toggleFacilityStatusApi(id: string, _nextStatus?: boolean)
 }
 
 export async function fetchHsRateTypesApi(): Promise<{ bmTypes: Array<{ id: number; name: string }>; cukaiTypes: Array<{ id: number; name: string }> }> {
-  const res = await apiGet<{ data: { types_rates_bm?: any[]; types_rates_cukai?: any[] } }>("/api/exim/master/hs-codes/rate-types");
+  const res = await apiGet<{ data: { bm?: any[]; cukai?: any[]; types_rates_bm?: any[]; types_rates_cukai?: any[] } }>("/api/exim/master/hs-codes/rate-types");
+  const rawBm = res?.data?.bm ?? res?.data?.types_rates_bm ?? [];
+  const rawCukai = res?.data?.cukai ?? res?.data?.types_rates_cukai ?? [];
   return {
-    bmTypes: (res?.data?.types_rates_bm || []).map((t: any) => ({ id: Number(t.id), name: t.name || t.nama || "" })),
-    cukaiTypes: (res?.data?.types_rates_cukai || []).map((t: any) => ({ id: Number(t.id), name: t.name || t.nama || "" })),
+    bmTypes: rawBm.map((t: any) => ({ id: Number(t.id), name: t.name || t.nama || "" })),
+    cukaiTypes: rawCukai.map((t: any) => ({ id: Number(t.id), name: t.name || t.nama || "" })),
   };
 }
 
@@ -684,9 +706,11 @@ export async function fetchMasterHsCodes(): Promise<HsRecord[] | null> {
     no: idx + 1,
     name: r.name || r.code || "",
     description: r.description || "",
-    typeRateBm: r.bm_type?.name || r.bm_type_name || "-",
+    typeRateBmId: r.types_rates_bm_id ? Number(r.types_rates_bm_id) : r.type_rate_bm?.id ? Number(r.type_rate_bm.id) : undefined,
+    typeRateBm: r.type_rate_bm?.name || r.typeRateBm?.name || r.bm_type?.name || r.bm_type_name || "-",
     ratesBm: Number(r.rates_bm ?? r.bm ?? 0),
-    typeRateCukai: r.cukai_type?.name || r.cukai_type_name || "-",
+    typeRateCukaiId: r.types_rates_cukai_id ? Number(r.types_rates_cukai_id) : r.type_rate_cukai?.id ? Number(r.type_rate_cukai.id) : undefined,
+    typeRateCukai: r.type_rate_cukai?.name || r.typeRateCukai?.name || r.cukai_type?.name || r.cukai_type_name || "-",
     ratesCukai: Number(r.rates_cukai ?? r.cukai ?? 0),
     ratesPpn: Number(r.rates_ppn ?? r.ppn ?? 0),
     ratesPph: Number(r.rates_pph ?? r.pph ?? 0),
@@ -694,34 +718,40 @@ export async function fetchMasterHsCodes(): Promise<HsRecord[] | null> {
   }));
 }
 
-export async function saveHsApi(record: HsRecord, isEdit: boolean): Promise<HsRecord | null> {
-  const payload = {
+export async function saveHsApi(record: HsRecord, isEdit: boolean): Promise<HsRecord> {
+  const payload: Record<string, any> = {
     name: record.name,
-    description: record.description,
-    bm_type_name: record.typeRateBm,
-    rates_bm: record.ratesBm,
-    cukai_type_name: record.typeRateCukai,
-    rates_cukai: record.ratesCukai,
-    rates_ppn: record.ratesPpn,
-    rates_pph: record.ratesPph,
-    rates_ppnbm: record.ratesPpnbm,
+    description: record.description?.trim() ? record.description.trim() : null,
+    rates_bm: Number(record.ratesBm) || 0,
+    rates_cukai: Number(record.ratesCukai) || 0,
   };
+  if (record.typeRateBmId) {
+    payload.types_rates_bm_id = Number(record.typeRateBmId);
+  }
+  if (record.typeRateCukaiId) {
+    payload.types_rates_cukai_id = Number(record.typeRateCukaiId);
+  }
   const res = isEdit
     ? await apiPut<{ data: any }>(`/api/exim/master/hs-codes/${toNumericOrCleanId(record.id)}`, payload)
     : await apiPost<{ data: any }>("/api/exim/master/hs-codes", payload);
   const r = res?.data;
+  if (!r) {
+    throw new Error("HS Code was not returned after saving.");
+  }
   return {
     ...record,
-    id: r?.id ? String(r.id) : record.id,
-    name: r?.name || record.name,
-    description: r?.description ?? record.description ?? "",
-    typeRateBm: r?.bm_type?.name || r?.bm_type_name || record.typeRateBm,
-    ratesBm: Number(r?.rates_bm ?? record.ratesBm),
-    typeRateCukai: r?.cukai_type?.name || r?.cukai_type_name || record.typeRateCukai,
-    ratesCukai: Number(r?.rates_cukai ?? record.ratesCukai),
-    ratesPpn: Number(r?.rates_ppn ?? record.ratesPpn),
-    ratesPph: Number(r?.rates_pph ?? record.ratesPph),
-    ratesPpnbm: Number(r?.rates_ppnbm ?? record.ratesPpnbm),
+    id: String(r.id),
+    name: r.name || record.name,
+    description: r.description ?? record.description ?? "",
+    typeRateBmId: r.types_rates_bm_id ? Number(r.types_rates_bm_id) : r.type_rate_bm?.id ? Number(r.type_rate_bm.id) : record.typeRateBmId,
+    typeRateBm: r.type_rate_bm?.name || r.typeRateBm?.name || r.bm_type?.name || record.typeRateBm,
+    ratesBm: Number(r.rates_bm ?? record.ratesBm),
+    typeRateCukaiId: r.types_rates_cukai_id ? Number(r.types_rates_cukai_id) : r.type_rate_cukai?.id ? Number(r.type_rate_cukai.id) : record.typeRateCukaiId,
+    typeRateCukai: r.type_rate_cukai?.name || r.typeRateCukai?.name || r.cukai_type?.name || record.typeRateCukai,
+    ratesCukai: Number(r.rates_cukai ?? record.ratesCukai),
+    ratesPpn: Number(r.rates_ppn ?? record.ratesPpn ?? 0),
+    ratesPph: Number(r.rates_pph ?? record.ratesPph ?? 0),
+    ratesPpnbm: Number(r.rates_ppnbm ?? record.ratesPpnbm ?? 0),
   };
 }
 
@@ -831,14 +861,17 @@ export async function fetchMasterColours(): Promise<ColorRecord[] | null> {
     no: idx + 1,
     code: r.code || "",
     name: r.name || "",
+    grade: r.grade || "",
+    status: isTruthyStatus(r.status ?? 1),
   }));
 }
 
 export async function saveColorApi(record: ColorRecord, isEdit?: boolean): Promise<ColorRecord> {
   const payload = {
-    code: record.code,
+    code: record.code?.trim() ? record.code.trim() : null,
     name: record.name,
-    status: 1,
+    grade: record.grade ?? "",
+    status: record.status === false ? 0 : 1,
   };
   const res = isEdit
     ? await apiPut<{ data: any }>(`/api/exim/master/colours/${toNumericOrCleanId(record.id)}`, payload)
@@ -851,8 +884,10 @@ export async function saveColorApi(record: ColorRecord, isEdit?: boolean): Promi
   return {
     ...record,
     id: String(r.id),
-    code: r.code || record.code,
+    code: r.code || "",
     name: r.name || record.name,
+    grade: r.grade ?? record.grade ?? "",
+    status: isTruthyStatus(r.status ?? record.status ?? 1),
   };
 }
 
@@ -1301,6 +1336,7 @@ export async function fetchMasterCurrencies(): Promise<CurrencyRecord[] | null> 
     symbol: r.symbol || r.code || "",
     syncStatus: (r.sync_status || (isTruthyStatus(r.status) ? "Synced" : "Not Synced")) as CurrencyRecord["syncStatus"],
     lastSynced: formatDisplayDate(r.last_synced_at || r.updated_at || r.created_at),
+    status: isTruthyStatus(r.status ?? 1),
     createdBy: r.created_by_name || r.created_by_user?.name || r.creator?.name || "-",
     createdAt: formatDisplayDate(r.created_at),
   }));
@@ -1326,6 +1362,7 @@ export async function saveCurrencyApi(
     symbol: r.symbol || r.code || data.currencyCode,
     syncStatus: (r.sync_status || "Synced") as CurrencyRecord["syncStatus"],
     lastSynced: formatDisplayDate(r.last_synced_at || r.updated_at || r.created_at),
+    status: isTruthyStatus(r.status ?? 1),
     createdBy: r.created_by_name || r.created_by_user?.name || r.creator?.name || "-",
     createdAt: formatDisplayDate(r.created_at),
   };
@@ -1445,6 +1482,66 @@ export async function deleteJobNumberApi(id: string): Promise<boolean> {
 export async function toggleJobNumberStatusApi(id: string): Promise<boolean> {
   const res = await apiPatch(`/api/procurement/master/job-numbers/${toNumericOrCleanId(id)}/toggle-status`);
   return Boolean(res);
+}
+
+// =========================================================================
+// 5. REFERENCE MASTERS READERS (EXISTING BACKEND READ ENDPOINTS)
+// =========================================================================
+
+function mapReferenceRows(rows: any[], hasStatus = true): ReferenceMasterRecord[] {
+  return rows.map((r: any, idx: number) => ({
+    id: String(r.id),
+    no: idx + 1,
+    code: r.code ?? undefined,
+    name: r.name || r.nama || "",
+    status: hasStatus ? isTruthyStatus(r.status ?? 1) : undefined,
+  }));
+}
+
+export async function fetchPphTypesMasterApi(): Promise<ReferenceMasterRecord[]> {
+  const res = await apiGet<{ data: any[] }>("/api/procurement/master/pph-types");
+  return mapReferenceRows(Array.isArray(res?.data) ? res.data : [], false);
+}
+
+export async function fetchTypeRatesBmMasterApi(): Promise<ReferenceMasterRecord[]> {
+  const res = await apiGet<{ data: { bm?: any[]; types_rates_bm?: any[] } }>("/api/exim/master/hs-codes/rate-types");
+  const rows = res?.data?.bm ?? res?.data?.types_rates_bm ?? [];
+  return mapReferenceRows(Array.isArray(rows) ? rows : [], true);
+}
+
+export async function fetchTypeRatesCukaiMasterApi(): Promise<ReferenceMasterRecord[]> {
+  const res = await apiGet<{ data: { cukai?: any[]; types_rates_cukai?: any[] } }>("/api/exim/master/hs-codes/rate-types");
+  const rows = res?.data?.cukai ?? res?.data?.types_rates_cukai ?? [];
+  return mapReferenceRows(Array.isArray(rows) ? rows : [], true);
+}
+
+export async function fetchCustomsReportsMasterApi(): Promise<ReferenceMasterRecord[]> {
+  const res = await apiGet<{ data: Record<string, any> }>("/api/master/lookups");
+  const rows = res?.data?.customs_reports ?? [];
+  return mapReferenceRows(Array.isArray(rows) ? rows : [], true);
+}
+
+export async function fetchItemTypesMasterApi(): Promise<ReferenceMasterRecord[]> {
+  const res = await apiGet<{ data: Record<string, any> }>("/api/master/lookups");
+  const rows = res?.data?.item_types ?? [];
+  return mapReferenceRows(Array.isArray(rows) ? rows : [], true);
+}
+
+export async function fetchGroupScrapItemsMasterApi(): Promise<ReferenceMasterRecord[]> {
+  const res = await apiGet<{ data: Record<string, any> }>("/api/master/lookups");
+  const rows = res?.data?.group_scrap_items ?? [];
+  return mapReferenceRows(Array.isArray(rows) ? rows : [], true);
+}
+
+export async function fetchSpecificationsMasterApi(): Promise<ReferenceMasterRecord[]> {
+  const res = await apiGet<{ data: Record<string, any> }>("/api/master/lookups");
+  const rows = res?.data?.specifications ?? [];
+  return mapReferenceRows(Array.isArray(rows) ? rows : [], true);
+}
+
+export async function fetchWarehouseTypesListApi(): Promise<ReferenceMasterRecord[]> {
+  const res = await apiGet<{ data: any[] }>("/api/warehouse/master/warehouse-types");
+  return mapReferenceRows(Array.isArray(res?.data) ? res.data : [], true);
 }
 
 // Re-export Operations, Warehouse, Dashboard, Reports & Admin APIs

@@ -941,7 +941,7 @@ export function ItemForm({ initialRecord, onBack, onSave }: ItemFormProps) {
           <Button type="button" variant="ghost" onClick={onBack} disabled={saving}>
             Cancel
           </Button>
-          <Button type="submit" variant="primary" icon="check" disabled={saving || loadingLookups}>
+          <Button type="submit" variant="primary" disabled={saving || loadingLookups}>
             {saving ? "Saving..." : "Save"}
           </Button>
         </div>

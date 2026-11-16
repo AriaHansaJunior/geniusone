@@ -7,17 +7,23 @@ import { fetchPphTypesApi } from "../../../../data/masterApi";
 import type { PphRecord } from "./pph-types";
 
 interface PphFormProps {
+  initialRecord?: PphRecord | null;
   onBack: () => void;
-  onSave?: (record: PphRecord) => void | Promise<any>;
+  onSave?: (record: PphRecord, isEdit: boolean) => void | Promise<any>;
 }
 
-export function PphForm({ onBack, onSave }: PphFormProps) {
-  const [name, setName] = useState("");
-  const [rate, setRate] = useState("0.00");
-  const [selectedTypeId, setSelectedTypeId] = useState("");
+export function PphForm({ initialRecord, onBack, onSave }: PphFormProps) {
+  const isEdit = Boolean(initialRecord);
+  const [name, setName] = useState(initialRecord?.name || "");
+  const [rate, setRate] = useState(
+    initialRecord?.rate !== undefined ? Number(initialRecord.rate).toFixed(2) : "0.00"
+  );
+  const [selectedTypeId, setSelectedTypeId] = useState(
+    initialRecord?.typeId ? String(initialRecord.typeId) : ""
+  );
   const [pphTypes, setPphTypes] = useState<Array<{ id: number; name: string }>>([]);
   const [loadingTypes, setLoadingTypes] = useState(false);
-  const [deduction, setDeduction] = useState("No");
+  const [deduction, setDeduction] = useState(initialRecord?.deduction || "No");
   const [saving, setSaving] = useState(false);
 
   const [notification, setNotification] = useState<{
@@ -29,6 +35,17 @@ export function PphForm({ onBack, onSave }: PphFormProps) {
   const [showSaveConfirm, setShowSaveConfirm] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
 
+  useEffect(() => {
+    setName(initialRecord?.name || "");
+    setRate(
+      initialRecord?.rate !== undefined ? Number(initialRecord.rate).toFixed(2) : "0.00"
+    );
+    setSelectedTypeId(initialRecord?.typeId ? String(initialRecord.typeId) : "");
+    setDeduction(initialRecord?.deduction || "No");
+    setNotification(null);
+    setSaving(false);
+  }, [initialRecord]);
+
   // Fetch PPh types from pph_type table
   useEffect(() => {
     let cancelled = false;
@@ -37,6 +54,12 @@ export function PphForm({ onBack, onSave }: PphFormProps) {
       .then((data) => {
         if (!cancelled && Array.isArray(data)) {
           setPphTypes(data);
+          if (!selectedTypeId && initialRecord?.type) {
+            const matched = data.find(
+              (t) => t.name.toLowerCase() === initialRecord.type?.toLowerCase()
+            );
+            if (matched) setSelectedTypeId(String(matched.id));
+          }
         }
       })
       .catch((err) => {
@@ -49,7 +72,7 @@ export function PphForm({ onBack, onSave }: PphFormProps) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [initialRecord]);
 
   // Form dirty check
   const isDirty = name.trim() !== "" || rate !== "0.00" || selectedTypeId !== "" || deduction !== "No";
@@ -101,19 +124,20 @@ export function PphForm({ onBack, onSave }: PphFormProps) {
     const chosenType = pphTypes.find((t) => String(t.id) === selectedTypeId);
 
     const newRecord: PphRecord = {
-      id: `pph-${Date.now()}`,
+      id: initialRecord ? initialRecord.id : "",
       name: name.trim(),
       rate: parseFloat(rate) || 0,
       deduction: deduction,
-      type: chosenType ? chosenType.name : undefined,
-      typeId: chosenType ? chosenType.id : (selectedTypeId ? Number(selectedTypeId) : undefined),
+      type: chosenType ? chosenType.name : initialRecord?.type,
+      typeId: chosenType ? chosenType.id : (selectedTypeId ? Number(selectedTypeId) : initialRecord?.typeId),
+      hidden: initialRecord?.hidden,
     };
 
     if (onSave) {
       try {
         setSaving(true);
         setNotification(null);
-        await onSave(newRecord);
+        await onSave(newRecord, isEdit);
       } catch (err: any) {
         setNotification({
           type: "warning",
@@ -145,7 +169,7 @@ export function PphForm({ onBack, onSave }: PphFormProps) {
       {/* Page Header */}
       <div className="master-form-header">
         <h1 className="master-form-page-title">
-          Add PPH
+          {isEdit ? "Edit PPH" : "Add PPH"}
         </h1>
       </div>
 

@@ -1,87 +1,69 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Button } from "../../../../components/ui/Button";
 import { Icon } from "../../../../components/ui/Icon";
+import type { DeliveryTermRecord } from "./delivery-terms-types";
 
 interface DeliveryTermsFormProps {
+  initialRecord?: DeliveryTermRecord | null;
   onBack: () => void;
-  onSave?: (data: { name: string }) => void | Promise<any>;
+  onSave?: (data: { name: string }, editId?: string) => void | Promise<any>;
 }
 
-export function DeliveryTermsForm({ onBack, onSave }: DeliveryTermsFormProps) {
-  const [name, setName] = useState("");
+export function DeliveryTermsForm({
+  initialRecord,
+  onBack,
+  onSave,
+}: DeliveryTermsFormProps) {
+  const isEdit = Boolean(initialRecord);
+  const [name, setName] = useState(initialRecord?.name || "");
   const [saving, setSaving] = useState(false);
-  const [notification, setNotification] = useState<{
-    type: "info" | "warning";
-    message: string;
-  } | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setName(initialRecord?.name || "");
+    setSubmitError(null);
+    setSaving(false);
+  }, [initialRecord]);
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (saving) return;
 
     if (!name.trim()) {
-      setNotification({
-        type: "warning",
-        message: "Please enter the Delivery Term before proceeding.",
-      });
+      setSubmitError("Please enter the Delivery Term before proceeding.");
       return;
     }
 
     if (onSave) {
       try {
         setSaving(true);
-        setNotification(null);
-        await onSave({ name: name.trim() });
+        setSubmitError(null);
+        await onSave({ name: name.trim() }, initialRecord?.id);
       } catch (err: any) {
-        setNotification({
-          type: "warning",
-          message: err?.message || "Failed to save delivery term to database.",
-        });
-      } finally {
+        setSubmitError(err?.message || "Failed to save delivery term to database.");
         setSaving(false);
       }
     }
   };
 
   return (
-    <div
-      className="delivery-terms-form-page master-form-page"
-    >
-      {/* Page Header */}
+    <div className="delivery-terms-form-page master-form-page">
       <div className="master-form-header">
         <h1 className="master-form-page-title">
-          Add Delivery Term
+          {isEdit ? "Edit Delivery Term" : "Add Delivery Term"}
         </h1>
       </div>
 
-      {/* Status Notice Banner */}
-      {notification && (
-        <div
-          className={`supplier-form-alert supplier-form-alert--${notification.type}`}
-        >
-          <Icon
-            name={notification.type === "info" ? "check" : "alertTriangle"}
-            size={16}
-          />
-          <div className="supplier-form-alert__content">
-            <strong>
-              {notification.type === "info"
-                ? "Form Validated"
-                : "Required Information Missing"}
-            </strong>
-            <p>{notification.message}</p>
+      {submitError && (
+        <div className="master-form-alert--error" role="alert">
+          <div className="master-form-alert-row">
+            <Icon name="alertTriangle" size={16} />
+            <span>{submitError}</span>
           </div>
-          <button
-            type="button"
-            className="alert-close-btn"
-            onClick={() => setNotification(null)}
-          >
-            ×
-          </button>
         </div>
       )}
 
-      {/* Main Form Card */}
-      <form onSubmit={handleSave} className="master-form-card">
+      <form onSubmit={handleSave} className="master-form-card" noValidate>
         <div className="master-form-group">
           <label htmlFor="deliveryTermName" className="master-form-label">
             Delivery Term <span className="required-mark">*</span>
@@ -89,6 +71,7 @@ export function DeliveryTermsForm({ onBack, onSave }: DeliveryTermsFormProps) {
           <input
             id="deliveryTermName"
             type="text"
+            maxLength={45}
             className="master-form-input"
             placeholder="Delivery Terms"
             value={name}
@@ -98,7 +81,6 @@ export function DeliveryTermsForm({ onBack, onSave }: DeliveryTermsFormProps) {
           />
         </div>
 
-        {/* Action Buttons Footer */}
         <div className="master-form-actions">
           <Button type="button" variant="ghost" onClick={onBack} disabled={saving}>
             Cancel

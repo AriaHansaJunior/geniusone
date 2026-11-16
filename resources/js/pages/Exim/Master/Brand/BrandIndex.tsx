@@ -4,6 +4,7 @@ import { SearchField } from "../../../../components/ui/SearchField";
 import { Icon } from "../../../../components/ui/Icon";
 import { ConfirmDialog } from "../../../../components/ui/ConfirmDialog";
 import { Pagination } from "../../../../components/ui/Pagination";
+import { StatusToggle } from "../../../../components/ui/StatusToggle";
 import { initialBrandRecords } from "./brand-data";
 import type {
   BrandRecord,
@@ -179,12 +180,9 @@ export function BrandIndex({
     const isActive = sortField === field && sortDirection !== "none";
     return (
       <span
-        style={{
-          marginLeft: "6px",
-          display: "inline-flex",
-          alignItems: "center",
-          color: isActive ? "var(--blue-600)" : "var(--muted-2)",
-        }}
+        className={`master-sort-indicator ${
+          isActive ? "master-sort-indicator--active" : ""
+        }`}
       >
         {isActive ? (
           sortDirection === "asc" ? (
@@ -230,7 +228,7 @@ export function BrandIndex({
       {/* Main Table Panel */}
       <div className="brand-table-panel panel">
         {/* Table Toolbar */}
-        <div className="brand-toolbar" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 18px", borderBottom: "1px solid var(--line)", background: "#ffffff", gap: "16px" }}>
+        <div className="brand-toolbar master-table-toolbar">
           <SearchField
             value={search}
             onChange={(val) => {
@@ -239,7 +237,7 @@ export function BrandIndex({
             }}
             placeholder="Search code, name..."
           />
-          <div className="brand-header-actions" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <div className="brand-header-actions master-toolbar-actions">
             <Button variant="primary" onClick={onAddNew}>
               Add New
             </Button>
@@ -260,42 +258,38 @@ export function BrandIndex({
             <table className="brand-data-table data-table">
               <thead>
                 <tr>
-                  <th style={{ width: "60px", textAlign: "center" }}>
+                  <th className="master-col-no">
                     <span>No</span>
                   </th>
                   <th
-                    className="sortable-th"
-                    style={{ width: "100px" }}
+                    className="sortable-th master-col-w100"
                     onClick={() => handleToggleSort("code")}
                   >
                     <span>Code</span>
                     {renderSortIndicator("code")}
                   </th>
                   <th
-                    className="sortable-th"
-                    style={{ minWidth: "220px" }}
+                    className="sortable-th master-col-mw220"
                     onClick={() => handleToggleSort("name")}
                   >
                     <span>Name</span>
                     {renderSortIndicator("name")}
                   </th>
                   <th
-                    className="sortable-th"
-                    style={{ minWidth: "260px" }}
+                    className="sortable-th master-col-mw260"
                     onClick={() => handleToggleSort("description")}
                   >
                     <span>Description</span>
                     {renderSortIndicator("description")}
                   </th>
                   <th
-                    className="sortable-th"
-                    style={{ width: "80px", textAlign: "center" }}
+                    className="sortable-th master-col-status-sm"
                     onClick={() => handleToggleSort("status")}
                   >
                     <span>Status</span>
                     {renderSortIndicator("status")}
                   </th>
-                  <th style={{ width: "140px", textAlign: "center" }}>
+                  <th className="master-col-actions-wide">
                     <span>Option</span>
                   </th>
                 </tr>
@@ -308,13 +302,7 @@ export function BrandIndex({
                     return (
                       <tr key={item.id}>
                         {/* 1. Sequential No */}
-                        <td
-                          style={{
-                            textAlign: "center",
-                            color: "var(--muted)",
-                            fontWeight: 600,
-                          }}
-                        >
+                        <td className="master-cell-no">
                           {rowNumber}
                         </td>
 
@@ -333,29 +321,17 @@ export function BrandIndex({
                           {item.description || "-"}
                         </td>
 
-                        {/* 5. Status Checkbox Toggle */}
-                        <td style={{ textAlign: "center" }}>
-                          <button
-                            type="button"
-                            className="brand-status-toggle"
-                            onClick={() => handleToggleStatus(item.id)}
-                            title={`Click to toggle status (${
-                              item.status ? "Active" : "Inactive"
-                            })`}
-                            aria-label={`Toggle status for ${item.name}`}
-                          >
-                            <span
-                              className={`brand-status-checkbox ${
-                                item.status ? "checked" : "unchecked"
-                              }`}
-                            >
-                              {item.status && <Icon name="check" size={13} />}
-                            </span>
-                          </button>
+                        {/* 5. Status Toggle */}
+                        <td className="master-cell-center">
+                          <StatusToggle
+                            active={item.status}
+                            onToggle={() => handleToggleStatus(item.id)}
+                            ariaLabel={`Toggle status for ${item.name}`}
+                          />
                         </td>
 
                         {/* 6. Option Row Actions */}
-                        <td style={{ textAlign: "center" }}>
+                        <td className="master-cell-center">
                           <div className="brand-row-actions">
                             {onEdit && (
                               <button

@@ -3,6 +3,7 @@ import { Button } from "../../../../components/ui/Button";
 import { SearchField } from "../../../../components/ui/SearchField";
 import { Pagination } from "../../../../components/ui/Pagination";
 import { Icon } from "../../../../components/ui/Icon";
+import { StatusToggle } from "../../../../components/ui/StatusToggle";
 import { ConfirmDialog } from "../../../../components/ui/ConfirmDialog";
 import { initialUnitRecords } from "./unit-data";
 import type { UnitRecord } from "./unit-types";
@@ -12,6 +13,7 @@ interface UnitIndexProps {
   onAddNew: () => void;
   onEdit?: (record: UnitRecord) => void;
   onDelete?: (id: string) => void;
+  onToggleStatus?: (id: string) => void;
 }
 
 type SortDirection = "none" | "asc" | "desc";
@@ -21,6 +23,7 @@ export function UnitIndex({
   onAddNew,
   onEdit,
   onDelete,
+  onToggleStatus,
 }: UnitIndexProps) {
   const [localRecords, setLocalRecords] = useState<UnitRecord[]>(records);
   const [search, setSearch] = useState("");
@@ -34,7 +37,6 @@ export function UnitIndex({
     setLocalRecords(records);
   }, [records]);
 
-  // Filter records based on search query
   const filteredRecords = useMemo(() => {
     if (!search.trim()) return localRecords;
     const query = search.toLowerCase().trim();
@@ -43,7 +45,6 @@ export function UnitIndex({
     );
   }, [localRecords, search]);
 
-  // Sort records by Unit Name
   const sortedRecords = useMemo(() => {
     if (sortDirection === "none") {
       return filteredRecords;
@@ -59,7 +60,6 @@ export function UnitIndex({
     return list;
   }, [filteredRecords, sortDirection]);
 
-  // Pagination calculation
   const totalRecords = sortedRecords.length;
   const totalPages = Math.max(1, Math.ceil(totalRecords / pageSize));
   const safeCurrentPage = Math.min(Math.max(1, currentPage), totalPages);
@@ -69,7 +69,6 @@ export function UnitIndex({
     return sortedRecords.slice(startIdx, startIdx + pageSize);
   }, [sortedRecords, safeCurrentPage, pageSize]);
 
-  // Toggle sorting on Unit Name
   const handleToggleSort = () => {
     setSortDirection((prev) => {
       if (prev === "none") return "asc";
@@ -81,19 +80,16 @@ export function UnitIndex({
   const handleConfirmDelete = () => {
     if (!unitToDelete) return;
     const idToDelete = unitToDelete.id;
-    setLocalRecords((prev) => prev.filter((u) => u.id !== idToDelete));
+    setUnitToDelete(null);
     if (onDelete) {
       onDelete(idToDelete);
     }
-    setUnitToDelete(null);
   };
 
   return (
-    <div className="unit-page">
-      {/* Main Table Container Card */}
-      <div className="panel unit-table-panel">
-        {/* Table Toolbar: Search on left, Single Add Unit action on right */}
-        <div className="unit-toolbar">
+    <div className="master-page-shell unit-page">
+      <div className="panel table-panel unit-table-panel">
+        <div className="master-table-toolbar">
           <SearchField
             value={search}
             onChange={(val) => {
@@ -103,34 +99,30 @@ export function UnitIndex({
             placeholder="Search unit..."
           />
 
-          <div className="button-row">
+          <div className="master-toolbar-actions">
             <Button variant="primary" onClick={onAddNew}>
-              Add Unit
+              Add New
             </Button>
           </div>
         </div>
 
-        {/* Responsive Table Frame */}
         <div className="table-frame">
           <div className="table-scroll">
             <table className="unit-data-table data-table">
               <thead>
                 <tr>
-                  <th style={{ width: "70px", textAlign: "center" }}>
+                  <th className="master-col-no">
                     <span>No</span>
                   </th>
                   <th
-                    className="sortable-th"
+                    className="sortable-th master-sortable-th"
                     onClick={handleToggleSort}
                   >
                     <span>Unit</span>
                     <span
-                      style={{
-                        marginLeft: "6px",
-                        display: "inline-flex",
-                        alignItems: "center",
-                        color: sortDirection === "none" ? "var(--muted-2)" : "var(--blue-600)",
-                      }}
+                      className={`master-sort-indicator ${
+                        sortDirection !== "none" ? "master-sort-indicator--active" : ""
+                      }`}
                     >
                       {sortDirection === "asc" ? (
                         <Icon name="arrowUp" size={12} />
@@ -141,50 +133,53 @@ export function UnitIndex({
                       )}
                     </span>
                   </th>
-                  <th style={{ width: "160px", textAlign: "center" }}>
-                    <span>Actions</span>
+                  <th className="master-col-status">
+                    <span>Status</span>
+                  </th>
+                  <th className="master-col-actions">
+                    <span>Option</span>
                   </th>
                 </tr>
               </thead>
               <tbody>
                 {paginatedRecords.length > 0 ? (
                   paginatedRecords.map((item, index) => {
-                    const rowNumber =
-                      (safeCurrentPage - 1) * pageSize + index + 1;
+                    const rowNumber = (safeCurrentPage - 1) * pageSize + index + 1;
                     return (
                       <tr key={item.id}>
-                        <td
-                          style={{
-                            textAlign: "center",
-                            color: "var(--muted)",
-                            fontWeight: 600,
-                          }}
-                        >
-                          {rowNumber}
+                        <td className="master-cell-no">{rowNumber}</td>
+                        <td className="master-cell-name unit-name-cell">{item.name}</td>
+                        <td className="master-cell-center">
+                          <StatusToggle
+                            active={item.status ?? true}
+                            onToggle={() => onToggleStatus?.(item.id)}
+                            ariaLabel={`Toggle status for ${item.name}`}
+                          />
                         </td>
-                        <td className="unit-name-cell">
-                          {item.name}
-                        </td>
-                        <td style={{ textAlign: "center" }}>
-                          <div className="unit-row-actions">
+                        <td className="master-cell-center">
+                          <div className="master-actions-group">
                             {onEdit && (
                               <button
                                 type="button"
-                                className="unit-action-btn unit-action-btn--edit"
+                                className="btn-action-edit"
                                 title={`Edit ${item.name}`}
+                                aria-label={`Edit ${item.name}`}
                                 onClick={() => setUnitToEdit(item)}
                               >
                                 <Icon name="edit" size={13} />
                               </button>
                             )}
-                            <button
-                              type="button"
-                              className="unit-action-btn unit-action-btn--delete"
-                              title={`Delete ${item.name}`}
-                              onClick={() => setUnitToDelete(item)}
-                            >
-                              <Icon name="trash" size={13} />
-                            </button>
+                            {onDelete && (
+                              <button
+                                type="button"
+                                className="btn-action-delete"
+                                title={`Delete ${item.name}`}
+                                aria-label={`Delete ${item.name}`}
+                                onClick={() => setUnitToDelete(item)}
+                              >
+                                <Icon name="trash" size={13} />
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -192,13 +187,15 @@ export function UnitIndex({
                   })
                 ) : (
                   <tr>
-                    <td colSpan={3} className="empty-table-cell">
-                      <div className="empty">
-                        <div className="empty__icon">
-                          <Icon name="search" />
+                    <td colSpan={4} className="empty-table-cell">
+                      <div className="empty master-empty-box">
+                        <div className="empty__icon master-empty-icon">
+                          <Icon name="search" size={24} />
                         </div>
                         <strong>No units found</strong>
-                        <span>Try adjusting your search query.</span>
+                        <span className="master-empty-subtitle">
+                          Try adjusting your search query.
+                        </span>
                       </div>
                     </td>
                   </tr>
@@ -207,7 +204,6 @@ export function UnitIndex({
             </table>
           </div>
 
-          {/* Unified Bottom Pagination */}
           <Pagination
             totalRecords={totalRecords}
             currentPage={safeCurrentPage}
@@ -222,7 +218,6 @@ export function UnitIndex({
         </div>
       </div>
 
-      {/* Edit Confirmation Dialog */}
       <ConfirmDialog
         isOpen={!!unitToEdit}
         title="Edit Record"
@@ -240,7 +235,6 @@ export function UnitIndex({
         onCancel={() => setUnitToEdit(null)}
       />
 
-      {/* Delete Confirmation Dialog */}
       <ConfirmDialog
         isOpen={!!unitToDelete}
         entityType="unit"

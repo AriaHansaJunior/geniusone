@@ -226,7 +226,7 @@ export function StyleImport({ onBack }: StyleImportProps) {
             ref={fileInputRef}
             type="file"
             accept=".xlsx, .xls, .csv"
-            style={{ display: "none" }}
+            className="master-hidden-input"
             onChange={handleFileChange}
           />
 
@@ -297,7 +297,7 @@ export function StyleImport({ onBack }: StyleImportProps) {
           <Button type="button" variant="ghost" onClick={onBack}>
             Cancel
           </Button>
-          <Button type="submit" variant="primary" icon="check">
+          <Button type="submit" variant="primary">
             Save
           </Button>
         </div>

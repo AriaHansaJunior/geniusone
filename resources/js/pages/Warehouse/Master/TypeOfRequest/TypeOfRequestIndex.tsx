@@ -7,6 +7,8 @@ import { Badge } from "../../../../components/ui/Badge";
 import { Icon } from "../../../../components/ui/Icon";
 import { StatusToggle } from "../../../../components/ui/StatusToggle";
 import { ConfirmDialog } from "../../../../components/ui/ConfirmDialog";
+import { toggleWarehouseTypeOfRequestStatusApi } from "../../../../data/masterApi";
+import { useNotification } from "../../../../context/NotificationContext";
 import { initialTypeOfRequestRecords } from "./type-of-request-data";
 import type { TypeOfRequestRecord, TypeOfRequestSortField } from "./type-of-request-types";
 
@@ -116,11 +118,23 @@ export function TypeOfRequestIndex({
     setRecordToDelete(null);
   };
 
-  const handleToggleStatus = (record: TypeOfRequestRecord) => {
-    const nextStatus = record.status === "Active" ? "Inactive" : "Active";
+  const { notifySuccess, notifyError } = useNotification();
+
+  const handleToggleStatus = async (record: TypeOfRequestRecord) => {
+    const previousStatus = record.status;
+    const nextStatus = previousStatus === "Active" ? "Inactive" : "Active";
     setLocalRecords((prev) =>
       prev.map((r) => (r.id === record.id ? { ...r, status: nextStatus } : r))
     );
+    try {
+      await toggleWarehouseTypeOfRequestStatusApi(record.id);
+      notifySuccess("Status Updated", `${record.name} is now ${nextStatus}.`);
+    } catch (err) {
+      setLocalRecords((prev) =>
+        prev.map((r) => (r.id === record.id ? { ...r, status: previousStatus } : r))
+      );
+      notifyError("Status Update Failed", err);
+    }
   };
 
   const handleExportExcel = () => {
@@ -170,7 +184,7 @@ export function TypeOfRequestIndex({
       {/* White Content Card */}
       <div className="wh-table-card">
         {/* Top Controls Bar */}
-        <div className="wh-controls-bar" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 18px", borderBottom: "1px solid var(--line)", background: "#ffffff", gap: "16px" }}>
+        <div className="wh-controls-bar">
           <div className="wh-search-box">
             <SearchField
               value={search}
@@ -181,7 +195,7 @@ export function TypeOfRequestIndex({
               placeholder="Search..."
             />
           </div>
-          <div className="wh-header-actions" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <div className="wh-header-actions">
             <Button variant="primary" onClick={onAddNew}>
               Add New
             </Button>
@@ -198,9 +212,8 @@ export function TypeOfRequestIndex({
               <tr>
                 <th className="wh-th-no">No</th>
                 <th
-                  className="wh-th-sortable"
+                  className="wh-th-sortable wh-col-req-name"
                   onClick={() => handleToggleSort("name")}
-                  style={{ width: "170px" }}
                 >
                   <div className="wh-th-content">
                     <span>Request Type Name</span>
@@ -208,28 +221,26 @@ export function TypeOfRequestIndex({
                   </div>
                 </th>
                 <th
-                  className="wh-th-sortable"
+                  className="wh-th-sortable wh-col-meta"
                   onClick={() => handleToggleSort("department")}
-                  style={{ width: "150px" }}
                 >
                   <div className="wh-th-content">
                     <span>Department</span>
                     {renderSortIndicator("department")}
                   </div>
                 </th>
-                <th style={{ minWidth: "220px" }}>Description</th>
-                <th style={{ width: "110px", textAlign: "center" }}>Job Required</th>
+                <th className="wh-col-desc">Description</th>
+                <th className="wh-col-job-req">Job Required</th>
                 <th
-                  className="wh-th-sortable text-center"
+                  className="wh-th-sortable text-center wh-col-status"
                   onClick={() => handleToggleSort("status")}
-                  style={{ width: "80px" }}
                 >
                   <div className="wh-th-content justify-center">
                     <span>Status</span>
                     {renderSortIndicator("status")}
                   </div>
                 </th>
-                <th className="wh-th-option text-center" style={{ width: "80px" }}>
+                <th className="wh-th-option text-center wh-col-option">
                   Option
                 </th>
               </tr>
@@ -252,12 +263,12 @@ export function TypeOfRequestIndex({
                         <strong>{item.name}</strong>
                       </td>
                       <td>
-                        <span style={{ fontSize: "12px", color: "var(--ink-soft)" }}>
+                        <span className="wh-cell-sub">
                           {item.department || "-"}
                         </span>
                       </td>
                       <td className="wh-td-desc">{item.description}</td>
-                      <td style={{ textAlign: "center" }}>
+                      <td className="master-cell-center">
                         {item.requiresJobNumber ? (
                           <Badge tone="purple">Yes</Badge>
                         ) : (

@@ -4,13 +4,15 @@ import { Icon } from "../../../../components/ui/Icon";
 import { SearchField } from "../../../../components/ui/SearchField";
 import { Pagination } from "../../../../components/ui/Pagination";
 import { StatusToggle } from "../../../../components/ui/StatusToggle";
-import {
-  type SupplierRecord,
-} from "./supplier-types";
+import { ConfirmDialog } from "../../../../components/ui/ConfirmDialog";
+import { useNotification } from "../../../../context/NotificationContext";
+import { type SupplierRecord } from "./supplier-types";
 
 interface SupplierIndexProps {
   records?: SupplierRecord[];
   onAddNew: () => void;
+  onEdit?: (record: SupplierRecord) => void;
+  onDelete?: (id: string) => Promise<void> | void;
   onToggleHide?: (id: string) => void;
 }
 
@@ -29,9 +31,15 @@ type SortDirection = "asc" | "desc";
 export function SupplierIndex({
   records = [],
   onAddNew,
+  onEdit,
+  onDelete,
   onToggleHide,
 }: SupplierIndexProps) {
+  const { notifySuccess, notifyError, notifyWarning } = useNotification();
+
   const [localRecords, setLocalRecords] = useState<SupplierRecord[]>(records);
+  const [supplierToEdit, setSupplierToEdit] = useState<SupplierRecord | null>(null);
+  const [supplierToDelete, setSupplierToDelete] = useState<SupplierRecord | null>(null);
 
   useEffect(() => {
     setLocalRecords(records);
@@ -42,7 +50,6 @@ export function SupplierIndex({
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [sortField, setSortField] = useState<SortField>("no");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
-  const [exportNotice, setExportNotice] = useState<string | null>(null);
 
   const handleToggleHide = (id: string) => {
     setLocalRecords((prev) =>
@@ -53,7 +60,15 @@ export function SupplierIndex({
     }
   };
 
-  // Filter records based on search query
+  const handleConfirmDelete = async () => {
+    if (!supplierToDelete) return;
+    const target = supplierToDelete;
+    setSupplierToDelete(null);
+    if (onDelete) {
+      await onDelete(target.id);
+    }
+  };
+
   const filteredRecords = useMemo(() => {
     if (!search.trim()) return localRecords;
     const query = search.toLowerCase().trim();
@@ -72,7 +87,6 @@ export function SupplierIndex({
     });
   }, [localRecords, search]);
 
-  // Sort records
   const sortedRecords = useMemo(() => {
     const list = [...filteredRecords];
     list.sort((a, b) => {
@@ -97,7 +111,6 @@ export function SupplierIndex({
     return list;
   }, [filteredRecords, sortField, sortDirection]);
 
-  // Pagination calculation
   const totalRecords = sortedRecords.length;
   const totalPages = Math.max(1, Math.ceil(totalRecords / pageSize));
   const safeCurrentPage = Math.min(Math.max(1, currentPage), totalPages);
@@ -107,7 +120,6 @@ export function SupplierIndex({
     return sortedRecords.slice(startIdx, startIdx + pageSize);
   }, [sortedRecords, safeCurrentPage, pageSize]);
 
-  // Toggle column sorting
   const handleSort = (field: SortField) => {
     if (sortField === field) {
       setSortDirection((prev) => (prev === "asc" ? "desc" : "asc"));
@@ -117,10 +129,9 @@ export function SupplierIndex({
     }
   };
 
-  // Export to Excel-compatible CSV with UTF-8 BOM
   const handleExportToExcel = () => {
     if (sortedRecords.length === 0) {
-      setExportNotice("No records available to export.");
+      notifyWarning("Nothing to Export", "No supplier records match the current filter.");
       return;
     }
 
@@ -135,6 +146,7 @@ export function SupplierIndex({
         "NITKU",
         "Created By",
         "Created At",
+        "Status",
       ];
 
       const csvRows = [headers.join(",")];
@@ -150,11 +162,11 @@ export function SupplierIndex({
           `"${(row.nitku || "").replace(/"/g, '""')}"`,
           `"${(row.createdBy || "").replace(/"/g, '""')}"`,
           `"${(row.createdAt || "").replace(/"/g, '""')}"`,
+          row.hidden ? "Inactive" : "Active",
         ];
         csvRows.push(values.join(","));
       });
 
-      // Prepend UTF-8 BOM (\uFEFF) so Excel correctly recognizes UTF-8 formatting
       const csvString = "\uFEFF" + csvRows.join("\r\n");
       const blob = new Blob([csvString], { type: "text/csv;charset=utf-8;" });
       const url = URL.createObjectURL(blob);
@@ -169,12 +181,9 @@ export function SupplierIndex({
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
 
-      setExportNotice(
-        `Successfully exported ${sortedRecords.length} supplier record(s) to CSV.`
-      );
-      setTimeout(() => setExportNotice(null), 4000);
-    } catch (err) {
-      setExportNotice("Export could not be completed from current frontend environment.");
+      notifySuccess("Export Completed", `Exported ${sortedRecords.length} supplier record(s).`);
+    } catch {
+      notifyError("Export Failed", "Could not export supplier records.");
     }
   };
 
@@ -182,12 +191,9 @@ export function SupplierIndex({
     const isActive = sortField === field;
     return (
       <span
-        style={{
-          marginLeft: "6px",
-          display: "inline-flex",
-          alignItems: "center",
-          color: isActive ? "var(--blue-600)" : "var(--muted-2)",
-        }}
+        className={`master-sort-indicator ${
+          isActive ? "master-sort-indicator--active" : ""
+        }`}
       >
         {isActive ? (
           sortDirection === "asc" ? (
@@ -203,120 +209,96 @@ export function SupplierIndex({
   };
 
   return (
-    <div className="supplier-master-page">
-      {/* Export status toast if active */}
-      {exportNotice && (
-        <div className="supplier-toast-notice">
-          <Icon name="check" size={14} />
-          <span>{exportNotice}</span>
-          <button
-            type="button"
-            className="toast-close-btn"
-            onClick={() => setExportNotice(null)}
-          >
-            ×
-          </button>
-        </div>
-      )}
-
-      {/* Main Table Container Card */}
+    <div className="master-page-shell supplier-master-page">
       <div className="panel table-panel supplier-table-panel">
-        {/* Table Toolbar: Search on left, Actions on right */}
-        <div className="supplier-table-toolbar">
+        <div className="master-table-toolbar">
           <SearchField
             value={search}
             onChange={(val) => {
               setSearch(val);
               setCurrentPage(1);
             }}
-            placeholder="Search document, supplier, material..."
+            placeholder="Search supplier code, name, NPWP, address..."
           />
-          <div className="button-row">
-            <Button
-              variant="excel"
-              onClick={handleExportToExcel}
-            >
-              Export to Excel
-            </Button>
+          <div className="master-toolbar-actions">
             <Button variant="primary" onClick={onAddNew}>
               Add New
+            </Button>
+            <Button variant="excel" onClick={handleExportToExcel}>
+              Export to Excel
             </Button>
           </div>
         </div>
 
-        {/* Responsive Table Scroll Container */}
         <div className="table-frame supplier-table-frame">
           <div className="table-scroll">
             <table className="data-table supplier-data-table">
               <thead>
                 <tr>
                   <th
-                    style={{ width: "48px", textAlign: "center" }}
+                    className="sortable-th master-sortable-th supplier-col-no"
                     onClick={() => handleSort("no")}
-                    className="sortable-th"
                   >
                     <span>No</span>
                     {renderSortIndicator("no")}
                   </th>
                   <th
-                    style={{ width: "130px" }}
+                    className="sortable-th master-sortable-th supplier-col-code"
                     onClick={() => handleSort("supplierCode")}
-                    className="sortable-th"
                   >
                     <span>Supplier Code</span>
                     {renderSortIndicator("supplierCode")}
                   </th>
                   <th
-                    style={{ width: "230px" }}
+                    className="sortable-th master-sortable-th supplier-col-name"
                     onClick={() => handleSort("supplierName")}
-                    className="sortable-th"
                   >
                     <span>Supplier Name</span>
                     {renderSortIndicator("supplierName")}
                   </th>
                   <th
-                    style={{ minWidth: "260px" }}
+                    className="sortable-th master-sortable-th supplier-col-address"
                     onClick={() => handleSort("address")}
-                    className="sortable-th"
                   >
                     <span>Address</span>
                     {renderSortIndicator("address")}
                   </th>
                   <th
-                    style={{ width: "95px", textAlign: "center" }}
+                    className="sortable-th master-sortable-th supplier-col-country"
                     onClick={() => handleSort("country")}
-                    className="sortable-th"
                   >
                     <span>Country</span>
                     {renderSortIndicator("country")}
                   </th>
                   <th
-                    style={{ width: "135px" }}
+                    className="sortable-th master-sortable-th supplier-col-npwp"
                     onClick={() => handleSort("npwp")}
-                    className="sortable-th"
                   >
                     <span>NPWP</span>
                     {renderSortIndicator("npwp")}
                   </th>
                   <th
-                    style={{ width: "145px" }}
+                    className="sortable-th master-sortable-th supplier-col-nitku"
                     onClick={() => handleSort("nitku")}
-                    className="sortable-th"
                   >
                     <span>NITKU</span>
                     {renderSortIndicator("nitku")}
                   </th>
                   <th
-                    style={{ width: "135px" }}
+                    className="sortable-th master-sortable-th supplier-col-created"
                     onClick={() => handleSort("created")}
-                    className="sortable-th"
                   >
                     <span>Created</span>
                     {renderSortIndicator("created")}
                   </th>
-                  <th style={{ width: "95px", textAlign: "center" }}>
+                  <th className="supplier-col-status">
                     <span>Status</span>
                   </th>
+                  {(onEdit || onDelete) && (
+                    <th className="supplier-col-option">
+                      <span>Option</span>
+                    </th>
+                  )}
                 </tr>
               </thead>
               <tbody>
@@ -325,58 +307,75 @@ export function SupplierIndex({
                     const rowNumber = (safeCurrentPage - 1) * pageSize + index + 1;
                     return (
                       <tr key={item.id} className={item.hidden ? "row--hidden" : ""}>
-                        <td style={{ textAlign: "center", color: "var(--muted)", fontWeight: 600 }}>
-                          {rowNumber}
+                        <td className="master-cell-no">{rowNumber}</td>
+                        <td className="master-cell-code">
+                          {item.supplierCode || "—"}
                         </td>
-                      <td>
-                        {item.supplierCode ? (
-                          <strong className="supplier-code-badge">
-                            {item.supplierCode}
-                          </strong>
-                        ) : (
-                          <span className="text-muted">—</span>
+                        <td className="master-cell-name">{item.supplierName}</td>
+                        <td className="supplier-address-cell">{item.address || "—"}</td>
+                        <td className="master-cell-center">
+                          <span className="supplier-country-tag">{item.country || "—"}</span>
+                        </td>
+                        <td className="master-cell-mono">{item.npwp || "—"}</td>
+                        <td className="master-cell-mono">{item.nitku || "—"}</td>
+                        <td>
+                          <div className="supplier-created-cell">
+                            <span className="supplier-creator">{item.createdBy || "-"}</span>
+                            <span className="supplier-timestamp">{item.createdAt || "-"}</span>
+                          </div>
+                        </td>
+                        <td className="master-cell-center">
+                          <StatusToggle
+                            hidden={item.hidden}
+                            onToggle={() => handleToggleHide(item.id)}
+                            ariaLabel={`Toggle status for ${item.supplierName}`}
+                          />
+                        </td>
+                        {(onEdit || onDelete) && (
+                          <td className="master-cell-center">
+                            <div className="master-actions-group">
+                              {onEdit && (
+                                <button
+                                  type="button"
+                                  className="btn-action-edit"
+                                  title={`Edit ${item.supplierName}`}
+                                  aria-label={`Edit ${item.supplierName}`}
+                                  onClick={() => setSupplierToEdit(item)}
+                                >
+                                  <Icon name="edit" size={13} />
+                                </button>
+                              )}
+                              {onDelete && (
+                                <button
+                                  type="button"
+                                  className="btn-action-delete"
+                                  title={`Delete ${item.supplierName}`}
+                                  aria-label={`Delete ${item.supplierName}`}
+                                  onClick={() => setSupplierToDelete(item)}
+                                >
+                                  <Icon name="trash" size={13} />
+                                </button>
+                              )}
+                            </div>
+                          </td>
                         )}
-                      </td>
-                      <td className="supplier-name-cell">
-                        <strong>{item.supplierName}</strong>
-                      </td>
-                      <td className="supplier-address-cell">
-                        {item.address}
-                      </td>
-                      <td style={{ textAlign: "center" }}>
-                        <span className="supplier-country-tag">
-                          {item.country}
-                        </span>
-                      </td>
-                      <td className="supplier-id-cell">
-                        {item.npwp || "—"}
-                      </td>
-                      <td className="supplier-id-cell">
-                        {item.nitku || "—"}
-                      </td>
-                      <td className="supplier-created-cell">
-                        <strong className="supplier-creator">{item.createdBy}</strong>
-                        <span className="supplier-timestamp">{item.createdAt}</span>
-                      </td>
-                      <td style={{ textAlign: "center" }}>
-                        <StatusToggle
-                          hidden={item.hidden}
-                          onToggle={() => handleToggleHide(item.id)}
-                          ariaLabel={`Toggle status for ${item.supplierName}`}
-                        />
-                      </td>
-                    </tr>
+                      </tr>
                     );
                   })
                 ) : (
                   <tr>
-                    <td colSpan={9} className="empty-table-cell">
-                      <div className="empty">
-                        <div className="empty__icon">
-                          <Icon name="search" />
+                    <td
+                      colSpan={onEdit || onDelete ? 10 : 9}
+                      className="empty-table-cell"
+                    >
+                      <div className="empty master-empty-box">
+                        <div className="empty__icon master-empty-icon">
+                          <Icon name="search" size={24} />
                         </div>
                         <strong>No suppliers found</strong>
-                        <span>Try adjusting your search criteria.</span>
+                        <span className="master-empty-subtitle">
+                          Try adjusting your search criteria.
+                        </span>
                       </div>
                     </td>
                   </tr>
@@ -396,6 +395,32 @@ export function SupplierIndex({
           />
         </div>
       </div>
+
+      <ConfirmDialog
+        isOpen={!!supplierToEdit}
+        title="Edit Supplier"
+        message={`Do you want to edit supplier "${supplierToEdit?.supplierName}"?`}
+        confirmLabel="Continue"
+        cancelLabel="Cancel"
+        confirmVariant="primary"
+        icon="edit"
+        onConfirm={() => {
+          if (supplierToEdit && onEdit) {
+            onEdit(supplierToEdit);
+          }
+          setSupplierToEdit(null);
+        }}
+        onCancel={() => setSupplierToEdit(null)}
+      />
+
+      <ConfirmDialog
+        isOpen={!!supplierToDelete}
+        entityType="supplier"
+        entityName={supplierToDelete?.supplierName}
+        entityCode={supplierToDelete?.supplierCode}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setSupplierToDelete(null)}
+      />
     </div>
   );
 }

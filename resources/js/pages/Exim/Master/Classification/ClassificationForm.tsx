@@ -15,7 +15,7 @@ interface ClassificationFormProps {
   isReportingTypesLoading?: boolean;
   isAccountsLoading?: boolean;
   onBack: () => void;
-  onSave?: (record: ClassificationRecord, isEdit: boolean) => void;
+  onSave?: (record: ClassificationRecord, isEdit: boolean) => Promise<void> | void;
 }
 
 export function ClassificationForm({
@@ -38,6 +38,7 @@ export function ClassificationForm({
   );
   const [reportingTypeId, setReportingTypeId] = useState(initialRecord?.reportingTypeId || "");
   const [accountId, setAccountId] = useState(initialRecord?.accountId || "");
+  const [saving, setSaving] = useState(false);
 
   const [errors, setErrors] = useState<{
     code?: string;
@@ -51,8 +52,9 @@ export function ClassificationForm({
     message: string;
   } | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (saving) return;
 
     const newErrors: {
       code?: string;
@@ -109,7 +111,16 @@ export function ClassificationForm({
     };
 
     if (onSave) {
-      onSave(updatedRecord, isEdit);
+      try {
+        setSaving(true);
+        await onSave(updatedRecord, isEdit);
+      } catch (err: any) {
+        setNotification({
+          type: "warning",
+          message: err?.message || "Failed to save classification to database.",
+        });
+        setSaving(false);
+      }
     }
   };
 
@@ -294,11 +305,11 @@ export function ClassificationForm({
 
         {/* Form Action Buttons: Cancel and Save */}
         <div className="classification-form-actions">
-          <Button type="button" variant="ghost" onClick={onBack}>
+          <Button type="button" variant="ghost" onClick={onBack} disabled={saving}>
             Cancel
           </Button>
-          <Button type="submit" variant="primary">
-            Save
+          <Button type="submit" variant="primary" disabled={saving}>
+            {saving ? "Saving..." : "Save"}
           </Button>
         </div>
       </form>

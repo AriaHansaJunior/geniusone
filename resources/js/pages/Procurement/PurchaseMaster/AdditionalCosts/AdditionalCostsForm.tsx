@@ -1,43 +1,51 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Button } from "../../../../components/ui/Button";
 import { Icon } from "../../../../components/ui/Icon";
+import type { AdditionalCostRecord } from "./additional-costs-types";
 
 interface AdditionalCostsFormProps {
+  initialRecord?: AdditionalCostRecord | null;
   onBack: () => void;
-  onSave?: (data: { code: string; name: string }) => void | Promise<any>;
+  onSave?: (data: { code: string; name: string }, editId?: string) => void | Promise<any>;
 }
 
-export function AdditionalCostsForm({ onBack, onSave }: AdditionalCostsFormProps) {
-  const [costCode, setCostCode] = useState("");
-  const [costName, setCostName] = useState("");
+export function AdditionalCostsForm({
+  initialRecord,
+  onBack,
+  onSave,
+}: AdditionalCostsFormProps) {
+  const isEdit = Boolean(initialRecord);
+  const [costCode, setCostCode] = useState(initialRecord?.costCode || "");
+  const [costName, setCostName] = useState(initialRecord?.costName || "");
   const [saving, setSaving] = useState(false);
-  const [notification, setNotification] = useState<{
-    type: "info" | "warning";
-    message: string;
-  } | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setCostCode(initialRecord?.costCode || "");
+    setCostName(initialRecord?.costName || "");
+    setSubmitError(null);
+    setSaving(false);
+  }, [initialRecord]);
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (saving) return;
 
     if (!costCode.trim() || !costName.trim()) {
-      setNotification({
-        type: "warning",
-        message: "Please enter both Cost Code and Cost Name before proceeding.",
-      });
+      setSubmitError("Please enter both Cost Code and Cost Name before proceeding.");
       return;
     }
 
     if (onSave) {
       try {
         setSaving(true);
-        setNotification(null);
-        await onSave({ code: costCode.trim(), name: costName.trim() });
+        setSubmitError(null);
+        await onSave(
+          { code: costCode.trim(), name: costName.trim() },
+          initialRecord?.id
+        );
       } catch (err: any) {
-        setNotification({
-          type: "warning",
-          message: err?.message || "Failed to save additional cost to database.",
-        });
-      } finally {
+        setSubmitError(err?.message || "Failed to save additional cost to database.");
         setSaving(false);
       }
     }
@@ -45,44 +53,23 @@ export function AdditionalCostsForm({ onBack, onSave }: AdditionalCostsFormProps
 
   return (
     <div className="additional-costs-form-page master-form-page">
-      {/* Page Header */}
       <div className="master-form-header">
         <h1 className="master-form-page-title">
-          Add Additional Costs
+          {isEdit ? "Edit Additional Costs" : "Add Additional Costs"}
         </h1>
       </div>
 
-      {/* Status Notice Banner */}
-      {notification && (
-        <div
-          className={`supplier-form-alert supplier-form-alert--${notification.type}`}
-        >
-          <Icon
-            name={notification.type === "info" ? "check" : "alertTriangle"}
-            size={16}
-          />
-          <div className="supplier-form-alert__content">
-            <strong>
-              {notification.type === "info"
-                ? "Form Validated"
-                : "Required Information Missing"}
-            </strong>
-            <p>{notification.message}</p>
+      {submitError && (
+        <div className="master-form-alert--error" role="alert">
+          <div className="master-form-alert-row">
+            <Icon name="alertTriangle" size={16} />
+            <span>{submitError}</span>
           </div>
-          <button
-            type="button"
-            className="alert-close-btn"
-            onClick={() => setNotification(null)}
-          >
-            ×
-          </button>
         </div>
       )}
 
-      {/* Main Form Card */}
-      <form onSubmit={handleSave} className="master-form-card">
+      <form onSubmit={handleSave} className="master-form-card" noValidate>
         <div className="master-form-grid-2">
-          {/* Field 1: Cost Code */}
           <div className="master-form-group">
             <label htmlFor="costCode" className="master-form-label">
               Cost Code <span className="required-mark">*</span>
@@ -90,6 +77,7 @@ export function AdditionalCostsForm({ onBack, onSave }: AdditionalCostsFormProps
             <input
               id="costCode"
               type="text"
+              maxLength={45}
               className="master-form-input font-mono"
               value={costCode}
               onChange={(e) => setCostCode(e.target.value)}
@@ -98,7 +86,6 @@ export function AdditionalCostsForm({ onBack, onSave }: AdditionalCostsFormProps
             />
           </div>
 
-          {/* Field 2: Cost Name */}
           <div className="master-form-group">
             <label htmlFor="costName" className="master-form-label">
               Cost Name <span className="required-mark">*</span>
@@ -106,6 +93,7 @@ export function AdditionalCostsForm({ onBack, onSave }: AdditionalCostsFormProps
             <input
               id="costName"
               type="text"
+              maxLength={45}
               className="master-form-input"
               value={costName}
               onChange={(e) => setCostName(e.target.value)}
@@ -114,7 +102,6 @@ export function AdditionalCostsForm({ onBack, onSave }: AdditionalCostsFormProps
           </div>
         </div>
 
-        {/* Action Buttons Footer */}
         <div className="master-form-actions">
           <Button type="button" variant="ghost" onClick={onBack} disabled={saving}>
             Cancel

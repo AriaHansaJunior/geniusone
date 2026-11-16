@@ -54,6 +54,15 @@ export function resolveViewStateFromPath(pathname: string, defaultPage: PageKey 
   ) {
     return { type: "warehouse-master-create" };
   }
+  const warehouseMasterEditMatch = cleanPath.match(
+    /^\/warehouse\/master\/warehouse\/edit\/([^/]+)$/
+  );
+  if (warehouseMasterEditMatch) {
+    return {
+      type: "warehouse-master-edit",
+      id: decodeURIComponent(warehouseMasterEditMatch[1]),
+    };
+  }
 
   if (
     cleanPath === "/warehouse/request/request-material/create" ||
@@ -93,6 +102,12 @@ export function resolveViewStateFromPath(pathname: string, defaultPage: PageKey 
   ) {
     return { type: "supplier-create" };
   }
+  const supplierEditMatch = cleanPath.match(
+    /^\/(?:procurement\/purchase-master\/supplier|procurement\/supplier)\/edit\/([^/]+)$/
+  );
+  if (supplierEditMatch) {
+    return { type: "supplier-edit", id: decodeURIComponent(supplierEditMatch[1]) };
+  }
 
   if (
     cleanPath === "/procurement/purchase-master/payment-term/create" ||
@@ -101,6 +116,12 @@ export function resolveViewStateFromPath(pathname: string, defaultPage: PageKey 
     cleanPath === "/procurement/payment-term/add"
   ) {
     return { type: "payment-term-create" };
+  }
+  const paymentTermEditMatch = cleanPath.match(
+    /^\/(?:procurement\/purchase-master\/payment-term|procurement\/payment-term)\/edit\/([^/]+)$/
+  );
+  if (paymentTermEditMatch) {
+    return { type: "payment-term-edit", id: decodeURIComponent(paymentTermEditMatch[1]) };
   }
 
   if (
@@ -111,6 +132,12 @@ export function resolveViewStateFromPath(pathname: string, defaultPage: PageKey 
   ) {
     return { type: "purchase-category-create" };
   }
+  const purchaseCategoryEditMatch = cleanPath.match(
+    /^\/(?:procurement\/purchase-master\/purchase-category|procurement\/purchase-category)\/edit\/([^/]+)$/
+  );
+  if (purchaseCategoryEditMatch) {
+    return { type: "purchase-category-edit", id: decodeURIComponent(purchaseCategoryEditMatch[1]) };
+  }
 
   if (
     cleanPath === "/procurement/purchase-master/delivery-terms/create" ||
@@ -119,6 +146,12 @@ export function resolveViewStateFromPath(pathname: string, defaultPage: PageKey 
     cleanPath === "/procurement/delivery-terms/add"
   ) {
     return { type: "delivery-terms-create" };
+  }
+  const deliveryTermsEditMatch = cleanPath.match(
+    /^\/(?:procurement\/purchase-master\/delivery-terms|procurement\/delivery-terms)\/edit\/([^/]+)$/
+  );
+  if (deliveryTermsEditMatch) {
+    return { type: "delivery-terms-edit", id: decodeURIComponent(deliveryTermsEditMatch[1]) };
   }
 
   if (
@@ -129,6 +162,12 @@ export function resolveViewStateFromPath(pathname: string, defaultPage: PageKey 
   ) {
     return { type: "additional-costs-create" };
   }
+  const additionalCostsEditMatch = cleanPath.match(
+    /^\/(?:procurement\/purchase-master\/additional-costs|procurement\/additional-costs)\/edit\/([^/]+)$/
+  );
+  if (additionalCostsEditMatch) {
+    return { type: "additional-costs-edit", id: decodeURIComponent(additionalCostsEditMatch[1]) };
+  }
 
   if (
     cleanPath === "/procurement/purchase-master/pph/create" ||
@@ -137,6 +176,40 @@ export function resolveViewStateFromPath(pathname: string, defaultPage: PageKey 
     cleanPath === "/procurement/pph/add"
   ) {
     return { type: "pph-create" };
+  }
+  const pphEditMatch = cleanPath.match(
+    /^\/(?:procurement\/purchase-master\/pph|procurement\/pph)\/edit\/([^/]+)$/
+  );
+  if (pphEditMatch) {
+    return { type: "pph-edit", id: decodeURIComponent(pphEditMatch[1]) };
+  }
+
+  if (
+    cleanPath === "/procurement/purchase-master/pph-type/create" ||
+    cleanPath === "/procurement/purchase-master/pph-type/add"
+  ) {
+    return { type: "reference-master-create", page: "pph-type" };
+  }
+  if (cleanPath === "/exim/master/type-rates-bm/create" || cleanPath === "/exim/master/type-rates-bm/add") {
+    return { type: "reference-master-create", page: "type-rates-bm" };
+  }
+  if (cleanPath === "/exim/master/type-rates-cukai/create" || cleanPath === "/exim/master/type-rates-cukai/add") {
+    return { type: "reference-master-create", page: "type-rates-cukai" };
+  }
+  if (cleanPath === "/exim/master/custom-report/create" || cleanPath === "/exim/master/custom-report/add") {
+    return { type: "reference-master-create", page: "custom-report" };
+  }
+  if (cleanPath === "/exim/master/item-type/create" || cleanPath === "/exim/master/item-type/add") {
+    return { type: "reference-master-create", page: "item-type" };
+  }
+  if (cleanPath === "/exim/master/group-scrap-item/create" || cleanPath === "/exim/master/group-scrap-item/add") {
+    return { type: "reference-master-create", page: "group-scrap-item" };
+  }
+  if (cleanPath === "/exim/master/specification/create" || cleanPath === "/exim/master/specification/add") {
+    return { type: "reference-master-create", page: "specification" };
+  }
+  if (cleanPath === "/warehouse/master/warehouse-type/create" || cleanPath === "/warehouse/master/warehouse-type/add") {
+    return { type: "reference-master-create", page: "warehouse-type" };
   }
 
   // Rafaksi Type Create & Edit
@@ -285,6 +358,23 @@ export function resolveViewStateFromPath(pathname: string, defaultPage: PageKey 
   }
 
   if (
+    cleanPath === "/exim/master/satuan/create" ||
+    cleanPath === "/exim/master/satuan/add" ||
+    cleanPath === "/exim/master/unit-reference/create" ||
+    cleanPath === "/exim/master/unit-reference/add" ||
+    cleanPath === "/exim/satuan/create" ||
+    cleanPath === "/exim/unit-reference/create"
+  ) {
+    return { type: "unit-reference-create" };
+  }
+  const unitReferenceEditMatch = cleanPath.match(
+    /^\/(?:exim\/master\/satuan|exim\/master\/unit-reference|exim\/satuan|exim\/unit-reference)\/edit\/([^/]+)$/
+  );
+  if (unitReferenceEditMatch) {
+    return { type: "unit-reference-edit", id: decodeURIComponent(unitReferenceEditMatch[1]) };
+  }
+
+  if (
     cleanPath === "/exim/master/classification/create" ||
     cleanPath === "/exim/master/classification/add" ||
     cleanPath === "/exim/classification/create" ||
@@ -365,6 +455,12 @@ export function resolveViewStateFromPath(pathname: string, defaultPage: PageKey 
     cleanPath === "/exim/color/add"
   ) {
     return { type: "colour-create" };
+  }
+  const colourEditMatch = cleanPath.match(
+    /^\/(?:exim\/master\/colour|exim\/master\/color|exim\/colour|exim\/color)\/edit\/([^/]+)$/
+  );
+  if (colourEditMatch) {
+    return { type: "colour-edit", id: decodeURIComponent(colourEditMatch[1]) };
   }
 
   if (
@@ -724,13 +820,14 @@ export function resolveActiveSidebarPage(viewState: ViewState): PageKey | null {
   if (viewState.type === "po-detail" || viewState.type === "po-create") return "po";
   if (viewState.type === "report-detail") return "report";
   if (viewState.type === "warehouse-detail" || viewState.type === "warehouse-create") return "warehouse";
-  if (viewState.type === "supplier-create") return "supplier";
-  if (viewState.type === "payment-term-create") return "payment-term";
-  if (viewState.type === "purchase-category-create") return "purchase-category";
-  if (viewState.type === "delivery-terms-create") return "delivery-terms";
-  if (viewState.type === "additional-costs-create") return "additional-costs";
-  if (viewState.type === "pph-create") return "pph";
+  if (viewState.type === "supplier-create" || viewState.type === "supplier-edit") return "supplier";
+  if (viewState.type === "payment-term-create" || viewState.type === "payment-term-edit") return "payment-term";
+  if (viewState.type === "purchase-category-create" || viewState.type === "purchase-category-edit") return "purchase-category";
+  if (viewState.type === "delivery-terms-create" || viewState.type === "delivery-terms-edit") return "delivery-terms";
+  if (viewState.type === "additional-costs-create" || viewState.type === "additional-costs-edit") return "additional-costs";
+  if (viewState.type === "pph-create" || viewState.type === "pph-edit") return "pph";
   if (viewState.type === "unit-create" || viewState.type === "unit-edit") return "unit";
+  if (viewState.type === "unit-reference-create" || viewState.type === "unit-reference-edit") return "satuan";
   if (viewState.type === "classification-create" || viewState.type === "classification-edit") return "classification";
   if (viewState.type === "department-create" || viewState.type === "department-edit") return "department";
   if (viewState.type === "brand-create" || viewState.type === "brand-edit") return "brand";
@@ -738,11 +835,12 @@ export function resolveActiveSidebarPage(viewState: ViewState): PageKey | null {
   if (viewState.type === "hs-create" || viewState.type === "hs-edit") return "hs";
   if (viewState.type === "category-create" || viewState.type === "category-edit") return "category";
   if (viewState.type === "style-create" || viewState.type === "style-edit" || viewState.type === "style-import") return "style";
-  if (viewState.type === "colour-create") return "colour";
+  if (viewState.type === "colour-create" || viewState.type === "colour-edit") return "colour";
   if (viewState.type === "receive-note-create" || viewState.type === "receive-note-detail") return "receive-note";
   if (viewState.type === "receive-note-return-create" || viewState.type === "receive-note-return-detail") return "receive-note-return";
   if (viewState.type === "document-history-detail") return "document-history";
-  if (viewState.type === "warehouse-master-create" || viewState.type === "warehouse-coordinate" || viewState.type === "warehouse-coordinate-create") return "warehouse-master";
+  if (viewState.type === "warehouse-master-create" || viewState.type === "warehouse-master-edit" || viewState.type === "warehouse-coordinate" || viewState.type === "warehouse-coordinate-create") return "warehouse-master";
+  if (viewState.type === "reference-master-create") return viewState.page;
   if (viewState.type === "item-create" || viewState.type === "item-edit" || viewState.type === "item-qr") return "item";
   if (viewState.type === "wh-req-material-create" || viewState.type === "wh-req-material-detail") return "wh-req-material";
   if (viewState.type === "rafaksi-type-create" || viewState.type === "rafaksi-type-edit") return "rafaksi-type";

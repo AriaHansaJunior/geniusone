@@ -3,7 +3,9 @@ export interface ColorRecord {
   no: number;
   code: string;
   name: string;
+  grade?: string;
+  status: boolean;
 }
 
-export type ColorSortField = "code" | "name";
+export type ColorSortField = "code" | "name" | "status";
 export type SortDirection = "none" | "asc" | "desc";

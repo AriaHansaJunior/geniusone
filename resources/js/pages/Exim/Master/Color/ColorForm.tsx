@@ -1,29 +1,43 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Button } from "../../../../components/ui/Button";
 import { Icon } from "../../../../components/ui/Icon";
 import type { ColorRecord } from "./color-types";
 
 interface ColorFormProps {
+  initialRecord?: ColorRecord | null;
   onBack: () => void;
-  onSave?: (record: ColorRecord) => void;
+  onSave?: (record: ColorRecord, isEdit: boolean) => Promise<void> | void;
 }
 
-export function ColorForm({ onBack, onSave }: ColorFormProps) {
-  const [code, setCode] = useState("");
-  const [name, setName] = useState("");
+export function ColorForm({ initialRecord, onBack, onSave }: ColorFormProps) {
+  const isEdit = Boolean(initialRecord);
+
+  const [code, setCode] = useState(initialRecord?.code || "");
+  const [name, setName] = useState(initialRecord?.name || "");
+  const [grade, setGrade] = useState(initialRecord?.grade || "");
+  const [status, setStatus] = useState(initialRecord?.status ?? true);
+  const [saving, setSaving] = useState(false);
 
   const [errors, setErrors] = useState<{
     code?: string;
     name?: string;
   }>({});
 
-  const [notification, setNotification] = useState<{
-    type: "info" | "warning" | "success";
-    message: string;
-  } | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    setCode(initialRecord?.code || "");
+    setName(initialRecord?.name || "");
+    setGrade(initialRecord?.grade || "");
+    setStatus(initialRecord?.status ?? true);
+    setErrors({});
+    setSubmitError(null);
+    setSaving(false);
+  }, [initialRecord]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (saving) return;
 
     const trimmedCode = code.trim();
     const trimmedName = name.trim();
@@ -32,88 +46,73 @@ export function ColorForm({ onBack, onSave }: ColorFormProps) {
 
     if (!trimmedCode) {
       newErrors.code = "Color Code is required.";
+    } else if (trimmedCode.length > 45) {
+      newErrors.code = "Color Code cannot exceed 45 characters.";
     }
 
     if (!trimmedName) {
       newErrors.name = "Color Name is required.";
+    } else if (trimmedName.length > 45) {
+      newErrors.name = "Color Name cannot exceed 45 characters.";
     }
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
-      setNotification({
-        type: "warning",
-        message: "Please fill in both Color Code and Color Name before saving.",
-      });
+      setSubmitError("Please fill in both Color Code and Color Name before saving.");
       return;
     }
 
     setErrors({});
-    setNotification(null);
+    setSubmitError(null);
 
-    const newRecord: ColorRecord = {
-      id: `col-${Date.now()}`,
-      no: 1, // dynamically computed in listing
+    const payload: ColorRecord = {
+      id: initialRecord ? initialRecord.id : "",
+      no: initialRecord ? initialRecord.no : 1,
       code: trimmedCode,
       name: trimmedName,
+      grade: grade.trim(),
+      status,
     };
 
     if (onSave) {
-      onSave(newRecord);
+      try {
+        setSaving(true);
+        await onSave(payload, isEdit);
+      } catch (err: any) {
+        setSubmitError(err?.message || "Failed to save Colour. Please verify inputs.");
+        setSaving(false);
+      }
     }
   };
 
   return (
-    <div className="color-form-page">
-      {/* Page Header */}
-      <div className="color-form-header">
-        <h1 className="color-form-title">Add Color</h1>
+    <div className="master-form-page">
+      <div className="master-form-header">
+        <h1 className="master-form-page-title">
+          {isEdit ? "Edit Colour" : "Add Colour"}
+        </h1>
       </div>
 
-      {/* Notification Alert Banner */}
-      {notification && (
-        <div className={`color-alert color-alert--${notification.type}`}>
-          <Icon
-            name={
-              notification.type === "warning"
-                ? "alertTriangle"
-                : notification.type === "success"
-                ? "check"
-                : "alertTriangle"
-            }
-            size={16}
-          />
-          <div className="color-alert__content">
-            <strong>
-              {notification.type === "warning"
-                ? "Validation Notice"
-                : "Notice"}
-            </strong>
-            <p>{notification.message}</p>
+      {submitError && (
+        <div className="master-form-alert--error" role="alert">
+          <div className="master-form-alert-row">
+            <Icon name="alertTriangle" size={16} />
+            <span>{submitError}</span>
           </div>
-          <button
-            type="button"
-            className="color-alert-close"
-            onClick={() => setNotification(null)}
-            aria-label="Dismiss notification"
-          >
-            ×
-          </button>
         </div>
       )}
 
-      {/* Form Content Card */}
-      <form onSubmit={handleSubmit} className="color-form-card">
-        {/* Two-Column Form Grid for Color Code & Color Name */}
-        <div className="color-form-grid">
-          {/* 1. Color Code */}
-          <div className="color-form-group">
-            <label htmlFor="colorCode" className="color-form-label">
+      <form onSubmit={handleSubmit} className="master-form-card" noValidate>
+        <div className="master-form-grid-2">
+          <div className="master-form-group">
+            <label htmlFor="colorCode" className="master-form-label">
               Color Code <span className="required-mark">*</span>
             </label>
             <input
               id="colorCode"
               type="text"
-              className={`color-form-input ${errors.code ? "has-error" : ""}`}
+              maxLength={45}
+              className={`master-form-input font-mono ${errors.code ? "is-invalid" : ""}`}
               placeholder="e.g. BLCK, SILV, R130..."
               value={code}
               onChange={(e) => {
@@ -122,20 +121,18 @@ export function ColorForm({ onBack, onSave }: ColorFormProps) {
               }}
               autoFocus
             />
-            {errors.code && (
-              <span className="color-form-error-msg">{errors.code}</span>
-            )}
+            {errors.code && <span className="master-form-error-text">{errors.code}</span>}
           </div>
 
-          {/* 2. Color Name */}
-          <div className="color-form-group">
-            <label htmlFor="colorName" className="color-form-label">
+          <div className="master-form-group">
+            <label htmlFor="colorName" className="master-form-label">
               Color Name <span className="required-mark">*</span>
             </label>
             <input
               id="colorName"
               type="text"
-              className={`color-form-input ${errors.name ? "has-error" : ""}`}
+              maxLength={45}
+              className={`master-form-input ${errors.name ? "is-invalid" : ""}`}
               placeholder="e.g. BLACK, SILVER, RED..."
               value={name}
               onChange={(e) => {
@@ -143,19 +140,45 @@ export function ColorForm({ onBack, onSave }: ColorFormProps) {
                 if (errors.name) setErrors((prev) => ({ ...prev, name: undefined }));
               }}
             />
-            {errors.name && (
-              <span className="color-form-error-msg">{errors.name}</span>
-            )}
+            {errors.name && <span className="master-form-error-text">{errors.name}</span>}
+          </div>
+
+          <div className="master-form-group">
+            <label htmlFor="colorGrade" className="master-form-label">
+              Grade
+            </label>
+            <input
+              id="colorGrade"
+              type="text"
+              maxLength={45}
+              className="master-form-input"
+              placeholder="Optional grade / shade"
+              value={grade}
+              onChange={(e) => setGrade(e.target.value)}
+            />
+          </div>
+
+          <div className="master-form-group">
+            <span className="master-form-label">Status</span>
+            <label className="master-form-switch-box">
+              <span className="master-form-inline-check">
+                <input
+                  type="checkbox"
+                  checked={status}
+                  onChange={(e) => setStatus(e.target.checked)}
+                />
+                <span>Active Colour</span>
+              </span>
+            </label>
           </div>
         </div>
 
-        {/* Form Action Buttons: Cancel and Save */}
-        <div className="color-form-actions">
-          <Button type="button" variant="ghost" onClick={onBack}>
+        <div className="master-form-actions">
+          <Button type="button" variant="ghost" onClick={onBack} disabled={saving}>
             Cancel
           </Button>
-          <Button type="submit" variant="primary">
-            Save
+          <Button type="submit" variant="primary" disabled={saving}>
+            {saving ? "Saving..." : "Save"}
           </Button>
         </div>
       </form>

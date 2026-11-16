@@ -3,6 +3,7 @@ import ReactDOM from "react-dom/client";
 import { App } from "./components/App";
 import { ErrorBoundary } from "./components/ui/ErrorBoundary";
 import { AuthPermissionProvider } from "./context/AuthPermissionContext";
+import { NotificationProvider } from "./context/NotificationContext";
 import type { PageKey } from "./types";
 
 const rootElement = document.getElementById("root");
@@ -14,9 +15,11 @@ if (rootElement) {
   ReactDOM.createRoot(rootElement).render(
     <React.StrictMode>
       <ErrorBoundary fallbackTitle="GeniusOne Application Error">
-        <AuthPermissionProvider>
-          <App initialPage={initialPage} initialCode={initialCode} />
-        </AuthPermissionProvider>
+        <NotificationProvider>
+          <AuthPermissionProvider>
+            <App initialPage={initialPage} initialCode={initialCode} />
+          </AuthPermissionProvider>
+        </NotificationProvider>
       </ErrorBoundary>
     </React.StrictMode>
   );

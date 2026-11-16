@@ -1,4 +1,4 @@
-﻿export type SyncStatus = "Synced" | "Pending" | "Failed" | "Not Synced";
+export type SyncStatus = "Synced" | "Pending" | "Failed" | "Not Synced";
 
 export interface CurrencyRecord {
   id: string;
@@ -8,11 +8,12 @@ export interface CurrencyRecord {
   symbol: string;
   syncStatus: SyncStatus;
   lastSynced: string;
+  status?: boolean;
   createdAt: string;
   createdBy: string;
 }
 
-export type CurrencySortField = "currencyCode" | "currencyName" | "syncStatus" | "lastSynced";
+export type CurrencySortField = "currencyCode" | "status";
 export type SortDirection = "none" | "asc" | "desc";
 
 export const initialCurrencyRecords: CurrencyRecord[] = [];
