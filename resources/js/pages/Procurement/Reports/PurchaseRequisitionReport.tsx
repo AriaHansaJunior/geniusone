@@ -69,8 +69,8 @@ export function PurchaseRequisitionReport({
   // Filter States
   // ---------------------------------------------------------------------------
   const [search, setSearch] = useState("");
-  const [startDate, setStartDate] = useState("2026-07-14");
-  const [endDate, setEndDate] = useState("2026-10-14");
+  const [startDate, setStartDate] = useState("2026-01-01");
+  const [endDate, setEndDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [statusFilter, setStatusFilter] = useState<PrReportStatus | "All">("All");
   const [deptFilter, setDeptFilter] = useState("All Departemen");
   const [sectionFilter, setSectionFilter] = useState("All Section");
@@ -246,6 +246,7 @@ export function PurchaseRequisitionReport({
 
     return filtered;
   }, [
+    records,
     search,
     startDate,
     endDate,

@@ -159,10 +159,14 @@ Route::prefix('warehouse')->group(function () {
     Route::post('/rn/{id}/reject', [ReceiveNoteApiController::class, 'reject']);
     Route::get('/rn/{code}', [ReceiveNoteApiController::class, 'show'])->where('code', '.*');
 
-    // Warehouse Reports (Stock Card & Stock Item)
+    // Warehouse Reports (Stock Card, Stock Item, Receive Material, Transfer, Mutation, Outstanding)
     Route::prefix('reports')->group(function () {
         Route::get('/stock-card', [WarehouseReportApiController::class, 'stockCard']);
         Route::get('/stock-item', [WarehouseReportApiController::class, 'stockItem']);
+        Route::get('/receive-material', [WarehouseReportApiController::class, 'receiveMaterialReport']);
+        Route::get('/stock-transfer', [WarehouseReportApiController::class, 'stockTransferReport']);
+        Route::get('/stock-mutation', [WarehouseReportApiController::class, 'stockMutationReport']);
+        Route::get('/outstanding-request', [WarehouseReportApiController::class, 'outstandingRequestReport']);
     });
 
     // Material Requisitions (Request Material)

@@ -5,12 +5,29 @@ namespace App\Http\Controllers\Api\Warehouse;
 use App\Http\Controllers\Controller;
 use App\Models\Master\Material\Item;
 use App\Models\Warehouse\Facility\Warehouse;
+use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class WarehouseReportApiController extends Controller
 {
+    private function normalizeDateYmd(?string $raw): string
+    {
+        $trimmed = trim((string) $raw);
+        if ($trimmed === '') {
+            return date('Y-m-d');
+        }
+        if (preg_match('/^\d{4}-\d{2}-\d{2}/', $trimmed, $m)) {
+            return $m[0];
+        }
+        try {
+            return Carbon::parse($trimmed)->format('Y-m-d');
+        } catch (\Throwable) {
+            return substr($trimmed, 0, 10) ?: date('Y-m-d');
+        }
+    }
+
     /**
      * Get Stock Card (Kartu Stok) transaction ledger for an item over a date range.
      * Integrates Inbound (BPB Receive Material) and Outbound (Request Material).
@@ -169,7 +186,7 @@ class WarehouseReportApiController extends Controller
 
         foreach ($allInbounds as $in) {
             $qtyIn = max(0.0, (float) $in->quantity - (float) $in->rafaksi);
-            $rawDate = substr((string) $in->movement_date, 0, 10) ?: date('Y-m-d');
+            $rawDate = $this->normalizeDateYmd((string) $in->movement_date);
             $whName = $in->warehouse_name ?: '—';
 
             $jobNum = $in->job_code ?: ($in->job_name ?: '—');
@@ -197,7 +214,7 @@ class WarehouseReportApiController extends Controller
 
         foreach ($allOutbounds as $out) {
             $qtyOut = (float) $out->qty_out;
-            $rawDate = substr((string) $out->movement_date, 0, 10) ?: date('Y-m-d');
+            $rawDate = $this->normalizeDateYmd((string) $out->movement_date);
             $whName = $out->warehouse_name ?: '—';
 
             $docRef = $out->request_number ?: '—';
@@ -227,7 +244,7 @@ class WarehouseReportApiController extends Controller
 
         foreach ($allReturns as $ret) {
             $qtyIn = (float) $ret->qty_in;
-            $rawDate = substr((string) $ret->movement_date, 0, 10) ?: date('Y-m-d');
+            $rawDate = $this->normalizeDateYmd((string) $ret->movement_date);
             $whName = $ret->warehouse_name ?: '—';
 
             $rawMovements[] = [
@@ -454,6 +471,71 @@ class WarehouseReportApiController extends Controller
 
         $stockRows = $query->orderBy('i.code')->orderBy('w.name')->get();
 
+        // Include stocked master items that do not yet have explicit warehouse_stocks rows
+        if (empty($warehouseId) || $warehouseId === 'all' || $warehouseId === 'All Warehouse') {
+            $existingItemIds = $stockRows->pluck('item_id')->unique()->all();
+            $fallbackQuery = DB::table('items as i')
+                ->leftJoin('categories as cat', 'i.categories_id', '=', 'cat.id')
+                ->leftJoin('classifications as cls', 'i.classifications_id', '=', 'cls.id')
+                ->leftJoin('facilities as fac', 'i.facilities_id', '=', 'fac.id')
+                ->leftJoin('units_of_measurements as u', 'i.units_of_measurements_id', '=', 'u.id')
+                ->leftJoinSub($bufferSubquery, 'sn_agg', function ($join) {
+                    $join->on('sn_agg.items_id', '=', 'i.id');
+                })
+                ->whereNull('i.deleted_at')
+                ->where('i.stock', '>', 0);
+
+            if (! empty($existingItemIds)) {
+                $fallbackQuery->whereNotIn('i.id', $existingItemIds);
+            }
+            if (! empty($search)) {
+                $fallbackQuery->where(function ($q) use ($search) {
+                    $q->where('i.name', 'like', "%{$search}%")
+                        ->orWhere('i.code', 'like', "%{$search}%")
+                        ->orWhere('i.external_code', 'like', "%{$search}%");
+                });
+            }
+            if (! empty($classification) && $classification !== 'All Classifications') {
+                $fallbackQuery->where(function ($q) use ($classification) {
+                    $q->where('cls.name', $classification)->orWhere('cat.name', $classification);
+                });
+            }
+            if (! empty($facility) && $facility !== 'All Facilities') {
+                $fallbackQuery->where('fac.name', $facility);
+            }
+            if (empty($location) || $location === 'All' || $location === 'Warehouse') {
+                if (empty($coordinate) || $coordinate === 'All Coordinates') {
+                    if ($stockStatus !== 'Not Available') {
+                        $fallbackItems = $fallbackQuery->select([
+                            DB::raw('NULL as stock_id'),
+                            'i.id as item_id',
+                            'i.code as materialCode',
+                            'i.external_code as externalCode',
+                            'i.name as materialItem',
+                            DB::raw('COALESCE(cls.name, cat.name) as classification'),
+                            'cat.name as category_name',
+                            'fac.name as facility',
+                            DB::raw('NULL as warehouse_coordinates_id'),
+                            DB::raw("'—' as coordinate"),
+                            DB::raw("'Opening / Main Warehouse' as warehouseName"),
+                            DB::raw('NULL as warehouse_id'),
+                            'i.stock as quantity',
+                            'i.stock as availableQty',
+                            DB::raw('0 as pendingQty'),
+                            DB::raw("'—' as lotNumber"),
+                            DB::raw("'Warehouse' as locationType"),
+                            'i.updated_at as last_movement_date',
+                            'u.code as unit_code',
+                            'u.name as unit_name',
+                            DB::raw('COALESCE(sn_agg.min_buffer, 0) as minimum_stock'),
+                        ])->orderBy('i.code')->get();
+
+                        $stockRows = $stockRows->concat($fallbackItems)->sortBy('materialCode')->values();
+                    }
+                }
+            }
+        }
+
         $records = $stockRows->values()->map(function ($it, $idx) {
             $stock = (float) $it->quantity;
             $minStock = (float) ($it->minimum_stock ?? 0);
@@ -507,6 +589,513 @@ class WarehouseReportApiController extends Controller
             'meta' => [
                 'total' => $records->count(),
             ],
+        ]);
+    }
+
+    /**
+     * Receive Material Report (Inbound BPB & Receive Note physical receipts).
+     */
+    public function receiveMaterialReport(Request $request): JsonResponse
+    {
+        $startDate = $request->query('startDate');
+        $endDate = $request->query('endDate');
+        $warehouse = $request->query('warehouse');
+        $search = trim((string) $request->query('search', ''));
+
+        $rows = DB::table('bpb_receive_material as bpb')
+            ->join('po_rn_to_bpb as pb', 'pb.bpb_receive_material_id', '=', 'bpb.id')
+            ->join('purchase_order_has_receive_note as porn', 'pb.po_has_rn_id', '=', 'porn.id')
+            ->leftJoin('receive_note as rn', 'porn.receive_note_id', '=', 'rn.id')
+            ->leftJoin('purchase_order as po', 'porn.purchase_order_id', '=', 'po.id')
+            ->leftJoin('supliers as sup', 'po.supliers_id', '=', 'sup.id')
+            ->leftJoin('supliers as rnsup', 'rn.supliers_id', '=', 'rnsup.id')
+            ->leftJoin('warehouses as w', 'pb.warehouses_id', '=', 'w.id')
+            ->leftJoin('warehouse_coordinates as wc', 'pb.warehouse_coordinates_id', '=', 'wc.id')
+            ->leftJoin('purchase_order_has_purchase_requisitions as poi', 'porn.po_has_items_id', '=', 'poi.id')
+            ->leftJoin('purchase_requisitions_has_items as pri', 'poi.pr_has_items_id', '=', 'pri.id')
+            ->leftJoin('items as it', function ($join) {
+                $join->on('it.id', '=', DB::raw('COALESCE(poi.items_id, pri.items_id)'));
+            })
+            ->leftJoin('units_of_measurements as u', 'it.units_of_measurements_id', '=', 'u.id')
+            ->whereNull('bpb.deleted_at')
+            ->whereNull('pb.deleted_at')
+            ->whereNull('porn.deleted_at')
+            ->select([
+                'bpb.id as bpb_id',
+                'pb.id as mapping_id',
+                'bpb.bpb_number',
+                'bpb.source_type',
+                'bpb.status',
+                DB::raw('COALESCE(bpb.receive_date, rn.arrival_date, bpb.created_at) as movement_date'),
+                'rn.rn_number',
+                'po.po_number',
+                'po.facility_status',
+                DB::raw('COALESCE(sup.name, rnsup.name) as supplier_name'),
+                'w.name as warehouse_name',
+                'wc.name as coordinate_name',
+                'it.code as item_code',
+                DB::raw('COALESCE(it.name, porn.item_name) as item_name'),
+                DB::raw('COALESCE(u.code, u.name) as unit'),
+                'porn.quantity as gross_qty',
+                'porn.rafaksi',
+                'porn.dn_number',
+            ])
+            ->orderByDesc('bpb.id')
+            ->get()
+            ->map(function ($r, $idx) {
+                $dateIso = $this->normalizeDateYmd((string) $r->movement_date);
+                $gross = (float) ($r->gross_qty ?? 0);
+                $raf = (float) ($r->rafaksi ?? 0);
+
+                return [
+                    'id' => (string) ($r->mapping_id ?? ($r->bpb_id.'-'.$idx)),
+                    'bpb_number' => $r->bpb_number ?: '-',
+                    'date' => $dateIso,
+                    'source_type' => $r->source_type === 'PO' ? 'Direct PO' : 'Via RN',
+                    'rn_number' => $r->rn_number ?: '-',
+                    'po_number' => $r->po_number ?: '-',
+                    'supplier' => $r->supplier_name ?: '-',
+                    'facility' => $r->facility_status ?: 'FASILITAS',
+                    'warehouse' => $r->warehouse_name ?: '-',
+                    'coordinate' => $r->coordinate_name ?: '-',
+                    'item_code' => $r->item_code ?: '-',
+                    'item_name' => $r->item_name ?: '-',
+                    'unit' => $r->unit ?: 'PCE',
+                    'gross_qty' => $gross,
+                    'rafaksi' => $raf,
+                    'net_qty' => max(0.0, $gross - $raf),
+                    'lot_number' => $r->dn_number ?: '-',
+                    'status' => $r->status ?: 'Waiting for Approve 1',
+                ];
+            })
+            ->filter(function ($r) use ($startDate, $endDate, $warehouse, $search) {
+                if ($startDate && $r['date'] < $startDate) {
+                    return false;
+                }
+                if ($endDate && $r['date'] > $endDate) {
+                    return false;
+                }
+                if ($warehouse && $warehouse !== 'All Warehouse' && strcasecmp($r['warehouse'], $warehouse) !== 0) {
+                    return false;
+                }
+                if ($search !== '') {
+                    $q = strtolower($search);
+                    $hay = strtolower("{$r['bpb_number']} {$r['rn_number']} {$r['po_number']} {$r['supplier']} {$r['item_code']} {$r['item_name']}");
+                    if (! str_contains($hay, $q)) {
+                        return false;
+                    }
+                }
+
+                return true;
+            })
+            ->values()
+            ->map(function ($r, $i) {
+                $r['no'] = $i + 1;
+
+                return $r;
+            });
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $rows,
+        ]);
+    }
+
+    /**
+     * Stock Transfer & Return Report (Transfer Stock Return + Material Issue Transfers).
+     */
+    public function stockTransferReport(Request $request): JsonResponse
+    {
+        $startDate = $request->query('startDate');
+        $endDate = $request->query('endDate');
+        $search = trim((string) $request->query('search', ''));
+
+        $returns = DB::table('transfer_stock_return_items as ri')
+            ->join('transfer_stock_returns as r', 'ri.transfer_stock_return_id', '=', 'r.id')
+            ->leftJoin('items as i', 'ri.items_id', '=', 'i.id')
+            ->leftJoin('units_of_measurements as u', 'i.units_of_measurements_id', '=', 'u.id')
+            ->leftJoin('warehouses as w', 'r.warehouses_id', '=', 'w.id')
+            ->leftJoin('request_material as rm', 'r.request_material_id', '=', 'rm.id')
+            ->select([
+                'ri.id',
+                'r.return_number as doc_number',
+                DB::raw('COALESCE(r.return_date, r.created_at) as movement_date'),
+                'i.code as item_code',
+                'i.name as item_name',
+                DB::raw('COALESCE(u.code, u.name) as unit'),
+                'ri.quantity',
+                'w.name as warehouse_name',
+                'rm.request_number as ref_number',
+                'r.job_number',
+                'r.status',
+                'r.note',
+            ])
+            ->get()
+            ->map(fn ($r) => [
+                'id' => 'tsr-'.$r->id,
+                'doc_type' => 'Transfer Stock Return',
+                'doc_number' => $r->doc_number,
+                'date' => $this->normalizeDateYmd((string) $r->movement_date),
+                'item_code' => $r->item_code ?: '-',
+                'item_name' => $r->item_name ?: '-',
+                'unit' => $r->unit ?: 'PCE',
+                'quantity' => (float) $r->quantity,
+                'warehouse' => $r->warehouse_name ?: '-',
+                'destination' => $r->ref_number ? "Return from {$r->ref_number}" : 'Warehouse Return',
+                'job_number' => $r->job_number ?: '-',
+                'status' => $r->status ?: 'Waiting for Approve 1',
+                'note' => $r->note ?: '-',
+            ]);
+
+        $issues = DB::table('request_material_item as rmi')
+            ->join('request_material as rm', 'rmi.request_material_id', '=', 'rm.id')
+            ->leftJoin('items as i', 'rmi.items_id', '=', 'i.id')
+            ->leftJoin('units_of_measurements as u', 'i.units_of_measurements_id', '=', 'u.id')
+            ->leftJoin('warehouses as w', 'rm.warehouses_id', '=', 'w.id')
+            ->leftJoin('destination_location as dl', 'rm.destination_location_id', '=', 'dl.id')
+            ->leftJoin('departments as dept', 'rm.departments_id', '=', 'dept.id')
+            ->whereNull('rm.deleted_at')
+            ->whereNull('rmi.deleted_at')
+            ->select([
+                'rm.id as rm_id',
+                'rmi.items_id as item_id',
+                'rm.request_number as doc_number',
+                DB::raw('COALESCE(rm.request_date, rm.created_at) as movement_date'),
+                'i.code as item_code',
+                'i.name as item_name',
+                DB::raw('COALESCE(u.code, u.name) as unit'),
+                'rmi.request as quantity',
+                'w.name as warehouse_name',
+                'dl.name as destination_name',
+                'dept.name as department_name',
+                'rm.job_number',
+                'rm.status',
+                'rm.note',
+            ])
+            ->get()
+            ->map(fn ($r, $idx) => [
+                'id' => "rm-{$r->rm_id}-{$r->item_id}-{$idx}",
+                'doc_type' => 'Material Transfer / Request',
+                'doc_number' => $r->doc_number,
+                'date' => $this->normalizeDateYmd((string) $r->movement_date),
+                'item_code' => $r->item_code ?: '-',
+                'item_name' => $r->item_name ?: '-',
+                'unit' => $r->unit ?: 'PCE',
+                'quantity' => (float) $r->quantity,
+                'warehouse' => $r->warehouse_name ?: '-',
+                'destination' => $r->destination_name ?: ($r->department_name ?: 'Production Floor'),
+                'job_number' => $r->job_number ?: '-',
+                'status' => $r->status ?: 'Waiting for Approve 1',
+                'note' => $r->note ?: '-',
+            ]);
+
+        $rows = $returns->concat($issues)
+            ->sortByDesc('date')
+            ->filter(function ($r) use ($startDate, $endDate, $search) {
+                if ($startDate && $r['date'] < $startDate) {
+                    return false;
+                }
+                if ($endDate && $r['date'] > $endDate) {
+                    return false;
+                }
+                if ($search !== '') {
+                    $q = strtolower($search);
+                    $hay = strtolower("{$r['doc_number']} {$r['doc_type']} {$r['item_code']} {$r['item_name']} {$r['warehouse']} {$r['destination']}");
+                    if (! str_contains($hay, $q)) {
+                        return false;
+                    }
+                }
+
+                return true;
+            })
+            ->values()
+            ->map(function ($r, $i) {
+                $r['no'] = $i + 1;
+
+                return $r;
+            });
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $rows,
+        ]);
+    }
+
+    /**
+     * Stock Mutation Report (Opening + In - Out = Ending per item over date range).
+     */
+    public function stockMutationReport(Request $request): JsonResponse
+    {
+        $startDate = $request->query('startDate', date('Y-m-01'));
+        $endDate = $request->query('endDate', date('Y-m-d'));
+        $search = trim((string) $request->query('search', ''));
+
+        $items = DB::table('items as i')
+            ->leftJoin('units_of_measurements as u', 'i.units_of_measurements_id', '=', 'u.id')
+            ->leftJoin('classifications as cls', 'i.classifications_id', '=', 'cls.id')
+            ->leftJoin('facilities as fac', 'i.facilities_id', '=', 'fac.id')
+            ->whereNull('i.deleted_at')
+            ->select([
+                'i.id',
+                'i.code',
+                'i.name',
+                'i.stock',
+                DB::raw('COALESCE(u.code, u.name) as unit'),
+                'cls.name as classification',
+                'fac.name as facility',
+            ])
+            ->orderBy('i.code')
+            ->get();
+
+        // Aggregate Inbound (BPB Approved) per item
+        $bpbInbounds = DB::table('purchase_order_has_receive_note as porn')
+            ->join('po_rn_to_bpb as pb', 'pb.po_has_rn_id', '=', 'porn.id')
+            ->join('bpb_receive_material as bpb', 'pb.bpb_receive_material_id', '=', 'bpb.id')
+            ->leftJoin('purchase_order_has_purchase_requisitions as poi', 'porn.po_has_items_id', '=', 'poi.id')
+            ->leftJoin('purchase_requisitions_has_items as pri', 'poi.pr_has_items_id', '=', 'pri.id')
+            ->whereIn('bpb.status', ['Approved', 'Approved 2'])
+            ->whereNull('bpb.deleted_at')
+            ->whereNull('pb.deleted_at')
+            ->whereNull('porn.deleted_at')
+            ->select([
+                DB::raw('COALESCE(poi.items_id, pri.items_id) as item_id'),
+                'porn.item_name',
+                'porn.quantity',
+                'porn.rafaksi',
+                DB::raw('COALESCE(bpb.receive_date, bpb.created_at) as movement_date'),
+            ])
+            ->get();
+
+        // Aggregate Outbound (Request Material Approved) per item
+        $rmOutbounds = DB::table('request_material_item as rmi')
+            ->join('request_material as rm', 'rmi.request_material_id', '=', 'rm.id')
+            ->whereIn('rm.status', ['Approved', 'Approved 2'])
+            ->whereNull('rm.deleted_at')
+            ->whereNull('rmi.deleted_at')
+            ->select([
+                'rmi.items_id as item_id',
+                'rmi.request as qty',
+                DB::raw('COALESCE(rm.request_date, rm.created_at) as movement_date'),
+            ])
+            ->get();
+
+        // Aggregate Return Inbound (Transfer Stock Return Approved)
+        $tsrInbounds = DB::table('transfer_stock_return_items as ri')
+            ->join('transfer_stock_returns as r', 'ri.transfer_stock_return_id', '=', 'r.id')
+            ->whereIn('r.status', ['Approved', 'Approved 2'])
+            ->select([
+                'ri.items_id as item_id',
+                'ri.quantity as qty',
+                DB::raw('COALESCE(r.return_date, r.created_at) as movement_date'),
+            ])
+            ->get();
+
+        $itemById = $items->keyBy('id');
+        $idByName = [];
+        foreach ($items as $it) {
+            $idByName[strtolower(trim((string) $it->name))] = $it->id;
+            $idByName[strtolower(trim((string) $it->code))] = $it->id;
+        }
+
+        $statsByItem = [];
+        $initStat = fn () => ['all_in' => 0.0, 'all_out' => 0.0, 'prior_in' => 0.0, 'prior_out' => 0.0, 'period_in' => 0.0, 'period_out' => 0.0];
+
+        foreach ($bpbInbounds as $in) {
+            $itemId = $in->item_id ?: ($idByName[strtolower(trim((string) $in->item_name))] ?? null);
+            if (! $itemId || ! $itemById->has($itemId)) {
+                continue;
+            }
+            if (! isset($statsByItem[$itemId])) {
+                $statsByItem[$itemId] = $initStat();
+            }
+            $qty = max(0.0, (float) $in->quantity - (float) $in->rafaksi);
+            $d = $this->normalizeDateYmd((string) $in->movement_date);
+            $statsByItem[$itemId]['all_in'] += $qty;
+            if ($d < $startDate) {
+                $statsByItem[$itemId]['prior_in'] += $qty;
+            } elseif ($d <= $endDate) {
+                $statsByItem[$itemId]['period_in'] += $qty;
+            }
+        }
+
+        foreach ($tsrInbounds as $in) {
+            $itemId = $in->item_id;
+            if (! $itemId || ! $itemById->has($itemId)) {
+                continue;
+            }
+            if (! isset($statsByItem[$itemId])) {
+                $statsByItem[$itemId] = $initStat();
+            }
+            $qty = max(0.0, (float) $in->qty);
+            $d = $this->normalizeDateYmd((string) $in->movement_date);
+            $statsByItem[$itemId]['all_in'] += $qty;
+            if ($d < $startDate) {
+                $statsByItem[$itemId]['prior_in'] += $qty;
+            } elseif ($d <= $endDate) {
+                $statsByItem[$itemId]['period_in'] += $qty;
+            }
+        }
+
+        foreach ($rmOutbounds as $out) {
+            $itemId = $out->item_id;
+            if (! $itemId || ! $itemById->has($itemId)) {
+                continue;
+            }
+            if (! isset($statsByItem[$itemId])) {
+                $statsByItem[$itemId] = $initStat();
+            }
+            $qty = max(0.0, (float) $out->qty);
+            $d = $this->normalizeDateYmd((string) $out->movement_date);
+            $statsByItem[$itemId]['all_out'] += $qty;
+            if ($d < $startDate) {
+                $statsByItem[$itemId]['prior_out'] += $qty;
+            } elseif ($d <= $endDate) {
+                $statsByItem[$itemId]['period_out'] += $qty;
+            }
+        }
+
+        $rows = collect();
+        foreach ($items as $it) {
+            $st = $statsByItem[$it->id] ?? $initStat();
+            $currentStock = (float) $it->stock;
+            if ($currentStock <= 0 && $st['all_in'] <= 0 && $st['all_out'] <= 0) {
+                continue;
+            }
+            $baseline = $currentStock - $st['all_in'] + $st['all_out'];
+            $opening = $baseline + $st['prior_in'] - $st['prior_out'];
+            $ending = $opening + $st['period_in'] - $st['period_out'];
+
+            if ($search !== '') {
+                $q = strtolower($search);
+                $hay = strtolower("{$it->code} {$it->name} {$it->classification} {$it->facility}");
+                if (! str_contains($hay, $q)) {
+                    continue;
+                }
+            }
+
+            $rows->push([
+                'id' => (string) $it->id,
+                'item_code' => $it->code ?: '-',
+                'item_name' => $it->name,
+                'classification' => $it->classification ?: '-',
+                'facility' => $it->facility ?: 'FASILITAS',
+                'unit' => $it->unit ?: 'PCE',
+                'opening' => round($opening, 4),
+                'total_in' => round($st['period_in'], 4),
+                'total_out' => round($st['period_out'], 4),
+                'ending' => round($ending, 4),
+                'current_stock' => round($currentStock, 4),
+            ]);
+        }
+
+        $rows = $rows->values()->map(function ($r, $i) {
+            $r['no'] = $i + 1;
+
+            return $r;
+        });
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $rows,
+        ]);
+    }
+
+    /**
+     * Outstanding Material Requests Report (Request Materials pending or awaiting return/fulfillment).
+     */
+    public function outstandingRequestReport(Request $request): JsonResponse
+    {
+        $startDate = $request->query('startDate');
+        $endDate = $request->query('endDate');
+        $search = trim((string) $request->query('search', ''));
+
+        $returnedByRmItem = DB::table('transfer_stock_return_items as ri')
+            ->join('transfer_stock_returns as r', 'ri.transfer_stock_return_id', '=', 'r.id')
+            ->where('r.status', '!=', 'Rejected')
+            ->selectRaw('ri.items_id, r.request_material_id, SUM(ri.quantity) as returned_qty')
+            ->groupBy('ri.items_id', 'r.request_material_id')
+            ->get()
+            ->keyBy(fn ($r) => "{$r->request_material_id}-{$r->items_id}");
+
+        $rows = DB::table('request_material_item as rmi')
+            ->join('request_material as rm', 'rmi.request_material_id', '=', 'rm.id')
+            ->leftJoin('items as i', 'rmi.items_id', '=', 'i.id')
+            ->leftJoin('units_of_measurements as u', 'i.units_of_measurements_id', '=', 'u.id')
+            ->leftJoin('warehouses as w', 'rm.warehouses_id', '=', 'w.id')
+            ->leftJoin('departments as dept', 'rm.departments_id', '=', 'dept.id')
+            ->leftJoin('destination_location as dl', 'rm.destination_location_id', '=', 'dl.id')
+            ->whereNull('rm.deleted_at')
+            ->whereNull('rmi.deleted_at')
+            ->select([
+                'rm.id as rm_id',
+                'rm.request_number',
+                DB::raw('COALESCE(rm.request_date, rm.created_at) as movement_date'),
+                'rm.status',
+                'rm.job_number',
+                'i.id as item_id',
+                'i.code as item_code',
+                'i.name as item_name',
+                DB::raw('COALESCE(u.code, u.name) as unit'),
+                'rmi.request as requested_qty',
+                'w.name as warehouse_name',
+                'dept.name as department_name',
+                'dl.name as destination_name',
+                'rm.note',
+            ])
+            ->orderByDesc('rm.id')
+            ->get()
+            ->map(function ($r, $idx) use ($returnedByRmItem) {
+                $retObj = $returnedByRmItem->get("{$r->rm_id}-{$r->item_id}");
+                $returned = (float) ($retObj?->returned_qty ?? 0);
+                $requested = (float) $r->requested_qty;
+                $isApproved = in_array($r->status, ['Approved', 'Approved 2'], true);
+
+                return [
+                    'id' => "out-{$r->rm_id}-{$r->item_id}-{$idx}",
+                    'request_number' => $r->request_number,
+                    'date' => $this->normalizeDateYmd((string) $r->movement_date),
+                    'department' => $r->department_name ?: '-',
+                    'warehouse' => $r->warehouse_name ?: '-',
+                    'destination' => $r->destination_name ?: '-',
+                    'item_code' => $r->item_code ?: '-',
+                    'item_name' => $r->item_name ?: '-',
+                    'unit' => $r->unit ?: 'PCE',
+                    'requested_qty' => $requested,
+                    'issued_qty' => $isApproved ? $requested : 0.0,
+                    'returned_qty' => $returned,
+                    'outstanding_qty' => $isApproved ? 0.0 : $requested,
+                    'job_number' => $r->job_number ?: '-',
+                    'status' => $r->status ?: 'Waiting for Approve 1',
+                    'note' => $r->note ?: '-',
+                ];
+            })
+            ->filter(function ($r) use ($startDate, $endDate, $search) {
+                if ($startDate && $r['date'] < $startDate) {
+                    return false;
+                }
+                if ($endDate && $r['date'] > $endDate) {
+                    return false;
+                }
+                if ($search !== '') {
+                    $q = strtolower($search);
+                    $hay = strtolower("{$r['request_number']} {$r['item_code']} {$r['item_name']} {$r['department']} {$r['warehouse']}");
+                    if (! str_contains($hay, $q)) {
+                        return false;
+                    }
+                }
+
+                return true;
+            })
+            ->values()
+            ->map(function ($r, $i) {
+                $r['no'] = $i + 1;
+
+                return $r;
+            });
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $rows,
         ]);
     }
 }

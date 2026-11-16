@@ -22,7 +22,7 @@ import type {
 } from "./stock-item-types";
 
 export function StockItemIndex() {
-  const [date, setDate] = useState("2026-10-20");
+  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [classification, setClassification] = useState("All Classifications");
   const [location, setLocation] = useState<LocationFilter>("All");
   const [stockStatus, setStockStatus] = useState<StockStatusFilter>("All");
@@ -151,7 +151,22 @@ export function StockItemIndex() {
       }
       return true;
     });
-  }, [classification, location, stockStatus, coordinate, facility, search]);
+  }, [liveRecords, classification, location, stockStatus, coordinate, facility, search]);
+
+  const dynamicClassifications = useMemo(() => {
+    const vals = liveRecords.map((r) => r.classification).filter((v) => v && v !== "—" && v !== "-");
+    return Array.from(new Set([...stockItemClassificationsList, ...vals]));
+  }, [liveRecords]);
+
+  const dynamicCoordinates = useMemo(() => {
+    const vals = liveRecords.map((r) => r.coordinate).filter((v) => v && v !== "—" && v !== "-");
+    return Array.from(new Set([...stockItemCoordinatesList, ...vals]));
+  }, [liveRecords]);
+
+  const dynamicFacilities = useMemo(() => {
+    const vals = liveRecords.map((r) => r.facility).filter((v) => v && v !== "—" && v !== "-");
+    return Array.from(new Set([...stockItemFacilitiesList, ...vals]));
+  }, [liveRecords]);
 
   // Pagination calculation
   const totalRecords = filteredRecords.length;
@@ -320,7 +335,7 @@ export function StockItemIndex() {
                 setClassification(val);
                 setCurrentPage(1);
               }}
-              options={stockItemClassificationsList}
+              options={dynamicClassifications}
             />
           </div>
 
@@ -334,7 +349,7 @@ export function StockItemIndex() {
                 setCoordinate(val);
                 setCurrentPage(1);
               }}
-              options={stockItemCoordinatesList}
+              options={dynamicCoordinates}
             />
           </div>
 
@@ -348,7 +363,7 @@ export function StockItemIndex() {
                 setFacility(val);
                 setCurrentPage(1);
               }}
-              options={stockItemFacilitiesList}
+              options={dynamicFacilities}
             />
           </div>
         </div>

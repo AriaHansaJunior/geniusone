@@ -22,8 +22,8 @@ export function DocumentHistoryIndex({
 }: DocumentHistoryIndexProps) {
   // Search & Filter State
   const [search, setSearch] = useState("");
-  const [startDate, setStartDate] = useState("2026-10-01");
-  const [endDate, setEndDate] = useState("2026-10-31");
+  const [startDate, setStartDate] = useState("2026-01-01");
+  const [endDate, setEndDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [pageSize, setPageSize] = useState<number>(10);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [sortField, setSortField] =
@@ -67,14 +67,19 @@ export function DocumentHistoryIndex({
       }
 
       // Date range filter
-      if (startDate && endDate && rec.invoiceDate) {
-        // rec.invoiceDate is in DD-MM-YYYY format
-        const parts = rec.invoiceDate.split("-");
-        if (parts.length === 3) {
-          const recDateIso = `${parts[2]}-${parts[1]}-${parts[0]}`;
-          if (recDateIso < startDate || recDateIso > endDate) {
-            return false;
+      if (startDate && endDate && rec.invoiceDate && rec.invoiceDate !== "-") {
+        const raw = rec.invoiceDate.trim();
+        let recDateIso = "";
+        if (/^\d{4}-\d{2}-\d{2}/.test(raw)) {
+          recDateIso = raw.slice(0, 10);
+        } else {
+          const parts = raw.split("-");
+          if (parts.length === 3 && parts[2].length === 4) {
+            recDateIso = `${parts[2]}-${parts[1].padStart(2, "0")}-${parts[0].padStart(2, "0")}`;
           }
+        }
+        if (recDateIso && (recDateIso < startDate || recDateIso > endDate)) {
+          return false;
         }
       }
 
@@ -178,10 +183,9 @@ export function DocumentHistoryIndex({
 
   const handleSendMenuAction = (actionLabel: string, invoiceNum: string) => {
     setActiveSendMenuId(null);
-    setNotice(
-      `Selected "${actionLabel}" for invoice ${invoiceNum}. (Frontend demonstration mode)`
-    );
+    setNotice(`Document ${invoiceNum} opened for "${actionLabel}".`);
     setTimeout(() => setNotice(null), 4000);
+    onViewDetail(invoiceNum);
   };
 
   const startEntry = totalRecords === 0 ? 0 : (safeCurrentPage - 1) * pageSize + 1;

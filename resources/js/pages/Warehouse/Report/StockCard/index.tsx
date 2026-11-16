@@ -16,16 +16,16 @@ import {
 import type { StockCardRecord } from "./stock-card-types";
 
 export function StockCardIndex() {
-  const [startDate, setStartDate] = useState("2026-10-01");
-  const [endDate, setEndDate] = useState("2026-10-31");
+  const [startDate, setStartDate] = useState("2026-01-01");
+  const [endDate, setEndDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [selectedItemCode, setSelectedItemCode] = useState("");
   const [selectedUnit, setSelectedUnit] = useState("All Units");
   const [selectedWarehouse, setSelectedWarehouse] = useState("All Warehouse");
 
   // Applied filter state (triggered on Report button click or initial mount)
   const [appliedFilters, setAppliedFilters] = useState({
-    startDate: "2026-10-01",
-    endDate: "2026-10-31",
+    startDate: "2026-01-01",
+    endDate: new Date().toISOString().slice(0, 10),
     itemCode: "",
     unit: "All Units",
     warehouse: "All Warehouse",
@@ -43,7 +43,7 @@ export function StockCardIndex() {
 
   // Load real items and warehouses dynamically
   React.useEffect(() => {
-    apiFetch("/api/exim/master/items")
+    apiFetch("/api/exim/master/items?per_page=500")
       .then((res) => (res.ok ? res.json() : null))
       .then((json) => {
         if (json?.data && Array.isArray(json.data) && json.data.length > 0) {
@@ -66,7 +66,7 @@ export function StockCardIndex() {
       })
       .catch(() => {});
 
-    apiFetch("/api/warehouse/master/warehouses")
+    apiFetch("/api/warehouse/master/warehouses?per_page=500")
       .then((res) => (res.ok ? res.json() : null))
       .then((json) => {
         if (json?.data && Array.isArray(json.data) && json.data.length > 0) {
@@ -138,14 +138,14 @@ export function StockCardIndex() {
       .then((res) => (res.ok ? res.json() : null))
       .then((json) => {
         if (!isMounted) return;
-        if (json?.status === "success" && json.data?.movements && json.data.movements.length > 0) {
+        if (json?.status === "success" && Array.isArray(json.data?.movements)) {
           const item = json.data.item;
           const mapped: StockCardRecord[] = json.data.movements.map((m: any, idx: number) => ({
             id: String(m.id || idx + 1),
             no: idx + 1,
             itemCode: item?.code || appliedFilters.itemCode,
-            itemName: item?.name || "100% Cotton Combed Fabric 30s",
-            unitCode: m.unit || item?.unit || "KG",
+            itemName: item?.name || "-",
+            unitCode: m.unit || item?.unit || "PCE",
             warehouse: m.warehouse || appliedFilters.warehouse,
             date: m.date || appliedFilters.startDate,
             ref: m.reference_no || "-",

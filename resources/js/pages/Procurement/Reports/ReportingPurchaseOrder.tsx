@@ -65,8 +65,8 @@ export function ReportingPurchaseOrder({
   // Filter States
   // ---------------------------------------------------------------------------
   const [search, setSearch] = useState("");
-  const [startDate, setStartDate] = useState("2026-07-01");
-  const [endDate, setEndDate] = useState("2026-10-31");
+  const [startDate, setStartDate] = useState("2026-01-01");
+  const [endDate, setEndDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [supplierFilter, setSupplierFilter] = useState("Choose Supplier");
   const [receivingFilter, setReceivingFilter] = useState<
     PoReceivingStatus | "Show All"
@@ -181,11 +181,13 @@ export function ReportingPurchaseOrder({
       if (isoEnd && record.purchaseDateRaw > isoEnd) return false;
 
       // Supplier Filter
-      if (
-        supplierFilter !== "Choose Supplier" &&
-        record.supplier !== supplierFilter
-      ) {
-        return false;
+      if (supplierFilter !== "Choose Supplier") {
+        const targetSup = supplierFilter.toLowerCase();
+        const recSup = (record.supplier || "").toLowerCase();
+        const recSupName = String((record as any).supplierName || "").toLowerCase();
+        if (recSup !== targetSup && recSupName !== targetSup && !recSup.includes(targetSup)) {
+          return false;
+        }
       }
 
       // Receiving Status Filter
@@ -218,6 +220,7 @@ export function ReportingPurchaseOrder({
 
     return filtered;
   }, [
+    records,
     search,
     startDate,
     endDate,

@@ -2,6 +2,7 @@
 
 namespace App\Services\Workflow;
 
+use App\Http\Controllers\Api\Exim\Operations\DocumentHistoryApiController;
 use App\Models\Master\Material\Item;
 use App\Models\Procurement\PurchaseOrder\ApprovalPo;
 use App\Models\Procurement\PurchaseOrder\PurchaseOrder;
@@ -166,6 +167,11 @@ class DocumentApprovalWorkflowService
             // 4. BE-05: Deduct Inventory on RM Stage 2 Approval
             if ($normKey === 'RM' && $tier === 2) {
                 $this->deductRmStockFromInventory($doc, $user->id);
+            }
+
+            // 5. Auto-record approved Receive Note into EXIM Document History
+            if ($normKey === 'RN' && $tier === 2 && $doc instanceof ReceiveNote) {
+                DocumentHistoryApiController::syncSingleReceiveNote($doc, $user->id);
             }
 
             // 5. BE-06: Centralized Audit Trail History

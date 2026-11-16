@@ -14,6 +14,9 @@ class DocumentHistoryApiController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
+        $actorId = $this->optionalActorId($request) ?? 1;
+        self::syncMissingApprovedDocuments($actorId);
+
         $query = DocumentHistory::with(['createdByUser', 'updatedByUser', 'items']);
 
         if ($search = $request->query('search')) {
@@ -117,12 +120,10 @@ class DocumentHistoryApiController extends Controller
     }
 
     /**
-     * Synchronize approved Receive Notes into Document Histories from MySQL.
+     * Automatically sync all Approved Receive Notes that have not yet been recorded in Document History.
      */
-    public function synchronize(Request $request): JsonResponse
+    public static function syncMissingApprovedDocuments(int $actorId = 1): array
     {
-        $actorId = $this->requireActorId($request);
-
         return DB::transaction(function () use ($actorId) {
             $existingTxNumbers = DocumentHistory::pluck('transaction_number')->filter()->flip();
 
@@ -133,9 +134,9 @@ class DocumentHistoryApiController extends Controller
                 'items.poItem.directItem.unitOfMeasurement',
                 'items.poItem.item.unitOfMeasurement',
             ])
+                ->whereIn('status', ['Approved', 'Approved 2'])
                 ->orderByDesc('id')
-                ->get()
-                ->filter(fn (ReceiveNote $rn) => $rn->status === 'Approved');
+                ->get();
 
             $synced = [];
             foreach ($approvedRns as $rn) {
@@ -143,17 +144,48 @@ class DocumentHistoryApiController extends Controller
                     continue;
                 }
 
-                $history = $this->createFromReceiveNote($rn, $actorId);
-                $synced[] = $history->load(['items', 'createdByUser']);
+                $history = self::buildFromReceiveNote($rn, $actorId);
+                $synced[] = $history->load(['items', 'createdByUser', 'updatedByUser']);
             }
 
-            return response()->json([
-                'status' => 'success',
-                'message' => count($synced).' document(s) synchronized from approved Receive Notes.',
-                'data' => $synced,
-                'synced_count' => count($synced),
-            ]);
+            return $synced;
         });
+    }
+
+    /**
+     * Ensure a single Receive Note is recorded in Document History (idempotent).
+     */
+    public static function syncSingleReceiveNote(ReceiveNote $rn, int $actorId = 1): DocumentHistory
+    {
+        $existing = DocumentHistory::where('transaction_number', $rn->rn_number)->first();
+        if ($existing) {
+            return $existing;
+        }
+
+        $rn->loadMissing([
+            'supplier',
+            'currency',
+            'items.poItem.directItem.unitOfMeasurement',
+            'items.poItem.item.unitOfMeasurement',
+        ]);
+
+        return self::buildFromReceiveNote($rn, $actorId);
+    }
+
+    /**
+     * Synchronize approved Receive Notes into Document Histories from MySQL.
+     */
+    public function synchronize(Request $request): JsonResponse
+    {
+        $actorId = $this->requireActorId($request);
+        $synced = self::syncMissingApprovedDocuments($actorId);
+
+        return response()->json([
+            'status' => 'success',
+            'message' => count($synced).' document(s) synchronized from approved Receive Notes.',
+            'data' => $synced,
+            'synced_count' => count($synced),
+        ]);
     }
 
     /**
@@ -182,7 +214,7 @@ class DocumentHistoryApiController extends Controller
                     ]);
                 }
 
-                $history = $this->createFromReceiveNote($rn, $actorId);
+                $history = self::buildFromReceiveNote($rn, $actorId);
 
                 return response()->json([
                     'status' => 'success',
@@ -195,7 +227,7 @@ class DocumentHistoryApiController extends Controller
         return $this->store($request);
     }
 
-    private function createFromReceiveNote(ReceiveNote $rn, int $actorId): DocumentHistory
+    private static function buildFromReceiveNote(ReceiveNote $rn, int $actorId): DocumentHistory
     {
         $totalAmount = (float) $rn->items->sum(fn ($it) => (float) ($it->grand_total ?? (($it->quantity ?? 0) * ($it->price ?? 0))));
 

@@ -1,4 +1,5 @@
 import React from "react";
+import { WarehouseOperationalReport } from "../pages/Warehouse/Report/WarehouseOperationalReport";
 import {
   Dashboard,
   PurchaseRequisition,
@@ -973,6 +974,26 @@ export function AppViewRenderer({
         <StockItemIndex />
       )}
 
+      {/* Warehouse Receive Material Report */}
+      {viewState.type === "list" && viewState.page === "wh-rep-receive-material" && (
+        <WarehouseOperationalReport reportKind="receive-material" />
+      )}
+
+      {/* Warehouse Stock Transfer Report */}
+      {viewState.type === "list" && viewState.page === "wh-rep-stock-transfer" && (
+        <WarehouseOperationalReport reportKind="stock-transfer" />
+      )}
+
+      {/* Warehouse Stock Mutation Report */}
+      {viewState.type === "list" && viewState.page === "wh-rep-stock-mutation" && (
+        <WarehouseOperationalReport reportKind="stock-mutation" />
+      )}
+
+      {/* Warehouse Outstanding Request Report */}
+      {viewState.type === "list" && viewState.page === "wh-rep-outstanding-request" && (
+        <WarehouseOperationalReport reportKind="outstanding-request" />
+      )}
+
       {/* Warehouse Request Material Listing */}
       {viewState.type === "list" && viewState.page === "wh-req-material" && (
         <RequestMaterialIndex
@@ -1067,6 +1088,10 @@ export function AppViewRenderer({
         viewState.page !== "warehouse-master" &&
         viewState.page !== "wh-rep-stock-card" &&
         viewState.page !== "wh-rep-stock-item" &&
+        viewState.page !== "wh-rep-receive-material" &&
+        viewState.page !== "wh-rep-stock-transfer" &&
+        viewState.page !== "wh-rep-stock-mutation" &&
+        viewState.page !== "wh-rep-outstanding-request" &&
         viewState.page !== "wh-req-material" &&
         viewState.page !== "stock-notification-master" &&
         viewState.page !== "wh-type-of-request" &&

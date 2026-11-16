@@ -7,10 +7,40 @@ use App\Models\Procurement\PurchaseOrder\PurchaseOrder;
 use App\Models\Procurement\PurchaseRequest\PurchaseRequisition;
 use App\Services\GeniusOneBackend;
 use App\ViewModels\PrPoTraceabilityViewModel;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class TraceabilityReportApiController extends Controller
 {
+    private function toIsoDate(?string $raw, $fallback = null): string
+    {
+        if (! empty($raw)) {
+            $trimmed = trim((string) $raw);
+            if (preg_match('/^\d{4}-\d{2}-\d{2}/', $trimmed, $m)) {
+                return $m[0];
+            }
+            try {
+                return Carbon::parse($trimmed)->format('Y-m-d');
+            } catch (\Throwable) {
+                // ignore
+            }
+        }
+        if ($fallback instanceof \DateTimeInterface) {
+            return $fallback->format('Y-m-d');
+        }
+
+        return date('Y-m-d');
+    }
+
+    private function toDmyDate(string $isoDate): string
+    {
+        if (preg_match('/^(\d{4})-(\d{2})-(\d{2})/', $isoDate, $m)) {
+            return "{$m[3]}-{$m[2]}-{$m[1]}";
+        }
+
+        return $isoDate;
+    }
     /**
      * Get PR-PO-RN-BPB Traceability Matrix Report.
      */
@@ -132,7 +162,7 @@ class TraceabilityReportApiController extends Controller
             $query->whereDate('date', '<=', $request->date_to);
         }
 
-        $records = $query->orderBy('id', 'desc')->get();
+        $records = $query->with(['items.orderItems.purchaseOrder.supplier', 'creatorUser', 'updatedByUser'])->orderBy('id', 'desc')->get();
 
         $rows = $records->values()->map(function ($pr, $idx) {
             $firstItem = $pr->items->first();
@@ -140,11 +170,13 @@ class TraceabilityReportApiController extends Controller
                 ->filter()->unique()->values();
             $jobNumbers = $pr->items->map(fn ($it) => $it->jobNumberModel?->code ?? $it->jobNumberModel?->name ?? $it->job_number)
                 ->filter()->unique()->values();
-            $unitName = $firstItem?->item?->unitOfMeasurement?->name ?? '';
+            $unitName = $firstItem?->item?->unitOfMeasurement?->code ?? $firstItem?->item?->unitOfMeasurement?->name ?? '';
 
             $status = $pr->status ?? 'Waiting for Approve 1';
-            $appr2 = $pr->approvals->where('approval_ke', '2')->first();
-            $isApproved2 = ($status === 'Approved') || ($appr2 && (int) $appr2->status === 1);
+            $appr1 = $pr->approvals->where('approval_ke', '1')->where('status', 1)->first();
+            $appr2 = $pr->approvals->where('approval_ke', '2')->where('status', 1)->first();
+            $isApproved2 = in_array($status, ['Approved', 'Approved 2'], true) || (bool) $appr2;
+            $isApproved1 = $isApproved2 || ($status === 'Waiting for Approve 2') || (bool) $appr1;
             $allClosed = $pr->items->isNotEmpty() && $pr->items->every(fn ($it) => (bool) $it->is_closed);
             $unclosed = $pr->items->filter(fn ($it) => ! (bool) $it->is_closed);
             $fullyOrderedCount = $unclosed->filter(fn ($it) => $it->orderItems && (float) $it->orderItems->sum('order') >= (float) $it->quantity)->count();
@@ -156,10 +188,45 @@ class TraceabilityReportApiController extends Controller
                 $status = 'Outstanding';
             }
 
+            $approvalStatusLabel = $allClosed
+                ? 'Closed'
+                : ($isApproved2 ? 'Approve 2' : ($isApproved1 ? 'Approve 1' : 'Ready'));
+
+            $qtyRequest = (float) $pr->items->sum('quantity');
+            $qtyPurchase = (float) $pr->items->sum(fn ($it) => $it->orderItems ? (float) $it->orderItems->sum('order') : 0.0);
+            $qtyRemain = max(0.0, $qtyRequest - $qtyPurchase);
+
+            $prDateRaw = $this->toIsoDate($pr->date, $pr->created_at);
+            $dueDateRaw = $this->toIsoDate($pr->due_date, $pr->created_at);
+
+            $hasNonFac = $pr->items->contains(fn ($it) => stripos((string) ($it->item?->facility?->name ?? ''), 'non') !== false);
+            $facilityType = $hasNonFac ? 'NON FASILITAS' : 'FASILITAS';
+
+            $poDetails = $pr->items->flatMap(function ($it) {
+                return ($it->orderItems ?? collect())->map(function ($oi) {
+                    $po = $oi->purchaseOrder;
+                    if (! $po) {
+                        return null;
+                    }
+
+                    return [
+                        'poCode' => $po->po_number,
+                        'supplierName' => $po->supplier?->name ?? '—',
+                        'qty' => (float) $oi->order,
+                        'date' => $this->toDmyDate($this->toIsoDate($po->date, $po->created_at)),
+                    ];
+                });
+            })->filter()->groupBy('poCode')->map(function ($group) {
+                $first = $group->first();
+                $first['qty'] = (float) $group->sum('qty');
+
+                return $first;
+            })->values()->all();
+
             $lineItems = $pr->items->values()->map(function ($it, $itIdx) use ($pr) {
                 $ordered = $it->orderItems ? (float) $it->orderItems->sum('order') : 0.0;
                 $qty = (float) $it->quantity;
-                $unit = $it->item?->unitOfMeasurement?->name ?? '';
+                $unit = $it->item?->unitOfMeasurement?->code ?? $it->item?->unitOfMeasurement?->name ?? '';
 
                 return [
                     'no' => $itIdx + 1,
@@ -184,19 +251,36 @@ class TraceabilityReportApiController extends Controller
                 '_id' => "pr-{$pr->id}",
                 'prNumber' => $pr->pr_number,
                 'pr_number' => $pr->pr_number,
-                'date' => $pr->date ?: ($pr->created_at?->format('Y-m-d') ?? '-'),
-                'dueDate' => $pr->due_date ?: '-',
+                'date' => $prDateRaw,
+                'prDate' => $this->toDmyDate($prDateRaw),
+                'prDateRaw' => $prDateRaw,
+                'dueDate' => $dueDateRaw,
+                'dateRequired' => $this->toDmyDate($dueDateRaw),
+                'dateRequiredRaw' => $dueDateRaw,
+                'facilityType' => $facilityType,
+                'itemCode' => $firstItem?->item?->code ?? '-',
+                'itemName' => $firstItem?->item?->name ?? ($pr->items->count() > 1 ? $pr->items->count().' items' : '—'),
+                'unitCode' => $unitName ?: 'PCE',
                 'deptRequest' => $pr->department?->name ?? '—',
                 'department' => $pr->department?->name ?? '—',
                 'section' => $pr->section?->name ?? '—',
                 'jobNumber' => $jobNumbers->isNotEmpty() ? $jobNumbers->join(', ') : '—',
                 'poNumber' => $poNumbers->isNotEmpty() ? $poNumbers->join(', ') : '—',
                 'totalItem' => $pr->items->count(),
-                'totalQuantity' => (float) $pr->items->sum('quantity'),
-                'totalQtyFormatted' => number_format((float) $pr->items->sum('quantity'), 4).($unitName !== '' ? " {$unitName}" : ''),
+                'totalQuantity' => $qtyRequest,
+                'qtyRequest' => $qtyRequest,
+                'qtyPurchase' => $qtyPurchase,
+                'qtyRemain' => $qtyRemain,
+                'totalQtyFormatted' => number_format($qtyRequest, 4).($unitName !== '' ? " {$unitName}" : ''),
                 'unit' => $unitName,
                 'status' => $status,
+                'approvalStatus' => $approvalStatusLabel,
+                'approvalDate1' => $appr1?->updated_at?->format('d-m-Y') ?? '-',
+                'approvalDate2' => $appr2?->updated_at?->format('d-m-Y') ?? '-',
                 'createdBy' => $pr->creatorUser?->name ?? '—',
+                'lastUpdatedBy' => $pr->updatedByUser?->name ?? $pr->creatorUser?->name ?? '—',
+                'lastUpdatedAt' => $pr->updated_at?->format('d-m-Y H:i') ?? ($pr->created_at?->format('d-m-Y H:i') ?? '-'),
+                'poDetails' => $poDetails,
                 'remark' => $firstItem?->note ?? $firstItem?->remark ?? '',
                 'items' => $lineItems,
             ];
@@ -271,15 +355,34 @@ class TraceabilityReportApiController extends Controller
 
         $records = $query->orderBy('id', 'desc')->get();
 
-        $rows = $records->values()->map(function ($po, $idx) {
+        // Preload net received quantity per PO item from RN & BPB links
+        $receivedByPoItem = DB::table('purchase_order_has_receive_note as porn')
+            ->leftJoin('receive_note as rn', 'porn.receive_note_id', '=', 'rn.id')
+            ->whereNull('porn.deleted_at')
+            ->where(function ($q) {
+                $q->whereNull('rn.id')->orWhere('rn.status', '!=', 'Rejected');
+            })
+            ->selectRaw('porn.po_has_items_id, SUM(GREATEST(0, porn.quantity - COALESCE(porn.rafaksi, 0))) as received_qty')
+            ->groupBy('porn.po_has_items_id')
+            ->pluck('received_qty', 'po_has_items_id');
+
+        $rows = $records->values()->map(function ($po, $idx) use ($receivedByPoItem) {
             $currencyCode = $po->currency?->code ?? $po->currency?->name ?? 'IDR';
-            $supplierName = $po->supplier ? "[{$po->supplier->code}] {$po->supplier->name}" : '—';
+            $supplierDisplay = $po->supplier ? "[{$po->supplier->code}] {$po->supplier->name}" : '—';
             $prNumbers = $po->items->map(fn ($it) => $it->requisitionItem?->purchaseRequisition?->pr_number)->filter()->unique()->values();
             $rnRecord = $po->receiveNotes->first();
 
-            $lineItems = $po->items->values()->map(function ($it, $itIdx) use ($currencyCode) {
+            $totalOrdered = (float) $po->items->sum('order');
+            $totalReceived = (float) $po->items->sum(fn ($it) => (float) ($receivedByPoItem[$it->id] ?? 0));
+            $receivingStatus = ($totalOrdered > 0 && $totalReceived >= $totalOrdered) ? 'Complete' : 'Outstanding';
+            $purchaseDateRaw = $this->toIsoDate($po->date, $po->created_at);
+            $facilityLabel = $po->facility_status ?: ($po->isKawasanBerikat() ? 'FASILITAS' : 'NON FASILITAS');
+
+            $lineItems = $po->items->values()->map(function ($it, $itIdx) use ($currencyCode, $receivedByPoItem) {
                 $itemObj = $it->directItem ?? $it->item ?? $it->requisitionItem?->item;
-                $unit = $itemObj?->unitOfMeasurement?->name ?? '';
+                $unit = $itemObj?->unitOfMeasurement?->code ?? $itemObj?->unitOfMeasurement?->name ?? '';
+                $ordered = (float) $it->order;
+                $received = (float) ($receivedByPoItem[$it->id] ?? 0);
 
                 return [
                     'no' => $itIdx + 1,
@@ -288,7 +391,9 @@ class TraceabilityReportApiController extends Controller
                     'itemName' => $itemObj?->name ?? ($it->item_alias ?: '—'),
                     'prNumber' => $it->requisitionItem?->purchaseRequisition?->pr_number ?? '—',
                     'unit' => $unit,
-                    'qty' => (float) $it->order,
+                    'qty' => $ordered,
+                    'qtyReceived' => $received,
+                    'qtyOutstanding' => max(0.0, $ordered - $received),
                     'price' => (float) $it->price,
                     'discount' => (float) $it->discount,
                     'dpp' => (float) $it->dpp,
@@ -305,12 +410,15 @@ class TraceabilityReportApiController extends Controller
                 '_id' => "po-{$po->id}",
                 'poNumber' => $po->po_number,
                 'po_number' => $po->po_number,
-                'date' => $po->date ?: ($po->created_at?->format('Y-m-d') ?? '-'),
-                'dueDate' => $po->due_date ?: '-',
-                'supplier' => $supplierName,
+                'date' => $purchaseDateRaw,
+                'purchaseDate' => $this->toDmyDate($purchaseDateRaw),
+                'purchaseDateRaw' => $purchaseDateRaw,
+                'dueDate' => $this->toIsoDate($po->due_date, $po->created_at),
+                'supplier' => $supplierDisplay,
                 'supplierName' => $po->supplier?->name ?? '—',
                 'poType' => $po->poType?->name ?? '—',
-                'facility' => $po->facility_status ?: ($po->isKawasanBerikat() ? 'FASILITAS' : 'NON FASILITAS'),
+                'facility' => $facilityLabel,
+                'facilityType' => $facilityLabel,
                 'currency' => $currencyCode,
                 'rate' => (float) $po->rate,
                 'paymentTerm' => $po->paymentTerm?->name ?? '—',
@@ -318,17 +426,23 @@ class TraceabilityReportApiController extends Controller
                 'rnNumber' => $rnRecord?->receiveNote?->rn_number ?? '—',
                 'deptCreated' => $po->creator?->department?->name ?? '—',
                 'createdBy' => $po->creator?->name ?? '—',
+                'createdAt' => $po->created_at?->format('d-m-Y H:i') ?? $this->toDmyDate($purchaseDateRaw),
                 'totalItem' => $po->items->count(),
-                'totalQuantity' => (float) $po->items->sum('order'),
+                'totalQuantity' => $totalOrdered,
+                'totalReceived' => $totalReceived,
                 'subtotal' => (float) $po->subtotal,
                 'discount' => (float) $po->discount,
                 'dpp' => (float) $po->dpp,
+                'vat' => (float) $po->ppn,
                 'ppn' => (float) $po->ppn,
                 'pph' => (float) $po->pph,
                 'additionalCosts' => (float) $po->additional_costs_total,
                 'grandTotal' => (float) $po->grand_total,
                 'total' => $currencyCode.' '.number_format((float) $po->grand_total, 2),
+                'description' => $po->remark ?: '-',
                 'status' => $po->status ?? 'Waiting for Approve 1',
+                'poStatus' => $po->status ?? 'Waiting for Approve 1',
+                'receivingStatus' => $receivingStatus,
                 'items' => $lineItems,
             ];
         })->values();

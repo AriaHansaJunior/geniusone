@@ -294,32 +294,87 @@ export async function deleteReceiveNoteReturnApi(id: string | number): Promise<b
 export async function fetchMasterDocumentHistories(): Promise<DocumentHistoryRecord[] | null> {
   const res = await apiGet<{ data: any[] }>("/api/exim/operations/document-histories", { per_page: 200 });
   if (!res?.data) return null;
+  const toDmy = (val?: string | null): string => {
+    if (!val) return "-";
+    const iso = String(val).slice(0, 10);
+    const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    return m ? `${m[3]}-${m[2]}-${m[1]}` : iso;
+  };
   return res.data.map((r: any, idx: number) => {
-    const cif = Number(r.cif_value || 0);
+    const amount = Number(r.amount ?? r.cif_value ?? 0);
     const curr = r.currency || "IDR";
+    const rawItems = Array.isArray(r.items) ? r.items : [];
+    const mappedItems = rawItems.map((it: any, itIdx: number) => {
+      const qty = Number(it.quantity ?? 0);
+      const unitPrice = Number(it.unit_price ?? 0);
+      const subtotal = Number(it.subtotal ?? qty * unitPrice);
+      const invDate = toDmy(r.invoice_date || r.created_at);
+      return {
+        id: String(it.id || `${r.id}-${itIdx}`),
+        no: itIdx + 1,
+        soNumber: it.so_number || "-",
+        soDate: invDate,
+        plNumber: it.pl_number || r.invoice_alias || "-",
+        plDate: invDate,
+        itemProduct: it.item_name || "-",
+        itemCode: it.item_code || "-",
+        nettWeight: qty,
+        grossWeight: qty,
+        pack: 1,
+        packUnit: it.unit || "PCE",
+        quantity: qty,
+        unit: it.unit || "PCE",
+        unitPrice,
+        subtotal,
+        currency: curr,
+        history: [
+          {
+            id: `hist-${it.id || itIdx}`,
+            namaBarang: it.item_name || "-",
+            itemCode: it.item_code || "-",
+            productionNumber: r.transaction_number || "-",
+            productionDate: invDate,
+            spkNumber: it.so_number || "-",
+            nomorAju: it.nomor_aju || "-",
+            nomorAjuDate: invDate,
+            nomorDaftar: it.nomor_daftar || "-",
+            nomorDaftarDate: invDate,
+            jenisDokumen: it.jenis_dokumen || r.customs_document || "-",
+            seriBarang: it.seri_barang || String(itIdx + 1),
+            qty,
+            qtyFormatted: `${qty.toLocaleString("en-US")} ${it.unit || "PCE"}`,
+            netto: qty,
+            nettoFormatted: `${qty.toLocaleString("en-US")} ${it.unit || "PCE"}`,
+          },
+        ],
+      };
+    });
+    const totalUnitPrice = mappedItems.reduce((sum: number, it: any) => sum + Number(it.unitPrice || 0), 0);
+    const totalSubtotal = mappedItems.reduce((sum: number, it: any) => sum + Number(it.subtotal || 0), 0) || amount;
+
     return {
       id: String(r.id),
       no: idx + 1,
-      invoiceNumber: r.reference_doc_number || r.aju_number || "-",
-      mutationType: r.reference_doc_type || "INCOMING",
-      invoiceDate: r.registration_date ? String(r.registration_date).slice(0, 10) : "-",
-      customerSupplier: r.partner_name || "-",
-      customsDocument: `${r.bc_type || "-"} / ${r.aju_number || "-"}`,
-      amount: cif,
-      amountFormatted: `${curr} ${cif.toLocaleString("en-US", { minimumFractionDigits: 2 })}`,
-      lastUpdatedUser: r.created_by_name || "-",
+      invoiceNumber: r.invoice_number || r.transaction_number || "-",
+      mutationType: r.mutation_type || "Receive Note",
+      invoiceDate: toDmy(r.invoice_date || r.created_at),
+      customerSupplier: r.customer_supplier || r.customer || "-",
+      customsDocument: r.customs_document || "-",
+      amount,
+      amountFormatted: `${curr} ${amount.toLocaleString("en-US", { minimumFractionDigits: 2 })}`,
+      lastUpdatedUser: r.updated_by_user?.name || r.created_by_user?.name || "-",
       lastUpdatedTimestamp: formatDisplayDate(r.updated_at || r.created_at),
-      transactionNumber: r.aju_number || "-",
-      invoiceAlias: r.registration_number || "-",
-      customer: r.partner_name || "-",
-      destination: r.customs_office || "-",
-      blNumber: r.sppb_number || "-",
+      transactionNumber: r.transaction_number || r.invoice_number || "-",
+      invoiceAlias: r.invoice_alias || "-",
+      customer: r.customer || r.customer_supplier || "-",
+      destination: r.destination || "-",
+      blNumber: r.bl_number || "-",
       currency: curr,
       createdAt: formatDisplayDate(r.created_at),
       lastUpdatedAt: formatDisplayDate(r.updated_at || r.created_at),
-      items: [],
-      totalUnitPrice: cif,
-      totalSubtotal: cif,
+      items: mappedItems,
+      totalUnitPrice,
+      totalSubtotal,
     };
   });
 }
@@ -824,57 +879,90 @@ export async function fetchPrReportApi(params?: Record<string, any>): Promise<Pr
   const res = await apiGet<{ data?: any[]; rows?: any[] }>("/api/reporting/pr-report", params);
   const list = res?.data || res?.rows || [];
   if (!Array.isArray(list)) return [];
-  return list.map((r: any, idx: number) => ({
-    id: String(r.id || idx + 1),
-    prNumber: r.prNumber || r.pr_number || r.code || "-",
-    prDate: r.prDate || r.pr_date || r.date || "-",
-    prDateRaw: r.prDateRaw || r.pr_date_raw || r.date || "",
-    dateRequired: r.dateRequired || r.date_required || r.dueDate || "-",
-    dateRequiredRaw: r.dateRequiredRaw || r.date_required_raw || r.dueDate || "",
-    facilityType: r.facilityType || r.facility || "FASILITAS",
-    itemCode: r.itemCode || r.item_code || r.items?.[0]?.itemCode || "-",
-    itemName: r.itemName || r.item_name || r.items?.[0]?.itemName || "-",
-    unitCode: r.unitCode || r.unit || r.items?.[0]?.unit || "-",
-    qtyRequest: Number(r.qtyRequest ?? r.qty_request ?? r.totalQuantity ?? r.qty ?? 0),
-    qtyPurchase: Number(r.qtyPurchase ?? r.qty_purchase ?? 0),
-    qtyRemain: Number(r.qtyRemain ?? r.qty_remain ?? 0),
-    status: (r.status === "Completed" || r.status === "Ordered" ? "Completed" : "Outstanding") as PrReportRecord["status"],
-    approvalDate1: r.approvalDate1 || r.approval1_at || "-",
-    approvalDate2: r.approvalDate2 || r.approval2_at || "-",
-    approvalStatus: (["Ready", "Approve 1", "Approve 2", "Closed"].includes(r.approvalStatus)
-      ? r.approvalStatus
-      : "Approve 2") as PrReportRecord["approvalStatus"],
-    lastUpdatedBy: r.lastUpdatedBy || r.createdBy || r.created_by || "-",
-    lastUpdatedAt: r.lastUpdatedAt || r.updated_at || r.date || "-",
-    deptRequest: r.deptRequest || r.department || "-",
-    section: r.section || "-",
-    poDetails: Array.isArray(r.poDetails) ? r.poDetails : [],
-  }));
+  return list.map((r: any, idx: number) => {
+    const qtyRequest = Number(r.qtyRequest ?? r.qty_request ?? r.totalQuantity ?? r.qty ?? 0);
+    const qtyPurchase = Number(r.qtyPurchase ?? r.qty_purchase ?? 0);
+    const qtyRemain = Number(r.qtyRemain ?? r.qty_remain ?? Math.max(0, qtyRequest - qtyPurchase));
+    const rawStatus = String(r.status || "");
+    const normalizedReportStatus: PrReportRecord["status"] =
+      rawStatus === "Ordered" || rawStatus === "Completed" || rawStatus === "Closing" || (qtyRequest > 0 && qtyRemain <= 0)
+        ? "Completed"
+        : "Outstanding";
+
+    const rawApproval = String(r.approvalStatus || "");
+    const resolvedApproval: PrReportRecord["approvalStatus"] = ["Ready", "Approve 1", "Approve 2", "Closed"].includes(rawApproval)
+      ? (rawApproval as PrReportRecord["approvalStatus"])
+      : rawStatus.toLowerCase().includes("closing")
+        ? "Closed"
+        : rawStatus.toLowerCase().includes("approve 2")
+          ? "Approve 1"
+          : rawStatus.toLowerCase().includes("approve 1")
+            ? "Ready"
+            : "Approve 2";
+
+    return {
+      id: String(r.id || idx + 1),
+      prNumber: r.prNumber || r.pr_number || r.code || "-",
+      prDate: r.prDate || r.pr_date || r.date || "-",
+      prDateRaw: r.prDateRaw || r.pr_date_raw || r.date || "",
+      dateRequired: r.dateRequired || r.date_required || r.dueDate || "-",
+      dateRequiredRaw: r.dateRequiredRaw || r.date_required_raw || r.dueDate || "",
+      facilityType: (/non/i.test(String(r.facilityType || r.facility || "")) ? "NON FASILITAS" : "FASILITAS") as PrReportRecord["facilityType"],
+      itemCode: r.itemCode || r.item_code || r.items?.[0]?.itemCode || "-",
+      itemName: r.itemName || r.item_name || r.items?.[0]?.itemName || "-",
+      unitCode: r.unitCode || r.unit || r.items?.[0]?.unit || "-",
+      qtyRequest,
+      qtyPurchase,
+      qtyRemain,
+      status: normalizedReportStatus,
+      approvalDate1: r.approvalDate1 || r.approval1_at || "-",
+      approvalDate2: r.approvalDate2 || r.approval2_at || "-",
+      approvalStatus: resolvedApproval,
+      lastUpdatedBy: r.lastUpdatedBy || r.createdBy || r.created_by || "-",
+      lastUpdatedAt: r.lastUpdatedAt || r.updated_at || r.date || "-",
+      deptRequest: r.deptRequest || r.department || "-",
+      section: r.section || "-",
+      poDetails: Array.isArray(r.poDetails) ? r.poDetails : [],
+    };
+  });
 }
 
 export async function fetchPoReportApi(params?: Record<string, any>): Promise<PoReportRecord[]> {
   const res = await apiGet<{ data?: any[]; rows?: any[] }>("/api/reporting/po-report", params);
   const list = res?.data || res?.rows || [];
   if (!Array.isArray(list)) return [];
-  return list.map((r: any, idx: number) => ({
-    id: String(r.id || idx + 1),
-    poNumber: r.poNumber || r.po_number || r.code || "-",
-    purchaseDate: r.purchaseDate || r.purchase_date || r.date || "-",
-    purchaseDateRaw: r.purchaseDateRaw || r.purchase_date_raw || r.date || "",
-    supplier: r.supplier || r.supplier_name || "-",
-    discount: Number(r.discount ?? 0),
-    vat: Number(r.vat ?? r.ppn ?? r.ppn_amount ?? 0),
-    subtotal: Number(r.subtotal ?? r.grandTotal ?? r.grand_total ?? 0),
-    description: r.description || r.note || "-",
-    poStatus: (["Approved", "Ready", "Draft", "Closed"].includes(r.poStatus || r.status)
-      ? (r.poStatus || r.status)
-      : "Approved") as PoReportRecord["poStatus"],
-    receivingStatus: (r.receivingStatus === "Complete" ? "Complete" : "Outstanding") as PoReportRecord["receivingStatus"],
-    facilityType: (/non/i.test(String(r.facilityType || r.facility || "")) ? "NON FASILITAS" : "FASILITAS") as PoReportRecord["facilityType"],
-    createdBy: r.createdBy || r.created_by || "-",
-    createdAt: r.createdAt || r.created_at || r.date || "-",
-    items: Array.isArray(r.items) ? r.items : [],
-  }));
+  return list.map((r: any, idx: number) => {
+    const rawPoStatus = String(r.poStatus || r.status || "Waiting for Approve 1");
+    const mappedPoStatus: PoReportRecord["poStatus"] =
+      rawPoStatus === "Approved" || rawPoStatus === "Approved 2" || rawPoStatus === "Completed"
+        ? "Approved"
+        : rawPoStatus === "Waiting for Approve 2" || rawPoStatus === "Approved 1"
+          ? "Ready"
+          : rawPoStatus === "Draft"
+            ? "Draft"
+            : rawPoStatus === "Closed" || rawPoStatus === "Closing" || rawPoStatus === "Rejected"
+              ? "Closed"
+              : "Ready";
+
+    return {
+      id: String(r.id || idx + 1),
+      poNumber: r.poNumber || r.po_number || r.code || "-",
+      purchaseDate: r.purchaseDate || r.purchase_date || r.date || "-",
+      purchaseDateRaw: r.purchaseDateRaw || r.purchase_date_raw || r.date || "",
+      supplier: r.supplier || r.supplier_name || "-",
+      supplierName: r.supplierName || r.supplier || "-",
+      discount: Number(r.discount ?? 0),
+      vat: Number(r.vat ?? r.ppn ?? r.ppn_amount ?? 0),
+      subtotal: Number(r.subtotal ?? r.grandTotal ?? r.grand_total ?? 0),
+      description: r.description || r.note || r.remark || "-",
+      poStatus: mappedPoStatus,
+      receivingStatus: (r.receivingStatus === "Complete" ? "Complete" : "Outstanding") as PoReportRecord["receivingStatus"],
+      facilityType: (/non/i.test(String(r.facilityType || r.facility || "")) ? "NON FASILITAS" : "FASILITAS") as PoReportRecord["facilityType"],
+      createdBy: r.createdBy || r.created_by || "-",
+      createdAt: r.createdAt || r.created_at || r.date || "-",
+      items: Array.isArray(r.items) ? r.items : [],
+    };
+  });
 }
 
 // =========================================================================
