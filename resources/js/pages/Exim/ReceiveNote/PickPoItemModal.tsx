@@ -74,13 +74,11 @@ export function PickPoItemModal({
             const rawItems = po.items || po._items || [];
             const poFac = String(po.facility || po.facility_status || po._rawFacility || "FASILITAS");
             const isPoFacility = !poFac.toUpperCase().includes("NON");
-            const isPoKawasanBerikat = isPoFacility
-              ? true
-              : Boolean(
-                  po.is_kawasan_berikat ??
-                    po.isKawasanBerikat ??
-                    rawItems.some((it: any) => Boolean(it.ditangguhkan_kawasan_berikat))
-                );
+            const rawKb = po.is_kawasan_berikat ?? po.isKawasanBerikat;
+            const isPoKawasanBerikat =
+              rawKb !== undefined && rawKb !== null
+                ? Boolean(rawKb)
+                : rawItems.some((it: any) => Boolean(it.ditangguhkan_kawasan_berikat)) || isPoFacility;
 
             if (!isPoKawasanBerikat) {
               return;

@@ -1126,7 +1126,7 @@ const handleConfirmSubmit = async () => {
       latest_delivery: latestDelivery,
       service_subkon: isSubkon,
       facility_status: statusFacility === "Non Facility" ? "NON FASILITAS" : "FASILITAS",
-      is_kawasan_berikat: statusFacility === "Facility" ? true : isKawasanBerikat,
+      is_kawasan_berikat: isKawasanBerikat,
       remark: remarkPo,
       items: items.map((it) => {
         const hasDiscount = it.discountType && it.discountType !== "none";

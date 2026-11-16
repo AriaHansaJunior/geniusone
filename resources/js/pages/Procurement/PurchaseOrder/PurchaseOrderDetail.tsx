@@ -394,10 +394,10 @@ export function PurchaseOrderDetail({
 
   const ppnRate = 11;
   const isKawasanBerikat = useMemo(() => {
-    if (!isHeaderNonFac) return true;
     const rawKb = row.is_kawasan_berikat ?? row.isKawasanBerikat;
     if (rawKb !== undefined && rawKb !== null) return Boolean(rawKb);
-    return poItems.some((it: any) => Boolean(it.ditangguhkan_kawasan_berikat));
+    if (poItems.some((it: any) => Boolean(it.ditangguhkan_kawasan_berikat))) return true;
+    return !isHeaderNonFac;
   }, [isHeaderNonFac, row.is_kawasan_berikat, row.isKawasanBerikat, poItems]);
 
   const ppnAmount = useMemo(() => {

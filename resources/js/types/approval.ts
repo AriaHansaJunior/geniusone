@@ -92,15 +92,29 @@ export function normalizeApprovalStatus(rawStatus?: string | null): ApprovalStat
     return "PARTIAL_CLOSING";
   }
 
-  if (s === "APPROVED" || s === "COMPLETE" || s === "APPROVED_2" || s === "STAGE_2_APPROVED") {
+  if (
+    s === "APPROVED" ||
+    s === "COMPLETE" ||
+    s === "COMPLETED" ||
+    s === "APPROVED_2" ||
+    s === "STAGE_2_APPROVED"
+  ) {
     return "APPROVED";
   }
 
-  if (s === "WAITING_APPROVE_2" || s === "APPROVED_1" || s === "STAGE_1_APPROVED" || s === "WAITING_2") {
+  if (
+    s === "WAITING_FOR_APPROVE_2" ||
+    s === "WAITING_APPROVE_2" ||
+    s === "WAITING_APPROVAL_2" ||
+    s === "WAITING_FOR_APPROVAL_2" ||
+    s === "APPROVED_1" ||
+    s === "STAGE_1_APPROVED" ||
+    s === "WAITING_2"
+  ) {
     return "WAITING_APPROVE_2";
   }
 
-  if (s === "REJECTED" || s === "DECLINED") {
+  if (s === "REJECTED" || s === "DECLINED" || s.startsWith("REJECTED_")) {
     return "REJECTED";
   }
 

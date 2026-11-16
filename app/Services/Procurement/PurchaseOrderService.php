@@ -123,9 +123,9 @@ class PurchaseOrderService
 
             $dueDate = $headerData['due_date'] ?? now()->addDays(14)->format('Y-m-d');
             $latestDeliv = $headerData['latest_delivery'] ?? now()->addDays(14);
-            $isKawasanBerikat = strtoupper($resolvedFacility) === 'FASILITAS'
-                ? true
-                : (bool) ($headerData['is_kawasan_berikat'] ?? false);
+            $isKawasanBerikat = array_key_exists('is_kawasan_berikat', $headerData)
+                ? (bool) $headerData['is_kawasan_berikat']
+                : strtoupper($resolvedFacility) === 'FASILITAS';
 
             $order = PurchaseOrder::create([
                 'po_number' => $poNumber,
@@ -204,9 +204,9 @@ class PurchaseOrderService
             $facilityInput = array_key_exists('facility_status', $headerData) || ! empty($items)
                 ? $this->resolveFacilityStatus(array_merge(['facility_status' => $order->facility_status], $headerData), $items)
                 : $order->facility_status;
-            $isKawasanBerikat = strtoupper((string) $facilityInput) === 'FASILITAS'
-                ? true
-                : (bool) ($headerData['is_kawasan_berikat'] ?? $order->is_kawasan_berikat);
+            $isKawasanBerikat = array_key_exists('is_kawasan_berikat', $headerData)
+                ? (bool) $headerData['is_kawasan_berikat']
+                : (bool) ($order->is_kawasan_berikat ?? (strtoupper((string) $facilityInput) === 'FASILITAS'));
 
             $order->update([
                 'po_types_id' => $headerData['po_types_id'] ?? $order->po_types_id,

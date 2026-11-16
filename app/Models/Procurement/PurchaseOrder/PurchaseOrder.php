@@ -56,15 +56,15 @@ class PurchaseOrder extends Model
 
     public function isKawasanBerikat(): bool
     {
-        if (strtoupper((string) $this->facility_status) === 'FASILITAS') {
-            return true;
-        }
-
         if ($this->is_kawasan_berikat !== null) {
             return (bool) $this->is_kawasan_berikat;
         }
 
-        return $this->items->contains(fn ($it) => (bool) $it->ditangguhkan_kawasan_berikat);
+        if ($this->items->contains(fn ($it) => (bool) $it->ditangguhkan_kawasan_berikat)) {
+            return true;
+        }
+
+        return strtoupper((string) $this->facility_status) === 'FASILITAS';
     }
 
     public function creator(): BelongsTo

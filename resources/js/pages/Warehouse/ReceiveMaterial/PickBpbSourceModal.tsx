@@ -54,13 +54,14 @@ const getSafeStr = (val: any): string => {
 };
 
 export const isPoKawasanBerikat = (po: any): boolean => {
-  const poFac = String(po?.facility || po?.facility_status || po?._rawFacility || "FASILITAS");
-  const isFacility = !poFac.toUpperCase().includes("NON");
-  if (isFacility) return true;
   const rawKb = po?.is_kawasan_berikat ?? po?.isKawasanBerikat;
   if (rawKb !== undefined && rawKb !== null) return Boolean(rawKb);
   const rawItems = po?.items || po?._items || [];
-  return Array.isArray(rawItems) && rawItems.some((it: any) => Boolean(it.ditangguhkan_kawasan_berikat));
+  if (Array.isArray(rawItems) && rawItems.some((it: any) => Boolean(it.ditangguhkan_kawasan_berikat))) {
+    return true;
+  }
+  const poFac = String(po?.facility || po?.facility_status || po?._rawFacility || "FASILITAS");
+  return !poFac.toUpperCase().includes("NON");
 };
 
 export function PickBpbSourceModal({

@@ -7,6 +7,50 @@ import { useAuthPermission } from "../../context/AuthPermissionContext";
 const STORAGE_KEY_SECTIONS = "geniusone_sidebar_sections";
 const STORAGE_KEY_GROUPS = "geniusone_sidebar_groups";
 
+// Precompute leaf IDs that appear in multiple menu locations (e.g. "item" under Procurement and Exim)
+const LEAF_PATHS_BY_ID: Record<string, string[]> = {};
+for (const section of navigationConfig) {
+  for (const leaf of section.directItems || []) {
+    if (!LEAF_PATHS_BY_ID[leaf.id]) LEAF_PATHS_BY_ID[leaf.id] = [];
+    LEAF_PATHS_BY_ID[leaf.id].push(leaf.path);
+  }
+  for (const group of section.groups || []) {
+    for (const leaf of group.items || []) {
+      if (!LEAF_PATHS_BY_ID[leaf.id]) LEAF_PATHS_BY_ID[leaf.id] = [];
+      LEAF_PATHS_BY_ID[leaf.id].push(leaf.path);
+    }
+  }
+}
+
+function getNormalizedCurrentPath(): string {
+  if (typeof window === "undefined") return "";
+  return decodeURIComponent(window.location.pathname).replace(/\/$/, "") || "/";
+}
+
+function isLeafMatch(leaf: NavLeafItem, activePage: PageKey | null, currentPath: string): boolean {
+  if (!activePage || activePage !== leaf.id) return false;
+
+  const sharedPaths = LEAF_PATHS_BY_ID[leaf.id] || [];
+  if (sharedPaths.length <= 1) return true;
+
+  // Match exact route path or nested sub-route (e.g. /exim/master/item/create)
+  const exactOrSubMatch = sharedPaths.find(
+    (p) => currentPath === p || currentPath.startsWith(`${p}/`)
+  );
+  if (exactOrSubMatch) {
+    return leaf.path === exactOrSubMatch;
+  }
+
+  // Fallback by module prefix if accessed via a legacy shorthand URL (e.g. /procurement/item vs /master/item)
+  if (currentPath.startsWith("/procurement/")) {
+    return leaf.path.startsWith("/procurement/");
+  }
+
+  // Default to the canonical first non-procurement (Exim) path or the first registered path
+  const canonicalDefault = sharedPaths.find((p) => p.startsWith("/exim/")) || sharedPaths[0];
+  return leaf.path === canonicalDefault;
+}
+
 interface SidebarProps {
   activePage: PageKey | null;
   onNavigate: (page: PageKey, path?: string) => void;
@@ -86,11 +130,12 @@ export function Sidebar({
       exim: false,
       warehouse: false,
     };
+    const currentPath = getNormalizedCurrentPath();
     if (activePage && activePage !== "dashboard") {
       for (const section of navigationConfig) {
         if (
-          section.directItems?.some((i) => i.id === activePage) ||
-          section.groups?.some((g) => g.id === activePage || g.items.some((i) => i.id === activePage))
+          section.directItems?.some((i) => isLeafMatch(i, activePage, currentPath)) ||
+          section.groups?.some((g) => g.id === activePage || g.items.some((i) => isLeafMatch(i, activePage, currentPath)))
         ) {
           defaults[section.id] = true;
           break;
@@ -134,11 +179,12 @@ export function Sidebar({
       "warehouse-request": false,
       "warehouse-report": false,
     };
+    const currentPath = getNormalizedCurrentPath();
     if (activePage && activePage !== "dashboard") {
       for (const section of navigationConfig) {
         if (section.groups) {
           for (const group of section.groups) {
-            if (group.id === activePage || group.items.some((i) => i.id === activePage)) {
+            if (group.id === activePage || group.items.some((i) => isLeafMatch(i, activePage, currentPath))) {
               if (!group.isDirectLeaf && !group.disabled && !group.isPlaceholder) {
                 defaults[group.id] = true;
               }
@@ -196,36 +242,38 @@ export function Sidebar({
 
   // Preserve user's saved session state on initial mount/refresh.
   // Only auto-expand parent section and subgroup when user navigates between pages.
+  const currentPath = getNormalizedCurrentPath();
   const isFirstMountRef = useRef(true);
-  const prevActivePageRef = useRef<PageKey | null>(activePage);
+  const prevNavKeyRef = useRef<string>(`${activePage || ""}::${currentPath}`);
 
   useEffect(() => {
+    const nextNavKey = `${activePage || ""}::${currentPath}`;
     if (isFirstMountRef.current) {
       isFirstMountRef.current = false;
       return;
     }
 
     if (!activePage || activePage === "dashboard") {
-      prevActivePageRef.current = activePage;
+      prevNavKeyRef.current = nextNavKey;
       return;
     }
 
-    if (prevActivePageRef.current !== activePage) {
-      prevActivePageRef.current = activePage;
+    if (prevNavKeyRef.current !== nextNavKey) {
+      prevNavKeyRef.current = nextNavKey;
 
       for (const section of navigationConfig) {
         // Check direct items
         if (section.path && activePage === section.id) {
           return;
         }
-        if (section.directItems?.some((item) => item.id === activePage)) {
+        if (section.directItems?.some((item) => isLeafMatch(item, activePage, currentPath))) {
           setOpenSections((prev) => ({ ...prev, [section.id]: true }));
           return;
         }
         // Check nested groups
         if (section.groups) {
           for (const group of section.groups) {
-            if (group.id === activePage || group.items.some((item) => item.id === activePage)) {
+            if (group.id === activePage || group.items.some((item) => isLeafMatch(item, activePage, currentPath))) {
               setOpenSections((prev) => ({ ...prev, [section.id]: true }));
               if (!group.isDirectLeaf) {
                 setOpenGroups((prev) => ({ ...prev, [group.id]: true }));
@@ -236,7 +284,7 @@ export function Sidebar({
         }
       }
     }
-  }, [activePage]);
+  }, [activePage, currentPath]);
 
   const toggleSection = (sectionId: string, e?: React.MouseEvent) => {
     e?.stopPropagation();
@@ -282,8 +330,16 @@ export function Sidebar({
 
   const isSectionActive = (section: NavSection): boolean => {
     if (section.path && activePage === section.id) return true;
-    if (section.directItems?.some((item) => item.id === activePage)) return true;
-    if (section.groups?.some((group) => group.id === activePage || group.items.some((item) => item.id === activePage))) return true;
+    if (section.directItems?.some((item) => isLeafMatch(item, activePage, currentPath))) return true;
+    if (
+      section.groups?.some(
+        (group) =>
+          group.id === activePage ||
+          group.items.some((item) => isLeafMatch(item, activePage, currentPath))
+      )
+    ) {
+      return true;
+    }
     return false;
   };
 
@@ -481,11 +537,11 @@ export function Sidebar({
                                       </div>
                                     ) : (
                                       group.items.map((leaf) => {
-                                        const isLeafActive = activePage === leaf.id;
+                                        const isLeafActive = isLeafMatch(leaf, activePage, currentPath);
                                         return (
                                           <button
                                             type="button"
-                                            key={leaf.id}
+                                            key={`${leaf.id}-${leaf.path}`}
                                             className={`sidebar-leaf-item ${
                                               isLeafActive ? "active" : ""
                                             } ${leaf.isPlaceholder ? "leaf-placeholder" : ""}`}
@@ -522,11 +578,11 @@ export function Sidebar({
 
                       {/* Direct Items under Section (e.g. Receive Note, Document History) */}
                       {section.directItems?.map((leaf) => {
-                        const isLeafActive = activePage === leaf.id;
+                        const isLeafActive = isLeafMatch(leaf, activePage, currentPath);
                         return (
                           <button
                             type="button"
-                            key={leaf.id}
+                            key={`${leaf.id}-${leaf.path}`}
                             className={`sidebar-leaf-item sidebar-leaf-item--direct ${
                               isLeafActive ? "active" : ""
                             } ${leaf.isPlaceholder ? "leaf-placeholder" : ""}`}

@@ -615,7 +615,7 @@ export function PurchaseOrderTabsAndSummary({
             <span>{ppnAmount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
           </div>
 
-          {/* Kawasan Berikat Routing & Tax Rule: Facility = mandatory Kawasan Berikat; Non Facility = optional */}
+          {/* Kawasan Berikat Routing Rule: checked = Via Receive Note (RN); unchecked = Direct to BPB */}
           <div
             className="po-summary-row"
             style={{
@@ -630,27 +630,26 @@ export function PurchaseOrderTabsAndSummary({
               style={{
                 fontSize: "11.5px",
                 gap: "6px",
-                opacity: statusFacility === "Facility" ? 0.85 : 1,
+                cursor: "pointer",
               }}
             >
               <input
                 type="checkbox"
-                checked={statusFacility === "Facility" ? true : isKawasanBerikat}
-                disabled={statusFacility === "Facility"}
+                checked={isKawasanBerikat}
                 onChange={(e) => setIsKawasanBerikat(e.target.checked)}
               />
               <span style={{ fontWeight: 600 }}>
-                Kawasan Berikat {statusFacility === "Facility" ? "(Mandatory)" : "(Optional)"}
+                Kawasan Berikat
               </span>
             </label>
             <span
               style={{
                 fontSize: "11px",
-                color: (statusFacility === "Facility" || isKawasanBerikat) ? "var(--blue-700)" : "var(--muted)",
+                color: isKawasanBerikat ? "var(--blue-700)" : "var(--muted)",
                 fontWeight: 700,
               }}
             >
-              {statusFacility === "Facility" || isKawasanBerikat ? "Via Receive Note (RN)" : "Direct to BPB"}
+              {isKawasanBerikat ? "Via Receive Note (RN)" : "Direct to BPB"}
             </span>
           </div>
 

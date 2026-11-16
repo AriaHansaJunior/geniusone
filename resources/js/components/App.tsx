@@ -258,12 +258,13 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
   // Navigate to list or dashboard view
   const handleNavigateList = useCallback((targetPage: PageKey, targetPath?: string) => {
     const { nextState, path } = resolveTargetPathForPage(targetPage, targetPath);
-    setViewState(nextState);
 
     if (typeof window !== "undefined") {
       window.scrollTo(0, 0);
       window.history.pushState(nextState, "", path);
     }
+
+    setViewState(nextState);
   }, []);
 
   // Navigate to detail view using slugified document identifier
