@@ -90,9 +90,9 @@ class AuthApiController extends Controller
         // Generate stateless API Bearer token
         $token = Str::random(60);
         Cache::put("api_token:{$token}", $user->id, now()->addDays(30));
-        $user->update(['remember_token' => $token]);
+        $user->forceFill(['remember_token' => $token])->save();
 
-        $user->load(['department', 'roleModel']);
+        $user->load(['department:id,name', 'roleModel.permissions', 'directPermissions']);
         $roleCode = $user->role ?: ($user->roleModel?->name ?? User::ROLE_VIEWER);
 
         return response()->json([
@@ -138,7 +138,7 @@ class AuthApiController extends Controller
                 'name' => $user->name,
                 'ip' => $request->ip(),
             ]);
-            $user->update(['remember_token' => null]);
+            $user->forceFill(['remember_token' => null])->save();
         }
 
         Auth::logout();
@@ -168,7 +168,7 @@ class AuthApiController extends Controller
             ], 401);
         }
 
-        $user->load(['department', 'roleModel']);
+        $user->load(['department:id,name', 'roleModel.permissions', 'directPermissions']);
         $roleCode = $user->role ?: ($user->roleModel?->name ?? User::ROLE_VIEWER);
 
         return response()->json([

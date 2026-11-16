@@ -132,7 +132,7 @@ import {
   saveDestinationLocationApi,
   deleteDestinationLocationApi,
 } from "../data/masterApi";
-import { createReceiveNote } from "../data/api";
+import { clearApiCache, createReceiveNote } from "../data/api";
 
 interface AppProps {
   initialPage?: string;
@@ -270,8 +270,20 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
   const loadedPagesRef = useRef<Set<string>>(new Set());
   const [masterFetchStates, setMasterFetchStates] = useState<Record<string, "loading" | "done">>({});
 
+  // Redirect authenticated users away from the standalone login view on refresh
+  useEffect(() => {
+    if (authReady && isAuthenticated && viewState.type === "login") {
+      handleNavigateList("dashboard", "/dashboard");
+    }
+  }, [authReady, isAuthenticated, viewState.type, handleNavigateList]);
+
   // On-demand route-based database synchronization
   useEffect(() => {
+    if (!isAuthenticated) {
+      loadedPagesRef.current.clear();
+      return;
+    }
+
     let isMounted = true;
     const page = viewState.type === "list" ? viewState.page : undefined;
     const type = viewState.type;
@@ -370,64 +382,40 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
     if (page === "job-number" || type === "job-number-create" || type === "job-number-edit" || type === "pr-create") {
       loadOnce("job-numbers", fetchMasterJobNumbers, setJobNumberRecords);
     }
-    if (page === "receive-note" || type === "receive-note-detail" || type === "receive-note-create" || type === "dashboard") {
-      fetchMasterReceiveNotes().then((data) => {
-        if (isMounted && Array.isArray(data)) {
-          setReceiveNoteRecords(data);
-        }
-      });
+    if (page === "receive-note" || type === "receive-note-detail" || type === "receive-note-create") {
+      loadOnce("receive-notes", fetchMasterReceiveNotes, setReceiveNoteRecords);
     }
     if (page === "receive-note-return" || type === "receive-note-return-detail" || type === "receive-note-return-create") {
-      fetchMasterReceiveNoteReturns().then((data) => {
-        if (isMounted && Array.isArray(data)) {
-          setReceiveNoteReturnRecords(data);
-        }
-      });
+      loadOnce("receive-note-returns", fetchMasterReceiveNoteReturns, setReceiveNoteReturnRecords);
     }
     if (page === "document-history" || type === "document-history-detail") {
-      fetchMasterDocumentHistories().then((data) => {
-        if (isMounted && Array.isArray(data)) {
-          setDocumentHistoryRecords(data);
-        }
-      });
+      loadOnce("document-histories", fetchMasterDocumentHistories, setDocumentHistoryRecords);
     }
-    if (page === "wh-req-material" || type === "wh-req-material-detail" || type === "wh-req-material-create" || type === "dashboard") {
-      fetchRequestMaterials().then((data) => {
-        if (isMounted && Array.isArray(data)) {
-          setRequestMaterialRecords(data);
-        }
-      });
+    if (page === "wh-req-material" || type === "wh-req-material-detail" || type === "wh-req-material-create") {
+      loadOnce("request-materials", fetchRequestMaterials, setRequestMaterialRecords);
     }
     if (page === "stock-notification-master" || type === "stock-notification-create" || type === "stock-notification-edit") {
-      fetchStockNotificationsApi().then((data) => {
-        if (isMounted && Array.isArray(data)) {
-          setStockNotificationRecords(data);
-        }
-      });
+      loadOnce("stock-notifications", fetchStockNotificationsApi, setStockNotificationRecords);
     }
     if (page === "wh-type-of-request" || type === "wh-type-of-request-create" || type === "wh-type-of-request-edit" || type === "wh-req-material-create") {
-      fetchWarehouseTypesOfRequestApi().then((data) => {
-        if (isMounted && Array.isArray(data)) {
-          setTypeOfRequestRecords(data);
-        }
-      });
+      loadOnce("wh-type-of-requests", fetchWarehouseTypesOfRequestApi, setTypeOfRequestRecords);
     }
     if (page === "wh-destination-location" || type === "wh-destination-location-create" || type === "wh-destination-location-edit" || type === "wh-req-material-create") {
-      fetchDestinationLocationsApi().then((data) => {
-        if (isMounted && Array.isArray(data)) {
-          setDestinationLocationRecords(data);
-        }
-      });
+      loadOnce("wh-destination-locations", fetchDestinationLocationsApi, setDestinationLocationRecords);
     }
 
     return () => {
       isMounted = false;
     };
-  }, [viewState]);
+  }, [viewState, isAuthenticated]);
 
   // Synchronize shared React state whenever any document approval changes (e.g. Dashboard Quick Approve)
   useEffect(() => {
     const handleApprovalChanged = () => {
+      clearApiCache();
+      loadedPagesRef.current.delete("receive-notes");
+      loadedPagesRef.current.delete("request-materials");
+      if (!isAuthenticated) return;
       fetchMasterReceiveNotes().then((data) => {
         if (Array.isArray(data)) setReceiveNoteRecords(data);
       }).catch(() => { });
@@ -437,7 +425,7 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
     };
     window.addEventListener("geniusone_approval_changed", handleApprovalChanged);
     return () => window.removeEventListener("geniusone_approval_changed", handleApprovalChanged);
-  }, []);
+  }, [isAuthenticated]);
 
   const handleTogglePphHide = useCallback((id: string) => {
     setPphRecords((prev) => {

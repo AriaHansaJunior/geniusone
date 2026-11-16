@@ -23,16 +23,22 @@ class AuthenticateApiRequest
 
         // 2. Check Bearer token or X-Auth-Token
         $token = $request->bearerToken() ?: $request->header('X-Auth-Token');
-        if ($token) {
-            $userId = Cache::get("api_token:{$token}")
-                ?: User::where('remember_token', $token)->value('id');
+        if ($token && ! in_array($token, ['null', 'undefined', '[object Object]'], true)) {
+            $user = null;
+            $userId = Cache::get("api_token:{$token}");
 
             if ($userId) {
                 $user = User::find($userId);
-                if ($user && $user->isActive()) {
-                    Auth::setUser($user);
-                    $request->setUserResolver(fn () => $user);
+            } else {
+                $user = User::where('remember_token', $token)->first();
+                if ($user) {
+                    Cache::put("api_token:{$token}", $user->id, now()->addDays(30));
                 }
+            }
+
+            if ($user && $user->isActive()) {
+                Auth::setUser($user);
+                $request->setUserResolver(fn () => $user);
             }
         }
 

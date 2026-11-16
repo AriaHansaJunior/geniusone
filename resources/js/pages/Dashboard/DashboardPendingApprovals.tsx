@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { Icon } from "../../components/ui/Icon";
 import { Button } from "../../components/ui/Button";
 import { Badge } from "../../components/ui/Badge";
@@ -125,15 +125,32 @@ export function DashboardPendingApprovals({
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [pageSize, setPageSize] = useState<number>(5);
 
-  // Load all pending approval records across modules
+  const receiveNoteRef = useRef(receiveNoteRecords);
+  receiveNoteRef.current = receiveNoteRecords;
+  const requestMaterialRef = useRef(requestMaterialRecords);
+  requestMaterialRef.current = requestMaterialRecords;
+
+  // Load all pending approval records across modules in parallel (single pass)
   const loadApprovals = useCallback(async () => {
     setIsLoading(true);
     const collected: PendingApprovalItem[] = [];
 
+    const [prResult, poResult, rnResult, whResult, reqResult, tsrResult] = await Promise.allSettled([
+      fetchList("pr"),
+      fetchList("po"),
+      receiveNoteRef.current && receiveNoteRef.current.length > 0
+        ? Promise.resolve(receiveNoteRef.current)
+        : fetchReceiveNotes(),
+      fetchList("warehouse"),
+      requestMaterialRef.current && requestMaterialRef.current.length > 0
+        ? Promise.resolve(requestMaterialRef.current)
+        : fetchRequestMaterials(),
+      fetchTransferStockReturnsApi(),
+    ]);
+
     // 1. Purchase Requisitions (PR)
-    try {
-      const prRes = await fetchList("pr");
-      const list = prRes.rows;
+    if (prResult.status === "fulfilled") {
+      const list = prResult.value.rows;
       for (const row of list) {
         const docNum = String(row._rawNumber || row._rawPr || row.prNumber || row.id || "").trim();
         if (!docNum) continue;
@@ -157,14 +174,13 @@ export function DashboardPendingApprovals({
           });
         }
       }
-    } catch (err) {
-      console.warn("Dashboard approvals: Failed to load PR:", err);
+    } else {
+      console.warn("Dashboard approvals: Failed to load PR:", prResult.reason);
     }
 
     // 2. Purchase Orders (PO)
-    try {
-      const poRes = await fetchList("po");
-      const list = poRes.rows;
+    if (poResult.status === "fulfilled") {
+      const list = poResult.value.rows;
       for (const row of list) {
         const docNum = String(row._rawPo || row._rawNumber || row.poNumber || row.id || "").trim();
         if (!docNum) continue;
@@ -190,16 +206,13 @@ export function DashboardPendingApprovals({
           });
         }
       }
-    } catch (err) {
-      console.warn("Dashboard approvals: Failed to load PO:", err);
+    } else {
+      console.warn("Dashboard approvals: Failed to load PO:", poResult.reason);
     }
 
     // 3. Receive Notes (RN)
-    try {
-      const rnList =
-        receiveNoteRecords && receiveNoteRecords.length > 0
-          ? receiveNoteRecords
-          : (await fetchReceiveNotes()) || [];
+    if (rnResult.status === "fulfilled") {
+      const rnList = rnResult.value || [];
       for (const rn of rnList) {
         const docNum = String(rn.rnNumber || rn.id || "").trim();
         if (!docNum) continue;
@@ -225,14 +238,13 @@ export function DashboardPendingApprovals({
           });
         }
       }
-    } catch (err) {
-      console.warn("Dashboard approvals: Failed to load RN:", err);
+    } else {
+      console.warn("Dashboard approvals: Failed to load RN:", rnResult.reason);
     }
 
     // 4. Receive Material (BPB)
-    try {
-      const whRes = await fetchList("warehouse");
-      const list = whRes.rows;
+    if (whResult.status === "fulfilled") {
+      const list = whResult.value.rows;
       for (const row of list) {
         const docNum = String(row._rawNumber || row._rawRn || row.bpbNumber || row.id || "").trim();
         if (!docNum) continue;
@@ -256,16 +268,13 @@ export function DashboardPendingApprovals({
           });
         }
       }
-    } catch (err) {
-      console.warn("Dashboard approvals: Failed to load BPB:", err);
+    } else {
+      console.warn("Dashboard approvals: Failed to load BPB:", whResult.reason);
     }
 
     // 5. Request Material
-    try {
-      const reqList =
-        requestMaterialRecords && requestMaterialRecords.length > 0
-          ? requestMaterialRecords
-          : (await fetchRequestMaterials()) || [];
+    if (reqResult.status === "fulfilled") {
+      const reqList = reqResult.value || [];
       for (const req of reqList) {
         const docNum = String(req.requestCode || req.id || "").trim();
         if (!docNum) continue;
@@ -291,13 +300,13 @@ export function DashboardPendingApprovals({
           });
         }
       }
-    } catch (err) {
-      console.warn("Dashboard approvals: Failed to load Request Material:", err);
+    } else {
+      console.warn("Dashboard approvals: Failed to load Request Material:", reqResult.reason);
     }
 
     // 6. Transfer Stock Return
-    try {
-      const tsrList = (await fetchTransferStockReturnsApi()) || [];
+    if (tsrResult.status === "fulfilled") {
+      const tsrList = tsrResult.value || [];
       for (const tsr of tsrList) {
         const docNum = String(tsr.mutationCode || tsr.id || "").trim();
         if (!docNum) continue;
@@ -320,13 +329,13 @@ export function DashboardPendingApprovals({
           });
         }
       }
-    } catch (err) {
-      console.warn("Dashboard approvals: Failed to load Transfer Stock Return:", err);
+    } else {
+      console.warn("Dashboard approvals: Failed to load Transfer Stock Return:", tsrResult.reason);
     }
 
     setItems(collected);
     setIsLoading(false);
-  }, [receiveNoteRecords, requestMaterialRecords]);
+  }, []);
 
   // Initial load & subscribe to approval events across tabs/pages
   useEffect(() => {

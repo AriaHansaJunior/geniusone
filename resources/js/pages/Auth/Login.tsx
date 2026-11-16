@@ -43,8 +43,8 @@ export function Login({ onNavigateHome, onLoginSuccess }: LoginProps) {
             // ignore
           }
         }
-        if (data.data?.user) {
-          loginUser(data.data.user, data.data.token);
+        if (data.data?.user && data.data?.token) {
+          loginUser(String(data.data.token), data.data.user);
         }
         if (onLoginSuccess) {
           onLoginSuccess();

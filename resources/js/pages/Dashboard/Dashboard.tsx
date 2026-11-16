@@ -173,7 +173,7 @@ export function Dashboard({
       currency: appliedFilters.currency,
       rateType: appliedFilters.rateType,
     });
-    apiFetch(`/api/dashboard/exchange-rates?${params.toString()}`)
+    apiFetch(`/api/dashboard/exchange-rates?${params.toString()}`, { cache: "no-store" })
       .then((r) => r.json())
       .then((json) => {
         if (json?.status === "success" && Array.isArray(json.data)) {

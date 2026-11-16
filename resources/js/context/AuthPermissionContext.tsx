@@ -5,7 +5,7 @@
  */
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
-import { apiFetch } from "../data/api";
+import { apiFetch, clearApiCache, isValidAuthToken } from "../data/api";
 import { fetchRolesApi, fetchUsersApi } from "../services/userPermissionApi";
 import {
   type ApprovalModule,
@@ -34,15 +34,49 @@ interface AuthPermissionContextValue {
 
 const AuthPermissionContext = createContext<AuthPermissionContextValue | undefined>(undefined);
 
+function normalizeAuthUser(data: any): UserAccount {
+  const roleCode = String(data?.role || "viewer");
+  const isSuper =
+    Boolean(data?.isSuperAdmin ?? data?.is_super_admin) ||
+    roleCode.toLowerCase() === "superadmin";
+
+  return {
+    id: data.id,
+    name: data.name || "",
+    username: data.username || "",
+    email: data.email || "",
+    role: roleCode,
+    role_label: data.role_label || ucfirstRole(roleCode),
+    department: data.department_name || data.department?.name || data.department || "-",
+    department_id: data.department_id ?? data.departments_id ?? null,
+    departments_id: data.departments_id ?? data.department_id ?? null,
+    job_title: data.job_title ?? null,
+    employee_id: data.employee_id ?? null,
+    preferred_language: data.preferred_language ?? "EN",
+    photo: data.photo || null,
+    isSuperAdmin: isSuper,
+    is_super_admin: isSuper,
+    permissions: Array.isArray(data.permissions) ? data.permissions : [],
+    sidebar_permissions: Array.isArray(data.sidebar_permissions) ? data.sidebar_permissions : null,
+  };
+}
+
+function ucfirstRole(role: string): string {
+  return role ? role.charAt(0).toUpperCase() + role.slice(1) : "User";
+}
+
 function getStoredUser(): UserAccount | null {
   if (typeof window === "undefined") return null;
   try {
     const raw = sessionStorage.getItem("geniusone_user") || localStorage.getItem("geniusone_user");
     if (raw) {
-      return JSON.parse(raw);
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === "object" && (parsed.id || parsed.username)) {
+        return parsed as UserAccount;
+      }
     }
   } catch {
-    // ignore
+    // ignore invalid JSON from legacy storage
   }
   return null;
 }
@@ -50,13 +84,15 @@ function getStoredUser(): UserAccount | null {
 function getStoredToken(): string | null {
   if (typeof window === "undefined") return null;
   try {
-    return sessionStorage.getItem("geniusone_token") || localStorage.getItem("geniusone_token");
+    const raw = sessionStorage.getItem("geniusone_token") || localStorage.getItem("geniusone_token");
+    return isValidAuthToken(raw) ? raw : null;
   } catch {
     return null;
   }
 }
 
 function clearAuthStorage(): void {
+  clearApiCache();
   if (typeof window === "undefined") return;
   try {
     sessionStorage.removeItem("geniusone_token");
@@ -102,11 +138,12 @@ export function AuthPermissionProvider({ children }: { children: React.ReactNode
     refreshRoles();
   }, [refreshRoles]);
 
-  // Verify token against backend /api/auth/me on mount
+  // Verify token against backend /api/auth/me once on mount
   useEffect(() => {
     let active = true;
     const storedToken = getStoredToken();
     if (!storedToken) {
+      clearAuthStorage();
       setCurrentUserState(null);
       setToken(null);
       setAuthReady(true);
@@ -114,32 +151,19 @@ export function AuthPermissionProvider({ children }: { children: React.ReactNode
     }
 
     apiFetch("/api/auth/me")
-      .then((res) => {
-        if (!res.ok) throw new Error("Unauthenticated");
+      .then(async (res) => {
+        if (res.status === 401 || res.status === 403) {
+          throw new Error("UNAUTHENTICATED");
+        }
+        if (!res.ok) {
+          return null;
+        }
         return res.json();
       })
       .then((json) => {
-        if (!active) return;
+        if (!active || !json) return;
         if (json?.status === "success" && json.data) {
-          const u: UserAccount = {
-            id: json.data.id,
-            name: json.data.name,
-            username: json.data.username,
-            email: json.data.email,
-            role: json.data.role,
-            role_label: json.data.role_label,
-            department: json.data.department_name || "-",
-            department_id: json.data.department_id,
-            departments_id: json.data.department_id,
-            job_title: json.data.job_title,
-            employee_id: json.data.employee_id,
-            preferred_language: json.data.preferred_language,
-            photo: json.data.photo || null,
-            isSuperAdmin: Boolean(json.data.is_super_admin),
-            is_super_admin: Boolean(json.data.is_super_admin),
-            permissions: json.data.permissions || [],
-            sidebar_permissions: json.data.sidebar_permissions || null,
-          };
+          const u = normalizeAuthUser(json.data);
           setCurrentUserState(u);
           try {
             sessionStorage.setItem("geniusone_user", JSON.stringify(u));
@@ -147,21 +171,15 @@ export function AuthPermissionProvider({ children }: { children: React.ReactNode
           } catch {
             // ignore
           }
-          refreshRoles();
-          if (u.isSuperAdmin) {
-            fetchUsersApi()
-              .then((list) => {
-                if (active) setUsers(list);
-              })
-              .catch(() => {});
-          }
         }
       })
-      .catch(() => {
+      .catch((err) => {
         if (!active) return;
-        clearAuthStorage();
-        setToken(null);
-        setCurrentUserState(null);
+        if (err?.message === "UNAUTHENTICATED") {
+          clearAuthStorage();
+          setToken(null);
+          setCurrentUserState(null);
+        }
       })
       .finally(() => {
         if (active) setAuthReady(true);
@@ -170,7 +188,7 @@ export function AuthPermissionProvider({ children }: { children: React.ReactNode
     return () => {
       active = false;
     };
-  }, [refreshRoles]);
+  }, []);
 
   // Listen for 401 unauthorized events from apiFetch
   useEffect(() => {
@@ -185,28 +203,32 @@ export function AuthPermissionProvider({ children }: { children: React.ReactNode
     }
   }, []);
 
-  const loginUser = useCallback(
-    (newToken: string, user: UserAccount) => {
-      try {
-        sessionStorage.setItem("geniusone_token", newToken);
-        sessionStorage.setItem("geniusone_user", JSON.stringify(user));
-        localStorage.setItem("geniusone_token", newToken);
-        localStorage.setItem("geniusone_user", JSON.stringify(user));
-      } catch {
-        // ignore
+  const loginUser = useCallback((newToken: string, user: UserAccount) => {
+    // Defensive normalization in case callers pass (user, token)
+    let resolvedToken = newToken as any;
+    let resolvedUser = user as any;
+    if (typeof resolvedToken === "object" && resolvedToken !== null && typeof resolvedUser === "string") {
+      resolvedUser = newToken;
+      resolvedToken = user;
+    }
+    const normalizedUser = normalizeAuthUser(resolvedUser);
+    const tokenStr = isValidAuthToken(resolvedToken) ? resolvedToken : "";
+
+    clearApiCache();
+    try {
+      if (tokenStr) {
+        sessionStorage.setItem("geniusone_token", tokenStr);
+        localStorage.setItem("geniusone_token", tokenStr);
       }
-      setToken(newToken);
-      setCurrentUserState(user);
-      setAuthReady(true);
-      refreshRoles();
-      if (user.isSuperAdmin || user.is_super_admin || String(user.role || "").toLowerCase() === "superadmin") {
-        fetchUsersApi()
-          .then((list) => setUsers(list))
-          .catch(() => {});
-      }
-    },
-    [refreshRoles]
-  );
+      sessionStorage.setItem("geniusone_user", JSON.stringify(normalizedUser));
+      localStorage.setItem("geniusone_user", JSON.stringify(normalizedUser));
+    } catch {
+      // ignore
+    }
+    setToken(tokenStr || null);
+    setCurrentUserState(normalizedUser);
+    setAuthReady(true);
+  }, []);
 
   const logoutUser = useCallback(async () => {
     try {
@@ -236,29 +258,11 @@ export function AuthPermissionProvider({ children }: { children: React.ReactNode
 
   const refreshCurrentUser = useCallback(async () => {
     try {
-      const res = await apiFetch("/api/auth/me");
+      const res = await apiFetch("/api/auth/me", { cache: "no-store" });
       if (!res.ok) return;
       const json = await res.json();
       if (json?.status === "success" && json.data) {
-        const u: UserAccount = {
-          id: json.data.id,
-          name: json.data.name,
-          username: json.data.username,
-          email: json.data.email,
-          role: json.data.role,
-          role_label: json.data.role_label,
-          department: json.data.department_name || "-",
-          department_id: json.data.department_id,
-          departments_id: json.data.department_id,
-          job_title: json.data.job_title,
-          employee_id: json.data.employee_id,
-          preferred_language: json.data.preferred_language,
-          photo: json.data.photo || null,
-          isSuperAdmin: Boolean(json.data.is_super_admin),
-          is_super_admin: Boolean(json.data.is_super_admin),
-          permissions: json.data.permissions || [],
-          sidebar_permissions: json.data.sidebar_permissions || null,
-        };
+        const u = normalizeAuthUser(json.data);
         setCurrentUserState(u);
         try {
           sessionStorage.setItem("geniusone_user", JSON.stringify(u));

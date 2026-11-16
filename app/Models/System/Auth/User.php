@@ -24,8 +24,6 @@ class User extends Authenticatable
     /** @use HasFactory<UserFactory> */
     use HasFactory, LogsActivity, Notifiable, SoftDeletes;
 
-    protected $appends = ['effective_permissions'];
-
     public const ROLE_SUPERADMIN = 'superadmin';
 
     public const ROLE_ADMIN = 'admin';
@@ -262,8 +260,11 @@ class User extends Authenticatable
         $perms = collect();
 
         try {
-            $roleModel = Role::where('name', $this->role)->with('permissions')->first();
+            $roleModel = $this->relationLoaded('roleModel')
+                ? $this->getRelation('roleModel')
+                : Role::where('name', $this->role)->with('permissions')->first();
             if ($roleModel) {
+                $roleModel->loadMissing('permissions');
                 if ($roleModel->permissions->contains('name', '*')) {
                     return ['*'];
                 }
@@ -276,7 +277,9 @@ class User extends Authenticatable
                 $perms = $perms->merge($constantPerms);
             }
 
-            $directs = $this->directPermissions()->get();
+            $directs = $this->relationLoaded('directPermissions')
+                ? $this->getRelation('directPermissions')
+                : $this->directPermissions()->get();
             foreach ($directs as $dp) {
                 if ($dp->pivot->is_granted) {
                     $perms->push($dp->name);

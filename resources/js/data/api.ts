@@ -20,10 +20,22 @@ export class ApiError extends Error {
   }
 }
 
+export function isValidAuthToken(token: string | null | undefined): token is string {
+  if (!token || typeof token !== "string") return false;
+  const trimmed = token.trim();
+  return (
+    trimmed.length >= 10 &&
+    trimmed !== "null" &&
+    trimmed !== "undefined" &&
+    trimmed !== "[object Object]"
+  );
+}
+
 export function getAuthToken(): string | null {
   if (typeof window === "undefined") return null;
   try {
-    return sessionStorage.getItem("geniusone_token") || localStorage.getItem("geniusone_token");
+    const raw = sessionStorage.getItem("geniusone_token") || localStorage.getItem("geniusone_token");
+    return isValidAuthToken(raw) ? raw : null;
   } catch {
     return null;
   }
@@ -44,20 +56,150 @@ export function buildAuthHeaders(extra: Record<string, string> = {}): Record<str
   return headers;
 }
 
+interface BufferedHttpResponse {
+  status: number;
+  statusText: string;
+  headers: [string, string][];
+  bodyText: string;
+  cachedAt: number;
+}
+
+const inFlightGetRequests = new Map<string, Promise<BufferedHttpResponse>>();
+const getResponseCache = new Map<string, BufferedHttpResponse>();
+
+const DEFAULT_GET_CACHE_TTL_MS = 5000;
+const METADATA_GET_CACHE_TTL_MS = 30000;
+
+function resolveGetCacheTtlMs(url: string): number {
+  if (
+    url.includes("/api/system/context") ||
+    url.includes("/api/master/lookups") ||
+    url.includes("/api/admin/roles") ||
+    url.includes("/api/procurement/master/") ||
+    url.includes("/api/exim/master/") ||
+    url.includes("/api/warehouse/master/")
+  ) {
+    return METADATA_GET_CACHE_TTL_MS;
+  }
+  return DEFAULT_GET_CACHE_TTL_MS;
+}
+
+function shouldSkipGetCache(url: string, init: RequestInit): boolean {
+  if (init.cache === "no-store" || init.cache === "reload") return true;
+  if (url.includes("/attachment")) return true;
+  return false;
+}
+
+function buildResponseFromBuffer(entry: BufferedHttpResponse): Response {
+  return new Response(entry.bodyText, {
+    status: entry.status,
+    statusText: entry.statusText,
+    headers: entry.headers,
+  });
+}
+
+/**
+ * Clears cached GET responses (and optionally in-flight entries).
+ * Automatically triggered on mutations (POST/PUT/PATCH/DELETE) and auth changes.
+ */
+export function clearApiCache(prefix?: string): void {
+  if (!prefix) {
+    getResponseCache.clear();
+    inFlightGetRequests.clear();
+    return;
+  }
+  for (const key of getResponseCache.keys()) {
+    if (key.includes(prefix)) getResponseCache.delete(key);
+  }
+  for (const key of inFlightGetRequests.keys()) {
+    if (key.includes(prefix)) inFlightGetRequests.delete(key);
+  }
+}
+
+if (typeof window !== "undefined") {
+  window.addEventListener("geniusone_approval_changed", () => {
+    clearApiCache();
+  });
+  window.addEventListener("geniusone_unauthorized", () => {
+    clearApiCache();
+  });
+}
+
 /**
  * Low-level fetch wrapper: attaches Bearer token, CSRF token and session cookies,
- * and broadcasts `geniusone_unauthorized` when the server rejects the session.
+ * deduplicates concurrent identical GET requests with a short-lived response cache,
+ * and broadcasts `geniusone_unauthorized` when the server rejects an active token.
  */
 export async function apiFetch(input: string, init: RequestInit = {}): Promise<Response> {
+  const method = String(init.method || "GET").toUpperCase();
   const isFormData = typeof FormData !== "undefined" && init.body instanceof FormData;
   const extra: Record<string, string> = {};
   if (init.body !== undefined && !isFormData) extra["Content-Type"] = "application/json";
   const headers = { ...buildAuthHeaders(extra), ...((init.headers as Record<string, string>) || {}) };
-  const res = await fetch(input, { credentials: "include", ...init, headers });
-  if (res.status === 401 && typeof window !== "undefined") {
-    window.dispatchEvent(new CustomEvent("geniusone_unauthorized"));
+  const resolvedUrl =
+    typeof window !== "undefined" ? new URL(input, window.location.origin).toString() : input;
+
+  // Invalidate read cache automatically on any write mutation
+  if (method !== "GET" && method !== "HEAD") {
+    clearApiCache();
+    const res = await fetch(resolvedUrl, { credentials: "include", ...init, method, headers });
+    if (res.status === 401 && headers.Authorization && typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("geniusone_unauthorized"));
+    }
+    return res;
   }
-  return res;
+
+  if (shouldSkipGetCache(resolvedUrl, init)) {
+    const res = await fetch(resolvedUrl, { credentials: "include", ...init, method, headers });
+    if (res.status === 401 && headers.Authorization && typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("geniusone_unauthorized"));
+    }
+    return res;
+  }
+
+  const tokenPart = headers.Authorization || "anon";
+  const cacheKey = `${tokenPart}::${resolvedUrl}`;
+  const ttlMs = resolveGetCacheTtlMs(resolvedUrl);
+
+  const cached = getResponseCache.get(cacheKey);
+  if (cached && Date.now() - cached.cachedAt < ttlMs) {
+    return buildResponseFromBuffer(cached);
+  }
+
+  let promise = inFlightGetRequests.get(cacheKey);
+  if (!promise) {
+    promise = (async () => {
+      try {
+        const res = await fetch(resolvedUrl, { credentials: "include", ...init, method, headers });
+        const bodyText = await res.text();
+        const headerEntries: [string, string][] = [];
+        res.headers.forEach((value, key) => {
+          headerEntries.push([key, value]);
+        });
+        const entry: BufferedHttpResponse = {
+          status: res.status,
+          statusText: res.statusText,
+          headers: headerEntries,
+          bodyText,
+          cachedAt: Date.now(),
+        };
+
+        if (res.ok) {
+          getResponseCache.set(cacheKey, entry);
+        } else if (res.status === 401 && headers.Authorization && typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("geniusone_unauthorized"));
+        }
+
+        return entry;
+      } finally {
+        inFlightGetRequests.delete(cacheKey);
+      }
+    })();
+    inFlightGetRequests.set(cacheKey, promise);
+  }
+
+  const buffered = await promise;
+  return buildResponseFromBuffer(buffered);
 }
 
 async function parseError(res: Response): Promise<ApiError> {
