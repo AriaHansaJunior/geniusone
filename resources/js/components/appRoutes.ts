@@ -1,9 +1,16 @@
 import { pageMeta } from "../config/pageMeta";
 import { navigationConfig } from "../config/navigation";
-import type { PageKey, ViewState } from "../types";
+import { withThemePrefix, type SystemTheme } from "../context/ThemeContext";
+import type { PageKey, SettingsTab, ViewState } from "../types";
 
 export function resolveViewStateFromPath(pathname: string, defaultPage: PageKey = "dashboard"): ViewState {
-  const cleanPath = decodeURIComponent(pathname).replace(/\/$/, "");
+  const rawPath = decodeURIComponent(pathname).replace(/\/$/, "");
+  const cleanPath =
+    rawPath === "/default"
+      ? "/dashboard"
+      : rawPath.startsWith("/default/")
+        ? rawPath.slice("/default".length)
+        : rawPath;
 
   // Authentication routes
   if (cleanPath === "/login") {
@@ -28,6 +35,21 @@ export function resolveViewStateFromPath(pathname: string, defaultPage: PageKey 
   if (cleanPath === "/dashboard") {
     return { type: "dashboard" };
   }
+
+  // Full-Screen Settings Workspace Routes
+  if (cleanPath === "/settings" || cleanPath === "/settings/edit-profile") {
+    return { type: "settings", tab: "edit-profile" };
+  }
+  if (cleanPath === "/settings/system-theme") {
+    return { type: "settings", tab: "system-theme" };
+  }
+  if (cleanPath === "/settings/user-permissions" || cleanPath === "/settings/user-permission") {
+    return { type: "settings", tab: "user-permissions" };
+  }
+  if (cleanPath === "/settings/audit-logs" || cleanPath === "/settings/audit-log") {
+    return { type: "settings", tab: "audit-logs" };
+  }
+
   if (cleanPath === "/profile/edit" || cleanPath === "/edit-profile") {
     return { type: "edit-profile" };
   }
@@ -755,6 +777,12 @@ export function resolveInitialViewState(initialPage = "dashboard", initialCode =
   }
   if (initialPage === "not-found") return { type: "not-found" };
   if (initialPage === "dashboard") return { type: "dashboard" };
+  if (initialPage === "settings" || initialPage === "settings-edit-profile") {
+    return { type: "settings", tab: "edit-profile" };
+  }
+  if (initialPage === "settings-system-theme") return { type: "settings", tab: "system-theme" };
+  if (initialPage === "settings-user-permissions") return { type: "settings", tab: "user-permissions" };
+  if (initialPage === "settings-audit-logs") return { type: "settings", tab: "audit-logs" };
   if (initialPage === "transfer-stock-return") return { type: "list", page: "transfer-stock-return" };
   if (initialPage === "login") return { type: "login" };
   if (initialPage === "edit-profile" || initialPage === "profile.edit") return { type: "edit-profile" };
@@ -815,6 +843,7 @@ export function resolveInitialViewState(initialPage = "dashboard", initialCode =
 
 export function resolveActiveSidebarPage(viewState: ViewState): PageKey | null {
   if (viewState.type === "dashboard") return "dashboard";
+  if (viewState.type === "settings") return "settings";
   if (viewState.type === "list") return viewState.page;
   if (viewState.type === "pr-detail" || viewState.type === "pr-create") return "pr";
   if (viewState.type === "po-detail" || viewState.type === "po-create") return "po";
@@ -861,11 +890,34 @@ export function resolveActiveSidebarPage(viewState: ViewState): PageKey | null {
   return null;
 }
 
-export function resolveTargetPathForPage(targetPage: PageKey, targetPath?: string): { nextState: ViewState; path: string } {
+export function resolveSettingsPath(tab: SettingsTab, theme: SystemTheme = "modern"): string {
+  const basePath =
+    tab === "system-theme"
+      ? "/settings/system-theme"
+      : tab === "user-permissions"
+        ? "/settings/user-permissions"
+        : tab === "audit-logs"
+          ? "/settings/audit-logs"
+          : "/settings/edit-profile";
+  return withThemePrefix(basePath, theme);
+}
+
+export function resolveTargetPathForPage(
+  targetPage: PageKey,
+  targetPath?: string,
+  theme: SystemTheme = "modern"
+): { nextState: ViewState; path: string } {
   if (targetPage === "dashboard") {
     return {
       nextState: { type: "dashboard" },
-      path: targetPath || "/dashboard",
+      path: withThemePrefix(targetPath || "/dashboard", theme),
+    };
+  }
+
+  if (targetPage === "settings") {
+    return {
+      nextState: { type: "settings", tab: "edit-profile" },
+      path: withThemePrefix(targetPath || "/settings/edit-profile", theme),
     };
   }
 
@@ -898,6 +950,6 @@ export function resolveTargetPathForPage(targetPage: PageKey, targetPath?: strin
 
   return {
     nextState: { type: "list", page: targetPage },
-    path,
+    path: withThemePrefix(path, theme),
   };
 }

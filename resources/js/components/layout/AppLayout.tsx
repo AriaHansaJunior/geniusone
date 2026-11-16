@@ -1,16 +1,21 @@
 import { useState, useRef, useEffect, type ReactNode } from "react";
 import { Header } from "./Header";
 import { Sidebar } from "./Sidebar";
+import { SettingsSidebar } from "./SettingsSidebar";
 import { Footer } from "./Footer";
 import { Button } from "../ui/Button";
 import { Icon } from "../ui/Icon";
 import { pageMeta } from "../../config/pageMeta";
-import type { PageKey } from "../../types";
+import type { PageKey, SettingsTab } from "../../types";
 
 interface AppLayoutProps {
   activePage: PageKey | null;
   onNavigate: (page: PageKey, path?: string) => void;
   onNavigateProfile?: () => void;
+  onNavigateSettings?: (tab?: SettingsTab) => void;
+  onExitSettings?: () => void;
+  isSettingsMode?: boolean;
+  settingsTab?: SettingsTab;
   onRequestLogout?: () => void;
   hideDefaultHeader?: boolean;
   children: ReactNode;
@@ -20,6 +25,10 @@ export function AppLayout({
   activePage,
   onNavigate,
   onNavigateProfile,
+  onNavigateSettings,
+  onExitSettings,
+  isSettingsMode = false,
+  settingsTab = "edit-profile",
   onRequestLogout,
   hideDefaultHeader = false,
   children,
@@ -72,9 +81,10 @@ export function AppLayout({
       <Header
         collapsed={collapsed}
         onToggleCollapse={handleToggleCollapse}
+        onNavigateSettings={() => onNavigateSettings?.("edit-profile")}
         onNavigateProfile={onNavigateProfile}
-        onNavigateAdmin={() => onNavigate("user-permission-admin" as PageKey, "/admin/user-permissions")}
-        onNavigateAudit={() => onNavigate("audit-log-admin" as PageKey, "/admin/audit-logs")}
+        onNavigateAdmin={() => onNavigateSettings?.("user-permissions")}
+        onNavigateAudit={() => onNavigateSettings?.("audit-logs")}
         onLogoutRequest={onRequestLogout}
         onToggleMobileSidebar={() => setIsMobileSidebarOpen((prev) => !prev)}
       />
@@ -82,17 +92,38 @@ export function AppLayout({
       {/* Main Workspace */}
       <div className="workspace">
         {/* Collapsible Sidebar with Mobile Drawer Support */}
-        <Sidebar
-          activePage={activePage}
-          onNavigate={(page, path) => {
-            setIsMobileSidebarOpen(false);
-            onNavigate(page, path);
-          }}
-          collapsed={collapsed}
-          onToggleCollapse={handleToggleCollapse}
-          isMobileOpen={isMobileSidebarOpen}
-          onCloseMobile={() => setIsMobileSidebarOpen(false)}
-        />
+        {isSettingsMode ? (
+          <SettingsSidebar
+            activeTab={settingsTab}
+            onSelectTab={(tab) => {
+              setIsMobileSidebarOpen(false);
+              onNavigateSettings?.(tab);
+            }}
+            onExitSettings={() => {
+              setIsMobileSidebarOpen(false);
+              if (onExitSettings) {
+                onExitSettings();
+              } else {
+                onNavigate("dashboard", "/dashboard");
+              }
+            }}
+            collapsed={collapsed}
+            isMobileOpen={isMobileSidebarOpen}
+            onCloseMobile={() => setIsMobileSidebarOpen(false)}
+          />
+        ) : (
+          <Sidebar
+            activePage={activePage}
+            onNavigate={(page, path) => {
+              setIsMobileSidebarOpen(false);
+              onNavigate(page, path);
+            }}
+            collapsed={collapsed}
+            onToggleCollapse={handleToggleCollapse}
+            isMobileOpen={isMobileSidebarOpen}
+            onCloseMobile={() => setIsMobileSidebarOpen(false)}
+          />
+        )}
 
         {/* Main Content Area */}
         <main>

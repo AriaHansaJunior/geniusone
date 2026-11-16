@@ -16,6 +16,8 @@ import {
 } from "../../../services/approvalApi";
 import { normalizeApprovalStatus, type DocumentApprovalState } from "../../../types/approval";
 import { useAuthPermission } from "../../../context/AuthPermissionContext";
+import { useTheme } from "../../../context/ThemeContext";
+import { PurchaseOrderDefaultDetail } from "../../../themes/default/pages/PurchaseOrderDefaultDetail";
 
 interface PurchaseOrderDetailProps {
   code: string;
@@ -128,6 +130,7 @@ export function PurchaseOrderDetail({
   }, [row.id, docNumber]);
 
   const { currentUser } = useAuthPermission();
+  const { isDefaultTheme } = useTheme();
   const isApproved = approvalState.status === "APPROVED";
 
   const handlePrintPdf = async () => {
@@ -472,6 +475,67 @@ export function PurchaseOrderDetail({
     }
     return list;
   }, [row.receivingNumbers, rmNumber]);
+
+  if (isDefaultTheme) {
+    return (
+      <PurchaseOrderDefaultDetail
+        row={row}
+        docNumber={docNumber}
+        supplierName={supplierName}
+        dateStr={dateStr}
+        dueDate={dueDate}
+        currency={currency}
+        rate={rate}
+        paymentMethod={paymentMethod}
+        paymentTerm={paymentTerm}
+        createdBy={createdBy}
+        releasedBy={releasedBy}
+        approvedBy={approvedBy}
+        poNote={poNote}
+        facility={facility}
+        isHeaderNonFac={isHeaderNonFac}
+        isKawasanBerikat={isKawasanBerikat}
+        isApproved={isApproved}
+        poItems={poItems}
+        otherCosts={otherCosts}
+        prNumbersList={prNumbersList}
+        receivingNumbersList={receivingNumbersList}
+        prNumber={prNumber}
+        totalMaterialQtyStr={totalMaterialQtyStr}
+        materialSubtotal={materialSubtotal}
+        discountAmount={discountAmount}
+        dppAmount={dppAmount}
+        ppnAmount={ppnAmount}
+        ppnRate={ppnRate}
+        totalOtherCosts={totalOtherCosts}
+        totalPph={totalPph}
+        displayOrderTotal={displayOrderTotal}
+        approvalState={approvalState}
+        setApprovalState={setApprovalState}
+        onStateStatusSync={(nextStatus) =>
+          setRow((prev) => ({ ...prev, _rawStatus: nextStatus, status: nextStatus }))
+        }
+        onResubmitRevision={handleRecordRevision}
+        onBack={onBack}
+        onNavigateDetail={onNavigateDetail}
+        onPrintPdf={handlePrintPdf}
+        isAddingCost={isAddingCost}
+        setIsAddingCost={setIsAddingCost}
+        costName={costName}
+        setCostName={setCostName}
+        costAmount={costAmount}
+        setCostAmount={setCostAmount}
+        costNote={costNote}
+        setCostNote={setCostNote}
+        isSubmittingCost={isSubmittingCost}
+        costError={costError}
+        setCostError={setCostError}
+        availableCostTypes={availableCostTypes}
+        onSaveAdditionalCost={handleSaveAdditionalCost}
+        activityLogEntries={activityLogEntries}
+      />
+    );
+  }
 
   return (
     <div className="full-page-detail">

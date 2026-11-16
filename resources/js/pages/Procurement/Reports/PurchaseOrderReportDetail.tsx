@@ -5,6 +5,8 @@ import { Badge } from "../../../components/ui/Badge";
 import { Material } from "../../../components/common/CommonCells";
 import { docToSlug } from "../../../utils/docSlug";
 import { fetchDetail } from "../../../data/api";
+import { useTheme } from "../../../context/ThemeContext";
+import { PurchaseOrderReportDefaultDetail } from "../../../themes/default/pages/PurchaseOrderReportDefaultDetail";
 import type { TableRow } from "../../../types";
 
 interface PurchaseOrderReportDetailProps {
@@ -18,6 +20,7 @@ export function PurchaseOrderReportDetail({
   onBack,
   onNavigateDetail,
 }: PurchaseOrderReportDetailProps) {
+  const { isDefaultTheme } = useTheme();
   const [row, setRow] = useState<TableRow>({} as TableRow);
 
   useEffect(() => {
@@ -56,6 +59,16 @@ export function PurchaseOrderReportDetail({
   const description = String(row._rawDescription || "—");
   const materialName = String(row._rawMaterialName || "—");
   const materialCode = String(row._rawMaterialCode || "—");
+
+  if (isDefaultTheme) {
+    return (
+      <PurchaseOrderReportDefaultDetail
+        row={row}
+        onBack={onBack}
+        onNavigateDetail={onNavigateDetail}
+      />
+    );
+  }
 
   return (
     <div className="full-page-detail">

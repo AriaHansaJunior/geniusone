@@ -16,6 +16,8 @@ import {
   type DocumentApprovalState,
 } from "../../../types/approval";
 import type { TransferStockReturnRecord } from "./transfer-stock-return-types";
+import { useTheme } from "../../../context/ThemeContext";
+import { TransferStockReturnDefaultDetail } from "../../../themes/default/pages/TransferStockReturnDefaultDetail";
 
 interface TransferStockReturnDetailProps {
   code: string;
@@ -34,6 +36,7 @@ export function TransferStockReturnDetail({
   onEdit,
   onUpdated,
 }: TransferStockReturnDetailProps) {
+  const { isDefaultTheme } = useTheme();
   const matchedFromProps = useMemo(() => {
     if (initialRecordProp) return initialRecordProp;
     if (!code || !records.length) return null;
@@ -240,7 +243,27 @@ export function TransferStockReturnDetail({
     record.warehouseName || record.items?.[0]?.destinationLocation || "—";
 
   return (
-    <div className="full-page-detail tsr-detail-page">
+    <>
+      {isDefaultTheme ? (
+        <TransferStockReturnDefaultDetail
+          record={record}
+          isApproved={isApproved}
+          canApproveOrReject={canApproveOrReject}
+          actionBusy={actionBusy}
+          warehouseDisplay={warehouseDisplay}
+          totalReturnedQty={totalReturnedQty}
+          approvalTimelineState={approvalTimelineState}
+          getStatusTone={getStatusTone}
+          notification={notification}
+          onDismissNotification={() => setNotification(null)}
+          onApprove={handleApprove}
+          onOpenRejectDialog={() => setIsRejectDialogOpen(true)}
+          onOpenDeleteConfirm={() => setIsDeleteConfirmOpen(true)}
+          onEdit={onEdit}
+          onBack={onBack}
+        />
+      ) : (
+        <div className="full-page-detail tsr-detail-page">
       {/* Detail Navigation & Top Action Bar */}
       <div className="detail-top-bar">
         <div className="detail-top-bar__left">
@@ -516,6 +539,8 @@ export function TransferStockReturnDetail({
             : "No transfer note or remarks entered."}
         </div>
       </div>
+        </div>
+      )}
 
       {/* Reject Reason Dialog */}
       <RejectDialog
@@ -538,7 +563,7 @@ export function TransferStockReturnDetail({
         cancelLabel="Cancel"
         variant="danger"
       />
-    </div>
+    </>
   );
 }
 

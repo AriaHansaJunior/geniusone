@@ -17,6 +17,7 @@
     <div id="root"
          data-initial-page="{{ $page ?? 'dashboard' }}"
          data-initial-code="{{ $code ?? '' }}"
+         data-initial-theme="{{ $theme ?? ($uiTheme ?? 'modern') }}"
          data-initial-json="{{ isset($initialData) ? json_encode($initialData) : '' }}"></div>
 </body>
 </html>

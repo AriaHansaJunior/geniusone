@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Icon } from "../ui/Icon";
+import { stripThemePrefix } from "../../context/ThemeContext";
 import { navigationConfig, type NavSection, type NavGroupItem, type NavLeafItem } from "../../config/navigation";
 import type { PageKey } from "../../types";
 import { useAuthPermission } from "../../context/AuthPermissionContext";
@@ -24,7 +25,8 @@ for (const section of navigationConfig) {
 
 function getNormalizedCurrentPath(): string {
   if (typeof window === "undefined") return "";
-  return decodeURIComponent(window.location.pathname).replace(/\/$/, "") || "/";
+  const decoded = decodeURIComponent(window.location.pathname).replace(/\/$/, "") || "/";
+  return stripThemePrefix(decoded).replace(/\/$/, "") || "/";
 }
 
 function isLeafMatch(leaf: NavLeafItem, activePage: PageKey | null, currentPath: string): boolean {
