@@ -6,6 +6,7 @@ import { fetchSystemContextApi } from "../../data/masterApi";
 interface HeaderProps {
   collapsed?: boolean;
   onToggleCollapse?: () => void;
+  onNavigateSettings?: () => void;
   onNavigateProfile?: () => void;
   onNavigateAdmin?: () => void;
   onNavigateAudit?: () => void;
@@ -17,14 +18,13 @@ interface HeaderProps {
 export function Header({
   collapsed = false,
   onToggleCollapse,
+  onNavigateSettings,
   onNavigateProfile,
-  onNavigateAdmin,
-  onNavigateAudit,
   onLogoutRequest,
   onToggleMobileSidebar,
   companyName: propCompanyName,
 }: HeaderProps) {
-  const { currentUser, isSuperAdmin } = useAuthPermission();
+  const { currentUser } = useAuthPermission();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [companyName, setCompanyName] = useState<string>(propCompanyName || "");
   const [avatarLoadError, setAvatarLoadError] = useState(false);
@@ -84,9 +84,13 @@ export function Header({
     };
   }, [isDropdownOpen]);
 
-  const handleEditProfile = () => {
+  const handleOpenSettings = () => {
     setIsDropdownOpen(false);
-    onNavigateProfile?.();
+    if (onNavigateSettings) {
+      onNavigateSettings();
+    } else {
+      onNavigateProfile?.();
+    }
   };
 
   const handleLogout = () => {
@@ -276,49 +280,17 @@ export function Header({
               <div className="user-dropdown__divider" />
 
               <div className="user-dropdown__menu">
-                {isSuperAdmin && onNavigateAdmin && (
-                  <button
-                    type="button"
-                    className="user-dropdown__item"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setIsDropdownOpen(false);
-                      onNavigateAdmin();
-                    }}
-                    role="menuitem"
-                  >
-                    <Icon name="lock" size={15} />
-                    <span>User & Permission Admin</span>
-                  </button>
-                )}
-
-                {isSuperAdmin && onNavigateAudit && (
-                  <button
-                    type="button"
-                    className="user-dropdown__item"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setIsDropdownOpen(false);
-                      onNavigateAudit();
-                    }}
-                    role="menuitem"
-                  >
-                    <Icon name="history" size={15} />
-                    <span>System Audit Logs</span>
-                  </button>
-                )}
-
                 <button
                   type="button"
                   className="user-dropdown__item"
                   onClick={(e) => {
                     e.stopPropagation();
-                    handleEditProfile();
+                    handleOpenSettings();
                   }}
                   role="menuitem"
                 >
-                  <Icon name="user" size={15} />
-                  <span>Edit Profile</span>
+                  <Icon name="settings" size={15} />
+                  <span>Settings</span>
                 </button>
 
                 <div className="user-dropdown__divider" />

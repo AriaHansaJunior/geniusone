@@ -17,6 +17,8 @@ import { useAuthPermission } from "../../../context/AuthPermissionContext";
 import { normalizeApprovalStatus, type DocumentApprovalState } from "../../../types/approval";
 import type { TableRow } from "../../../types";
 import { KwtPrintModal, KwtPrintTemplateBpb } from "../../../components/print";
+import { useTheme } from "../../../context/ThemeContext";
+import { WarehouseDefaultDetail } from "../../../themes/default/pages/WarehouseDefaultDetail";
 
 interface WarehouseDetailProps {
   code: string;
@@ -72,6 +74,7 @@ export function WarehouseDetail({
   });
 
   const { currentUser } = useAuthPermission();
+  const { isDefaultTheme } = useTheme();
 
   useEffect(() => {
     let isMounted = true;
@@ -277,7 +280,48 @@ export function WarehouseDetail({
   };
 
   return (
-    <div className="full-page-detail">
+    <>
+      {isDefaultTheme ? (
+        <WarehouseDefaultDetail
+          row={row}
+          docNumber={docNumber}
+          rnNumber={rnNumber}
+          poNumber={poNumber}
+          prNumber={prNumber}
+          supplierName={supplierName}
+          receiveDate={receiveDate}
+          rnDate={rnDate}
+          sjNumber={sjNumber}
+          ajuNumber={ajuNumber}
+          plateNo={plateNo}
+          noPen={noPen}
+          bcType={bcType}
+          bpbType={bpbType}
+          location={location}
+          displayTotalQty={displayTotalQty}
+          primaryUnit={primaryUnit}
+          createdBy={createdBy}
+          remark={remark}
+          bpbItems={bpbItems}
+          isApproved={isApproved}
+          approvalState={approvalState}
+          setApprovalState={setApprovalState}
+          onStateStatusSync={(nextStatus) =>
+            setRow((prev) => ({
+              ...prev,
+              _rawStatus: nextStatus,
+              _rawApproval: nextStatus,
+              status: nextStatus,
+            }))
+          }
+          onBack={onBack}
+          onNavigateDetail={onNavigateDetail}
+          onPrintPdf={handlePrintPdf}
+          onExportXlsx={handleExportXlsx}
+          activityLogEntries={activityLogEntries}
+        />
+      ) : (
+        <div className="full-page-detail">
       {/* Detail Navigation & Action Bar */}
       <div className="detail-top-bar">
         <div className="detail-top-bar__left">
@@ -679,6 +723,8 @@ export function WarehouseDetail({
           </div>
         </div>
       </div>
+        </div>
+      )}
 
       {/* KWT Official BPB Print Preview Modal */}
       <KwtPrintModal
@@ -729,7 +775,7 @@ export function WarehouseDetail({
           receivedBy={createdBy || ""}
         />
       </div>
-    </div>
+    </>
   );
 }
 

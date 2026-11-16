@@ -385,4 +385,49 @@ class RouteConsistencyTest extends TestCase
         $this->actingAs($user, 'web')->deleteJson("/api/warehouse/transfer-stock-returns/{$tsrId}")
             ->assertStatus(200);
     }
+
+    /**
+     * Test Settings routes and isolated Default vs Modern theme routes resolve without overlap.
+     */
+    public function test_settings_and_dual_theme_routes_do_not_overlap(): void
+    {
+        $modernSettingsRoutes = [
+            '/settings' => 'settings',
+            '/settings/system-theme' => 'settings-system-theme',
+            '/settings/edit-profile' => 'settings-edit-profile',
+            '/settings/user-permissions' => 'settings-user-permissions',
+            '/settings/audit-logs' => 'settings-audit-logs',
+        ];
+
+        foreach ($modernSettingsRoutes as $url => $expectedPage) {
+            $res = $this->get($url);
+            $res->assertStatus(200);
+            $res->assertSee('data-initial-page="'.$expectedPage.'"', false);
+            $res->assertSee('data-initial-theme="modern"', false);
+        }
+
+        $defaultThemeRoutes = [
+            '/default' => 'dashboard',
+            '/default/dashboard' => 'dashboard',
+            '/default/settings' => 'settings',
+            '/default/settings/system-theme' => 'settings-system-theme',
+            '/default/settings/edit-profile' => 'settings-edit-profile',
+            '/default/settings/user-permissions' => 'settings-user-permissions',
+            '/default/settings/audit-logs' => 'settings-audit-logs',
+            '/default/procurement/transactions/purchase-requisition' => 'default-route',
+            '/default/procurement/transactions/purchase-order' => 'default-route',
+            '/default/exim/receive-note' => 'default-route',
+        ];
+
+        foreach ($defaultThemeRoutes as $url => $expectedPage) {
+            $res = $this->get($url);
+            $res->assertStatus(200);
+            $res->assertSee('data-initial-page="'.$expectedPage.'"', false);
+            $res->assertSee('data-initial-theme="default"', false);
+        }
+
+        $modernDashboard = $this->get('/dashboard');
+        $modernDashboard->assertStatus(200);
+        $modernDashboard->assertSee('data-initial-theme="modern"', false);
+    }
 }

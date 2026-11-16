@@ -9,6 +9,8 @@ import { ApprovalStatusBadge } from "../../../components/approval/ApprovalStatus
 import { getLocalApprovalState } from "../../../services/approvalApi";
 import { normalizeApprovalStatus, type DocumentApprovalState } from "../../../types/approval";
 import { fetchDetail } from "../../../data/api";
+import { useTheme } from "../../../context/ThemeContext";
+import { ReceiveNoteDefaultDetail } from "../../../themes/default/pages/ReceiveNoteDefaultDetail";
 
 interface ReceiveNoteDetailProps {
   code: string;
@@ -25,6 +27,7 @@ export function ReceiveNoteDetail({
   onApprovalChange,
   onCreateBpb,
 }: ReceiveNoteDetailProps) {
+  const { isDefaultTheme } = useTheme();
   const [printMenuOpen, setPrintMenuOpen] = useState(false);
   const printMenuRef = useRef<HTMLDivElement>(null);
 
@@ -249,6 +252,23 @@ export function ReceiveNoteDetail({
     setPrintMenuOpen(false);
     window.print();
   };
+
+  if (isDefaultTheme) {
+    return (
+      <ReceiveNoteDefaultDetail
+        rnData={rnData}
+        isApproved={isApproved}
+        approvalState={approvalState}
+        onApprovalStateChange={(nextState) => {
+          setApprovalState(nextState);
+          onApprovalChange?.(rnData.rnNumber, nextState);
+        }}
+        onBack={onBack}
+        onCreateBpb={onCreateBpb}
+        onPrint={handlePrint}
+      />
+    );
+  }
 
   return (
     <div className="rn-detail-page">

@@ -407,6 +407,43 @@ Route::get('/admin/audit-log', fn () => view('app', ['page' => 'audit-log-admin'
 Route::get('/admin/audit', fn () => view('app', ['page' => 'audit-log-admin']));
 Route::get('/audit-log-admin', fn () => view('app', ['page' => 'audit-log-admin']));
 
+// Full-Screen Settings Workspace Routes (Modern & Optimized UI 2.0 Theme)
+Route::middleware('ui.theme:modern')->group(function () {
+    Route::get('/settings', fn () => view('app', ['page' => 'settings']))->name('settings');
+    Route::get('/settings/system-theme', fn () => view('app', ['page' => 'settings-system-theme']))->name('settings.system-theme');
+    Route::get('/settings/edit-profile', fn () => view('app', ['page' => 'settings-edit-profile']))->name('settings.edit-profile');
+    Route::get('/settings/user-permissions', fn () => view('app', ['page' => 'settings-user-permissions']))->name('settings.user-permissions');
+    Route::get('/settings/audit-logs', fn () => view('app', ['page' => 'settings-audit-logs']))->name('settings.audit-logs');
+});
+
+// Dedicated Default (SmartOne-Aligned Layout) Theme Routes (/default/*)
+Route::prefix('default')->name('default.')->middleware('ui.theme:default')->group(function () {
+    Route::get('/', fn () => view('app', ['page' => 'dashboard', 'theme' => 'default']))->name('home');
+    Route::get('/dashboard', fn () => view('app', ['page' => 'dashboard', 'theme' => 'default']))->name('dashboard');
+
+    // Settings Workspace inside Default Theme
+    Route::get('/settings', fn () => view('app', ['page' => 'settings', 'theme' => 'default']))->name('settings');
+    Route::get('/settings/system-theme', fn () => view('app', ['page' => 'settings-system-theme', 'theme' => 'default']))->name('settings.system-theme');
+    Route::get('/settings/edit-profile', fn () => view('app', ['page' => 'settings-edit-profile', 'theme' => 'default']))->name('settings.edit-profile');
+    Route::get('/settings/user-permissions', fn () => view('app', ['page' => 'settings-user-permissions', 'theme' => 'default']))->name('settings.user-permissions');
+    Route::get('/settings/audit-logs', fn () => view('app', ['page' => 'settings-audit-logs', 'theme' => 'default']))->name('settings.audit-logs');
+
+    // Server-hydrated Detail Routes in Default Theme
+    Route::get('/pr/detail/{code}', [PurchaseRequisitionController::class, 'show'])->where('code', '.*')->name('pr.detail');
+    Route::get('/procurement/transactions/purchase-requisition/detail/{code}', [PurchaseRequisitionController::class, 'show'])->where('code', '.*');
+    Route::get('/po/detail/{code}', [PurchaseOrderController::class, 'show'])->where('code', '.*')->name('po.detail');
+    Route::get('/procurement/transactions/purchase-order/detail/{code}', [PurchaseOrderController::class, 'show'])->where('code', '.*');
+    Route::get('/report/detail/{code}', [ReportController::class, 'show'])->where('code', '.*')->name('report.detail');
+    Route::get('/procurement/reports/report-pr-po/detail/{code}', [ReportController::class, 'show'])->where('code', '.*');
+    Route::get('/warehouse/detail/{code}', [WarehouseController::class, 'show'])->where('code', '.*')->name('warehouse.detail');
+    Route::get('/warehouse/incoming/receive-material-bpb/detail/{code}', [WarehouseController::class, 'show'])->where('code', '.*');
+
+    // Catch-all for Default Theme SPA Routes (prevents overlap with Modern UI 2.0 routes)
+    Route::get('/{any}', fn () => view('app', ['page' => 'default-route', 'theme' => 'default']))
+        ->where('any', '.*')
+        ->name('catchall');
+});
+
 // Fallback Route for Unknown URLs (Requirement 5.3)
 Route::fallback(function () {
     return response()->view('app', ['page' => 'not-found'], 404);

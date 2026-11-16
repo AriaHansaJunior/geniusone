@@ -9,6 +9,8 @@ import { ApprovalStatusBadge } from "../../../components/approval/ApprovalStatus
 import { getLocalApprovalState } from "../../../services/approvalApi";
 import { normalizeApprovalStatus, type DocumentApprovalState } from "../../../types/approval";
 import { fetchReceiveNoteReturns } from "../../../data/masterApi";
+import { useTheme } from "../../../context/ThemeContext";
+import { ReceiveNoteReturnDefaultDetail } from "../../../themes/default/pages/ReceiveNoteReturnDefaultDetail";
 
 interface ReceiveNoteReturnDetailProps {
   code: string;
@@ -21,6 +23,7 @@ export function ReceiveNoteReturnDetail({
   onBack,
   record,
 }: ReceiveNoteReturnDetailProps) {
+  const { isDefaultTheme } = useTheme();
   const [printMenuOpen, setPrintMenuOpen] = useState(false);
   const [fetchedRecord, setFetchedRecord] = useState<ReceiveNoteReturnRecord | null>(null);
   const printMenuRef = useRef<HTMLDivElement>(null);
@@ -125,6 +128,19 @@ export function ReceiveNoteReturnDetail({
     setPrintMenuOpen(false);
     window.print();
   };
+
+  if (isDefaultTheme) {
+    return (
+      <ReceiveNoteReturnDefaultDetail
+        rnrData={rnrData}
+        isApproved={isApproved}
+        approvalState={approvalState}
+        setApprovalState={setApprovalState}
+        onBack={onBack}
+        onPrint={handlePrint}
+      />
+    );
+  }
 
   return (
     <div className="rnr-detail-page">

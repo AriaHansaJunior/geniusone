@@ -11,6 +11,8 @@ import { getLocalApprovalState } from "../../../../services/approvalApi";
 import { normalizeApprovalStatus, type DocumentApprovalState } from "../../../../types/approval";
 import { KwtPrintModal, KwtPrintTemplateNpb } from "../../../../components/print";
 import { fetchRequestMaterials } from "../../../../data/masterApi";
+import { useTheme } from "../../../../context/ThemeContext";
+import { RequestMaterialDefaultDetail } from "../../../../themes/default/pages/RequestMaterialDefaultDetail";
 
 interface RequestMaterialDetailProps {
   id: string;
@@ -31,6 +33,7 @@ export function RequestMaterialDetail({
   records = initialRequestMaterialRecords,
   onBack,
 }: RequestMaterialDetailProps) {
+  const { isDefaultTheme } = useTheme();
   const [fetchedRecords, setFetchedRecords] = useState<RequestMaterialRecord[] | null>(null);
 
   const effectiveRecords = fetchedRecords && fetchedRecords.length > 0 ? fetchedRecords : records;
@@ -123,7 +126,18 @@ export function RequestMaterialDetail({
   };
 
   return (
-    <div className="full-page-detail request-material-detail-page">
+    <>
+      {isDefaultTheme ? (
+        <RequestMaterialDefaultDetail
+          record={record}
+          isApproved={isApproved}
+          approvalState={approvalState}
+          setApprovalState={setApprovalState}
+          onBack={onBack}
+          onPrint={handlePrint}
+        />
+      ) : (
+        <div className="full-page-detail request-material-detail-page">
       {/* Detail Navigation & Top Action Bar */}
       <div className="detail-top-bar">
         <div className="detail-top-bar__left">
@@ -399,6 +413,8 @@ export function RequestMaterialDetail({
           {record.requestNote || "No request note provided."}
         </div>
       </div>
+        </div>
+      )}
 
       {/* KWT Official NPB Print Preview Modal */}
       <KwtPrintModal
@@ -448,7 +464,7 @@ export function RequestMaterialDetail({
           requestedBy={record.createdBy || ""}
         />
       </div>
-    </div>
+    </>
   );
 }
 

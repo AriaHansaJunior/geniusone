@@ -137,7 +137,15 @@ export type PageKey =
   | "wh-rep-stock-mutation"
   | "wh-rep-outstanding-request"
   | "user-permission-admin"
-  | "audit-log-admin";
+  | "audit-log-admin"
+  | "settings"
+  | "system-theme";
+
+export type SettingsTab =
+  | "edit-profile"
+  | "system-theme"
+  | "user-permissions"
+  | "audit-logs";
 
 export type ViewState =
   | { type: "dashboard" }
@@ -217,6 +225,7 @@ export type ViewState =
   | { type: "wh-destination-location-create" }
   | { type: "wh-destination-location-edit"; record?: any }
   | { type: "edit-profile" }
+  | { type: "settings"; tab: SettingsTab }
   | { type: "login" }
   | { type: "not-found"; path?: string };
 

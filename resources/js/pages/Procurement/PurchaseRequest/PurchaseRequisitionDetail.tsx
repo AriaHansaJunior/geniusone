@@ -19,7 +19,9 @@ import {
 } from "../../../services/approvalApi";
 import { normalizeApprovalStatus, type DocumentApprovalState } from "../../../types/approval";
 import { useAuthPermission } from "../../../context/AuthPermissionContext";
+import { useTheme } from "../../../context/ThemeContext";
 import { KwtPrintModal, KwtPrintTemplatePr } from "../../../components/print";
+import { PurchaseRequisitionDefaultDetail } from "../../../themes/default/pages/PurchaseRequisitionDefaultDetail";
 
 interface PurchaseRequisitionDetailProps {
   code: string;
@@ -168,6 +170,7 @@ export function PurchaseRequisitionDetail({
   }, [row.id]);
 
   const { currentUser } = useAuthPermission();
+  const { isDefaultTheme } = useTheme();
   const [closedMapVersion, setClosedMapVersion] = useState(0);
 
   const isApproved =
@@ -437,7 +440,36 @@ export function PurchaseRequisitionDetail({
   };
 
   return (
-    <div className="full-page-detail">
+    <>
+      {isDefaultTheme ? (
+        <PurchaseRequisitionDefaultDetail
+          row={row}
+          docNumber={docNumber}
+          reqDate={reqDate}
+          dueDate={dueDate}
+          dept={dept}
+          sectionName={sectionName}
+          remark={remark}
+          createdBy={createdBy}
+          totalQty={totalQty}
+          items={items}
+          poNumbersList={poNumbersList}
+          approvalState={approvalState}
+          setApprovalState={setApprovalState}
+          onStateStatusSync={(nextStatus) =>
+            setRow((prev) => ({ ...prev, _rawStatus: nextStatus, status: nextStatus }))
+          }
+          onResubmitRevision={handleRecordRevision}
+          onBack={onBack}
+          onNavigateDetail={onNavigateDetail}
+          onPrintPdf={handlePrintPdf}
+          onExportXlsx={handleExportDetailXLSX}
+          onDownloadAttachment={handleDownloadAttachment}
+          onToggleItemClosing={handleToggleItemClosing}
+          activityLogEntries={activityLogEntries}
+        />
+      ) : (
+        <div className="full-page-detail">
       {/* Detail Navigation & Action Bar */}
       <div className="detail-top-bar">
         <div className="detail-top-bar__left">
@@ -927,6 +959,8 @@ export function PurchaseRequisitionDetail({
           </div>
         </div>
       </div>
+        </div>
+      )}
 
       {/* KWT Official PR Print Preview Modal */}
       <KwtPrintModal
@@ -982,7 +1016,7 @@ export function PurchaseRequisitionDetail({
           createdBy={createdBy}
         />
       </div>
-    </div>
+    </>
   );
 }
 

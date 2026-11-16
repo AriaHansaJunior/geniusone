@@ -9,6 +9,7 @@ import {
   resolveInitialViewState,
   resolveActiveSidebarPage,
   resolveTargetPathForPage,
+  resolveSettingsPath,
 } from "./appRoutes";
 import type { RequestMaterialRecord } from "../pages/Warehouse/Request/RequestMaterial/request-material-types";
 import type { StockNotificationRecord } from "../pages/Dashboard/StockNotificationMaster/stock-notification-types";
@@ -20,6 +21,12 @@ import { docToSlug } from "../utils/docSlug";
 import { ALL_SIDEBAR_MENU_ITEMS } from "../config/navigation";
 import { useAuthPermission } from "../context/AuthPermissionContext";
 import { useNotification } from "../context/NotificationContext";
+import {
+  hasDefaultThemePrefix,
+  readStoredSystemTheme,
+  useTheme,
+  withThemePrefix,
+} from "../context/ThemeContext";
 
 const SIDEBAR_GUARDED_PAGES = new Set(ALL_SIDEBAR_MENU_ITEMS.map((item) => item.id));
 import type {
@@ -61,7 +68,7 @@ import type { JobNumberRecord } from "../pages/Procurement/PurchaseMaster/JobNum
 import type { RafaksiTypeRecord } from "../pages/Procurement/PurchaseMaster/RafaksiType/rafaksi-type-types";
 import type { CurrencyRecord } from "../pages/Exim/Master/Currency/currency-types";
 import type { UnitReferenceRecord } from "../pages/Exim/Master/UnitReference/unit-reference-types";
-import type { PageKey, ViewState, TableRow } from "../types";
+import type { PageKey, SettingsTab, ViewState, TableRow } from "../types";
 import {
   fetchMasterSuppliers,
   saveSupplierApi,
@@ -232,6 +239,7 @@ interface AppProps {
 export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
   const { isAuthenticated, authReady, logoutUser, canAccessSidebarItem } = useAuthPermission();
   const { notifySuccess, notifyError } = useNotification();
+  const { theme, formatPath, syncThemeFromPath } = useTheme();
   const [viewState, setViewState] = useState<ViewState>(() =>
     resolveInitialViewState(initialPage, initialCode)
   );
@@ -243,6 +251,16 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
 
   const isDetailPage = viewState.type !== "list" && viewState.type !== "dashboard";
   const hideDefaultHeader = isDetailPage;
+
+  // Ensure URL route prefix stays synchronized with active UI theme across all legacy pushState flows
+  useEffect(() => {
+    if (typeof window !== "undefined" && theme === "default" && viewState.type !== "login") {
+      if (!hasDefaultThemePrefix(window.location.pathname)) {
+        const syncedUrl = withThemePrefix(`${window.location.pathname}${window.location.search}`, "default");
+        window.history.replaceState(window.history.state, "", syncedUrl);
+      }
+    }
+  }, [theme, viewState]);
 
   // Reset scroll position on route transition
   useEffect(() => {
@@ -257,7 +275,7 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
 
   // Navigate to list or dashboard view
   const handleNavigateList = useCallback((targetPage: PageKey, targetPath?: string) => {
-    const { nextState, path } = resolveTargetPathForPage(targetPage, targetPath);
+    const { nextState, path } = resolveTargetPathForPage(targetPage, targetPath, theme);
 
     if (typeof window !== "undefined") {
       window.scrollTo(0, 0);
@@ -265,7 +283,7 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
     }
 
     setViewState(nextState);
-  }, []);
+  }, [theme]);
 
   // Navigate to detail view using slugified document identifier
   const handleNavigateDetail = useCallback(
@@ -309,10 +327,10 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
 
       if (typeof window !== "undefined") {
         window.scrollTo(0, 0);
-        window.history.pushState(nextState, "", targetPath);
+        window.history.pushState(nextState, "", formatPath(targetPath));
       }
     },
-    []
+    [formatPath]
   );
 
   // Master & transaction datasets state synchronized from backend database
@@ -378,9 +396,16 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
   // Redirect authenticated users away from the standalone login view on refresh
   useEffect(() => {
     if (authReady && isAuthenticated && viewState.type === "login") {
-      handleNavigateList("dashboard", "/dashboard");
+      const savedTheme = readStoredSystemTheme();
+      const targetDash = withThemePrefix("/dashboard", savedTheme);
+      syncThemeFromPath(targetDash);
+      if (typeof window !== "undefined") {
+        window.scrollTo(0, 0);
+        window.history.pushState({ type: "dashboard" }, "", targetDash);
+      }
+      setViewState({ type: "dashboard" });
     }
-  }, [authReady, isAuthenticated, viewState.type, handleNavigateList]);
+  }, [authReady, isAuthenticated, viewState.type, syncThemeFromPath]);
 
   // On-demand route-based database synchronization
   useEffect(() => {
@@ -2384,15 +2409,28 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
     [notifySuccess, notifyError]
   );
 
-  // Navigate to edit profile view
-  const handleNavigateProfile = useCallback(() => {
-    setViewState({ type: "edit-profile" });
+  // Navigate to Full-Screen Settings workspace tab
+  const handleNavigateSettings = useCallback(
+    (tab: SettingsTab = "edit-profile") => {
+      const nextState: ViewState = { type: "settings", tab };
+      setViewState(nextState);
 
-    if (typeof window !== "undefined") {
-      window.scrollTo(0, 0);
-      window.history.pushState({ type: "edit-profile" }, "", "/profile/edit");
-    }
-  }, []);
+      if (typeof window !== "undefined") {
+        window.scrollTo(0, 0);
+        window.history.pushState(nextState, "", resolveSettingsPath(tab, theme));
+      }
+    },
+    [theme]
+  );
+
+  const handleExitSettings = useCallback(() => {
+    handleNavigateList("dashboard", "/dashboard");
+  }, [handleNavigateList]);
+
+  // Navigate to edit profile view (inside Settings workspace)
+  const handleNavigateProfile = useCallback(() => {
+    handleNavigateSettings("edit-profile");
+  }, [handleNavigateSettings]);
 
   // Logout request from Header dropdown
   const handleRequestLogout = useCallback(() => {
@@ -2410,7 +2448,7 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
     setViewState({ type: "login" });
   }, [logoutUser]);
 
-  // Login handler -> clears old session state and routes to dashboard with all menus collapsed
+  // Login handler -> clears old session state and routes to dashboard with active theme
   const handleLoginSuccess = useCallback(() => {
     if (typeof window !== "undefined") {
       try {
@@ -2420,8 +2458,15 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
         // ignore
       }
     }
-    handleNavigateList("dashboard", "/dashboard");
-  }, [handleNavigateList]);
+    const savedTheme = readStoredSystemTheme();
+    const targetDash = withThemePrefix("/dashboard", savedTheme);
+    syncThemeFromPath(targetDash);
+    if (typeof window !== "undefined") {
+      window.scrollTo(0, 0);
+      window.history.pushState({ type: "dashboard" }, "", targetDash);
+    }
+    setViewState({ type: "dashboard" });
+  }, [syncThemeFromPath]);
 
   // Cancel logout -> dismiss dialog, stay on current page
   const handleCancelLogout = useCallback(() => {
@@ -2446,6 +2491,7 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
   useEffect(() => {
     const handlePopState = () => {
       if (typeof window !== "undefined") {
+        syncThemeFromPath(window.location.pathname);
         const detected = resolveViewStateFromPath(window.location.pathname, "dashboard");
         setViewState(detected);
         window.scrollTo(0, 0);
@@ -2454,7 +2500,7 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
 
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
-  }, []);
+  }, [syncThemeFromPath]);
 
   // Standalone Login page view
   if (viewState.type === "login" || (authReady && !isAuthenticated)) {
@@ -2469,9 +2515,11 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
   const currentMeta =
     viewState.type === "list"
       ? pageMeta[viewState.page] || pageMeta.dashboard
-      : activeSidebarPage && pageMeta[activeSidebarPage]
-        ? pageMeta[activeSidebarPage]
-        : pageMeta.dashboard;
+      : viewState.type === "settings"
+        ? pageMeta.settings
+        : activeSidebarPage && pageMeta[activeSidebarPage]
+          ? pageMeta[activeSidebarPage]
+          : pageMeta.dashboard;
 
   const isRouteForbidden =
     authReady &&
@@ -2480,6 +2528,7 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
     activeSidebarPage !== "dashboard" &&
     SIDEBAR_GUARDED_PAGES.has(activeSidebarPage as string) &&
     viewState.type !== "edit-profile" &&
+    viewState.type !== "settings" &&
     viewState.type !== "not-found" &&
     !canAccessSidebarItem(activeSidebarPage as string);
 
@@ -2489,6 +2538,10 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
         activePage={activeSidebarPage}
         onNavigate={handleNavigateList}
         onNavigateProfile={handleNavigateProfile}
+        onNavigateSettings={handleNavigateSettings}
+        onExitSettings={handleExitSettings}
+        isSettingsMode={viewState.type === "settings"}
+        settingsTab={viewState.type === "settings" ? viewState.tab : "edit-profile"}
         onRequestLogout={handleRequestLogout}
         hideDefaultHeader={hideDefaultHeader && !isRouteForbidden}
       >
@@ -2660,6 +2713,8 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
             handleSaveRequestMaterial={handleSaveRequestMaterial}
             handleProfileCancel={handleProfileCancel}
             handleProfileSaveConfirmed={handleProfileSaveConfirmed}
+            handleNavigateSettings={handleNavigateSettings}
+            handleExitSettings={handleExitSettings}
             supplierRecords={supplierRecords}
             editingSupplier={editingSupplier}
             setEditingSupplier={setEditingSupplier}

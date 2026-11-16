@@ -6,6 +6,8 @@ import { ExpandedHistoryTable } from "./ExpandedHistoryTable";
 import { initialDocumentHistoryRecords } from "./document-history-data";
 import type { DocumentHistoryRecord } from "./document-history-types";
 import { fetchDocumentHistories } from "../../../data/masterApi";
+import { useTheme } from "../../../context/ThemeContext";
+import { DocumentHistoryDefaultDetail } from "../../../themes/default/pages/DocumentHistoryDefaultDetail";
 
 interface DocumentHistoryDetailProps {
   code: string;
@@ -18,6 +20,7 @@ export function DocumentHistoryDetail({
   onBack,
   record,
 }: DocumentHistoryDetailProps) {
+  const { isDefaultTheme } = useTheme();
   const [generateMenuOpen, setGenerateMenuOpen] = useState(false);
   const [fetchedRecord, setFetchedRecord] = useState<DocumentHistoryRecord | null>(null);
   const [expandedRowIds, setExpandedRowIds] = useState<Set<string>>(new Set());
@@ -238,6 +241,21 @@ export function DocumentHistoryDetail({
       setTimeout(() => setNotice(null), 3500);
     }
   };
+
+  if (isDefaultTheme) {
+    return (
+      <DocumentHistoryDefaultDetail
+        dhData={dhData}
+        expandedRowIds={expandedRowIds}
+        onToggleHistory={handleToggleHistory}
+        notice={notice}
+        onDismissNotice={() => setNotice(null)}
+        onSelectGenerateOption={handleSelectGenerateOption}
+        onExportToExcel={handleExportToExcel}
+        onBack={onBack}
+      />
+    );
+  }
 
   return (
     <div className="dh-detail-page">

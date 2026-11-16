@@ -1,0 +1,504 @@
+/* ==========================================================================
+   GENIUSONE — "Default" (SmartOne-Aligned Single-Card Layout) Theme Styles
+   Preserves GENIUSONE palette, typography (Lato/Noto Sans), and Icon set.
+   Zero overlap with UI 2.0 ("Modern and Optimized") views.
+   ========================================================================== */
+
+.smartone-detail-page {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  animation: fadeIn 0.16s ease-in-out;
+}
+
+.smartone-page-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  min-width: 0;
+}
+
+.smartone-page-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--ink);
+  letter-spacing: -0.2px;
+}
+
+.smartone-page-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* Single Unified Document Card */
+.smartone-unified-card {
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  box-shadow: 0 2px 10px -2px rgba(15, 23, 42, 0.05);
+  overflow: visible;
+  min-width: 0;
+}
+
+.smartone-card-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  padding: 12px 18px;
+  background: var(--slate-50);
+  border-bottom: 1px solid var(--line);
+  border-top-left-radius: var(--radius-md);
+  border-top-right-radius: var(--radius-md);
+}
+
+.smartone-card-bar__group {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+}
+
+.smartone-approval-inline {
+  padding: 10px 18px;
+  border-bottom: 1px solid var(--line);
+  background: var(--blue-25);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.smartone-timeline-strip {
+  padding-top: 2px;
+}
+
+/* Multi-Column Vertical Key : Value List Grid */
+.smartone-kv-grid {
+  padding: 18px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px 28px;
+  align-items: start;
+}
+
+.smartone-kv-grid--2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.smartone-kv-col {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 0;
+}
+
+.smartone-kv-row {
+  display: grid;
+  grid-template-columns: minmax(112px, 42%) minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+  font-size: 12.5px;
+  line-height: 1.45;
+  padding: 2px 0;
+}
+
+.smartone-kv-label {
+  font-weight: 700;
+  color: var(--ink-soft);
+  word-break: break-word;
+}
+
+.smartone-kv-value {
+  display: flex;
+  align-items: flex-start;
+  gap: 5px;
+  color: var(--ink);
+  word-break: break-word;
+  min-width: 0;
+}
+
+.smartone-kv-colon {
+  color: var(--muted);
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.smartone-kv-value-body {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.smartone-kv-link {
+  color: var(--blue-700);
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  font-family: inherit;
+  font-size: inherit;
+  text-align: left;
+}
+
+.smartone-kv-link:hover {
+  color: var(--blue-600);
+}
+
+.smartone-inline-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  align-items: center;
+}
+
+/* Secondary Sections Unified Inside Card */
+.smartone-card-section {
+  border-top: 1px solid var(--line);
+  min-width: 0;
+}
+
+.smartone-card-section__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  padding: 11px 18px;
+  background: var(--slate-50);
+  border-bottom: 1px solid var(--line);
+}
+
+.smartone-card-section__title {
+  margin: 0;
+  font-size: 12.5px;
+  font-weight: 800;
+  color: var(--ink);
+  letter-spacing: 0.2px;
+}
+
+.smartone-card-section__meta {
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+.smartone-card-section__body {
+  padding: 14px 18px;
+  min-width: 0;
+}
+
+.smartone-card-section__body--flush {
+  padding: 0;
+}
+
+/* Unified Summary & Notes Band */
+.smartone-notes-box {
+  background: var(--slate-50);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xs);
+  padding: 10px 14px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--ink);
+  white-space: pre-wrap;
+}
+
+.smartone-summary-band {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.smartone-ledger-list {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  background: var(--slate-50);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xs);
+  padding: 12px 14px;
+}
+
+.smartone-ledger-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12px;
+  color: var(--ink-soft);
+}
+
+.smartone-ledger-row--total {
+  border-top: 1px solid var(--line-strong);
+  padding-top: 8px;
+  margin-top: 2px;
+  font-size: 13.5px;
+  font-weight: 800;
+  color: var(--ink);
+}
+
+.smartone-ledger-amount {
+  font-family: ui-monospace, monospace;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.smartone-ledger-amount--danger {
+  color: var(--red-600);
+}
+
+.smartone-ledger-amount--primary {
+  color: var(--blue-700);
+}
+
+/* Unified Table Utilities */
+.smartone-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  min-width: 0;
+}
+
+.smartone-table-wrap .detail-data-table,
+.smartone-table-wrap .data-table {
+  width: 100%;
+  min-width: 720px;
+}
+
+.smartone-table-wrap .detail-data-table th,
+.smartone-table-wrap .data-table th {
+  white-space: nowrap;
+}
+
+.smartone-bottom-actions {
+  padding: 12px 18px;
+  border-top: 1px solid var(--line);
+  background: var(--slate-50);
+  border-bottom-left-radius: var(--radius-md);
+  border-bottom-right-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.smartone-bottom-actions .smartone-dropdown-menu {
+  top: auto;
+  bottom: calc(100% + 4px);
+}
+
+.smartone-td-center {
+  text-align: center;
+}
+
+.smartone-td-right {
+  text-align: right;
+}
+
+.smartone-td-mono {
+  font-family: ui-monospace, monospace;
+}
+
+.smartone-td-bold {
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.smartone-td-muted {
+  color: var(--muted);
+  font-size: 11.5px;
+}
+
+.smartone-td-sub {
+  display: block;
+  font-size: 10.5px;
+  color: var(--muted);
+}
+
+.smartone-tfoot-row {
+  background: var(--slate-50);
+  font-weight: 700;
+}
+
+.smartone-empty-cell {
+  text-align: center;
+  padding: 24px 16px;
+  color: var(--muted);
+  font-size: 12.5px;
+}
+
+.smartone-row-closed {
+  opacity: 0.72;
+  background: var(--slate-50);
+}
+
+.smartone-cost-form {
+  background: var(--slate-50);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  padding: 14px;
+  margin-bottom: 12px;
+}
+
+.smartone-cost-form__title {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: 10px;
+}
+
+.smartone-cost-form__error {
+  color: var(--red-600);
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+
+.smartone-cost-form__grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.smartone-cost-form__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.smartone-dropdown-anchor {
+  position: relative;
+  display: inline-block;
+}
+
+.smartone-dropdown-menu {
+  position: absolute;
+  left: 0;
+  top: calc(100% + 4px);
+  min-width: 190px;
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 8px 20px -4px rgba(15, 23, 42, 0.14);
+  padding: 4px;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.smartone-dropdown-item {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  padding: 8px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  border-radius: var(--radius-xs);
+  cursor: pointer;
+}
+
+.smartone-dropdown-item:hover {
+  background: var(--blue-50);
+  color: var(--blue-700);
+}
+
+.smartone-notice-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 12.5px;
+  font-weight: 600;
+  border: 1px solid var(--line);
+  background: var(--blue-50);
+  color: var(--blue-700);
+}
+
+.smartone-notice-banner--success {
+  background: var(--green-50);
+  color: var(--green-700);
+  border-color: rgba(16, 185, 129, 0.35);
+}
+
+.smartone-notice-banner--warning,
+.smartone-notice-banner--error {
+  background: var(--red-50);
+  color: var(--red-700);
+  border-color: rgba(244, 63, 94, 0.35);
+}
+
+.smartone-close-btn {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  padding: 2px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Tablet & Mobile Responsive Rules */
+@media (max-width: 1120px) {
+  .smartone-kv-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px 20px;
+  }
+
+  .smartone-summary-band {
+    grid-template-columns: 1fr;
+  }
+
+  .smartone-cost-form__grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .smartone-kv-grid,
+  .smartone-kv-grid--2 {
+    grid-template-columns: 1fr;
+    padding: 14px;
+    gap: 10px;
+  }
+
+  .smartone-card-bar,
+  .smartone-approval-inline,
+  .smartone-card-section__header,
+  .smartone-card-section__body,
+  .smartone-bottom-actions {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  .smartone-kv-row {
+    grid-template-columns: minmax(98px, 42%) minmax(0, 1fr);
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .smartone-page-title {
+    font-size: 14.5px;
+  }
+
+  .smartone-card-bar .button,
+  .smartone-page-actions .button {
+    min-height: 32px;
+  }
+}

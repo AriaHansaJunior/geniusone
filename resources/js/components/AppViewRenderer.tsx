@@ -100,7 +100,8 @@ import type {
   ReferenceMasterPageKey,
   ReferenceMasterRecord,
 } from "../pages/Common/ReferenceMaster/reference-master-types";
-import type { PageKey, ViewState, TableRow } from "../types";
+import type { PageKey, SettingsTab, ViewState, TableRow } from "../types";
+import { SettingsWorkspace } from "../pages/Settings/SettingsWorkspace";
 import type { RequestMaterialRecord } from "../pages/Warehouse/Request/RequestMaterial/request-material-types";
 import type { StockNotificationRecord } from "../pages/Dashboard/StockNotificationMaster/stock-notification-types";
 import type { TypeOfRequestRecord } from "../pages/Warehouse/Master/TypeOfRequest/type-of-request-types";
@@ -319,6 +320,8 @@ export interface AppViewRendererProps {
   handleSaveRequestMaterial: (newRecord: RequestMaterialRecord) => Promise<void>;
   handleProfileCancel: () => void;
   handleProfileSaveConfirmed: () => void;
+  handleNavigateSettings?: (tab?: SettingsTab) => void;
+  handleExitSettings?: () => void;
   // State Records & Setters
   supplierRecords: SupplierRecord[];
   editingSupplier: SupplierRecord | null;
@@ -548,6 +551,8 @@ export function AppViewRenderer({
   handleSaveRequestMaterial,
   handleProfileCancel,
   handleProfileSaveConfirmed,
+  handleNavigateSettings,
+  handleExitSettings,
   supplierRecords,
   editingSupplier,
   setEditingSupplier,
@@ -1814,6 +1819,19 @@ export function AppViewRenderer({
               "transfer-stock-return",
               "/warehouse/incoming/transfer-stock-return"
             )
+          }
+        />
+      )}
+
+      {/* Dedicated Full-Screen Settings Workspace */}
+      {viewState.type === "settings" && (
+        <SettingsWorkspace
+          activeTab={viewState.tab}
+          onSelectTab={(tab) => handleNavigateSettings?.(tab)}
+          onExitSettings={() =>
+            handleExitSettings
+              ? handleExitSettings()
+              : handleNavigateList("dashboard", "/dashboard")
           }
         />
       )}

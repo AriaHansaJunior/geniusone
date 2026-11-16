@@ -381,4 +381,14 @@ export const pageMeta: Record<PageKey, PageMeta> = {
     title: "System Audit Trail & History",
     description: "Real-time chronological audit trail of all user authentications, data modifications, and system activities in Western Indonesia Time (WIB).",
   },
+  settings: {
+    eyebrow: "SYSTEM PREFERENCES",
+    title: "Settings",
+    description: "Manage account preferences, display theme, and system governance.",
+  },
+  "system-theme": {
+    eyebrow: "SYSTEM PREFERENCES",
+    title: "System Theme",
+    description: "Switch between Default layout and Modern and Optimized UI 2.0.",
+  },
 };
