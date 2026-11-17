@@ -1,11 +1,11 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import * as XLSX from "xlsx";
 import { Icon } from "../../../components/ui/Icon";
 import { Button } from "../../../components/ui/Button";
 import { Badge } from "../../../components/ui/Badge";
 import { Material } from "../../../components/common/CommonCells";
 import { docToSlug } from "../../../utils/docSlug";
-import { fetchDetail } from "../../../data/api";
+import { fetchDetail, apiFetch, downloadAuthenticatedFile } from "../../../data/api";
 import type { TableRow } from "../../../types";
 import { ApprovalActionBar } from "../../../components/approval/ApprovalActionBar";
 import { ApprovalTimeline } from "../../../components/approval/ApprovalTimeline";
@@ -19,6 +19,7 @@ import {
 } from "../../../services/approvalApi";
 import { normalizeApprovalStatus, type DocumentApprovalState } from "../../../types/approval";
 import { useAuthPermission } from "../../../context/AuthPermissionContext";
+import { useNotification } from "../../../context/NotificationContext";
 import { useTheme } from "../../../context/ThemeContext";
 import { KwtPrintModal, KwtPrintTemplatePr } from "../../../components/print";
 import { PurchaseRequisitionDefaultDetail } from "../../../themes/default/pages/PurchaseRequisitionDefaultDetail";
@@ -427,15 +428,84 @@ export function PurchaseRequisitionDetail({
     XLSX.writeFile(wb, `PR_${safeDoc}.xlsx`);
   };
 
-  const handleDownloadAttachment = () => {
-    if (row.attachment_url) {
-      window.open(row.attachment_url, "_blank");
+  const { notifySuccess, notifyError } = useNotification();
+  const attachmentInputRef = useRef<HTMLInputElement>(null);
+  const [isUploadingAttachment, setIsUploadingAttachment] = useState(false);
+
+  const handleDownloadAttachment = async () => {
+    if (!row.attachment_url && !row.attachment_file) {
+      notifyError(
+        "No Attachment Available",
+        "No attachment file has been uploaded for this Purchase Requisition yet."
+      );
       return;
     }
-    if (row.attachment_file) {
-      const cleanDoc = docNumber.replace(/[\/\\?%*:|"<>]/g, "-");
-      window.open(`/api/procurement/pr/${cleanDoc}/attachment`, "_blank");
+
+    const fallbackId = row.id ? String(row.id) : docNumber;
+    const rawUrl = row.attachment_url ? String(row.attachment_url) : "";
+    const targetUrl =
+      rawUrl && !rawUrl.includes("/storage/")
+        ? rawUrl
+        : `/api/procurement/pr/${encodeURIComponent(fallbackId)}/attachment`;
+
+    try {
+      await downloadAuthenticatedFile(
+        targetUrl,
+        row.attachment_file ? String(row.attachment_file) : undefined
+      );
+    } catch (err) {
+      notifyError("Download Attachment Failed", err);
+    }
+  };
+
+  const handleUploadAttachment = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+
+    if (file.size > 2 * 1024 * 1024) {
+      notifyError("Upload Failed", "Attachment exceeds maximum allowed size of 2MB.");
       return;
+    }
+    const ext = "." + (file.name.split(".").pop() || "").toLowerCase();
+    const validExtensions = [".pdf", ".doc", ".docx", ".xls", ".xlsx", ".jpg", ".jpeg", ".png"];
+    if (!validExtensions.includes(ext)) {
+      notifyError(
+        "Invalid File Format",
+        "Allowed formats: PDF, DOC, DOCX, XLS, XLSX, JPG, PNG."
+      );
+      return;
+    }
+
+    setIsUploadingAttachment(true);
+    try {
+      const formData = new FormData();
+      formData.append("attachment_file", file);
+      const targetId = row.id ? String(row.id) : docNumber;
+      const res = await apiFetch(
+        `/api/procurement/pr/${encodeURIComponent(targetId)}/attachment`,
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
+      const data = await res.json().catch(() => ({} as any));
+      if (!res.ok) {
+        throw new Error(data?.message || `Failed to upload attachment (HTTP ${res.status}).`);
+      }
+
+      setRow((prev) => ({
+        ...prev,
+        attachment_file: data.attachment_file || file.name,
+        attachment_url:
+          data.attachment_url ||
+          `/api/procurement/pr/${encodeURIComponent(targetId)}/attachment`,
+      }));
+      notifySuccess("Attachment Uploaded", "Technical specification attachment updated.");
+    } catch (err) {
+      notifyError("Upload Attachment Failed", err);
+    } finally {
+      setIsUploadingAttachment(false);
     }
   };
 
@@ -508,7 +578,7 @@ export function PurchaseRequisitionDetail({
         </div>
 
         <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-          <Button variant="secondary" icon="file" onClick={handleDownloadAttachment}>
+          <Button variant="secondary" onClick={handleDownloadAttachment}>
             Download Attachments
           </Button>
         </div>
@@ -902,16 +972,38 @@ export function PurchaseRequisitionDetail({
                       )}
                     </div>
                   </div>
-                  {(row.attachment_file || row.attachment_url) && (
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    <input
+                      ref={attachmentInputRef}
+                      type="file"
+                      accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png"
+                      className="master-hidden-input"
+                      onChange={handleUploadAttachment}
+                    />
                     <Button
-                      variant="ghost"
-                      icon="download"
-                      style={{ padding: "6px 12px", fontSize: "11px" }}
-                      onClick={handleDownloadAttachment}
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={isUploadingAttachment}
+                      onClick={() => attachmentInputRef.current?.click()}
                     >
-                      Download
+                      {isUploadingAttachment
+                        ? "Uploading..."
+                        : row.attachment_file
+                          ? "Replace File"
+                          : "Upload File"}
                     </Button>
-                  )}
+                    {(row.attachment_file || row.attachment_url) && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleDownloadAttachment}
+                      >
+                        Download
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>

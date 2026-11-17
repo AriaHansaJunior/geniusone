@@ -4,7 +4,7 @@ import { Button } from "../../../components/ui/Button";
 import { Badge } from "../../../components/ui/Badge";
 import { Material } from "../../../components/common/CommonCells";
 import { docToSlug } from "../../../utils/docSlug";
-import { fetchDetail, apiFetch } from "../../../data/api";
+import { fetchDetail, apiFetch, downloadAuthenticatedFile } from "../../../data/api";
 import type { TableRow } from "../../../types";
 import { ApprovalActionBar } from "../../../components/approval/ApprovalActionBar";
 import { ApprovalTimeline } from "../../../components/approval/ApprovalTimeline";
@@ -16,6 +16,7 @@ import {
 } from "../../../services/approvalApi";
 import { normalizeApprovalStatus, type DocumentApprovalState } from "../../../types/approval";
 import { useAuthPermission } from "../../../context/AuthPermissionContext";
+import { useNotification } from "../../../context/NotificationContext";
 import { useTheme } from "../../../context/ThemeContext";
 import { PurchaseOrderDefaultDetail } from "../../../themes/default/pages/PurchaseOrderDefaultDetail";
 
@@ -30,6 +31,7 @@ export function PurchaseOrderDetail({
   onBack,
   onNavigateDetail,
 }: PurchaseOrderDetailProps) {
+  const { notifyError } = useNotification();
   const [activeTab, setActiveTab] = useState<"material" | "otherCosts">("material");
 
   const [row, setRow] = useState<TableRow>(() => {
@@ -476,6 +478,36 @@ export function PurchaseOrderDetail({
     return list;
   }, [row.receivingNumbers, rmNumber]);
 
+  const handleDownloadAttachment = async () => {
+    const attachments: Array<{ url?: string; filename?: string }> = Array.isArray(row.attachments)
+      ? row.attachments
+      : [];
+
+    if (attachments.length === 0 && !row.attachment_url && !row.attachment_file) {
+      notifyError(
+        "No Attachment Available",
+        "No attachment file was found on this Purchase Order or its linked Purchase Requisition(s)."
+      );
+      return;
+    }
+
+    const fallbackId = row.id ? String(row.id) : docNumber;
+    const rawUrl = row.attachment_url ? String(row.attachment_url) : "";
+    const targetUrl =
+      rawUrl && !rawUrl.includes("/storage/")
+        ? rawUrl
+        : `/api/procurement/po/${encodeURIComponent(fallbackId)}/attachment`;
+
+    try {
+      await downloadAuthenticatedFile(
+        targetUrl,
+        row.attachment_file ? String(row.attachment_file) : undefined
+      );
+    } catch (err) {
+      notifyError("Download Attachment Failed", err);
+    }
+  };
+
   if (isDefaultTheme) {
     return (
       <PurchaseOrderDefaultDetail
@@ -532,6 +564,7 @@ export function PurchaseOrderDetail({
         setCostError={setCostError}
         availableCostTypes={availableCostTypes}
         onSaveAdditionalCost={handleSaveAdditionalCost}
+        onDownloadAttachment={handleDownloadAttachment}
         activityLogEntries={activityLogEntries}
       />
     );
@@ -588,7 +621,7 @@ export function PurchaseOrderDetail({
         </div>
 
         <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-          <Button variant="secondary" icon="file">
+          <Button variant="secondary" onClick={handleDownloadAttachment}>
             Download Attachments
           </Button>
         </div>

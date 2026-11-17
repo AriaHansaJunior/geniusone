@@ -70,6 +70,7 @@ interface PurchaseOrderDefaultDetailProps {
   setCostError: React.Dispatch<React.SetStateAction<string | null>>;
   availableCostTypes: any[];
   onSaveAdditionalCost: () => void;
+  onDownloadAttachment?: () => void;
   activityLogEntries: PoHistoryEntry[];
 }
 
@@ -125,6 +126,7 @@ export function PurchaseOrderDefaultDetail({
   setCostError,
   availableCostTypes,
   onSaveAdditionalCost,
+  onDownloadAttachment,
   activityLogEntries,
 }: PurchaseOrderDefaultDetailProps) {
   const [activeTab, setActiveTab] = useState<"material" | "otherCosts">("material");
@@ -211,6 +213,21 @@ export function PurchaseOrderDefaultDetail({
       { label: "Approved By", value: approvedBy },
       { label: "Revision", value: String(row._rawRevision || "0") },
       { label: "Subcon", value: String(row._rawSubkon || "No") },
+      {
+        label: "Attachment file",
+        value:
+          row.attachment_file || row.attachment_url ? (
+            <button
+              type="button"
+              className="smartone-kv-link"
+              onClick={onDownloadAttachment}
+            >
+              {row.attachment_file || "Download Attachment"}
+            </button>
+          ) : (
+            "-"
+          ),
+      },
     ],
   ];
 
@@ -241,6 +258,13 @@ export function PurchaseOrderDefaultDetail({
               : `History Transaction (${activityLogEntries.length})`}
           </Button>
         </>
+      }
+      toolbarRight={
+        row.attachment_file || row.attachment_url ? (
+          <Button type="button" variant="outline" size="sm" onClick={onDownloadAttachment}>
+            Download Attachments
+          </Button>
+        ) : undefined
       }
       approvalSection={
         <ApprovalActionBar

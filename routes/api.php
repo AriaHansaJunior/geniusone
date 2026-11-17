@@ -78,6 +78,7 @@ Route::prefix('procurement')->group(function () {
     Route::patch('/pr/{id}', [PurchaseRequisitionApiController::class, 'update']);
     Route::delete('/pr/{id}', [PurchaseRequisitionApiController::class, 'destroy']);
     Route::get('/pr/{code}/attachment', [PurchaseRequisitionApiController::class, 'downloadAttachment'])->where('code', '.*(?<!/attachment)');
+    Route::post('/pr/{code}/attachment', [PurchaseRequisitionApiController::class, 'uploadAttachment'])->where('code', '.*(?<!/attachment)');
     Route::post('/pr/{id}/approve', [PurchaseRequisitionApiController::class, 'approve']);
     Route::post('/pr/{id}/reject', [PurchaseRequisitionApiController::class, 'reject']);
     Route::post('/pr/{id}/items/{itemId}/close', [PurchaseRequisitionApiController::class, 'closeItem']);
@@ -94,6 +95,7 @@ Route::prefix('procurement')->group(function () {
     Route::put('/po/{id}', [PurchaseOrderApiController::class, 'update']);
     Route::patch('/po/{id}', [PurchaseOrderApiController::class, 'update']);
     Route::delete('/po/{id}', [PurchaseOrderApiController::class, 'destroy']);
+    Route::get('/po/{code}/attachment', [PurchaseOrderApiController::class, 'downloadAttachment'])->where('code', '.*(?<!/attachment)');
     Route::post('/po/{id}/approve', [PurchaseOrderApiController::class, 'approve']);
     Route::post('/po/{id}/reject', [PurchaseOrderApiController::class, 'reject']);
     Route::post('/po/{id}/additional-costs', [PurchaseOrderApiController::class, 'storeAdditionalCost']);
@@ -322,12 +324,14 @@ Route::post('/pr', [PurchaseRequisitionApiController::class, 'store']);
 Route::put('/pr/{id}', [PurchaseRequisitionApiController::class, 'update']);
 Route::delete('/pr/{id}', [PurchaseRequisitionApiController::class, 'destroy']);
 Route::get('/pr/{code}/attachment', [PurchaseRequisitionApiController::class, 'downloadAttachment'])->where('code', '.*(?<!/attachment)');
+Route::post('/pr/{code}/attachment', [PurchaseRequisitionApiController::class, 'uploadAttachment'])->where('code', '.*(?<!/attachment)');
 Route::get('/pr/{code}', [PurchaseRequisitionApiController::class, 'show'])->where('code', '.*');
 
 Route::get('/po', [PurchaseOrderApiController::class, 'index']);
 Route::post('/po', [PurchaseOrderApiController::class, 'store']);
 Route::put('/po/{id}', [PurchaseOrderApiController::class, 'update']);
 Route::delete('/po/{id}', [PurchaseOrderApiController::class, 'destroy']);
+Route::get('/po/{code}/attachment', [PurchaseOrderApiController::class, 'downloadAttachment'])->where('code', '.*(?<!/attachment)');
 Route::get('/po/{code}', [PurchaseOrderApiController::class, 'show'])->where('code', '.*');
 
 Route::get('/rn', [ReceiveNoteApiController::class, 'index']);

@@ -10,6 +10,7 @@ use App\Models\Master\Organization\Section;
 use App\Models\Procurement\PurchaseRequest\PurchaseRequisition;
 use App\Models\Procurement\PurchaseRequest\PurchaseRequisitionItem;
 use App\Models\System\Governance\ApprovalHistory;
+use App\Services\AttachmentStorageService;
 use App\Services\AuditLogger;
 use App\Services\DocumentNumber\DocumentNumberGenerator;
 use App\Services\GeniusOneBackend;
@@ -208,8 +209,8 @@ class PurchaseRequisitionApiController extends Controller
                 'status' => $status,
                 'createdBy' => $creatorName,
                 'lastUpdated' => $createdTime,
-                'attachment_file' => $pr->attachment_file ? basename($pr->attachment_file) : null,
-                'attachment_url' => $pr->attachment_file ? url('storage/'.$pr->attachment_file) : null,
+                'attachment_file' => $pr->attachment_file ? AttachmentStorageService::displayFilename($pr->attachment_file) : null,
+                'attachment_url' => $pr->attachment_file ? "/api/procurement/pr/{$pr->id}/attachment" : null,
                 'actions' => '',
                 '_search' => "{$pr->pr_number} {$pr->department?->name} {$creatorName} {$status} {$prRemark} {$poNumberStr}",
                 'is_approved' => $isApproved2,
@@ -408,8 +409,8 @@ class PurchaseRequisitionApiController extends Controller
             'remark' => $firstItem?->note ?? $firstItem?->remark ?? '',
             '_rawRemark' => $firstItem?->note ?? $firstItem?->remark ?? '',
             'note' => $firstItem?->note ?? $firstItem?->remark ?? '',
-            'attachment_file' => $pr->attachment_file ? basename($pr->attachment_file) : null,
-            'attachment_url' => $pr->attachment_file ? (str_starts_with($pr->attachment_file, 'http') ? $pr->attachment_file : url('storage/'.$pr->attachment_file)) : null,
+            'attachment_file' => $pr->attachment_file ? AttachmentStorageService::displayFilename($pr->attachment_file) : null,
+            'attachment_url' => $pr->attachment_file ? "/api/procurement/pr/{$pr->id}/attachment" : null,
             'createdBy' => "{$creatorName} {$createdTime}",
             '_rawCreatedBy' => "{$creatorName} {$createdTime}",
             '_rawLastUpdated' => "{$creatorName} {$createdTime}",
@@ -479,31 +480,106 @@ class PurchaseRequisitionApiController extends Controller
     }
 
     /**
+     * Resolve a Purchase Requisition from numeric ID, pr-<id>, PR number, or slug.
+     */
+    private function findPrByIdentifier(string $code): ?PurchaseRequisition
+    {
+        $decodedCode = urldecode($code);
+        $rawCode = str_replace('-', '/', $decodedCode);
+        $cleanCode = preg_replace('/[^A-Za-z0-9]/', '', $decodedCode);
+
+        $numericId = null;
+        if (is_numeric($decodedCode)) {
+            $numericId = (int) $decodedCode;
+        } elseif (preg_match('/^pr-(\d+)$/i', $decodedCode, $m)) {
+            $numericId = (int) $m[1];
+        }
+
+        return PurchaseRequisition::where(function ($q) use ($decodedCode, $rawCode, $cleanCode, $numericId) {
+            $q->where('pr_number', $decodedCode)
+                ->orWhere('pr_number', $rawCode);
+
+            if ($cleanCode !== '') {
+                $q->orWhereRaw("REPLACE(REPLACE(pr_number, '/', ''), '-', '') = ?", [$cleanCode]);
+            }
+
+            if ($numericId) {
+                $q->orWhere('id', $numericId);
+            }
+        })->first();
+    }
+
+    /**
      * Download attachment file for a Purchase Requisition.
      */
     public function downloadAttachment(Request $request, string $code)
     {
-        $rawCode = str_replace('-', '/', $code);
-        $pr = PurchaseRequisition::where('pr_number', $rawCode)
-            ->orWhere('pr_number', $code)
-            ->orWhere('id', is_numeric($code) ? (int) $code : null)
-            ->first();
+        $pr = $this->findPrByIdentifier($code);
 
-        if (! $pr || ! $pr->attachment_file) {
-            abort(404, 'Attachment not found.');
+        if (! $pr) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Purchase Requisition not found.',
+            ], 404);
         }
 
-        $path = storage_path('app/public/'.$pr->attachment_file);
-        if (! file_exists($path)) {
-            $altPath = public_path($pr->attachment_file);
-            if (file_exists($altPath)) {
-                $path = $altPath;
-            } else {
-                abort(404, 'Attachment file not found on disk.');
-            }
+        if (! $pr->attachment_file) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'No attachment file has been uploaded for this Purchase Requisition.',
+            ], 404);
         }
 
-        return response()->download($path);
+        $path = AttachmentStorageService::resolveExistingPath($pr->attachment_file);
+        if (! $path) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Attachment file not found on server storage.',
+            ], 404);
+        }
+
+        return response()->download($path, AttachmentStorageService::displayFilename($pr->attachment_file));
+    }
+
+    /**
+     * Upload or replace the technical specification attachment on a Purchase Requisition.
+     */
+    public function uploadAttachment(Request $request, string $code)
+    {
+        $actorId = $this->requireActorId($request);
+        $pr = $this->findPrByIdentifier($code);
+
+        if (! $pr) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Purchase Requisition not found.',
+            ], 404);
+        }
+
+        if ($request->hasFile('attachment_file') && ! $request->hasFile('attachment')) {
+            $request->validate([
+                'attachment_file' => 'required|file|max:2048|mimes:pdf,doc,docx,xls,xlsx,jpg,jpeg,png',
+            ]);
+        } else {
+            $request->validate([
+                'attachment' => 'required|file|max:2048|mimes:pdf,doc,docx,xls,xlsx,jpg,jpeg,png',
+            ]);
+        }
+
+        $file = $request->file('attachment_file') ?? $request->file('attachment');
+        $storedPath = AttachmentStorageService::storeUploadedFile($file, 'attachments/pr');
+
+        $pr->update([
+            'attachment_file' => $storedPath,
+            'updated_by' => $actorId,
+        ]);
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Attachment uploaded successfully.',
+            'attachment_file' => AttachmentStorageService::displayFilename($storedPath),
+            'attachment_url' => "/api/procurement/pr/{$pr->id}/attachment",
+        ]);
     }
 
     /**
@@ -729,9 +805,8 @@ class PurchaseRequisitionApiController extends Controller
     {
         if ($request->hasFile('attachment_file') || $request->hasFile('attachment')) {
             $file = $request->file('attachment_file') ?? $request->file('attachment');
-            $filename = time().'_'.preg_replace('/[^a-zA-Z0-9._-]/', '_', $file->getClientOriginalName());
 
-            return $file->storeAs('attachments/pr', $filename, 'public');
+            return AttachmentStorageService::storeUploadedFile($file, 'attachments/pr');
         }
 
         if ($request->filled('attachment_file') && is_string($request->input('attachment_file'))) {

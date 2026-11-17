@@ -15,6 +15,7 @@ use App\Models\Procurement\PurchaseOrder\PoType;
 use App\Models\Procurement\PurchaseOrder\PurchaseOrder;
 use App\Models\Procurement\PurchaseRequest\PurchaseRequisition;
 use App\Models\Procurement\PurchaseRequest\PurchaseRequisitionItem;
+use App\Services\AttachmentStorageService;
 use App\Services\AuditLogger;
 use App\Services\DocumentNumber\DocumentNumberGenerator;
 use App\Services\GeniusOneBackend;
@@ -22,6 +23,7 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
+use ZipArchive;
 
 class PurchaseOrderApiController extends Controller
 {
@@ -96,9 +98,9 @@ class PurchaseOrderApiController extends Controller
     }
 
     /**
-     * Show single Purchase Order detail.
+     * Resolve a Purchase Order by po_number, normalized code, po-<id>, or numeric ID.
      */
-    public function show(Request $request, string $code)
+    private function findPoByIdentifier(string $code, array $relations = []): ?PurchaseOrder
     {
         $decodedCode = urldecode($code);
         $rawCode = str_replace('-', '/', $decodedCode);
@@ -111,7 +113,28 @@ class PurchaseOrderApiController extends Controller
             $numericId = (int) $m[1];
         }
 
-        $po = PurchaseOrder::with([
+        return PurchaseOrder::with($relations)
+            ->where(function ($q) use ($decodedCode, $rawCode, $cleanCode, $numericId) {
+                $q->where('po_number', $decodedCode)
+                    ->orWhere('po_number', $rawCode);
+
+                if ($cleanCode !== '') {
+                    $q->orWhereRaw("REPLACE(REPLACE(po_number, '/', ''), '-', '') = ?", [$cleanCode]);
+                }
+
+                if ($numericId) {
+                    $q->orWhere('id', $numericId);
+                }
+            })
+            ->first();
+    }
+
+    /**
+     * Show single Purchase Order detail.
+     */
+    public function show(Request $request, string $code)
+    {
+        $po = $this->findPoByIdentifier($code, [
             'supplier',
             'creator.department',
             'updatedByUser',
@@ -130,17 +153,7 @@ class PurchaseOrderApiController extends Controller
             'approvals.user',
             'additionalCosts.type',
             'receiveNotes.receiveNote',
-        ])
-            ->where(function ($q) use ($decodedCode, $rawCode, $cleanCode, $numericId) {
-                $q->where('po_number', $decodedCode)
-                    ->orWhere('po_number', $rawCode)
-                    ->orWhereRaw("REPLACE(REPLACE(po_number, '/', ''), '-', '') = ?", [$cleanCode]);
-
-                if ($numericId) {
-                    $q->orWhere('id', $numericId);
-                }
-            })
-            ->first();
+        ]);
 
         if (! $po) {
             if ($request->expectsJson() || $request->is('api/*') || $request->query('format') === 'json') {
@@ -397,6 +410,19 @@ class PurchaseOrderApiController extends Controller
         $additionalCostsVal = (float) $po->additional_costs_total;
         $grandTotalVal = (float) $po->grand_total;
 
+        $attachments = $po->items
+            ->map(fn ($it) => $it->requisitionItem?->purchaseRequisition)
+            ->filter(fn ($pr) => $pr && ! empty($pr->attachment_file))
+            ->unique('id')
+            ->values()
+            ->map(fn ($pr) => [
+                'id' => $pr->id,
+                'pr_number' => $pr->pr_number,
+                'filename' => AttachmentStorageService::displayFilename($pr->attachment_file),
+                'url' => "/api/procurement/pr/{$pr->id}/attachment",
+            ])
+            ->toArray();
+
         return [
             'id' => $po->id,
             '_id' => "po-{$po->id}",
@@ -418,6 +444,9 @@ class PurchaseOrderApiController extends Controller
             '_rawTotal' => $formattedGrandTotal,
             'prNumber' => $prNumber,
             '_rawPr' => $prNumber,
+            'attachments' => $attachments,
+            'attachment_file' => count($attachments) > 0 ? $attachments[0]['filename'] : null,
+            'attachment_url' => count($attachments) > 0 ? "/api/procurement/po/{$po->id}/attachment" : null,
             'rnNumber' => $rnNumber,
             '_rawRn' => $rnNumber,
             'items' => $lineItems,
@@ -483,6 +512,86 @@ class PurchaseOrderApiController extends Controller
             'actions' => '',
             '_search' => "{$po->po_number} {$supplierName} {$status} {$prNumber}",
         ];
+    }
+
+    /**
+     * Download attachment file(s) from the Purchase Order's linked Purchase Requisition(s).
+     */
+    public function downloadAttachment(Request $request, string $code)
+    {
+        $po = $this->findPoByIdentifier($code, ['items.requisitionItem.purchaseRequisition']);
+
+        if (! $po) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Purchase Order not found.',
+            ], 404);
+        }
+
+        $linkedPrs = $po->items
+            ->map(fn ($it) => $it->requisitionItem?->purchaseRequisition)
+            ->filter(fn ($pr) => $pr && ! empty($pr->attachment_file))
+            ->unique('id')
+            ->values();
+
+        if ($request->filled('pr_id')) {
+            $requestedPrId = (int) $request->query('pr_id');
+            $linkedPrs = $linkedPrs->where('id', $requestedPrId)->values();
+        }
+
+        if ($linkedPrs->isEmpty()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'No attachment file found on this Purchase Order or its linked Purchase Requisition(s).',
+            ], 404);
+        }
+
+        $resolvedFiles = [];
+        foreach ($linkedPrs as $pr) {
+            $path = AttachmentStorageService::resolveExistingPath($pr->attachment_file);
+            if ($path) {
+                $resolvedFiles[] = [
+                    'path' => $path,
+                    'filename' => AttachmentStorageService::displayFilename($pr->attachment_file),
+                    'pr_number' => $pr->pr_number,
+                ];
+            }
+        }
+
+        if (empty($resolvedFiles)) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Attachment file(s) could not be found on server storage.',
+            ], 404);
+        }
+
+        if (count($resolvedFiles) === 1 || ! class_exists(ZipArchive::class)) {
+            return response()->download($resolvedFiles[0]['path'], $resolvedFiles[0]['filename']);
+        }
+
+        $safePo = preg_replace('/[^a-zA-Z0-9._-]/', '_', (string) $po->po_number);
+        $zipFilename = "PO_{$safePo}_attachments.zip";
+        $tempZipPath = sys_get_temp_dir().DIRECTORY_SEPARATOR.'po_att_'.$po->id.'_'.uniqid().'.zip';
+
+        $zip = new ZipArchive;
+        if ($zip->open($tempZipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
+            return response()->download($resolvedFiles[0]['path'], $resolvedFiles[0]['filename']);
+        }
+
+        $usedNames = [];
+        foreach ($resolvedFiles as $entry) {
+            $entryName = $entry['filename'];
+            if (isset($usedNames[$entryName])) {
+                $usedNames[$entryName]++;
+                $entryName = $usedNames[$entryName].'_'.$entryName;
+            } else {
+                $usedNames[$entryName] = 1;
+            }
+            $zip->addFile($entry['path'], $entryName);
+        }
+        $zip->close();
+
+        return response()->download($tempZipPath, $zipFilename)->deleteFileAfterSend(true);
     }
 
     /**

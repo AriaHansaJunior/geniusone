@@ -3,6 +3,8 @@ import { Icon } from "./Icon";
 import { Button } from "./Button";
 import { Badge } from "./Badge";
 import { Material } from "../common/CommonCells";
+import { downloadAuthenticatedFile } from "../../data/api";
+import { useNotification } from "../../context/NotificationContext";
 import type { TableRow } from "../../types";
 
 interface DetailDrawerProps {
@@ -11,6 +13,7 @@ interface DetailDrawerProps {
 }
 
 export function DetailDrawer({ row, onClose }: { row: TableRow; onClose: () => void }) {
+  const { notifyError } = useNotification();
   const [poTab, setPoTab] = useState<"material" | "otherCosts">("material");
   const [showHistoryModal, setShowHistoryModal] = useState(false);
 
@@ -130,13 +133,28 @@ export function DetailDrawer({ row, onClose }: { row: TableRow; onClose: () => v
                 <span>DUE DATE & ATTACHMENT</span>
                 <strong>{String(row._rawDueDate || "21-Oct-2026")}</strong>
                 <small>
-                  <a
-                    href="#attachment"
-                    style={{ color: "var(--blue-600)", fontWeight: 700 }}
-                    onClick={(e) => e.preventDefault()}
-                  >
-                    Download File
-                  </a>
+                  {row.attachment_url || row.attachment_file ? (
+                    <button
+                      type="button"
+                      className="smartone-kv-link"
+                      onClick={() => {
+                        const targetUrl =
+                          row.attachment_url && !String(row.attachment_url).includes("/storage/")
+                            ? String(row.attachment_url)
+                            : `/api/procurement/pr/${encodeURIComponent(
+                                String(row.id || String(docNumber).replace(/\//g, "-"))
+                              )}/attachment`;
+                        downloadAuthenticatedFile(
+                          targetUrl,
+                          row.attachment_file ? String(row.attachment_file) : undefined
+                        ).catch((err) => notifyError("Download Attachment Failed", err));
+                      }}
+                    >
+                      {row.attachment_file ? String(row.attachment_file) : "Download File"}
+                    </button>
+                  ) : (
+                    "No attachment"
+                  )}
                 </small>
               </div>
             </div>

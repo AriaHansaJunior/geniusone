@@ -328,6 +328,49 @@ export async function apiDelete(endpoint: string): Promise<boolean> {
   return true;
 }
 
+/**
+ * Download a binary/document attachment using authenticated fetch (Bearer + CSRF + cookies),
+ * parsing Content-Disposition filename and reporting server errors as ApiError.
+ */
+export async function downloadAuthenticatedFile(
+  endpoint: string,
+  fallbackFilename = "attachment"
+): Promise<string> {
+  const res = await apiFetch(endpoint, { cache: "no-store" });
+  if (!res.ok) {
+    throw await parseError(res);
+  }
+
+  const disposition = res.headers.get("Content-Disposition") || "";
+  let filename = fallbackFilename;
+  const utfMatch = disposition.match(/filename\*=UTF-8''([^;\r\n]+)/i);
+  const asciiMatch = disposition.match(/filename="?([^";\r\n]+)"?/i);
+  if (utfMatch?.[1]) {
+    try {
+      filename = decodeURIComponent(utfMatch[1]);
+    } catch {
+      filename = utfMatch[1];
+    }
+  } else if (asciiMatch?.[1]) {
+    filename = asciiMatch[1].trim();
+  }
+
+  const blob = await res.blob();
+  if (typeof window !== "undefined") {
+    const objectUrl = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = objectUrl;
+    link.download = filename;
+    link.style.display = "none";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1500);
+  }
+
+  return filename;
+}
+
   /**
    * Create a new Warehouse Material Receipt (BPB).
    */
