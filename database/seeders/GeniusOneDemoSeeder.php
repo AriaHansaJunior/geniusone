@@ -129,11 +129,12 @@ class GeniusOneDemoSeeder extends Seeder
         $secWarehouse = Section::firstOrCreate(['name' => 'Raw Material Yard'], ['status' => 1]);
 
         // 3. Units of Measurement
-        $uomKg = UnitOfMeasurement::firstOrCreate(['name' => 'KGM'], ['status' => 1]);
-        $uomPce = UnitOfMeasurement::firstOrCreate(['name' => 'PCE'], ['status' => 1]);
-        $uomSet = UnitOfMeasurement::firstOrCreate(['name' => 'SET'], ['status' => 1]);
-        $uomLtr = UnitOfMeasurement::firstOrCreate(['name' => 'LTR'], ['status' => 1]);
-        $uomTon = UnitOfMeasurement::firstOrCreate(['name' => 'TON'], ['status' => 1]);
+        $uomKg = UnitOfMeasurement::firstOrCreate(['name' => 'KGM'], ['code' => 'KGM', 'description' => 'Kilogram (Customs Code)', 'status' => 1]);
+        $uomPce = UnitOfMeasurement::firstOrCreate(['name' => 'PCE'], ['code' => 'PCE', 'description' => 'Piece', 'status' => 1]);
+        $uomSet = UnitOfMeasurement::firstOrCreate(['name' => 'SET'], ['code' => 'SET', 'description' => 'Complete Set', 'status' => 1]);
+        $uomLtr = UnitOfMeasurement::firstOrCreate(['name' => 'LTR'], ['code' => 'LTR', 'description' => 'Liter', 'status' => 1]);
+        $uomTon = UnitOfMeasurement::firstOrCreate(['name' => 'TON'], ['code' => 'TON', 'description' => 'Metric Ton', 'status' => 1]);
+        $uomBox = UnitOfMeasurement::firstOrCreate(['name' => 'BOX'], ['code' => 'BOX', 'description' => 'Standard Carton / Box', 'status' => 1]);
 
         // 4. Financial & Logistics Master
         $curIdr = Currency::firstOrCreate(['name' => 'IDR'], ['status' => 1]);
@@ -310,16 +311,16 @@ class GeniusOneDemoSeeder extends Seeder
 
         // 6. Materials / Items (10 Items)
         $itemsData = [
-            ['code' => '10.100.100.001', 'name' => 'Battery Scrap / Lead Ingot 99.9%', 'uom' => $uomKg, 'cat' => $catRaw, 'class' => $classMetal, 'type' => $itemTypeBaku, 'stock' => 150000.0],
-            ['code' => '10.100.100.002', 'name' => 'Steel Plate SS400 10mm x 5ft x 20ft', 'uom' => $uomPce, 'cat' => $catRaw, 'class' => $classMetal, 'type' => $itemTypeBaku, 'stock' => 85.0],
-            ['code' => '20.200.200.001', 'name' => 'Electric Motor Induction 18.5 kW 4P', 'uom' => $uomPce, 'cat' => $catPart, 'class' => $classSpare, 'type' => $itemTypeSpare, 'stock' => 12.0],
-            ['code' => '20.200.200.002', 'name' => 'Centrifugal Slurry Pump 4/3 D-AH', 'uom' => $uomSet, 'cat' => $catPart, 'class' => $classSpare, 'type' => $itemTypeSpare, 'stock' => 6.0],
-            ['code' => '30.300.300.001', 'name' => 'Hydraulic Oil Tellus S2 MX 68 (Drum 209L)', 'uom' => $uomLtr, 'cat' => $catChem, 'class' => $classChem, 'type' => $itemTypeBaku, 'stock' => 4500.0],
-            ['code' => '30.300.300.002', 'name' => 'Sulfuric Acid H2SO4 Technical Grade 98%', 'uom' => $uomTon, 'cat' => $catChem, 'class' => $classChem, 'type' => $itemTypeBaku, 'stock' => 28.5],
-            ['code' => '40.400.400.001', 'name' => 'Welding Electrode LB-52 Kobe Steel 3.2mm', 'uom' => $uomKg, 'cat' => $catPart, 'class' => $classSpare, 'type' => $itemTypeSpare, 'stock' => 450.0],
-            ['code' => '50.500.500.001', 'name' => 'Safety Helmet Full Brim MSA V-Gard White', 'uom' => $uomPce, 'cat' => $catHse, 'class' => $classHse, 'type' => $itemTypeSpare, 'stock' => 120.0],
-            ['code' => '20.200.200.003', 'name' => 'High Temperature Filter Bag PPS 130x3000', 'uom' => $uomPce, 'cat' => $catPart, 'class' => $classSpare, 'type' => $itemTypeSpare, 'stock' => 300.0],
-            ['code' => '10.100.100.003', 'name' => 'Refractory Fire Brick SK-34 High Alumina', 'uom' => $uomPce, 'cat' => $catRaw, 'class' => $classMetal, 'type' => $itemTypeBaku, 'stock' => 2500.0],
+            ['code' => '10.100.100.001', 'name' => 'Battery Scrap / Lead Ingot 99.9%', 'uom' => $uomKg, 'great_uom' => $uomTon, 'conv' => 1000, 'cat' => $catRaw, 'class' => $classMetal, 'type' => $itemTypeBaku, 'stock' => 150000.0],
+            ['code' => '10.100.100.002', 'name' => 'Steel Plate SS400 10mm x 5ft x 20ft', 'uom' => $uomPce, 'great_uom' => null, 'conv' => 1, 'cat' => $catRaw, 'class' => $classMetal, 'type' => $itemTypeBaku, 'stock' => 85.0],
+            ['code' => '20.200.200.001', 'name' => 'Electric Motor Induction 18.5 kW 4P', 'uom' => $uomPce, 'great_uom' => null, 'conv' => 1, 'cat' => $catPart, 'class' => $classSpare, 'type' => $itemTypeSpare, 'stock' => 12.0],
+            ['code' => '20.200.200.002', 'name' => 'Centrifugal Slurry Pump 4/3 D-AH', 'uom' => $uomSet, 'great_uom' => null, 'conv' => 1, 'cat' => $catPart, 'class' => $classSpare, 'type' => $itemTypeSpare, 'stock' => 6.0],
+            ['code' => '30.300.300.001', 'name' => 'Hydraulic Oil Tellus S2 MX 68 (Drum 209L)', 'uom' => $uomLtr, 'great_uom' => null, 'conv' => 1, 'cat' => $catChem, 'class' => $classChem, 'type' => $itemTypeBaku, 'stock' => 4500.0],
+            ['code' => '30.300.300.002', 'name' => 'Sulfuric Acid H2SO4 Technical Grade 98%', 'uom' => $uomKg, 'great_uom' => $uomTon, 'conv' => 1000, 'cat' => $catChem, 'class' => $classChem, 'type' => $itemTypeBaku, 'stock' => 28.5],
+            ['code' => '40.400.400.001', 'name' => 'Welding Electrode LB-52 Kobe Steel 3.2mm', 'uom' => $uomKg, 'great_uom' => $uomBox, 'conv' => 20, 'cat' => $catPart, 'class' => $classSpare, 'type' => $itemTypeSpare, 'stock' => 450.0],
+            ['code' => '50.500.500.001', 'name' => 'Safety Helmet Full Brim MSA V-Gard White', 'uom' => $uomPce, 'great_uom' => $uomBox, 'conv' => 12, 'cat' => $catHse, 'class' => $classHse, 'type' => $itemTypeSpare, 'stock' => 120.0],
+            ['code' => '20.200.200.003', 'name' => 'High Temperature Filter Bag PPS 130x3000', 'uom' => $uomPce, 'great_uom' => $uomBox, 'conv' => 10, 'cat' => $catPart, 'class' => $classSpare, 'type' => $itemTypeSpare, 'stock' => 300.0],
+            ['code' => '10.100.100.003', 'name' => 'Refractory Fire Brick SK-34 High Alumina', 'uom' => $uomPce, 'great_uom' => $uomBox, 'conv' => 50, 'cat' => $catRaw, 'class' => $classMetal, 'type' => $itemTypeBaku, 'stock' => 2500.0],
         ];
 
         $items = [];
@@ -329,6 +330,9 @@ class GeniusOneDemoSeeder extends Seeder
                 [
                     'name' => $idat['name'],
                     'units_of_measurements_id' => $idat['uom']->id,
+                    'smallest_unit_id' => $idat['uom']->id,
+                    'greatest_unit_id' => $idat['great_uom']?->id,
+                    'unit_conversion' => $idat['conv'],
                     'categories_id' => $idat['cat']->id,
                     'classifications_id' => $idat['class']->id,
                     'item_types_id' => $idat['type']->id,

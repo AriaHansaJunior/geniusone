@@ -900,12 +900,66 @@ export async function toggleColorStatusApi(id: string): Promise<boolean> {
   return Boolean(res);
 }
 
+function resolveUnitDisplay(
+  unitObj: any,
+  fallbackCode = "",
+  fallbackName = ""
+): { code: string; name: string } {
+  const code = String(
+    unitObj?.code || unitObj?.name || unitObj?.nama || fallbackCode || ""
+  ).trim();
+  const description = String(unitObj?.description || "").trim();
+  const rawName = String(
+    unitObj?.name || unitObj?.nama || fallbackName || ""
+  ).trim();
+
+  let name = rawName || code;
+  if (description && description.toLowerCase() !== code.toLowerCase()) {
+    name = description;
+  } else if (rawName && rawName.toLowerCase() !== code.toLowerCase()) {
+    name = rawName;
+  }
+
+  return { code, name };
+}
+
 function mapApiItemToRecord(r: any, idx = 0): ItemRecord {
-  const uom = r.unit_of_measurement || r.unitOfMeasurement || r.unit;
-  const unitCode = uom?.code || uom?.nama || uom?.name || r.unit_name || "";
-  const unitName = uom?.name || uom?.nama || unitCode;
-  const smallest = r.smallest_unit || r.smallestUnit;
-  const greatest = r.greatest_unit || r.greatestUnit;
+  const uom =
+    r.unit_of_measurement ||
+    r.unitOfMeasurement ||
+    r.unit ||
+    (r.unit_name ? { name: r.unit_name } : null);
+  const smallestObj = r.smallest_unit || r.smallestUnit;
+  const greatestObj =
+    r.greatest_unit ||
+    r.greatestUnit ||
+    (r.greatest_unit_name ? { name: r.greatest_unit_name } : null);
+
+  const smallestDisp = resolveUnitDisplay(smallestObj || uom);
+  const smallestId = r.smallest_unit_id
+    ? Number(r.smallest_unit_id)
+    : r.units_of_measurements_id
+    ? Number(r.units_of_measurements_id)
+    : undefined;
+  const greatestId = r.greatest_unit_id ? Number(r.greatest_unit_id) : undefined;
+  const unitConversion =
+    r.unit_conversion !== undefined && r.unit_conversion !== null
+      ? Number(r.unit_conversion)
+      : 1;
+
+  const greatestDispRaw = greatestObj
+    ? resolveUnitDisplay(greatestObj)
+    : { code: "", name: "" };
+  const isSameAsSmallest = Boolean(
+    greatestObj &&
+      smallestId &&
+      greatestId &&
+      greatestId === smallestId &&
+      unitConversion <= 1
+  );
+  const greatestDisp =
+    greatestObj && !isSameAsSmallest ? greatestDispRaw : { code: "", name: "" };
+
   const facVal = r.facility?.name || r.facility_name || "";
   const hs = r.hs_code || r.hsCode;
 
@@ -918,10 +972,10 @@ function mapApiItemToRecord(r: any, idx = 0): ItemRecord {
     classification: r.classification?.name || r.classification_name || "-",
     category: r.category?.name || r.category_name || "-",
     hsCode: hs?.code || hs?.name || r.hs_code_name || "-",
-    smallestUnitCode: smallest?.code || smallest?.name || unitCode,
-    smallestUnitName: smallest?.name || unitName,
-    greatestUnitCode: greatest?.code || greatest?.name || r.greatest_unit_name || unitCode,
-    greatestUnitName: greatest?.name || r.greatest_unit_name || unitName,
+    smallestUnitCode: smallestDisp.code,
+    smallestUnitName: smallestDisp.name,
+    greatestUnitCode: greatestDisp.code,
+    greatestUnitName: greatestDisp.name,
     facility: (/non/i.test(facVal) ? "NON FASILITAS" : "FASILITAS") as "FASILITAS" | "NON FASILITAS",
     groupScrap: r.group_scrap_item?.name || r.groupScrapItem?.name || r.group_scrap || "-",
     specification: r.specification?.name || (typeof r.specification === "string" ? r.specification : "") || "-",
@@ -941,7 +995,7 @@ function mapApiItemToRecord(r: any, idx = 0): ItemRecord {
     updatedAt: formatDisplayDate(r.updated_at || r.created_at),
     updatedBy: r.updated_by_user?.name || r.updated_by_name || r.created_by_user?.name || r.created_by_name || "-",
     stock: Number(r.current_stock ?? r.stock ?? 0),
-    stockUnit: unitCode,
+    stockUnit: smallestDisp.code,
     categories_id: r.categories_id ? Number(r.categories_id) : undefined,
     classifications_id: r.classifications_id ? Number(r.classifications_id) : undefined,
     facilities_id: r.facilities_id ? Number(r.facilities_id) : undefined,
@@ -980,7 +1034,7 @@ export async function saveItemApi(record: ItemRecord, isEdit: boolean): Promise<
     item_types_id: record.item_types_id ? Number(record.item_types_id) : undefined,
     units_of_measurements_id: record.units_of_measurements_id ? Number(record.units_of_measurements_id) : undefined,
     smallest_unit_id: record.smallest_unit_id ? Number(record.smallest_unit_id) : undefined,
-    greatest_unit_id: record.greatest_unit_id ? Number(record.greatest_unit_id) : undefined,
+    greatest_unit_id: record.greatest_unit_id ? Number(record.greatest_unit_id) : null,
     unit_conversion: record.unitConversion !== undefined ? Number(record.unitConversion) : undefined,
     netto: record.netto !== undefined ? Number(record.netto) : undefined,
     size: cleanCode(record.size),

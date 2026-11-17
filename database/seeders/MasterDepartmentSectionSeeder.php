@@ -115,6 +115,7 @@ class MasterDepartmentSectionSeeder extends Seeder
                     'item_types_id' => $fallbackItemTypeId,
                     'categories_id' => $fallbackCatId,
                     'units_of_measurements_id' => $fallbackUomId,
+                    'smallest_unit_id' => $fallbackUomId,
                     'status' => 1,
                     'stock' => 100,
                 ]

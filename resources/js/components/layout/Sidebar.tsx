@@ -4,6 +4,7 @@ import { stripThemePrefix } from "../../context/ThemeContext";
 import { navigationConfig, type NavSection, type NavGroupItem, type NavLeafItem } from "../../config/navigation";
 import type { PageKey } from "../../types";
 import { useAuthPermission } from "../../context/AuthPermissionContext";
+import { useTheme } from "../../context/ThemeContext";
 
 const STORAGE_KEY_SECTIONS = "geniusone_sidebar_sections";
 const STORAGE_KEY_GROUPS = "geniusone_sidebar_groups";
@@ -71,6 +72,35 @@ export function Sidebar({
   onCloseMobile,
 }: SidebarProps) {
   const { canAccessSidebarItem } = useAuthPermission();
+  const { isDefaultTheme } = useTheme();
+  const [isMobileViewport, setIsMobileViewport] = useState<boolean>(() =>
+    typeof window !== "undefined" ? window.matchMedia("(max-width: 767px)").matches : false
+  );
+  const [mobileSheetSectionId, setMobileSheetSectionId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mq = window.matchMedia("(max-width: 767px)");
+    const handleViewportChange = () => {
+      setIsMobileViewport(mq.matches);
+      if (!mq.matches) {
+        setMobileSheetSectionId(null);
+      }
+    };
+    handleViewportChange();
+    mq.addEventListener("change", handleViewportChange);
+    return () => mq.removeEventListener("change", handleViewportChange);
+  }, []);
+
+  const isMobileFloatingDock = !isDefaultTheme && isMobileViewport;
+  const showNavLabels = !collapsed || isMobileFloatingDock;
+
+  const getDockLabel = (section: NavSection) => {
+    if (isMobileFloatingDock && section.id === "stock-notification-master") {
+      return "Alerts";
+    }
+    return section.label;
+  };
 
   const filteredNavigation = React.useMemo(() => {
     return navigationConfig
@@ -291,6 +321,10 @@ export function Sidebar({
   const toggleSection = (sectionId: string, e?: React.MouseEvent) => {
     e?.stopPropagation();
     setHoveredNav(null);
+    if (isMobileFloatingDock) {
+      setMobileSheetSectionId((prev) => (prev === sectionId ? null : sectionId));
+      return;
+    }
     if (collapsed) {
       onToggleCollapse?.();
       setOpenSections((prev) => ({ ...prev, [sectionId]: true }));
@@ -318,7 +352,7 @@ export function Sidebar({
   };
 
   const handleMouseEnter = (label: string, e: React.MouseEvent<HTMLElement>) => {
-    if (!collapsed) return;
+    if (!collapsed || isMobileFloatingDock) return;
     const rect = e.currentTarget.getBoundingClientRect();
     setHoveredNav({
       label,
@@ -381,6 +415,7 @@ export function Sidebar({
                       className={`sidebar-nav-item ${isActive ? "active" : ""}`}
                       onClick={() => {
                         setHoveredNav(null);
+                        setMobileSheetSectionId(null);
                         onNavigate(section.id as PageKey, section.path);
                         onCloseMobile?.();
                       }}
@@ -391,8 +426,8 @@ export function Sidebar({
                       aria-label={section.label}
                     >
                       <Icon name={section.icon} size={18} className="sidebar-nav-icon" />
-                      {!collapsed && (
-                        <span className="sidebar-nav-text">{section.label}</span>
+                      {showNavLabels && (
+                        <span className="sidebar-nav-text">{getDockLabel(section)}</span>
                       )}
                     </button>
                   </div>
@@ -405,7 +440,11 @@ export function Sidebar({
                   <div key={section.id} className="sidebar-nav-item-wrapper">
                     <button
                       type="button"
-                      className="sidebar-nav-item sidebar-nav-item--parent sidebar-nav-item--unpopulated"
+                      className={`sidebar-nav-item sidebar-nav-item--parent sidebar-nav-item--unpopulated ${
+                        isMobileFloatingDock && mobileSheetSectionId === section.id
+                          ? "dock-sheet-open"
+                          : ""
+                      }`}
                       onClick={(e) => toggleSection(section.id, e)}
                       onMouseEnter={(e) => handleMouseEnter(section.label, e)}
                       onMouseLeave={handleMouseLeave}
@@ -415,9 +454,9 @@ export function Sidebar({
                       title={collapsed ? section.label : undefined}
                     >
                       <Icon name={section.icon} size={18} className="sidebar-nav-icon" />
-                      {!collapsed && (
+                      {showNavLabels && (
                         <>
-                          <span className="sidebar-nav-text">{section.label}</span>
+                          <span className="sidebar-nav-text">{getDockLabel(section)}</span>
                           <span className="sidebar-nav-tag">Pending</span>
                         </>
                       )}
@@ -433,19 +472,23 @@ export function Sidebar({
                     type="button"
                     className={`sidebar-nav-item sidebar-nav-item--parent ${
                       sectionActive ? "parent-active" : ""
-                    } ${isSectionOpen && !collapsed ? "parent-expanded" : ""}`}
+                    } ${isSectionOpen && !collapsed ? "parent-expanded" : ""} ${
+                      isMobileFloatingDock && mobileSheetSectionId === section.id
+                        ? "dock-sheet-open"
+                        : ""
+                    }`}
                     onClick={(e) => toggleSection(section.id, e)}
                     onMouseEnter={(e) => handleMouseEnter(section.label, e)}
                     onMouseLeave={handleMouseLeave}
                     onPointerLeave={handleMouseLeave}
                     onBlur={handleMouseLeave}
-                    aria-expanded={isSectionOpen}
+                    aria-expanded={isMobileFloatingDock ? mobileSheetSectionId === section.id : isSectionOpen}
                     aria-label={section.label}
                   >
                     <Icon name={section.icon} size={18} className="sidebar-nav-icon" />
-                    {!collapsed && (
+                    {showNavLabels && (
                       <>
-                        <span className="sidebar-nav-text">{section.label}</span>
+                        <span className="sidebar-nav-text">{getDockLabel(section)}</span>
                         <Icon
                           name="chevronDown"
                           size={14}
@@ -458,7 +501,7 @@ export function Sidebar({
                   </button>
 
                   {/* Submenu Accordion Panel */}
-                  {!collapsed && isSectionOpen && (
+                  {!collapsed && !isMobileFloatingDock && isSectionOpen && (
                     <div className="sidebar-submenu-panel">
                       {/* Nested Groups (e.g. Purchase Master, Transactions, Reports) */}
                       {section.groups?.map((group) => {
@@ -629,8 +672,192 @@ export function Sidebar({
         </div>
       </aside>
 
+      {/* Apple Floating Glass Submenu Popover Sheet (Mobile Dock Mode) */}
+      {isMobileFloatingDock &&
+        mobileSheetSectionId &&
+        (() => {
+          const activeSheetSection = filteredNavigation.find(
+            (s) => s.id === mobileSheetSectionId
+          );
+          if (!activeSheetSection) return null;
+
+          return (
+            <>
+              <div
+                className="mobile-dock-sheet-backdrop"
+                onClick={() => setMobileSheetSectionId(null)}
+                aria-hidden="true"
+              />
+              <section
+                className="mobile-dock-sheet"
+                role="dialog"
+                aria-label={`${activeSheetSection.label} Navigation`}
+              >
+                <div className="mobile-dock-sheet__header">
+                  <div className="mobile-dock-sheet__title-wrap">
+                    <span className="mobile-dock-sheet__eyebrow">MODULE NAVIGATION</span>
+                    <h2 className="mobile-dock-sheet__title">{activeSheetSection.label}</h2>
+                  </div>
+                  <button
+                    type="button"
+                    className="mobile-dock-sheet__close"
+                    onClick={() => setMobileSheetSectionId(null)}
+                    aria-label="Close navigation sheet"
+                  >
+                    <Icon name="close" size={16} />
+                  </button>
+                </div>
+
+                <div className="mobile-dock-sheet__body">
+                  {activeSheetSection.isUnpopulated ? (
+                    <div className="mobile-dock-sheet__pending">
+                      Pending Specifications — This module is not populated yet.
+                    </div>
+                  ) : (
+                    <>
+                      {activeSheetSection.groups?.map((group) => {
+                        const isPlaceholder = Boolean(
+                          group.isPlaceholder || group.isExpandablePlaceholder
+                        );
+                        const isDisabled = Boolean(group.disabled || isPlaceholder);
+                        const isGroupOpen = !isDisabled && Boolean(openGroups[group.id]);
+
+                        return (
+                          <div key={group.id} className="sidebar-subgroup-container">
+                            {group.sectionHeader && (
+                              <div className="sidebar-group-divider-label">
+                                {group.sectionHeader}
+                              </div>
+                            )}
+                            {group.isDirectLeaf ? (
+                              <button
+                                type="button"
+                                className={`sidebar-subgroup-header sidebar-subgroup-header--direct ${
+                                  activePage === group.id ? "active" : ""
+                                } ${
+                                  isDisabled
+                                    ? "subgroup-placeholder sidebar-subgroup-header--disabled"
+                                    : ""
+                                }`}
+                                onClick={() => {
+                                  if (!isDisabled && group.path) {
+                                    onNavigate(group.id as PageKey, group.path);
+                                    setMobileSheetSectionId(null);
+                                    onCloseMobile?.();
+                                  }
+                                }}
+                                disabled={isDisabled}
+                              >
+                                <span className="sidebar-subgroup-title">{group.label}</span>
+                                {group.badge && (
+                                  <span className="sidebar-nav-tag">{group.badge}</span>
+                                )}
+                              </button>
+                            ) : (
+                              <>
+                                <button
+                                  type="button"
+                                  className={`sidebar-subgroup-header ${
+                                    isGroupOpen ? "subgroup-open" : ""
+                                  } ${
+                                    isDisabled
+                                      ? "subgroup-placeholder sidebar-subgroup-header--disabled"
+                                      : ""
+                                  }`}
+                                  onClick={(e) => {
+                                    if (isDisabled) return;
+                                    toggleGroup(group.id, e);
+                                  }}
+                                  disabled={isDisabled}
+                                >
+                                  <span className="sidebar-subgroup-title">{group.label}</span>
+                                  {isDisabled && (
+                                    <span className="sidebar-nav-tag">
+                                      {group.badge || "Pending"}
+                                    </span>
+                                  )}
+                                </button>
+
+                                {isGroupOpen && (
+                                  <div className="sidebar-subgroup-items">
+                                    {group.items.map((leaf) => {
+                                      const isLeafActive = isLeafMatch(
+                                        leaf,
+                                        activePage,
+                                        currentPath
+                                      );
+                                      return (
+                                        <button
+                                          type="button"
+                                          key={`${leaf.id}-${leaf.path}`}
+                                          className={`sidebar-leaf-item ${
+                                            isLeafActive ? "active" : ""
+                                          } ${leaf.isPlaceholder ? "leaf-placeholder" : ""}`}
+                                          onClick={() => {
+                                            if (!leaf.isPlaceholder) {
+                                              onNavigate(leaf.id as PageKey, leaf.path);
+                                              setMobileSheetSectionId(null);
+                                              onCloseMobile?.();
+                                            }
+                                          }}
+                                          disabled={leaf.isPlaceholder}
+                                        >
+                                          <span className="sidebar-leaf-dot" />
+                                          <span className="sidebar-leaf-text">
+                                            {leaf.label}
+                                          </span>
+                                          {leaf.badge && (
+                                            <small className="sidebar-leaf-badge">
+                                              {leaf.badge}
+                                            </small>
+                                          )}
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
+                                )}
+                              </>
+                            )}
+                          </div>
+                        );
+                      })}
+
+                      {activeSheetSection.directItems?.map((leaf) => {
+                        const isLeafActive = isLeafMatch(leaf, activePage, currentPath);
+                        return (
+                          <button
+                            type="button"
+                            key={`${leaf.id}-${leaf.path}`}
+                            className={`sidebar-leaf-item sidebar-leaf-item--direct ${
+                              isLeafActive ? "active" : ""
+                            } ${leaf.isPlaceholder ? "leaf-placeholder" : ""}`}
+                            onClick={() => {
+                              if (!leaf.isPlaceholder) {
+                                onNavigate(leaf.id as PageKey, leaf.path);
+                                setMobileSheetSectionId(null);
+                                onCloseMobile?.();
+                              }
+                            }}
+                            disabled={leaf.isPlaceholder}
+                          >
+                            <span className="sidebar-leaf-dot" />
+                            <span className="sidebar-leaf-text">{leaf.label}</span>
+                            {leaf.badge && (
+                              <small className="sidebar-leaf-badge">{leaf.badge}</small>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </>
+                  )}
+                </div>
+              </section>
+            </>
+          );
+        })()}
+
       {/* Mobile Backdrop Overlay */}
-      {isMobileOpen && (
+      {!isMobileFloatingDock && isMobileOpen && (
         <div
           className="sidebar-mobile-backdrop"
           onClick={onCloseMobile}
@@ -639,7 +866,7 @@ export function Sidebar({
       )}
 
       {/* Floating Tooltip in Collapsed Sidebar Mode */}
-      {collapsed && hoveredNav && (
+      {collapsed && !isMobileFloatingDock && hoveredNav && (
         <div
           className="sidebar-floating-tooltip"
           style={{ top: `${hoveredNav.top}px` }}

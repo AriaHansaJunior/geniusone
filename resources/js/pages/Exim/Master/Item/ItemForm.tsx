@@ -52,6 +52,35 @@ const EMPTY_LOOKUPS: ItemLookupState = {
 
 const normStr = (v?: string | null) => (v ?? "").trim().toLowerCase();
 
+function formatUomOptionLabel(u: LookupOption): string {
+  const primary = (u.code || u.name || "").trim();
+  const desc = (u.description || "").trim();
+  const nameVal = (u.name || "").trim();
+
+  if (desc && desc.toLowerCase() !== primary.toLowerCase()) {
+    return `${primary} - ${desc}`;
+  }
+  if (nameVal && nameVal.toLowerCase() !== primary.toLowerCase()) {
+    return `${primary} - ${nameVal}`;
+  }
+  return primary;
+}
+
+function getUomDisplayPair(u?: LookupOption): { code: string; name: string } {
+  if (!u) return { code: "", name: "" };
+  const code = (u.code || u.name || "").trim();
+  const desc = (u.description || "").trim();
+  const rawName = (u.name || "").trim();
+
+  let name = rawName || code;
+  if (desc && desc.toLowerCase() !== code.toLowerCase()) {
+    name = desc;
+  } else if (rawName && rawName.toLowerCase() !== code.toLowerCase()) {
+    name = rawName;
+  }
+  return { code, name };
+}
+
 function matchLookup<T extends { id: number; code?: string; name: string }>(
   list: T[],
   preferredId?: number | null,
@@ -114,9 +143,20 @@ export function ItemForm({ initialRecord, onBack, onSave }: ItemFormProps) {
   const [smallestUnitId, setSmallestUnitId] = useState<number | undefined>(
     initialRecord?.smallest_unit_id ?? initialRecord?.units_of_measurements_id
   );
-  const [greatestUnitId, setGreatestUnitId] = useState<number | undefined>(
-    initialRecord?.greatest_unit_id ?? initialRecord?.units_of_measurements_id
-  );
+  const [greatestUnitId, setGreatestUnitId] = useState<number | undefined>(() => {
+    const initialSmallId =
+      initialRecord?.smallest_unit_id ?? initialRecord?.units_of_measurements_id;
+    const initialGreatId = initialRecord?.greatest_unit_id;
+    if (
+      initialGreatId &&
+      (!initialSmallId ||
+        initialGreatId !== initialSmallId ||
+        (initialRecord?.unitConversion ?? 1) > 1)
+    ) {
+      return initialGreatId;
+    }
+    return undefined;
+  });
   const [conversionRate, setConversionRate] = useState<number>(
     initialRecord?.unitConversion ?? 1
   );
@@ -200,14 +240,22 @@ export function ItemForm({ initialRecord, onBack, onSave }: ItemFormProps) {
           next.uoms[0];
         if (smallUomMatch) setSmallestUnitId(Number(smallUomMatch.id));
 
-        const greatUomMatch =
-          matchLookup(
-            next.uoms,
-            initialRecord?.greatest_unit_id ?? initialRecord?.units_of_measurements_id,
-            initialRecord?.greatestUnitCode,
-            initialRecord?.greatestUnitName
-          ) ?? smallUomMatch;
-        if (greatUomMatch) setGreatestUnitId(Number(greatUomMatch.id));
+        const greatUomMatch = matchLookup(
+          next.uoms,
+          initialRecord?.greatest_unit_id,
+          initialRecord?.greatestUnitCode,
+          initialRecord?.greatestUnitName
+        );
+        if (
+          greatUomMatch &&
+          (!smallUomMatch ||
+            Number(greatUomMatch.id) !== Number(smallUomMatch.id) ||
+            (initialRecord?.unitConversion ?? 1) > 1)
+        ) {
+          setGreatestUnitId(Number(greatUomMatch.id));
+        } else {
+          setGreatestUnitId(undefined);
+        }
 
         // Resolve optional FKs if initialRecord provides them
         const catMatch =
@@ -336,14 +384,17 @@ export function ItemForm({ initialRecord, onBack, onSave }: ItemFormProps) {
     () =>
       lookups.uoms.map((u) => ({
         value: String(u.id),
-        label: u.code ? `${u.code} - ${u.name}` : u.name,
+        label: formatUomOptionLabel(u),
       })),
     [lookups.uoms]
   );
 
   const optionalUomOptions = useMemo(
-    () => [{ value: "", label: "— Same as Usage Unit —" }, ...uomOptions],
-    [uomOptions]
+    () => [
+      { value: "", label: "— Not Set (No Separate Greatest Unit) —" },
+      ...uomOptions.filter((opt) => Number(opt.value) !== smallestUnitId),
+    ],
+    [uomOptions, smallestUnitId]
   );
 
   const brandOptions = useMemo(
@@ -427,7 +478,10 @@ export function ItemForm({ initialRecord, onBack, onSave }: ItemFormProps) {
     const effectiveClassId = classificationsId ?? lookups.classifications[0]?.id;
     const effectiveFacId = facilitiesId ?? lookups.facilities[0]?.id;
     const effectiveSmallUomId = smallestUnitId ?? lookups.uoms[0]?.id;
-    const effectiveGreatUomId = greatestUnitId ?? effectiveSmallUomId;
+    const effectiveGreatUomId =
+      greatestUnitId && greatestUnitId !== effectiveSmallUomId
+        ? greatestUnitId
+        : undefined;
 
     if (!effectiveClassId || !effectiveFacId || !effectiveSmallUomId) {
       setNotification({
@@ -456,7 +510,11 @@ export function ItemForm({ initialRecord, onBack, onSave }: ItemFormProps) {
     const crObj = lookups.customsReports.find((c) => c.id === customsReportsId);
     const itObj = lookups.itemTypes.find((t) => t.id === itemTypesId);
     const smallUomObj = lookups.uoms.find((u) => u.id === effectiveSmallUomId);
-    const greatUomObj = lookups.uoms.find((u) => u.id === effectiveGreatUomId);
+    const greatUomObj = effectiveGreatUomId
+      ? lookups.uoms.find((u) => u.id === effectiveGreatUomId)
+      : undefined;
+    const smallUomDisplay = getUomDisplayPair(smallUomObj);
+    const greatUomDisplay = getUomDisplayPair(greatUomObj);
     const brandObj = lookups.brands.find((b) => b.id === brandsId);
     const styleObj = lookups.styles.find((s) => s.id === stylesId);
     const colourObj = lookups.colours.find((c) => c.id === coloursId);
@@ -478,10 +536,10 @@ export function ItemForm({ initialRecord, onBack, onSave }: ItemFormProps) {
       classification: clsObj?.name || initialRecord?.classification || "-",
       category: catObj?.name || "-",
       hsCode: hsObj?.name || "-",
-      smallestUnitCode: smallUomObj?.code || smallUomObj?.name || "PCE",
-      smallestUnitName: smallUomObj?.name || "PIECE",
-      greatestUnitCode: greatUomObj?.code || greatUomObj?.name || smallUomObj?.code || "PCE",
-      greatestUnitName: greatUomObj?.name || smallUomObj?.name || "PIECE",
+      smallestUnitCode: smallUomDisplay.code || "PCE",
+      smallestUnitName: smallUomDisplay.name || "Piece",
+      greatestUnitCode: greatUomDisplay.code,
+      greatestUnitName: greatUomDisplay.name,
       facility: facilityDisplay,
       groupScrap: scrapObj?.name || "-",
       specification: specObj?.name || "-",
@@ -520,7 +578,7 @@ export function ItemForm({ initialRecord, onBack, onSave }: ItemFormProps) {
       updatedAt: `${new Date().toISOString().slice(0, 10)} by USER`,
       updatedBy: "USER",
       stock: initialRecord?.stock || 0,
-      stockUnit: smallUomObj?.code || smallUomObj?.name || "PCE",
+      stockUnit: smallUomDisplay.code || "PCE",
     };
 
     if (onSave) {
@@ -752,14 +810,20 @@ export function ItemForm({ initialRecord, onBack, onSave }: ItemFormProps) {
           <div className="item-form-grid item-form-grid--4col">
             <div className="item-form-group">
               <label htmlFor="smallestUnitCode" className="item-form-label">
-                Usage Unit (Smallest Unit) <span className="required-mark">*</span>
+                Smallest Unit (Usage Unit) <span className="required-mark">*</span>
               </label>
               <CustomSelect
                 id="smallestUnitCode"
                 searchable
                 value={smallestUnitId ? String(smallestUnitId) : ""}
-                onChange={(val) => setSmallestUnitId(val ? Number(val) : undefined)}
-                placeholder={loadingLookups ? "Loading units..." : "Select usage unit..."}
+                onChange={(val) => {
+                  const nextId = val ? Number(val) : undefined;
+                  setSmallestUnitId(nextId);
+                  if (nextId && nextId === greatestUnitId) {
+                    setGreatestUnitId(undefined);
+                  }
+                }}
+                placeholder={loadingLookups ? "Loading units..." : "Select smallest unit..."}
                 disabled={loadingLookups}
                 options={uomOptions}
               />
@@ -767,14 +831,14 @@ export function ItemForm({ initialRecord, onBack, onSave }: ItemFormProps) {
 
             <div className="item-form-group">
               <label htmlFor="greatestUnitCode" className="item-form-label">
-                Purchase Unit (Greatest Unit)
+                Greatest Unit (Purchase Unit)
               </label>
               <CustomSelect
                 id="greatestUnitCode"
                 searchable
                 value={greatestUnitId ? String(greatestUnitId) : ""}
                 onChange={(val) => setGreatestUnitId(val ? Number(val) : undefined)}
-                placeholder={loadingLookups ? "Loading units..." : "Select purchase unit..."}
+                placeholder={loadingLookups ? "Loading units..." : "Select greatest unit (optional)..."}
                 disabled={loadingLookups}
                 options={optionalUomOptions}
               />

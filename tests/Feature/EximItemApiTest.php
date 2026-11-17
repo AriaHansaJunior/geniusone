@@ -91,5 +91,40 @@ class EximItemApiTest extends TestCase
             'created_by' => $user->id,
             'updated_by' => $user->id,
         ]);
+
+        $boxUnit = UnitOfMeasurement::query()->create([
+            'code' => 'BOX',
+            'name' => 'BOX',
+            'description' => 'Standard Carton / Box',
+            'status' => 1,
+            'created_by' => $user->id,
+        ]);
+
+        $distinctResponse = $this->postJson('/api/exim/master/items', [
+            'code' => 'ITM-TEST-02',
+            'name' => 'Packaged Raw Material',
+            'classifications_id' => $classification->id,
+            'facilities_id' => $facility->id,
+            'item_types_id' => $itemType->id,
+            'units_of_measurements_id' => $unit->id,
+            'smallest_unit_id' => $unit->id,
+            'greatest_unit_id' => $boxUnit->id,
+            'unit_conversion' => 12,
+            'status' => 1,
+            'trace_by_lot' => 0,
+        ]);
+
+        $distinctResponse->assertCreated()
+            ->assertJsonPath('data.smallest_unit.code', 'PCS')
+            ->assertJsonPath('data.greatest_unit.code', 'BOX')
+            ->assertJsonPath('data.greatest_unit.description', 'Standard Carton / Box');
+
+        $clearResponse = $this->putJson('/api/exim/master/items/'.$distinctResponse->json('data.id'), [
+            'greatest_unit_id' => null,
+        ]);
+
+        $clearResponse->assertOk()
+            ->assertJsonPath('data.greatest_unit_id', null)
+            ->assertJsonPath('data.greatest_unit', null);
     }
 }

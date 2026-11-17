@@ -35,6 +35,41 @@ const safeStr = (val: any, fallback = "-"): string => {
   return String(val);
 };
 
+const formatUnitText = (code?: string, name?: string): string => {
+  const cleanCode = safeStr(code, "").trim();
+  const cleanName = safeStr(name, "").trim();
+  const primary = cleanCode || (cleanName && cleanName !== "-" ? cleanName : "");
+  if (!primary) return "-";
+  if (
+    !cleanName ||
+    cleanName === "-" ||
+    cleanName.toLowerCase() === primary.toLowerCase()
+  ) {
+    return primary;
+  }
+  return `${primary} - ${cleanName}`;
+};
+
+const renderUnitCell = (code?: string, name?: string) => {
+  const cleanCode = safeStr(code, "").trim();
+  const cleanName = safeStr(name, "").trim();
+  const primary = cleanCode || (cleanName && cleanName !== "-" ? cleanName : "");
+  if (!primary) {
+    return <span className="item-unit-empty">-</span>;
+  }
+  const hasDistinctSub =
+    Boolean(cleanName) &&
+    cleanName !== "-" &&
+    cleanName.toLowerCase() !== primary.toLowerCase();
+
+  return (
+    <div className="item-unit-multiline">
+      <strong>{primary}</strong>
+      {hasDistinctSub && <span>{cleanName}</span>}
+    </div>
+  );
+};
+
 export function ItemIndex({
   records = initialItemRecords,
   onAddNew,
@@ -180,9 +215,9 @@ export function ItemIndex({
         visibleCols.forEach((col) => {
           let val = "";
           if (col.key === "smallestUnit") {
-            val = `${row.smallestUnitCode} / ${row.smallestUnitName}`;
+            val = formatUnitText(row.smallestUnitCode, row.smallestUnitName);
           } else if (col.key === "greatestUnit") {
-            val = `${row.greatestUnitCode} / ${row.greatestUnitName}`;
+            val = formatUnitText(row.greatestUnitCode, row.greatestUnitName);
           } else if (col.key === "traceByLot") {
             val = row.traceByLot ? "Yes" : "No";
           } else {
@@ -604,19 +639,13 @@ export function ItemIndex({
 
                       {visibleMap.smallestUnit && (
                         <td>
-                          <div className="item-unit-multiline">
-                            <strong>{safeStr(item.smallestUnitCode, "PCE")}</strong>
-                            <span>{safeStr(item.smallestUnitName, "Pieces")}</span>
-                          </div>
+                          {renderUnitCell(item.smallestUnitCode, item.smallestUnitName)}
                         </td>
                       )}
 
                       {visibleMap.greatestUnit && (
                         <td>
-                          <div className="item-unit-multiline">
-                            <strong>{safeStr(item.greatestUnitCode, "PCE")}</strong>
-                            <span>{safeStr(item.greatestUnitName, "Pieces")}</span>
-                          </div>
+                          {renderUnitCell(item.greatestUnitCode, item.greatestUnitName)}
                         </td>
                       )}
 

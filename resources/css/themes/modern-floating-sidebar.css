@@ -1,0 +1,459 @@
+/* ==========================================================================
+   GENIUSONE Modern UI 2.0 — Apple Floating Glass Sidebar & RWD Dock Morph
+   Scoped strictly to Modern UI (html:not([data-ui-theme="default"])).
+   Desktop/Laptop: Detached Liquid Glass floating left sidebar.
+   Mobile (<= 767px): Smoothly morphs & glides down to an Apple Floating
+   Glass Bottom Dock with frosted popover submenu sheet.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   1. Topbar Brand Alignment with Floating Left Sidebar (Desktop >= 768px)
+   -------------------------------------------------------------------------- */
+@media (min-width: 768px) {
+  html:not([data-ui-theme="default"]) .brand {
+    width: 262px;
+    transition:
+      width 0.46s cubic-bezier(0.22, 1, 0.36, 1),
+      padding 0.38s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  html:not([data-ui-theme="default"]) .brand.brand--collapsed {
+    width: 96px;
+  }
+
+  html:not([data-ui-theme="default"]) .workspace {
+    padding-left: 262px;
+    transition: padding-left 0.52s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  html:not([data-ui-theme="default"]) .app-shell--collapsed .workspace {
+    padding-left: 96px;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   2. Desktop / Laptop Floating Liquid Glass Left Sidebar
+   -------------------------------------------------------------------------- */
+html:not([data-ui-theme="default"]) .sidebar {
+  position: fixed;
+  top: 76px;
+  left: 12px;
+  width: 238px;
+  height: calc(100dvh - 126px);
+  max-height: none;
+  border-radius: 22px;
+  padding: 14px 10px 12px;
+  z-index: 45;
+  background: linear-gradient(
+    155deg,
+    rgba(255, 255, 255, 0.86) 0%,
+    rgba(244, 248, 255, 0.7) 55%,
+    rgba(255, 255, 255, 0.8) 100%
+  );
+  backdrop-filter: blur(26px) saturate(200%);
+  -webkit-backdrop-filter: blur(26px) saturate(200%);
+  border: 1px solid rgba(255, 255, 255, 0.94);
+  box-shadow:
+    0 20px 44px -10px rgba(15, 23, 42, 0.14),
+    0 6px 18px -4px rgba(0, 113, 227, 0.08),
+    inset 0 1.5px 1px rgba(255, 255, 255, 0.98),
+    inset 0 -1px 1px rgba(148, 163, 184, 0.14);
+  transform: translate3d(0, 0, 0) scale(1);
+  transition:
+    top 0.52s cubic-bezier(0.22, 1, 0.36, 1),
+    left 0.52s cubic-bezier(0.22, 1, 0.36, 1),
+    width 0.52s cubic-bezier(0.22, 1, 0.36, 1),
+    height 0.52s cubic-bezier(0.22, 1, 0.36, 1),
+    border-radius 0.48s cubic-bezier(0.22, 1, 0.36, 1),
+    padding 0.44s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.42s ease,
+    background 0.42s ease,
+    transform 0.52s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+html:not([data-ui-theme="default"]) .sidebar.sidebar--collapsed {
+  width: 72px;
+  padding: 14px 8px 12px;
+  border-radius: 22px;
+}
+
+html:not([data-ui-theme="default"]) .sidebar .sidebar-nav-item {
+  border-radius: 12px;
+  transition:
+    background 0.18s ease,
+    color 0.18s ease,
+    transform 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.22s ease;
+}
+
+html:not([data-ui-theme="default"]) .sidebar .sidebar-nav-item.active {
+  background: linear-gradient(135deg, rgba(191, 219, 254, 0.92) 0%, rgba(219, 234, 254, 0.85) 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.85),
+    0 4px 12px rgba(0, 113, 227, 0.14);
+}
+
+html:not([data-ui-theme="default"]) .sidebar .sidebar-floating-tooltip,
+html:not([data-ui-theme="default"]) .sidebar-floating-tooltip {
+  left: 94px;
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.88);
+  backdrop-filter: blur(12px) saturate(160%);
+  -webkit-backdrop-filter: blur(12px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+html:not([data-ui-theme="default"]) .settings-sidebar__mobile-back {
+  display: none;
+}
+
+/* --------------------------------------------------------------------------
+   3. Mobile RWD Morph (<= 767px): Bottom Floating Apple Liquid Glass Dock
+   -------------------------------------------------------------------------- */
+@media (max-width: 767px) {
+  html:not([data-ui-theme="default"]) .topbar__mobile-toggle {
+    display: none;
+  }
+
+  html:not([data-ui-theme="default"]) .settings-mobile-nav {
+    display: none;
+  }
+
+  html:not([data-ui-theme="default"]) .workspace {
+    padding-left: 0;
+    transition: padding-left 0.48s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  html:not([data-ui-theme="default"]) main {
+    padding-bottom: calc(92px + env(safe-area-inset-bottom, 0px));
+  }
+
+  html:not([data-ui-theme="default"]) .app-footer {
+    flex: 0 0 0px;
+    height: 0;
+    min-height: 0;
+    opacity: 0;
+    padding: 0;
+    border-top: 0;
+    overflow: hidden;
+    pointer-events: none;
+    transition:
+      height 0.32s cubic-bezier(0.22, 1, 0.36, 1),
+      opacity 0.25s ease;
+  }
+
+  html:not([data-ui-theme="default"]) .sidebar,
+  html:not([data-ui-theme="default"]) .sidebar.sidebar--collapsed,
+  html:not([data-ui-theme="default"]) .sidebar.sidebar--mobile-open {
+    position: fixed;
+    top: calc(100dvh - 78px - env(safe-area-inset-bottom, 0px));
+    left: 12px;
+    bottom: auto;
+    width: calc(100vw - 24px);
+    max-width: calc(100vw - 24px);
+    height: 66px;
+    border-radius: 26px;
+    padding: 6px 8px;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    z-index: 95;
+    transform: translate3d(0, 0, 0) scale(1);
+    background: linear-gradient(
+      145deg,
+      rgba(255, 255, 255, 0.88) 0%,
+      rgba(240, 246, 255, 0.72) 55%,
+      rgba(255, 255, 255, 0.84) 100%
+    );
+    backdrop-filter: blur(28px) saturate(210%);
+    -webkit-backdrop-filter: blur(28px) saturate(210%);
+    border: 1px solid rgba(255, 255, 255, 0.96);
+    box-shadow:
+      0 18px 44px -8px rgba(15, 23, 42, 0.22),
+      0 6px 20px -4px rgba(0, 113, 227, 0.14),
+      inset 0 1.5px 1.5px rgba(255, 255, 255, 0.98),
+      inset 0 -1px 1px rgba(148, 163, 184, 0.16);
+  }
+
+  html:not([data-ui-theme="default"]) .sidebar__top {
+    flex-direction: row;
+    align-items: center;
+    height: 100%;
+    overflow: hidden;
+  }
+
+  html:not([data-ui-theme="default"]) .sidebar__header,
+  html:not([data-ui-theme="default"]) .sidebar__bottom,
+  html:not([data-ui-theme="default"]) .settings-sidebar__group-label,
+  html:not([data-ui-theme="default"]) .settings-sidebar__footer,
+  html:not([data-ui-theme="default"]) .sidebar-chevron,
+  html:not([data-ui-theme="default"]) .sidebar-nav-tag,
+  html:not([data-ui-theme="default"]) .sidebar-submenu-panel {
+    display: none;
+  }
+
+  html:not([data-ui-theme="default"]) .settings-sidebar__mobile-back {
+    display: flex;
+  }
+
+  html:not([data-ui-theme="default"]) .sidebar-nav-scroll {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-around;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    gap: 4px;
+    padding-right: 0;
+    height: 100%;
+    width: 100%;
+  }
+
+  html:not([data-ui-theme="default"]) .sidebar-nav-scroll::-webkit-scrollbar {
+    display: none;
+  }
+
+  html:not([data-ui-theme="default"]) .sidebar-nav-item-wrapper,
+  html:not([data-ui-theme="default"]) .sidebar-section-container {
+    width: auto;
+    flex: 1 1 0;
+    min-width: 54px;
+    max-width: 82px;
+    align-items: center;
+  }
+
+  html:not([data-ui-theme="default"]) .sidebar .sidebar-nav-item,
+  html:not([data-ui-theme="default"]) .sidebar.sidebar--collapsed .sidebar-nav-item {
+    width: 100%;
+    min-width: 52px;
+    height: 52px;
+    min-height: 52px;
+    margin: 0;
+    padding: 4px 4px;
+    border-radius: 18px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    text-align: center;
+    color: var(--slate-600);
+  }
+
+  html:not([data-ui-theme="default"]) .sidebar .sidebar-nav-item:hover {
+    background: rgba(0, 113, 227, 0.08);
+    transform: translateY(-2px) scale(1.03);
+  }
+
+  html:not([data-ui-theme="default"]) .sidebar .sidebar-nav-item.active,
+  html:not([data-ui-theme="default"]) .sidebar .sidebar-nav-item.parent-active,
+  html:not([data-ui-theme="default"]) .sidebar .sidebar-nav-item.dock-sheet-open {
+    background: linear-gradient(
+      145deg,
+      rgba(191, 219, 254, 0.85) 0%,
+      rgba(219, 234, 254, 0.92) 100%
+    );
+    color: var(--blue-700);
+    border: 1px solid rgba(147, 197, 253, 0.9);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.9),
+      0 4px 14px rgba(0, 113, 227, 0.18);
+    transform: translateY(-1px);
+  }
+
+  html:not([data-ui-theme="default"]) .sidebar .sidebar-nav-icon {
+    width: 18px;
+    height: 18px;
+  }
+
+  html:not([data-ui-theme="default"]) .sidebar .sidebar-nav-text {
+    display: block;
+    flex: 0 0 auto;
+    width: 100%;
+    font-size: 9.5px;
+    font-weight: 700;
+    line-height: 1.15;
+    letter-spacing: -0.1px;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* Frosted Apple Popover Sheet for Mobile Dock Nested Modules */
+  .mobile-dock-sheet-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.24);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    z-index: 90;
+    animation: backdropIn 0.2s ease-out;
+  }
+
+  .mobile-dock-sheet {
+    position: fixed;
+    left: 12px;
+    right: 12px;
+    bottom: calc(90px + env(safe-area-inset-bottom, 0px));
+    max-height: min(62dvh, 460px);
+    z-index: 96;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border-radius: 24px;
+    background: linear-gradient(
+      160deg,
+      rgba(255, 255, 255, 0.94) 0%,
+      rgba(244, 248, 255, 0.88) 100%
+    );
+    backdrop-filter: blur(30px) saturate(210%);
+    -webkit-backdrop-filter: blur(30px) saturate(210%);
+    border: 1px solid rgba(255, 255, 255, 0.96);
+    box-shadow:
+      0 24px 56px -10px rgba(15, 23, 42, 0.26),
+      0 8px 24px -4px rgba(0, 113, 227, 0.14),
+      inset 0 1.5px 1px rgba(255, 255, 255, 0.98);
+    animation: appleDockSheetUp 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .mobile-dock-sheet__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 16px 12px;
+    border-bottom: 1px solid rgba(226, 232, 240, 0.78);
+  }
+
+  .mobile-dock-sheet__title-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  .mobile-dock-sheet__eyebrow {
+    font-size: 9.5px;
+    font-weight: 800;
+    letter-spacing: 0.7px;
+    text-transform: uppercase;
+    color: var(--blue-600);
+  }
+
+  .mobile-dock-sheet__title {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 800;
+    color: var(--ink);
+  }
+
+  .mobile-dock-sheet__close {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 1px solid rgba(226, 232, 240, 0.9);
+    background: rgba(255, 255, 255, 0.85);
+    color: var(--slate-600);
+    display: grid;
+    place-items: center;
+    padding: 0;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease;
+  }
+
+  .mobile-dock-sheet__close:hover {
+    background: var(--blue-50);
+    color: var(--blue-600);
+    transform: scale(1.06);
+  }
+
+  .mobile-dock-sheet__body {
+    padding: 10px 14px 14px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .mobile-dock-sheet__body .sidebar-leaf-item {
+    min-height: 36px;
+    padding: 7px 10px;
+    font-size: 12.5px;
+    border-radius: 10px;
+  }
+
+  .mobile-dock-sheet__body .sidebar-subgroup-header:not(:disabled)::after {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-right: 1.75px solid var(--slate-500);
+    border-bottom: 1.75px solid var(--slate-500);
+    transform: rotate(45deg);
+    transition: transform 0.2s ease, border-color 0.2s ease;
+    margin-right: 4px;
+    flex-shrink: 0;
+  }
+
+  .mobile-dock-sheet__body .sidebar-subgroup-header.subgroup-open::after {
+    transform: rotate(225deg);
+    border-color: var(--blue-600);
+  }
+
+  .mobile-dock-sheet__pending {
+    padding: 14px 12px;
+    border-radius: 12px;
+    background: rgba(241, 245, 249, 0.75);
+    color: var(--muted);
+    font-size: 12.5px;
+    font-weight: 600;
+    text-align: center;
+  }
+}
+
+@keyframes appleDockSheetUp {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 16px, 0) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@media (max-width: 420px) {
+  html:not([data-ui-theme="default"]) .sidebar,
+  html:not([data-ui-theme="default"]) .sidebar.sidebar--collapsed,
+  html:not([data-ui-theme="default"]) .sidebar.sidebar--mobile-open {
+    left: 8px;
+    width: calc(100vw - 16px);
+    max-width: calc(100vw - 16px);
+    border-radius: 22px;
+    padding: 5px 6px;
+  }
+
+  html:not([data-ui-theme="default"]) .sidebar-nav-item-wrapper,
+  html:not([data-ui-theme="default"]) .sidebar-section-container {
+    min-width: 48px;
+  }
+
+  .mobile-dock-sheet {
+    left: 8px;
+    right: 8px;
+    border-radius: 20px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-ui-theme="default"]) .sidebar,
+  html:not([data-ui-theme="default"]) .workspace,
+  html:not([data-ui-theme="default"]) .brand,
+  html:not([data-ui-theme="default"]) .sidebar .sidebar-nav-item,
+  .mobile-dock-sheet {
+    transition: none;
+    animation: none;
+  }
+}

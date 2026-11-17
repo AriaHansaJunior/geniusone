@@ -288,11 +288,36 @@ class WarehouseStockSeeder extends Seeder
             $unitId = DB::table('units_of_measurements')->where('name', $c['unit_name'])->value('id');
             if (! $unitId) {
                 $unitId = DB::table('units_of_measurements')->insertGetId([
+                    'code' => $c['unit_name'],
                     'name' => $c['unit_name'],
                     'status' => 1,
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]);
+            }
+
+            $greatestUnitId = null;
+            $unitConversion = 1;
+            $greatestMap = [
+                'RIM' => ['target' => 'BOX', 'conv' => 5],
+                'KGS' => ['target' => 'TON', 'conv' => 1000],
+            ];
+            if (isset($greatestMap[$c['unit_name']])) {
+                $gName = $greatestMap[$c['unit_name']]['target'];
+                $gId = DB::table('units_of_measurements')->where('name', $gName)->value('id');
+                if (! $gId) {
+                    $gId = DB::table('units_of_measurements')->insertGetId([
+                        'code' => $gName,
+                        'name' => $gName,
+                        'status' => 1,
+                        'created_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+                }
+                if ($gId && (int) $gId !== (int) $unitId) {
+                    $greatestUnitId = $gId;
+                    $unitConversion = $greatestMap[$c['unit_name']]['conv'];
+                }
             }
 
             $facId = DB::table('facilities')->where('name', $c['facility_name'])->value('id');
@@ -315,6 +340,9 @@ class WarehouseStockSeeder extends Seeder
                     'facilities_id' => $facId,
                     'stock' => $c['stock'],
                     'units_of_measurements_id' => $unitId,
+                    'smallest_unit_id' => $item->smallest_unit_id ?: $unitId,
+                    'greatest_unit_id' => $item->greatest_unit_id ?: $greatestUnitId,
+                    'unit_conversion' => $item->unit_conversion ?: $unitConversion,
                 ]);
                 $itemId = $item->id;
             } else {
@@ -328,6 +356,9 @@ class WarehouseStockSeeder extends Seeder
                     'facilities_id' => $facId,
                     'stock' => $c['stock'],
                     'units_of_measurements_id' => $unitId,
+                    'smallest_unit_id' => $unitId,
+                    'greatest_unit_id' => $greatestUnitId,
+                    'unit_conversion' => $unitConversion,
                     'status' => 1,
                     'created_at' => now(),
                     'updated_at' => now(),

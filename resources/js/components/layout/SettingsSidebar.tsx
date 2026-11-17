@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Icon } from "../ui/Icon";
 import { Button } from "../ui/Button";
 import { useAuthPermission } from "../../context/AuthPermissionContext";
@@ -61,8 +61,22 @@ export function SettingsSidebar({
   onCloseMobile,
 }: SettingsSidebarProps) {
   const { isSuperAdmin } = useAuthPermission();
-  const { theme } = useTheme();
-  const effectiveCollapsed = collapsed && !isMobileOpen;
+  const { theme, isDefaultTheme } = useTheme();
+  const [isMobileViewport, setIsMobileViewport] = useState<boolean>(() =>
+    typeof window !== "undefined" ? window.matchMedia("(max-width: 767px)").matches : false
+  );
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const mq = window.matchMedia("(max-width: 767px)");
+    const handleChange = () => setIsMobileViewport(mq.matches);
+    handleChange();
+    mq.addEventListener("change", handleChange);
+    return () => mq.removeEventListener("change", handleChange);
+  }, []);
+
+  const isMobileFloatingDock = !isDefaultTheme && isMobileViewport;
+  const effectiveCollapsed = collapsed && !isMobileOpen && !isMobileFloatingDock;
 
   const visibleItems = SETTINGS_MENU_ITEMS.filter(
     (item) => !item.superAdminOnly || isSuperAdmin
@@ -71,9 +85,17 @@ export function SettingsSidebar({
   const governanceItems = visibleItems.filter((item) => item.group === "Governance");
   const preferenceItems = visibleItems.filter((item) => item.group === "Preferences");
 
+  const getShortDockLabel = (label: string) => {
+    if (label === "User Permission") return "Permission";
+    if (label === "Edit Profile") return "Profile";
+    if (label === "System Theme") return "Theme";
+    return label;
+  };
+
   const renderNavItem = (item: SettingsSidebarItem) => {
     const isActive = activeTab === item.tab;
     const href = resolveSettingsPath(item.tab, theme);
+    const displayLabel = isMobileFloatingDock ? getShortDockLabel(item.label) : item.label;
 
     return (
       <div key={item.tab} className="sidebar-nav-item-wrapper">
@@ -89,7 +111,7 @@ export function SettingsSidebar({
           title={effectiveCollapsed ? item.label : undefined}
         >
           <Icon name={item.icon} size={18} className="sidebar-nav-icon" />
-          {!effectiveCollapsed && <span className="sidebar-nav-text">{item.label}</span>}
+          {!effectiveCollapsed && <span className="sidebar-nav-text">{displayLabel}</span>}
         </a>
       </div>
     );
@@ -128,6 +150,21 @@ export function SettingsSidebar({
               </div>
             )}
             {preferenceItems.map(renderNavItem)}
+
+            <div className="sidebar-nav-item-wrapper settings-sidebar__mobile-back">
+              <a
+                href={theme === "default" ? "/default/dashboard" : "/dashboard"}
+                className="sidebar-nav-item settings-sidebar__nav-link"
+                onClick={(e) => {
+                  e.preventDefault();
+                  onCloseMobile?.();
+                  onExitSettings();
+                }}
+              >
+                <Icon name="arrowLeft" size={18} className="sidebar-nav-icon" />
+                <span className="sidebar-nav-text">Back</span>
+              </a>
+            </div>
           </nav>
         </div>
 
