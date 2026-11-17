@@ -147,6 +147,7 @@ export function StyleForm({
                 setCode(e.target.value);
                 if (errors.code) setErrors((prev) => ({ ...prev, code: undefined }));
               }}
+              required
               autoFocus={!isEdit}
             />
             {errors.code && (
@@ -169,6 +170,7 @@ export function StyleForm({
                 setName(e.target.value);
                 if (errors.name) setErrors((prev) => ({ ...prev, name: undefined }));
               }}
+              required
             />
             {errors.name && (
               <span className="style-form-error-msg">{errors.name}</span>

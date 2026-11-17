@@ -4,11 +4,13 @@ import { SearchField } from "../../../../components/ui/SearchField";
 import { Pagination } from "../../../../components/ui/Pagination";
 import { Icon } from "../../../../components/ui/Icon";
 import { StatusToggle } from "../../../../components/ui/StatusToggle";
+import { TableLoadingRow } from "../../../../components/ui/LoadingBuffer";
 import { initialUnitRecords } from "./unit-data";
 import type { UnitRecord } from "./unit-types";
 
 interface UnitIndexProps {
   records?: UnitRecord[];
+  isLoading?: boolean;
   onAddNew: () => void;
   onToggleStatus?: (id: string) => void;
 }
@@ -17,6 +19,7 @@ type SortDirection = "none" | "asc" | "desc";
 
 export function UnitIndex({
   records = initialUnitRecords,
+  isLoading = false,
   onAddNew,
   onToggleStatus,
 }: UnitIndexProps) {
@@ -123,7 +126,9 @@ export function UnitIndex({
                 </tr>
               </thead>
               <tbody>
-                {paginatedRecords.length > 0 ? (
+                {isLoading && paginatedRecords.length === 0 ? (
+                  <TableLoadingRow colSpan={3} label="Loading Units..." />
+                ) : paginatedRecords.length > 0 ? (
                   paginatedRecords.map((item, index) => {
                     const rowNumber = (safeCurrentPage - 1) * pageSize + index + 1;
                     return (

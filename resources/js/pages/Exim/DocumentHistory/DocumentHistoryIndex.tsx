@@ -4,6 +4,7 @@ import { Icon } from "../../../components/ui/Icon";
 import { SearchField } from "../../../components/ui/SearchField";
 import { Pagination } from "../../../components/ui/Pagination";
 import { CustomDatePicker } from "../../../components/ui/CustomDatePicker";
+import { TableLoadingRow } from "../../../components/ui/LoadingBuffer";
 import { initialDocumentHistoryRecords } from "./document-history-data";
 import type {
   DocumentHistoryRecord,
@@ -13,11 +14,13 @@ import type {
 
 interface DocumentHistoryIndexProps {
   records?: DocumentHistoryRecord[];
+  isLoading?: boolean;
   onViewDetail: (invoiceNumber: string) => void;
 }
 
 export function DocumentHistoryIndex({
   records = initialDocumentHistoryRecords,
+  isLoading = false,
   onViewDetail,
 }: DocumentHistoryIndexProps) {
   // Search & Filter State
@@ -314,7 +317,13 @@ export function DocumentHistoryIndex({
               </tr>
             </thead>
             <tbody>
-              {paginatedRecords.length === 0 ? (
+              {isLoading && paginatedRecords.length === 0 ? (
+                <TableLoadingRow
+                  colSpan={8}
+                  label="Loading Document Histories..."
+                  sublabel="Retrieving customs declarations & invoice traceability logs..."
+                />
+              ) : paginatedRecords.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="dh-table-empty">
                     No Document History records found matching filters.

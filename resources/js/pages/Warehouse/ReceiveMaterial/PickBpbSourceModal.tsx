@@ -3,6 +3,7 @@ import { Icon } from "../../../components/ui/Icon";
 import { Button } from "../../../components/ui/Button";
 import { SearchField } from "../../../components/ui/SearchField";
 import { CustomSelect } from "../../../components/ui/CustomSelect";
+import { TableLoadingRow } from "../../../components/ui/LoadingBuffer";
 import { fetchDetail } from "../../../data/api";
 import type { BPBItemRow } from "./WarehouseCreate";
 
@@ -431,6 +432,7 @@ export function PickBpbSourceModal({
             <CustomSelect
               id="bpbPickerDocNumber"
               searchable
+              required
               value={selectedDocNumber}
               onChange={(val) => {
                 setSelectedDocNumber(val);
@@ -507,11 +509,11 @@ export function PickBpbSourceModal({
                   </td>
                 </tr>
               ) : isLoadingDetail && selectableItems.length === 0 ? (
-                <tr>
-                  <td colSpan={7} style={{ textAlign: "center", padding: "36px 16px", color: "var(--muted)" }}>
-                    Loading items for {selectedDocNumber}...
-                  </td>
-                </tr>
+                <TableLoadingRow
+                  colSpan={7}
+                  label={`Loading items for ${selectedDocNumber}...`}
+                  sublabel="Retrieving source document line items..."
+                />
               ) : filteredItems.length === 0 ? (
                 <tr>
                   <td colSpan={7} style={{ textAlign: "center", padding: "36px 16px", color: "var(--muted)" }}>

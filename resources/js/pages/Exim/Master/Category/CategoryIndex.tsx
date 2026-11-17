@@ -4,6 +4,7 @@ import { SearchField } from "../../../../components/ui/SearchField";
 import { Icon } from "../../../../components/ui/Icon";
 import { Pagination } from "../../../../components/ui/Pagination";
 import { StatusToggle } from "../../../../components/ui/StatusToggle";
+import { TableLoadingRow } from "../../../../components/ui/LoadingBuffer";
 import { initialCategoryRecords } from "./category-data";
 import type {
   CategoryRecord,
@@ -13,12 +14,14 @@ import type {
 
 interface CategoryIndexProps {
   records?: CategoryRecord[];
+  isLoading?: boolean;
   onAddNew: () => void;
   onToggleStatus?: (id: string) => void;
 }
 
 export function CategoryIndex({
   records = initialCategoryRecords,
+  isLoading = false,
   onAddNew,
   onToggleStatus,
 }: CategoryIndexProps) {
@@ -284,7 +287,9 @@ export function CategoryIndex({
                 </tr>
               </thead>
               <tbody>
-                {paginatedRecords.length > 0 ? (
+                {isLoading && paginatedRecords.length === 0 ? (
+                  <TableLoadingRow colSpan={5} label="Loading Categories..." />
+                ) : paginatedRecords.length > 0 ? (
                   paginatedRecords.map((item, index) => {
                     const rowNumber =
                       (safeCurrentPage - 1) * pageSize + index + 1;

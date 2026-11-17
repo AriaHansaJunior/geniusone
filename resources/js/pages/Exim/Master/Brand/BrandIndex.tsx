@@ -4,6 +4,7 @@ import { SearchField } from "../../../../components/ui/SearchField";
 import { Icon } from "../../../../components/ui/Icon";
 import { Pagination } from "../../../../components/ui/Pagination";
 import { StatusToggle } from "../../../../components/ui/StatusToggle";
+import { TableLoadingRow } from "../../../../components/ui/LoadingBuffer";
 import { initialBrandRecords } from "./brand-data";
 import type {
   BrandRecord,
@@ -13,12 +14,14 @@ import type {
 
 interface BrandIndexProps {
   records?: BrandRecord[];
+  isLoading?: boolean;
   onAddNew: () => void;
   onToggleStatus?: (id: string) => void;
 }
 
 export function BrandIndex({
   records = initialBrandRecords,
+  isLoading = false,
   onAddNew,
   onToggleStatus,
 }: BrandIndexProps) {
@@ -274,7 +277,9 @@ export function BrandIndex({
                 </tr>
               </thead>
               <tbody>
-                {paginatedRecords.length > 0 ? (
+                {isLoading && paginatedRecords.length === 0 ? (
+                  <TableLoadingRow colSpan={5} label="Loading Brands..." />
+                ) : paginatedRecords.length > 0 ? (
                   paginatedRecords.map((item, index) => {
                     const rowNumber =
                       (safeCurrentPage - 1) * pageSize + index + 1;

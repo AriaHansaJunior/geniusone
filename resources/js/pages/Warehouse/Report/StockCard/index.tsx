@@ -5,6 +5,7 @@ import { Icon } from "../../../../components/ui/Icon";
 import { Pagination } from "../../../../components/ui/Pagination";
 import { CustomDatePicker } from "../../../../components/ui/CustomDatePicker";
 import { CustomSelect } from "../../../../components/ui/CustomSelect";
+import { LoadingBuffer, TableLoadingRow } from "../../../../components/ui/LoadingBuffer";
 import { apiFetch } from "../../../../data/api";
 import {
   stockCardItemsList,
@@ -559,6 +560,11 @@ export function StockCardIndex() {
       {/* Report Table Panel */}
       <div className="panel" style={{ padding: "0" }}>
         <div className="table-frame">
+          {isLoading && liveRecords.length > 0 && (
+            <div className="table-frame__buffer-bar">
+              <LoadingBuffer variant="inline" label="Updating Stock Card movements..." />
+            </div>
+          )}
           <div className="table-scroll">
             <table className="data-table">
               <thead>
@@ -578,7 +584,13 @@ export function StockCardIndex() {
                 </tr>
               </thead>
               <tbody>
-                {paginatedRecords.length > 0 ? (
+                {isLoading && liveRecords.length === 0 ? (
+                  <TableLoadingRow
+                    colSpan={12}
+                    label="Loading Stock Card Ledger..."
+                    sublabel="Calculating inbound, outbound, and running balances..."
+                  />
+                ) : paginatedRecords.length > 0 ? (
                   paginatedRecords.map((item, index) => {
                     const rowNumber =
                       (safeCurrentPage - 1) * pageSize + index + 1;

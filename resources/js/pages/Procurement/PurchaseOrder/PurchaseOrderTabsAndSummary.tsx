@@ -124,7 +124,9 @@ export function PurchaseOrderTabsAndSummary({
                   <th rowSpan={2} style={{ minWidth: "230px" }}>PR Number</th>
                   <th rowSpan={2} style={{ minWidth: "210px" }}>Item Name</th>
                   <th rowSpan={2} style={{ minWidth: "140px" }}>Item Code</th>
-                  <th rowSpan={2} style={{ minWidth: "160px" }}>Item Alias *</th>
+                  <th rowSpan={2} style={{ minWidth: "160px" }}>
+                    Item Alias <span className="required-mark">*</span>
+                  </th>
                   <th rowSpan={2} style={{ minWidth: "125px", textAlign: "right" }}>Price</th>
                   <th rowSpan={2} style={{ minWidth: "90px" }}>Unit</th>
                   {/* Grouped Header for Quantity */}
@@ -143,7 +145,9 @@ export function PurchaseOrderTabsAndSummary({
                   {/* Sub-headers for Quantity with consistent GeniusOne design tokens */}
                   <th style={{ minWidth: "95px", textAlign: "right", fontSize: "10.5px", fontWeight: 700, background: "var(--surface-muted, #f8fafc)", color: "var(--ink-muted, #64748b)" }}>Requested</th>
                   <th style={{ minWidth: "95px", textAlign: "right", fontSize: "10.5px", fontWeight: 700, background: "var(--surface-muted, #f8fafc)", color: "var(--ink-muted, #64748b)" }}>Purchased</th>
-                  <th style={{ minWidth: "105px", textAlign: "right", fontSize: "10.5px", fontWeight: 700, background: "var(--surface-muted, #f8fafc)", color: "var(--ink-muted, #64748b)" }}>Order *</th>
+                  <th style={{ minWidth: "105px", textAlign: "right", fontSize: "10.5px", fontWeight: 700, background: "var(--surface-muted, #f8fafc)", color: "var(--ink-muted, #64748b)" }}>
+                    Order <span className="required-mark">*</span>
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -253,6 +257,7 @@ export function PurchaseOrderTabsAndSummary({
                           placeholder="Alias..."
                           value={row.itemAlias}
                           onChange={(e) => handleUpdateItemField(row.id, "itemAlias", e.target.value)}
+                          required
                         />
                       </td>
 
@@ -300,6 +305,7 @@ export function PurchaseOrderTabsAndSummary({
                           className="tx-input-cell tx-input-cell--num"
                           value={row.orderQty}
                           onChange={(e) => handleUpdateItemField(row.id, "orderQty", parseFloat(e.target.value) || 0)}
+                          required
                         />
                       </td>
 

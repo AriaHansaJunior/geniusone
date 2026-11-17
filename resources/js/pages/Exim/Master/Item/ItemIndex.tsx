@@ -5,6 +5,7 @@ import { Icon } from "../../../../components/ui/Icon";
 import { Pagination } from "../../../../components/ui/Pagination";
 import { CustomSelect } from "../../../../components/ui/CustomSelect";
 import { StatusToggle } from "../../../../components/ui/StatusToggle";
+import { TableLoadingRow } from "../../../../components/ui/LoadingBuffer";
 import { useAuthPermission } from "../../../../context/AuthPermissionContext";
 import { ColumnSettingsPanel } from "./ColumnSettingsPanel";
 import {
@@ -21,6 +22,7 @@ import type {
 
 interface ItemIndexProps {
   records?: ItemRecord[];
+  isLoading?: boolean;
   onAddNew: () => void;
   onGenerateQr: () => void;
   onToggleStatus?: (id: string) => void;
@@ -72,6 +74,7 @@ const renderUnitCell = (code?: string, name?: string) => {
 
 export function ItemIndex({
   records = initialItemRecords,
+  isLoading = false,
   onAddNew,
   onGenerateQr,
   onToggleStatus,
@@ -585,7 +588,13 @@ export function ItemIndex({
               </tr>
             </thead>
             <tbody>
-              {paginatedRecords.length > 0 ? (
+              {isLoading && paginatedRecords.length === 0 ? (
+                <TableLoadingRow
+                  colSpan={columns.filter((c) => c.visible).length + 2}
+                  label="Loading Master Items..."
+                  sublabel="Fetching material catalog and UOM specifications..."
+                />
+              ) : paginatedRecords.length > 0 ? (
                 paginatedRecords.map((item, index) => {
                   const isChecked = selectedCodes.has(item.itemCode);
                   const rowNumber = (safeCurrentPage - 1) * pageSize + index + 1;

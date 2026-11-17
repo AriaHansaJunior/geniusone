@@ -5,6 +5,7 @@ import { SearchField } from "../../../../components/ui/SearchField";
 import { Icon } from "../../../../components/ui/Icon";
 import { Pagination } from "../../../../components/ui/Pagination";
 import { StatusToggle } from "../../../../components/ui/StatusToggle";
+import { TableLoadingRow } from "../../../../components/ui/LoadingBuffer";
 import { useNotification } from "../../../../context/NotificationContext";
 import { initialColorRecords } from "./color-data";
 import type {
@@ -15,12 +16,14 @@ import type {
 
 interface ColorIndexProps {
   records?: ColorRecord[];
+  isLoading?: boolean;
   onAddNew: () => void;
   onToggleStatus?: (id: string) => Promise<void> | void;
 }
 
 export function ColorIndex({
   records = initialColorRecords,
+  isLoading = false,
   onAddNew,
   onToggleStatus,
 }: ColorIndexProps) {
@@ -95,9 +98,8 @@ export function ColorIndex({
     const isActive = sortField === field && sortDirection !== "none";
     return (
       <span
-        className={`master-sort-indicator ${
-          isActive ? "master-sort-indicator--active" : ""
-        }`}
+        className={`master-sort-indicator ${isActive ? "master-sort-indicator--active" : ""
+          }`}
       >
         {isActive ? (
           sortDirection === "asc" ? (
@@ -220,7 +222,9 @@ export function ColorIndex({
                 </tr>
               </thead>
               <tbody>
-                {paginatedRecords.length > 0 ? (
+                {isLoading && paginatedRecords.length === 0 ? (
+                  <TableLoadingRow colSpan={4} label="Loading Colours..." />
+                ) : paginatedRecords.length > 0 ? (
                   paginatedRecords.map((item, index) => {
                     const rowNumber = (safeCurrentPage - 1) * pageSize + index + 1;
                     return (

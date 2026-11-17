@@ -11,6 +11,7 @@ import { normalizeApprovalStatus, type DocumentApprovalState } from "../../../ty
 import { fetchDetail } from "../../../data/api";
 import { useTheme } from "../../../context/ThemeContext";
 import { ReceiveNoteDefaultDetail } from "../../../themes/default/pages/ReceiveNoteDefaultDetail";
+import { LoadingBuffer } from "../../../components/ui/LoadingBuffer";
 
 interface ReceiveNoteDetailProps {
   code: string;
@@ -48,15 +49,23 @@ export function ReceiveNoteDetail({
   }, []);
 
   const [apiData, setApiData] = useState<any>(null);
+  const [isLoadingDetail, setIsLoadingDetail] = useState<boolean>(Boolean(code) && !record);
 
   useEffect(() => {
     let isMounted = true;
     if (code) {
-      fetchDetail("rn", code).then((data: any) => {
-        if (isMounted && data) {
-          setApiData(data);
-        }
-      });
+      setIsLoadingDetail(true);
+      fetchDetail("rn", code)
+        .then((data: any) => {
+          if (isMounted && data) {
+            setApiData(data);
+          }
+        })
+        .finally(() => {
+          if (isMounted) setIsLoadingDetail(false);
+        });
+    } else {
+      setIsLoadingDetail(false);
     }
     return () => {
       isMounted = false;
@@ -253,25 +262,46 @@ export function ReceiveNoteDetail({
     window.print();
   };
 
+  if (isLoadingDetail && !record && !apiData) {
+    return (
+      <div className="rn-detail-page">
+        <LoadingBuffer
+          variant="panel"
+          label="Loading Receive Note Details..."
+          sublabel="Fetching customs receipt, supplier details, and item quantities..."
+          skeletonRows={4}
+        />
+      </div>
+    );
+  }
+
   if (isDefaultTheme) {
     return (
-      <ReceiveNoteDefaultDetail
-        rnData={rnData}
-        isApproved={isApproved}
-        approvalState={approvalState}
-        onApprovalStateChange={(nextState) => {
-          setApprovalState(nextState);
-          onApprovalChange?.(rnData.rnNumber, nextState);
-        }}
-        onBack={onBack}
-        onCreateBpb={onCreateBpb}
-        onPrint={handlePrint}
-      />
+      <>
+        {isLoadingDetail && (
+          <LoadingBuffer variant="inline" label="Synchronizing Receive Note details..." />
+        )}
+        <ReceiveNoteDefaultDetail
+          rnData={rnData}
+          isApproved={isApproved}
+          approvalState={approvalState}
+          onApprovalStateChange={(nextState) => {
+            setApprovalState(nextState);
+            onApprovalChange?.(rnData.rnNumber, nextState);
+          }}
+          onBack={onBack}
+          onCreateBpb={onCreateBpb}
+          onPrint={handlePrint}
+        />
+      </>
     );
   }
 
   return (
     <div className="rn-detail-page">
+      {isLoadingDetail && (
+        <LoadingBuffer variant="inline" label="Synchronizing Receive Note details..." />
+      )}
       {/* Top Header */}
       <div className="rn-detail-header" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "12px", marginBottom: "16px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>

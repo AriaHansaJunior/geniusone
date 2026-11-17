@@ -4,6 +4,7 @@ import { Badge } from "../../../components/ui/Badge";
 import { Pagination } from "../../../components/ui/Pagination";
 import { CustomSelect } from "../../../components/ui/CustomSelect";
 import { CustomDatePicker } from "../../../components/ui/CustomDatePicker";
+import { TableLoadingRow } from "../../../components/ui/LoadingBuffer";
 import {
   fetchPoReportApi,
   fetchMasterSuppliers,
@@ -88,16 +89,21 @@ export function ReportingPurchaseOrder({
   // Row Expansion State for Nested PO Details
   // ---------------------------------------------------------------------------
   const [records, setRecords] = useState<PoReportRecord[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [poReportSuppliersList, setPoReportSuppliersList] = useState<string[]>(["Choose Supplier"]);
   const [expandedRowIds, setExpandedRowIds] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     let isMounted = true;
+    setIsLoading(true);
     fetchPoReportApi()
       .then((rows) => {
         if (isMounted && Array.isArray(rows)) setRecords(rows);
       })
-      .catch(() => {});
+      .catch(() => { })
+      .finally(() => {
+        if (isMounted) setIsLoading(false);
+      });
     fetchMasterSuppliers()
       .then((rows) => {
         if (isMounted && Array.isArray(rows)) {
@@ -105,7 +111,7 @@ export function ReportingPurchaseOrder({
           setPoReportSuppliersList(["Choose Supplier", ...names]);
         }
       })
-      .catch(() => {});
+      .catch(() => { });
     return () => {
       isMounted = false;
     };
@@ -664,7 +670,13 @@ export function ReportingPurchaseOrder({
             </thead>
 
             <tbody>
-              {paginatedRecords.length === 0 ? (
+              {isLoading && paginatedRecords.length === 0 ? (
+                <TableLoadingRow
+                  colSpan={12}
+                  label="Loading Purchase Order Report..."
+                  sublabel="Fetching order lines & receiving statuses..."
+                />
+              ) : paginatedRecords.length === 0 ? (
                 <tr>
                   <td
                     colSpan={12}
@@ -777,88 +789,88 @@ export function ReportingPurchaseOrder({
                               {record.items && record.items.length > 0 ? (
                                 <div className="nested-po-items-card">
                                   <table className="nested-po-items-table">
-                                  <thead>
-                                    <tr>
-                                      <th style={{ width: "135px" }}>Item Code</th>
-                                      <th style={{ width: "230px" }}>Item Name</th>
-                                      <th style={{ width: "165px" }}>Source PR</th>
-                                      <th className="th--center" style={{ width: "70px" }}>Unit</th>
-                                      <th className="th--right" style={{ width: "95px" }}>Qty</th>
-                                      <th className="th--right" style={{ width: "115px" }}>Unit Price</th>
-                                      <th className="th--right" style={{ width: "95px" }}>Discount</th>
-                                      <th className="th--right" style={{ width: "125px" }}>Subtotal</th>
-                                      <th className="th--right" style={{ width: "95px" }}>Qty BPB</th>
-                                      <th className="th--right" style={{ width: "110px" }}>Qty Outstanding</th>
-                                      <th style={{ width: "200px" }}>Remark</th>
-                                    </tr>
-                                  </thead>
-                                  <tbody>
-                                    {record.items.map((item) => (
-                                      <tr key={item.id}>
-                                        <td>{item.itemCode}</td>
-                                        <td>{item.itemName}</td>
-                                        <td>
-                                          <span
-                                            className="po-link"
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              if (
-                                                onNavigatePr &&
-                                                item.prNumber &&
-                                                item.prNumber !== "-"
-                                              ) {
-                                                onNavigatePr(item.prNumber);
-                                              }
-                                            }}
-                                            title="Open Purchase Requisition"
-                                          >
-                                            {item.prNumber}
-                                          </span>
-                                        </td>
-                                        <td className="td--center">{item.unit}</td>
-                                        <td className="td--right">
-                                          {item.qty.toLocaleString("en-US", {
-                                            minimumFractionDigits: 2,
-                                            maximumFractionDigits: 2,
-                                          })}
-                                        </td>
-                                        <td className="td--right">
-                                          {item.unitPrice.toLocaleString("en-US", {
-                                            minimumFractionDigits: 2,
-                                            maximumFractionDigits: 2,
-                                          })}
-                                        </td>
-                                        <td className="td--right">
-                                          {item.discount.toLocaleString("en-US", {
-                                            minimumFractionDigits: 2,
-                                            maximumFractionDigits: 2,
-                                          })}
-                                        </td>
-                                        <td className="td--right" style={{ fontWeight: 600 }}>
-                                          {item.subtotal.toLocaleString("en-US", {
-                                            minimumFractionDigits: 2,
-                                            maximumFractionDigits: 2,
-                                          })}
-                                        </td>
-                                        <td className="td--right">
-                                          {(item.qtyBpb ?? 0).toLocaleString("en-US", {
-                                            minimumFractionDigits: 2,
-                                            maximumFractionDigits: 2,
-                                          })}
-                                        </td>
-                                        <td className="td--right">
-                                          {(item.qtyOutstanding ?? 0).toLocaleString("en-US", {
-                                            minimumFractionDigits: 2,
-                                            maximumFractionDigits: 2,
-                                          })}
-                                        </td>
-                                        <td>{item.remark || "-"}</td>
+                                    <thead>
+                                      <tr>
+                                        <th style={{ width: "135px" }}>Item Code</th>
+                                        <th style={{ width: "230px" }}>Item Name</th>
+                                        <th style={{ width: "165px" }}>Source PR</th>
+                                        <th className="th--center" style={{ width: "70px" }}>Unit</th>
+                                        <th className="th--right" style={{ width: "95px" }}>Qty</th>
+                                        <th className="th--right" style={{ width: "115px" }}>Unit Price</th>
+                                        <th className="th--right" style={{ width: "95px" }}>Discount</th>
+                                        <th className="th--right" style={{ width: "125px" }}>Subtotal</th>
+                                        <th className="th--right" style={{ width: "95px" }}>Qty BPB</th>
+                                        <th className="th--right" style={{ width: "110px" }}>Qty Outstanding</th>
+                                        <th style={{ width: "200px" }}>Remark</th>
                                       </tr>
-                                    ))}
-                                  </tbody>
-                                </table>
-                              </div>
-                            ) : (
+                                    </thead>
+                                    <tbody>
+                                      {record.items.map((item) => (
+                                        <tr key={item.id}>
+                                          <td>{item.itemCode}</td>
+                                          <td>{item.itemName}</td>
+                                          <td>
+                                            <span
+                                              className="po-link"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                if (
+                                                  onNavigatePr &&
+                                                  item.prNumber &&
+                                                  item.prNumber !== "-"
+                                                ) {
+                                                  onNavigatePr(item.prNumber);
+                                                }
+                                              }}
+                                              title="Open Purchase Requisition"
+                                            >
+                                              {item.prNumber}
+                                            </span>
+                                          </td>
+                                          <td className="td--center">{item.unit}</td>
+                                          <td className="td--right">
+                                            {item.qty.toLocaleString("en-US", {
+                                              minimumFractionDigits: 2,
+                                              maximumFractionDigits: 2,
+                                            })}
+                                          </td>
+                                          <td className="td--right">
+                                            {item.unitPrice.toLocaleString("en-US", {
+                                              minimumFractionDigits: 2,
+                                              maximumFractionDigits: 2,
+                                            })}
+                                          </td>
+                                          <td className="td--right">
+                                            {item.discount.toLocaleString("en-US", {
+                                              minimumFractionDigits: 2,
+                                              maximumFractionDigits: 2,
+                                            })}
+                                          </td>
+                                          <td className="td--right" style={{ fontWeight: 600 }}>
+                                            {item.subtotal.toLocaleString("en-US", {
+                                              minimumFractionDigits: 2,
+                                              maximumFractionDigits: 2,
+                                            })}
+                                          </td>
+                                          <td className="td--right">
+                                            {(item.qtyBpb ?? 0).toLocaleString("en-US", {
+                                              minimumFractionDigits: 2,
+                                              maximumFractionDigits: 2,
+                                            })}
+                                          </td>
+                                          <td className="td--right">
+                                            {(item.qtyOutstanding ?? 0).toLocaleString("en-US", {
+                                              minimumFractionDigits: 2,
+                                              maximumFractionDigits: 2,
+                                            })}
+                                          </td>
+                                          <td>{item.remark || "-"}</td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              ) : (
                                 <div className="nested-po-items-empty">
                                   No line items recorded for this purchase order.
                                 </div>

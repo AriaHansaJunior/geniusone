@@ -4,6 +4,7 @@ import { SearchField } from "../../../../components/ui/SearchField";
 import { Pagination } from "../../../../components/ui/Pagination";
 import { Icon } from "../../../../components/ui/Icon";
 import { StatusToggle } from "../../../../components/ui/StatusToggle";
+import { TableLoadingRow } from "../../../../components/ui/LoadingBuffer";
 import { useNotification } from "../../../../context/NotificationContext";
 import {
   type CurrencyRecord,
@@ -13,12 +14,14 @@ import {
 
 interface CurrencyIndexProps {
   records?: CurrencyRecord[];
+  isLoading?: boolean;
   onAddNew?: () => void;
   onToggleStatus?: (id: string) => Promise<void> | void;
 }
 
 export function CurrencyIndex({
   records = [],
+  isLoading = false,
   onAddNew,
   onToggleStatus,
 }: CurrencyIndexProps) {
@@ -194,7 +197,9 @@ export function CurrencyIndex({
                 </tr>
               </thead>
               <tbody>
-                {paginatedRecords.length > 0 ? (
+                {isLoading && paginatedRecords.length === 0 ? (
+                  <TableLoadingRow colSpan={3} label="Loading Currencies..." />
+                ) : paginatedRecords.length > 0 ? (
                   paginatedRecords.map((item, index) => {
                     const rowNumber = (safeCurrentPage - 1) * pageSize + index + 1;
                     return (

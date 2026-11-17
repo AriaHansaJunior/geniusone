@@ -82,6 +82,7 @@ export function PurchaseRequisition({ onDetail, onCreate }: PurchaseRequisitionP
   const columns = listColumns.pr;
   const [, setStats] = useState<[string, string, string][]>([]);
   const [rows, setRows] = useState<TableRow[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Active filters and search states
   const [filterInputs, setFilterInputs] = useState<PRFilters>(initialFilters);
@@ -94,12 +95,17 @@ export function PurchaseRequisition({ onDetail, onCreate }: PurchaseRequisitionP
 
   useEffect(() => {
     let isMounted = true;
-    fetchList("pr").then((res) => {
-      if (isMounted) {
-        setStats(res.stats);
-        setRows(res.rows);
-      }
-    });
+    setIsLoading(true);
+    fetchList("pr")
+      .then((res) => {
+        if (isMounted) {
+          setStats(res.stats);
+          setRows(res.rows);
+        }
+      })
+      .finally(() => {
+        if (isMounted) setIsLoading(false);
+      });
     return () => {
       isMounted = false;
     };
@@ -190,7 +196,7 @@ export function PurchaseRequisition({ onDetail, onCreate }: PurchaseRequisitionP
             rowStatus.includes("approved") ||
             (r as any).is_approved === true ||
             (r as any).approval_status === "Approved" ||
-          ((rowStatus === "outstanding" || rowStatus === "partial closing") && ((r as any).is_approved || (r as any).approval_status === "Approved"));
+            ((rowStatus === "outstanding" || rowStatus === "partial closing") && ((r as any).is_approved || (r as any).approval_status === "Approved"));
           if (!isAppr) return false;
         } else if (statusVal === "ordered") {
           if (!rowStatus.includes("ordered")) return false;
@@ -522,6 +528,8 @@ export function PurchaseRequisition({ onDetail, onCreate }: PurchaseRequisitionP
           columns={columns}
           rows={filtered}
           onDetail={onDetail}
+          isLoading={isLoading}
+          loadingMessage="Loading Purchase Requisitions..."
         />
       </section>
     </>

@@ -19,6 +19,7 @@ import { useAuthPermission } from "../../../context/AuthPermissionContext";
 import { useNotification } from "../../../context/NotificationContext";
 import { useTheme } from "../../../context/ThemeContext";
 import { PurchaseOrderDefaultDetail } from "../../../themes/default/pages/PurchaseOrderDefaultDetail";
+import { LoadingBuffer } from "../../../components/ui/LoadingBuffer";
 
 interface PurchaseOrderDetailProps {
   code: string;
@@ -66,13 +67,22 @@ export function PurchaseOrderDetail({
     } as TableRow;
   });
 
+  const [isLoadingDetail, setIsLoadingDetail] = useState<boolean>(
+    () => row.supplier === "Loading..."
+  );
+
   useEffect(() => {
     let isMounted = true;
-    fetchDetail("po", code).then((item) => {
-      if (isMounted && item) {
-        setRow(item);
-      }
-    });
+    setIsLoadingDetail(true);
+    fetchDetail("po", code)
+      .then((item) => {
+        if (isMounted && item) {
+          setRow(item);
+        }
+      })
+      .finally(() => {
+        if (isMounted) setIsLoadingDetail(false);
+      });
     return () => {
       isMounted = false;
     };
@@ -508,70 +518,91 @@ export function PurchaseOrderDetail({
     }
   };
 
+  if (isLoadingDetail && row.supplier === "Loading...") {
+    return (
+      <div className="full-page-detail">
+        <LoadingBuffer
+          variant="panel"
+          label="Loading Purchase Order Details..."
+          sublabel="Fetching order items, financials, and approval status..."
+          skeletonRows={4}
+        />
+      </div>
+    );
+  }
+
   if (isDefaultTheme) {
     return (
-      <PurchaseOrderDefaultDetail
-        row={row}
-        docNumber={docNumber}
-        supplierName={supplierName}
-        dateStr={dateStr}
-        dueDate={dueDate}
-        currency={currency}
-        rate={rate}
-        paymentMethod={paymentMethod}
-        paymentTerm={paymentTerm}
-        createdBy={createdBy}
-        releasedBy={releasedBy}
-        approvedBy={approvedBy}
-        poNote={poNote}
-        facility={facility}
-        isHeaderNonFac={isHeaderNonFac}
-        isKawasanBerikat={isKawasanBerikat}
-        isApproved={isApproved}
-        poItems={poItems}
-        otherCosts={otherCosts}
-        prNumbersList={prNumbersList}
-        receivingNumbersList={receivingNumbersList}
-        prNumber={prNumber}
-        totalMaterialQtyStr={totalMaterialQtyStr}
-        materialSubtotal={materialSubtotal}
-        discountAmount={discountAmount}
-        dppAmount={dppAmount}
-        ppnAmount={ppnAmount}
-        ppnRate={ppnRate}
-        totalOtherCosts={totalOtherCosts}
-        totalPph={totalPph}
-        displayOrderTotal={displayOrderTotal}
-        approvalState={approvalState}
-        setApprovalState={setApprovalState}
-        onStateStatusSync={(nextStatus) =>
-          setRow((prev) => ({ ...prev, _rawStatus: nextStatus, status: nextStatus }))
-        }
-        onResubmitRevision={handleRecordRevision}
-        onBack={onBack}
-        onNavigateDetail={onNavigateDetail}
-        onPrintPdf={handlePrintPdf}
-        isAddingCost={isAddingCost}
-        setIsAddingCost={setIsAddingCost}
-        costName={costName}
-        setCostName={setCostName}
-        costAmount={costAmount}
-        setCostAmount={setCostAmount}
-        costNote={costNote}
-        setCostNote={setCostNote}
-        isSubmittingCost={isSubmittingCost}
-        costError={costError}
-        setCostError={setCostError}
-        availableCostTypes={availableCostTypes}
-        onSaveAdditionalCost={handleSaveAdditionalCost}
-        onDownloadAttachment={handleDownloadAttachment}
-        activityLogEntries={activityLogEntries}
-      />
+      <>
+        {isLoadingDetail && (
+          <LoadingBuffer variant="inline" label="Synchronizing Purchase Order details..." />
+        )}
+        <PurchaseOrderDefaultDetail
+          row={row}
+          docNumber={docNumber}
+          supplierName={supplierName}
+          dateStr={dateStr}
+          dueDate={dueDate}
+          currency={currency}
+          rate={rate}
+          paymentMethod={paymentMethod}
+          paymentTerm={paymentTerm}
+          createdBy={createdBy}
+          releasedBy={releasedBy}
+          approvedBy={approvedBy}
+          poNote={poNote}
+          facility={facility}
+          isHeaderNonFac={isHeaderNonFac}
+          isKawasanBerikat={isKawasanBerikat}
+          isApproved={isApproved}
+          poItems={poItems}
+          otherCosts={otherCosts}
+          prNumbersList={prNumbersList}
+          receivingNumbersList={receivingNumbersList}
+          prNumber={prNumber}
+          totalMaterialQtyStr={totalMaterialQtyStr}
+          materialSubtotal={materialSubtotal}
+          discountAmount={discountAmount}
+          dppAmount={dppAmount}
+          ppnAmount={ppnAmount}
+          ppnRate={ppnRate}
+          totalOtherCosts={totalOtherCosts}
+          totalPph={totalPph}
+          displayOrderTotal={displayOrderTotal}
+          approvalState={approvalState}
+          setApprovalState={setApprovalState}
+          onStateStatusSync={(nextStatus) =>
+            setRow((prev) => ({ ...prev, _rawStatus: nextStatus, status: nextStatus }))
+          }
+          onResubmitRevision={handleRecordRevision}
+          onBack={onBack}
+          onNavigateDetail={onNavigateDetail}
+          onPrintPdf={handlePrintPdf}
+          isAddingCost={isAddingCost}
+          setIsAddingCost={setIsAddingCost}
+          costName={costName}
+          setCostName={setCostName}
+          costAmount={costAmount}
+          setCostAmount={setCostAmount}
+          costNote={costNote}
+          setCostNote={setCostNote}
+          isSubmittingCost={isSubmittingCost}
+          costError={costError}
+          setCostError={setCostError}
+          availableCostTypes={availableCostTypes}
+          onSaveAdditionalCost={handleSaveAdditionalCost}
+          onDownloadAttachment={handleDownloadAttachment}
+          activityLogEntries={activityLogEntries}
+        />
+      </>
     );
   }
 
   return (
     <div className="full-page-detail">
+      {isLoadingDetail && (
+        <LoadingBuffer variant="inline" label="Synchronizing Purchase Order details..." />
+      )}
       {/* Detail Navigation & Action Bar */}
       <div className="detail-top-bar">
         <div className="detail-top-bar__left">
@@ -1045,7 +1076,7 @@ export function PurchaseOrderDetail({
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "12px", marginBottom: "12px" }}>
                   <div>
                     <label style={{ display: "block", fontSize: "11.5px", fontWeight: 600, color: "var(--muted)", marginBottom: "4px" }}>
-                      Cost Name / Type *
+                      Cost Name / Type <span className="required-mark">*</span>
                     </label>
                     <input
                       type="text"
@@ -1053,6 +1084,7 @@ export function PurchaseOrderDetail({
                       value={costName}
                       onChange={(e) => setCostName(e.target.value)}
                       placeholder="e.g. Ongkos Angkut / Freight"
+                      required
                       style={{
                         width: "100%",
                         height: "36px",
@@ -1076,7 +1108,7 @@ export function PurchaseOrderDetail({
 
                   <div>
                     <label style={{ display: "block", fontSize: "11.5px", fontWeight: 600, color: "var(--muted)", marginBottom: "4px" }}>
-                      Amount ({currency}) *
+                      Amount ({currency}) <span className="required-mark">*</span>
                     </label>
                     <input
                       type="number"
@@ -1085,6 +1117,7 @@ export function PurchaseOrderDetail({
                       value={costAmount}
                       onChange={(e) => setCostAmount(e.target.value === "" ? "" : parseFloat(e.target.value))}
                       placeholder="0.00"
+                      required
                       style={{
                         width: "100%",
                         height: "36px",

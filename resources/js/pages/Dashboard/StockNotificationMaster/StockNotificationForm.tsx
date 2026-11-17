@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Button } from "../../../components/ui/Button";
 import { Icon } from "../../../components/ui/Icon";
 import { CustomSelect } from "../../../components/ui/CustomSelect";
+import { LoadingBuffer } from "../../../components/ui/LoadingBuffer";
 import { fetchMasterItems } from "../../../data/masterApi";
 import type { StockNotificationRecord } from "./stock-notification-types";
 
@@ -20,22 +21,28 @@ export function StockNotificationForm({
   const [predefinedItems, setPredefinedItems] = useState<
     Array<{ code: string; name: string; category: string; unit: string; stock: number }>
   >([]);
+  const [loadingLookups, setLoadingLookups] = useState(true);
 
   useEffect(() => {
     let isMounted = true;
-    fetchMasterItems().then((items) => {
-      if (isMounted && Array.isArray(items)) {
-        setPredefinedItems(
-          items.map((it) => ({
-            code: it.itemCode,
-            name: it.itemName,
-            category: it.category && it.category !== "-" ? it.category : (it.classification || ""),
-            unit: it.smallestUnitCode || "",
-            stock: Number(it.stock ?? 0),
-          }))
-        );
-      }
-    });
+    setLoadingLookups(true);
+    fetchMasterItems()
+      .then((items) => {
+        if (isMounted && Array.isArray(items)) {
+          setPredefinedItems(
+            items.map((it) => ({
+              code: it.itemCode,
+              name: it.itemName,
+              category: it.category && it.category !== "-" ? it.category : (it.classification || ""),
+              unit: it.smallestUnitCode || "",
+              stock: Number(it.stock ?? 0),
+            }))
+          );
+        }
+      })
+      .finally(() => {
+        if (isMounted) setLoadingLookups(false);
+      });
     return () => {
       isMounted = false;
     };
@@ -134,6 +141,9 @@ export function StockNotificationForm({
 
       {/* Form Content */}
       <form onSubmit={handleSubmit} className="master-form-card">
+        {loadingLookups && (
+          <LoadingBuffer variant="inline" label="Loading master item catalog..." />
+        )}
         {error && (
           <div className="master-form-error-banner">
             <Icon name="alertTriangle" size={15} />
@@ -145,7 +155,7 @@ export function StockNotificationForm({
         <div className="master-form-grid-3">
           <div className="master-form-group">
             <label className="master-form-label">
-              Select Item Catalog <span className="required-mark">*</span>
+              Select Item Catalog
             </label>
             <CustomSelect
               searchable
@@ -163,24 +173,30 @@ export function StockNotificationForm({
           </div>
 
           <div className="master-form-group">
-            <label className="master-form-label">Item Code</label>
+            <label className="master-form-label">
+              Item Code <span className="required-mark">*</span>
+            </label>
             <input
               type="text"
               className="master-form-input"
               placeholder="e.g. 80.100.001.001"
               value={itemCode}
               onChange={(e) => setItemCode(e.target.value)}
+              required
             />
           </div>
 
           <div className="master-form-group">
-            <label className="master-form-label">Item Name</label>
+            <label className="master-form-label">
+              Item Name <span className="required-mark">*</span>
+            </label>
             <input
               type="text"
               className="master-form-input"
               placeholder="Enter item name"
               value={itemName}
               onChange={(e) => setItemName(e.target.value)}
+              required
             />
           </div>
         </div>
@@ -238,6 +254,7 @@ export function StockNotificationForm({
                 const val = e.target.value;
                 setBufferQuantity(val === "" ? "" : Math.max(1, Number(val)));
               }}
+              required
             />
             {bufferQuantity !== "" && Number(bufferQuantity) > 0 && (
               <span className="master-form-helper-text">
@@ -298,9 +315,8 @@ export function StockNotificationForm({
 
           return (
             <div
-              className={`stock-rule-preview ${
-                isLowStockTriggered ? "stock-rule-preview--alert" : "stock-rule-preview--safe"
-              }`}
+              className={`stock-rule-preview ${isLowStockTriggered ? "stock-rule-preview--alert" : "stock-rule-preview--safe"
+                }`}
             >
               <Icon
                 name={isLowStockTriggered ? "alertTriangle" : "checkCircle"}

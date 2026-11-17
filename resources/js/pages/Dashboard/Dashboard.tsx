@@ -12,6 +12,7 @@ import { DashboardRateChart } from "./DashboardRateChart";
 import { DashboardStockAlert, type StockAlertSummary } from "./DashboardStockAlert";
 import { DashboardPendingApprovals } from "./DashboardPendingApprovals";
 import { ErrorBoundary } from "../../components/ui/ErrorBoundary";
+import { LoadingBuffer, TableLoadingRow } from "../../components/ui/LoadingBuffer";
 import type {
   ExchangeRateRecord,
   RateSortField,
@@ -52,9 +53,9 @@ const mapApiExchangeRateRecord = (r: any, idx: number): ExchangeRateRecord => {
     rate: rateVal !== null && rateVal !== undefined && !isNaN(Number(rateVal)) ? Number(rateVal) : null,
     flag: String(
       r.flag ||
-        (r.rate_type === "Pajak (KMK)"
-          ? "KMK Valuation"
-          : String(r.rate_type || "").includes("Bank Indonesia")
+      (r.rate_type === "Pajak (KMK)"
+        ? "KMK Valuation"
+        : String(r.rate_type || "").includes("Bank Indonesia")
           ? "BI Reference"
           : "Commercial Counter")
     ),
@@ -214,6 +215,7 @@ export function Dashboard({
   }, [appliedFilters]);
 
   const [rateRecords, setRateRecords] = useState<ExchangeRateRecord[]>([]);
+  const [isLoadingRates, setIsLoadingRates] = useState(true);
   const [currenciesList, setCurrenciesList] = useState<string[]>(["All Currencies"]);
   const rateTypesList = useMemo(
     () => [
@@ -240,6 +242,7 @@ export function Dashboard({
 
   React.useEffect(() => {
     let isMounted = true;
+    setIsLoadingRates(true);
     const params = new URLSearchParams({
       startDate: appliedFilters.startDate,
       endDate: appliedFilters.endDate,
@@ -265,6 +268,9 @@ export function Dashboard({
       })
       .catch((err) => {
         console.warn("[GeniusOne Exchange Rate] Network error:", err);
+      })
+      .finally(() => {
+        if (isMounted) setIsLoadingRates(false);
       });
 
     return () => {
@@ -373,9 +379,8 @@ export function Dashboard({
       {/* Top Low-Stock Buffer Notification Banner */}
       {stockAlertSummary.totalTriggered > 0 && (
         <div
-          className={`dashboard-low-stock-notice ${
-            stockAlertSummary.criticalCount > 0 ? "dashboard-low-stock-notice--critical" : ""
-          }`}
+          className={`dashboard-low-stock-notice ${stockAlertSummary.criticalCount > 0 ? "dashboard-low-stock-notice--critical" : ""
+            }`}
           role="status"
         >
           <div className="dashboard-low-stock-notice__info">
@@ -441,425 +446,428 @@ export function Dashboard({
       {/* Exchange Rates Master Card */}
       <ErrorBoundary fallbackTitle="Exchange Rates View Error" onReset={handleResetFilters}>
         <div className="dashboard-rate-card">
-        {/* Card Header with Refresh Action */}
-        <div className="dashboard-rate-card__header">
-          <div className="dashboard-rate-card__title">
-            <Icon name="globe" size={17} />
-            <span>Exchange Rates</span>
+          {/* Card Header with Refresh Action */}
+          <div className="dashboard-rate-card__header">
+            <div className="dashboard-rate-card__title">
+              <Icon name="globe" size={17} />
+              <span>Exchange Rates</span>
+            </div>
+
+            <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+              <Button
+                className="button-live-feed"
+                onClick={handleCheckLiveFeed}
+                disabled={isRefreshing}
+              >
+                {isRefreshing ? "Checking Feed..." : "Check Live Feed"}
+              </Button>
+            </div>
           </div>
 
-          <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-            <Button
-              className="button-live-feed"
-              onClick={handleCheckLiveFeed}
-              disabled={isRefreshing}
-            >
-              {isRefreshing ? "Checking Feed..." : "Check Live Feed"}
-            </Button>
-          </div>
-        </div>
-
-        {/* GeniusOne Custom Notification Banner */}
-        {notification && (
-          <div
-            style={{
-              padding: "10px 16px",
-              background:
-                notification.type === "error"
-                  ? "#fef2f2"
-                  : notification.type === "warning"
-                  ? "#fffbeb"
-                  : "#eff6ff",
-              borderBottom: `1px solid ${
-                notification.type === "error"
+          {/* GeniusOne Custom Notification Banner */}
+          {notification && (
+            <div
+              style={{
+                padding: "10px 16px",
+                background:
+                  notification.type === "error"
+                    ? "#fef2f2"
+                    : notification.type === "warning"
+                      ? "#fffbeb"
+                      : "#eff6ff",
+                borderBottom: `1px solid ${notification.type === "error"
                   ? "#fecaca"
                   : notification.type === "warning"
-                  ? "#fde68a"
-                  : "#bfdbfe"
-              }`,
-              color:
-                notification.type === "error"
-                  ? "#b91c1c"
-                  : notification.type === "warning"
-                  ? "#92400e"
-                  : "#1e40af",
-              fontSize: "12px",
-              fontWeight: 600,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: "8px",
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <Icon
-                name={notification.type === "error" ? "alertTriangle" : "info"}
-                size={14}
-              />
-              <span>{notification.message}</span>
-            </div>
-            <button
-              type="button"
-              onClick={() => setNotification(null)}
-              style={{
-                border: 0,
-                background: "transparent",
-                cursor: "pointer",
-                fontWeight: 700,
-                fontSize: "15px",
-                color: "inherit",
+                    ? "#fde68a"
+                    : "#bfdbfe"
+                  }`,
+                color:
+                  notification.type === "error"
+                    ? "#b91c1c"
+                    : notification.type === "warning"
+                      ? "#92400e"
+                      : "#1e40af",
+                fontSize: "12px",
+                fontWeight: 600,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: "8px",
               }}
-              title="Dismiss"
             >
-              ×
-            </button>
-          </div>
-        )}
-
-        {/* Filter Bar with Date Range, Currency, Rate Type, Show, Reset */}
-        <form onSubmit={handleApplyFilters} className="dashboard-filters-bar">
-          <div className="dashboard-filters-grid">
-            {/* Start Date (Tanggal Awal) */}
-            <div className="master-form-group">
-              <label className="master-form-label">Start Date</label>
-              <CustomDatePicker
-                value={startDate}
-                onChange={(val) => setStartDate(val)}
-                placeholder="DD/MM/YYYY"
-              />
-            </div>
-
-            {/* End Date (Tanggal Akhir) */}
-            <div className="master-form-group">
-              <label className="master-form-label">End Date</label>
-              <CustomDatePicker
-                value={endDate}
-                onChange={(val) => setEndDate(val)}
-                placeholder="DD/MM/YYYY"
-              />
-            </div>
-
-            {/* Currency (Valuta) */}
-            <div className="master-form-group">
-              <label className="master-form-label">Currency</label>
-              <CustomSelect
-                searchable
-                value={currency}
-                onChange={(val) => setCurrency(val)}
-                options={currenciesList}
-              />
-            </div>
-
-            {/* Rate Type (Tipe Rate) */}
-            <div className="master-form-group">
-              <label className="master-form-label">Rate Type</label>
-              <CustomSelect
-                value={rateType}
-                onChange={(val) => setRateType(val)}
-                options={rateTypesList}
-              />
-            </div>
-
-            {/* Action Buttons: Show & Reset */}
-            <div className="dashboard-filters-actions">
-              <Button
-                type="submit"
-                variant="primary"
-                onClick={handleApplyFilters}
-              >
-                Show
-              </Button>
-              <Button
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Icon
+                  name={notification.type === "error" ? "alertTriangle" : "info"}
+                  size={14}
+                />
+                <span>{notification.message}</span>
+              </div>
+              <button
                 type="button"
-                variant="danger"
-                onClick={handleResetFilters}
-              >
-                Reset
-              </Button>
-            </div>
-          </div>
-        </form>
-
-        {/* Table & Chart Tabs with Integrated Search */}
-        <div className="dashboard-tabs">
-          <div className="dashboard-tabs__list">
-            <button
-              type="button"
-              className={`dashboard-tab ${
-                activeTab === "table" ? "dashboard-tab--active" : ""
-              }`}
-              onClick={() => setActiveTab("table")}
-            >
-              <span>Table</span>
-              <span className="dashboard-tab__pill">{filteredRecords.length}</span>
-            </button>
-            <button
-              type="button"
-              className={`dashboard-tab ${
-                activeTab === "chart" ? "dashboard-tab--active" : ""
-              }`}
-              onClick={() => setActiveTab("chart")}
-            >
-              <span>Chart</span>
-            </button>
-          </div>
-
-          {activeTab === "table" && (
-            <div className="dashboard-tabs__search">
-              <SearchField
-                value={search}
-                onChange={(val) => {
-                  setSearch(val);
-                  setCurrentPage(1);
+                onClick={() => setNotification(null)}
+                style={{
+                  border: 0,
+                  background: "transparent",
+                  cursor: "pointer",
+                  fontWeight: 700,
+                  fontSize: "15px",
+                  color: "inherit",
                 }}
-                placeholder="Search currency, rate type, flag..."
-              />
+                title="Dismiss"
+              >
+                ×
+              </button>
             </div>
           )}
-        </div>
 
-        {/* Tab Content */}
-        {activeTab === "table" ? (
-          <>
-            {/* Table Wrapper with Fixed Layout */}
-            <div className="dashboard-rate-table-wrapper">
-              <table className="dashboard-rate-table">
-                <colgroup>
-                  <col style={{ width: "48px" }} />
-                  <col style={{ width: "115px" }} />
-                  <col style={{ width: "190px" }} />
-                  <col style={{ width: "190px" }} />
-                  <col style={{ width: "125px" }} />
-                  <col style={{ width: "125px" }} />
-                  <col style={{ width: "125px" }} />
-                  <col style={{ width: "150px" }} />
-                  <col style={{ width: "110px" }} />
-                </colgroup>
-                <thead>
-                  <tr>
-                    <th style={{ width: "48px", textAlign: "center" }}>No.</th>
-                    <th
-                      style={{ width: "115px" }}
-                      className="sortable"
-                      onClick={() => handleSort("rateDate")}
-                    >
-                      Rate Date{" "}
-                      {sortField === "rateDate" &&
-                        (sortDirection === "asc" ? "↑" : sortDirection === "desc" ? "↓" : "")}
-                    </th>
-                    <th
-                      style={{ width: "190px" }}
-                      className="sortable"
-                      onClick={() => handleSort("currencyCode")}
-                    >
-                      Currency{" "}
-                      {sortField === "currencyCode" &&
-                        (sortDirection === "asc" ? "↑" : sortDirection === "desc" ? "↓" : "")}
-                    </th>
-                    <th
-                      style={{ width: "190px" }}
-                      className="sortable"
-                      onClick={() => handleSort("rateType")}
-                    >
-                      Rate Type{" "}
-                      {sortField === "rateType" &&
-                        (sortDirection === "asc" ? "↑" : sortDirection === "desc" ? "↓" : "")}
-                    </th>
-                    <th
-                      style={{ width: "125px" }}
-                      className="numeric sortable"
-                      onClick={() => handleSort("buyingRate")}
-                    >
-                      Buying Rate{" "}
-                      {sortField === "buyingRate" &&
-                        (sortDirection === "asc" ? "↑" : sortDirection === "desc" ? "↓" : "")}
-                    </th>
-                    <th
-                      style={{ width: "125px" }}
-                      className="numeric sortable"
-                      onClick={() => handleSort("sellingRate")}
-                    >
-                      Selling Rate{" "}
-                      {sortField === "sellingRate" &&
-                        (sortDirection === "asc" ? "↑" : sortDirection === "desc" ? "↓" : "")}
-                    </th>
-                    <th
-                      style={{ width: "125px" }}
-                      className="numeric sortable"
-                      onClick={() => handleSort("rate")}
-                    >
-                      Rate{" "}
-                      {sortField === "rate" &&
-                        (sortDirection === "asc" ? "↑" : sortDirection === "desc" ? "↓" : "")}
-                    </th>
-                    <th style={{ width: "150px" }}>Flag / Source</th>
-                    <th style={{ width: "110px", textAlign: "center" }}>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {paginatedRecords.length > 0 ? (
-                    paginatedRecords.map((item, index) => {
-                      const rowNumber =
-                        (safeCurrentPage - 1) * pageSize + index + 1;
-                      return (
-                        <tr key={item.id}>
-                          <td
-                            style={{
-                              textAlign: "center",
-                              color: "var(--muted)",
-                              fontWeight: 600,
-                            }}
-                          >
-                            {rowNumber}
-                          </td>
-                          <td>
-                            <strong>{item.rateDate}</strong>
-                          </td>
-                          <td>
-                            <div
+          {/* Filter Bar with Date Range, Currency, Rate Type, Show, Reset */}
+          <form onSubmit={handleApplyFilters} className="dashboard-filters-bar">
+            <div className="dashboard-filters-grid">
+              {/* Start Date (Tanggal Awal) */}
+              <div className="master-form-group">
+                <label className="master-form-label">Start Date</label>
+                <CustomDatePicker
+                  value={startDate}
+                  onChange={(val) => setStartDate(val)}
+                  placeholder="DD/MM/YYYY"
+                />
+              </div>
+
+              {/* End Date (Tanggal Akhir) */}
+              <div className="master-form-group">
+                <label className="master-form-label">End Date</label>
+                <CustomDatePicker
+                  value={endDate}
+                  onChange={(val) => setEndDate(val)}
+                  placeholder="DD/MM/YYYY"
+                />
+              </div>
+
+              {/* Currency (Valuta) */}
+              <div className="master-form-group">
+                <label className="master-form-label">Currency</label>
+                <CustomSelect
+                  searchable
+                  value={currency}
+                  onChange={(val) => setCurrency(val)}
+                  options={currenciesList}
+                />
+              </div>
+
+              {/* Rate Type (Tipe Rate) */}
+              <div className="master-form-group">
+                <label className="master-form-label">Rate Type</label>
+                <CustomSelect
+                  value={rateType}
+                  onChange={(val) => setRateType(val)}
+                  options={rateTypesList}
+                />
+              </div>
+
+              {/* Action Buttons: Show & Reset */}
+              <div className="dashboard-filters-actions">
+                <Button
+                  type="submit"
+                  variant="primary"
+                  onClick={handleApplyFilters}
+                >
+                  Show
+                </Button>
+                <Button
+                  type="button"
+                  variant="danger"
+                  onClick={handleResetFilters}
+                >
+                  Reset
+                </Button>
+              </div>
+            </div>
+          </form>
+
+          {/* Table & Chart Tabs with Integrated Search */}
+          <div className="dashboard-tabs">
+            <div className="dashboard-tabs__list">
+              <button
+                type="button"
+                className={`dashboard-tab ${activeTab === "table" ? "dashboard-tab--active" : ""
+                  }`}
+                onClick={() => setActiveTab("table")}
+              >
+                <span>Table</span>
+                <span className="dashboard-tab__pill">{filteredRecords.length}</span>
+              </button>
+              <button
+                type="button"
+                className={`dashboard-tab ${activeTab === "chart" ? "dashboard-tab--active" : ""
+                  }`}
+                onClick={() => setActiveTab("chart")}
+              >
+                <span>Chart</span>
+              </button>
+            </div>
+
+            {activeTab === "table" && (
+              <div className="dashboard-tabs__search">
+                <SearchField
+                  value={search}
+                  onChange={(val) => {
+                    setSearch(val);
+                    setCurrentPage(1);
+                  }}
+                  placeholder="Search currency, rate type, flag..."
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Tab Content */}
+          {activeTab === "table" ? (
+            <>
+              {/* Table Wrapper with Fixed Layout */}
+              <div className="dashboard-rate-table-wrapper">
+                <table className="dashboard-rate-table">
+                  <colgroup>
+                    <col style={{ width: "48px" }} />
+                    <col style={{ width: "115px" }} />
+                    <col style={{ width: "190px" }} />
+                    <col style={{ width: "190px" }} />
+                    <col style={{ width: "125px" }} />
+                    <col style={{ width: "125px" }} />
+                    <col style={{ width: "125px" }} />
+                    <col style={{ width: "150px" }} />
+                    <col style={{ width: "110px" }} />
+                  </colgroup>
+                  <thead>
+                    <tr>
+                      <th style={{ width: "48px", textAlign: "center" }}>No.</th>
+                      <th
+                        style={{ width: "115px" }}
+                        className="sortable"
+                        onClick={() => handleSort("rateDate")}
+                      >
+                        Rate Date{" "}
+                        {sortField === "rateDate" &&
+                          (sortDirection === "asc" ? "↑" : sortDirection === "desc" ? "↓" : "")}
+                      </th>
+                      <th
+                        style={{ width: "190px" }}
+                        className="sortable"
+                        onClick={() => handleSort("currencyCode")}
+                      >
+                        Currency{" "}
+                        {sortField === "currencyCode" &&
+                          (sortDirection === "asc" ? "↑" : sortDirection === "desc" ? "↓" : "")}
+                      </th>
+                      <th
+                        style={{ width: "190px" }}
+                        className="sortable"
+                        onClick={() => handleSort("rateType")}
+                      >
+                        Rate Type{" "}
+                        {sortField === "rateType" &&
+                          (sortDirection === "asc" ? "↑" : sortDirection === "desc" ? "↓" : "")}
+                      </th>
+                      <th
+                        style={{ width: "125px" }}
+                        className="numeric sortable"
+                        onClick={() => handleSort("buyingRate")}
+                      >
+                        Buying Rate{" "}
+                        {sortField === "buyingRate" &&
+                          (sortDirection === "asc" ? "↑" : sortDirection === "desc" ? "↓" : "")}
+                      </th>
+                      <th
+                        style={{ width: "125px" }}
+                        className="numeric sortable"
+                        onClick={() => handleSort("sellingRate")}
+                      >
+                        Selling Rate{" "}
+                        {sortField === "sellingRate" &&
+                          (sortDirection === "asc" ? "↑" : sortDirection === "desc" ? "↓" : "")}
+                      </th>
+                      <th
+                        style={{ width: "125px" }}
+                        className="numeric sortable"
+                        onClick={() => handleSort("rate")}
+                      >
+                        Rate{" "}
+                        {sortField === "rate" &&
+                          (sortDirection === "asc" ? "↑" : sortDirection === "desc" ? "↓" : "")}
+                      </th>
+                      <th style={{ width: "150px" }}>Flag / Source</th>
+                      <th style={{ width: "110px", textAlign: "center" }}>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {isLoadingRates && paginatedRecords.length === 0 ? (
+                      <TableLoadingRow
+                        colSpan={9}
+                        label="Loading Exchange Rates..."
+                        sublabel="Retrieving BI, KMK, and counter exchange rates..."
+                      />
+                    ) : paginatedRecords.length > 0 ? (
+                      paginatedRecords.map((item, index) => {
+                        const rowNumber =
+                          (safeCurrentPage - 1) * pageSize + index + 1;
+                        return (
+                          <tr key={item.id}>
+                            <td
                               style={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: "6px",
-                                flexWrap: "wrap",
-                              }}
-                            >
-                              <span className="code-pill">
-                                {item.currencyCode}
-                              </span>
-                              <span
-                                style={{
-                                  fontSize: "11px",
-                                  color: "var(--muted)",
-                                  lineHeight: 1.35,
-                                  wordBreak: "break-word",
-                                }}
-                              >
-                                {item.currencyName}
-                              </span>
-                            </div>
-                          </td>
-                          <td>
-                            <Badge tone="purple">{item.rateType || "Bank Indonesia"}</Badge>
-                          </td>
-                          <td className="numeric">
-                            {item.buyingRate != null && !isNaN(Number(item.buyingRate)) ? (
-                              <span className="rate-value">
-                                {Number(item.buyingRate).toLocaleString("en-US", {
-                                  minimumFractionDigits: 2,
-                                  maximumFractionDigits: 2,
-                                })}
-                              </span>
-                            ) : (
-                              <span className="rate-unavailable">Unavailable</span>
-                            )}
-                          </td>
-                          <td className="numeric">
-                            {item.sellingRate != null && !isNaN(Number(item.sellingRate)) ? (
-                              <span className="rate-value">
-                                {Number(item.sellingRate).toLocaleString("en-US", {
-                                  minimumFractionDigits: 2,
-                                  maximumFractionDigits: 2,
-                                })}
-                              </span>
-                            ) : (
-                              <span className="rate-unavailable">Unavailable</span>
-                            )}
-                          </td>
-                          <td className="numeric">
-                            {item.rate != null && !isNaN(Number(item.rate)) ? (
-                              <span className="rate-value--highlight">
-                                {Number(item.rate).toLocaleString("en-US", {
-                                  minimumFractionDigits: 2,
-                                  maximumFractionDigits: 2,
-                                })}
-                              </span>
-                            ) : (
-                              <span className="rate-unavailable">Unavailable</span>
-                            )}
-                          </td>
-                          <td>
-                            <span
-                              style={{
-                                fontSize: "11px",
-                                color: "var(--ink)",
+                                textAlign: "center",
+                                color: "var(--muted)",
                                 fontWeight: 600,
                               }}
                             >
-                              {item.flag || "—"}
+                              {rowNumber}
+                            </td>
+                            <td>
+                              <strong>{item.rateDate}</strong>
+                            </td>
+                            <td>
+                              <div
+                                style={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: "6px",
+                                  flexWrap: "wrap",
+                                }}
+                              >
+                                <span className="code-pill">
+                                  {item.currencyCode}
+                                </span>
+                                <span
+                                  style={{
+                                    fontSize: "11px",
+                                    color: "var(--muted)",
+                                    lineHeight: 1.35,
+                                    wordBreak: "break-word",
+                                  }}
+                                >
+                                  {item.currencyName}
+                                </span>
+                              </div>
+                            </td>
+                            <td>
+                              <Badge tone="purple">{item.rateType || "Bank Indonesia"}</Badge>
+                            </td>
+                            <td className="numeric">
+                              {item.buyingRate != null && !isNaN(Number(item.buyingRate)) ? (
+                                <span className="rate-value">
+                                  {Number(item.buyingRate).toLocaleString("en-US", {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2,
+                                  })}
+                                </span>
+                              ) : (
+                                <span className="rate-unavailable">Unavailable</span>
+                              )}
+                            </td>
+                            <td className="numeric">
+                              {item.sellingRate != null && !isNaN(Number(item.sellingRate)) ? (
+                                <span className="rate-value">
+                                  {Number(item.sellingRate).toLocaleString("en-US", {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2,
+                                  })}
+                                </span>
+                              ) : (
+                                <span className="rate-unavailable">Unavailable</span>
+                              )}
+                            </td>
+                            <td className="numeric">
+                              {item.rate != null && !isNaN(Number(item.rate)) ? (
+                                <span className="rate-value--highlight">
+                                  {Number(item.rate).toLocaleString("en-US", {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2,
+                                  })}
+                                </span>
+                              ) : (
+                                <span className="rate-unavailable">Unavailable</span>
+                              )}
+                            </td>
+                            <td>
+                              <span
+                                style={{
+                                  fontSize: "11px",
+                                  color: "var(--ink)",
+                                  fontWeight: 600,
+                                }}
+                              >
+                                {item.flag || "—"}
+                              </span>
+                            </td>
+                            <td style={{ textAlign: "center" }}>
+                              {item.availability === "Available" ? (
+                                <Badge tone="green">Available</Badge>
+                              ) : (
+                                <Badge tone="gray">{item.availability || "Pending Feed"}</Badge>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })
+                    ) : (
+                      <tr>
+                        <td
+                          colSpan={9}
+                          style={{ textAlign: "center", padding: "40px 16px" }}
+                        >
+                          <div className="empty">
+                            <div className="empty__icon">
+                              <Icon name="search" />
+                            </div>
+                            <strong>No exchange rate records found</strong>
+                            <span>
+                              Try adjusting your date range, currency, or rate type
+                              filters.
                             </span>
-                          </td>
-                          <td style={{ textAlign: "center" }}>
-                            {item.availability === "Available" ? (
-                              <Badge tone="green">Available</Badge>
-                            ) : (
-                              <Badge tone="gray">{item.availability || "Pending Feed"}</Badge>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })
-                  ) : (
-                    <tr>
-                      <td
-                        colSpan={9}
-                        style={{ textAlign: "center", padding: "40px 16px" }}
-                      >
-                        <div className="empty">
-                          <div className="empty__icon">
-                            <Icon name="search" />
                           </div>
-                          <strong>No exchange rate records found</strong>
-                          <span>
-                            Try adjusting your date range, currency, or rate type
-                            filters.
-                          </span>
-                        </div>
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
 
-            {/* Pagination Controls below the table */}
-            <Pagination
-              totalRecords={totalRecords}
-              currentPage={safeCurrentPage}
-              pageSize={pageSize}
-              onPageChange={(p) => setCurrentPage(p)}
-              onPageSizeChange={(s) => {
-                setPageSize(s);
-                setCurrentPage(1);
-              }}
-            />
-          </>
-        ) : (
-          /* Chart Tab View */
-          <DashboardRateChart records={filteredRecords} />
-        )}
+              {/* Pagination Controls below the table */}
+              <Pagination
+                totalRecords={totalRecords}
+                currentPage={safeCurrentPage}
+                pageSize={pageSize}
+                onPageChange={(p) => setCurrentPage(p)}
+                onPageSizeChange={(s) => {
+                  setPageSize(s);
+                  setCurrentPage(1);
+                }}
+              />
+            </>
+          ) : (
+            /* Chart Tab View */
+            <DashboardRateChart records={filteredRecords} />
+          )}
 
-        {/* Card Footer with Transparency & Source Info */}
-        <div className="dashboard-rate-card__footer">
-          <div className="dashboard-rate-source-info">
-            <Icon name="alertTriangle" size={15} />
-            <div>
-              <strong>
-                Data Source: Bank Indonesia (BI JISDOR/Transaksi) &amp;
-                Kementerian Keuangan (KMK Tax Rates)
-              </strong>
-              <p>
-                In strict compliance with data integrity policies, live rate
-                values are displayed solely from verified benchmarks. Real-time
-                automatic external streaming requires server-side proxy
-                integration (scheduled for the backend milestone) to resolve
-                browser CORS security policies. Missing rates are not
-                fabricated.
-              </p>
+          {/* Card Footer with Transparency & Source Info */}
+          <div className="dashboard-rate-card__footer">
+            <div className="dashboard-rate-source-info">
+              <Icon name="alertTriangle" size={15} />
+              <div>
+                <strong>
+                  Data Source: Bank Indonesia (BI JISDOR/Transaksi) &amp;
+                  Kementerian Keuangan (KMK Tax Rates)
+                </strong>
+                <p>
+                  In strict compliance with data integrity policies, live rate
+                  values are displayed solely from verified benchmarks. Real-time
+                  automatic external streaming requires server-side proxy
+                  integration (scheduled for the backend milestone) to resolve
+                  browser CORS security policies. Missing rates are not
+                  fabricated.
+                </p>
+              </div>
             </div>
           </div>
         </div>
-      </div>
       </ErrorBoundary>
     </div>
   );

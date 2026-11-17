@@ -4,11 +4,13 @@ import { Icon } from "../../../../components/ui/Icon";
 import { SearchField } from "../../../../components/ui/SearchField";
 import { Pagination } from "../../../../components/ui/Pagination";
 import { StatusToggle } from "../../../../components/ui/StatusToggle";
+import { TableLoadingRow } from "../../../../components/ui/LoadingBuffer";
 import { useNotification } from "../../../../context/NotificationContext";
 import { type SupplierRecord } from "./supplier-types";
 
 interface SupplierIndexProps {
   records?: SupplierRecord[];
+  isLoading?: boolean;
   onAddNew: () => void;
   onToggleHide?: (id: string) => void;
 }
@@ -28,6 +30,7 @@ type SortDirection = "asc" | "desc";
 
 export function SupplierIndex({
   records = [],
+  isLoading = false,
   onAddNew,
   onToggleHide,
 }: SupplierIndexProps) {
@@ -179,9 +182,8 @@ export function SupplierIndex({
     const isActive = sortField === field;
     return (
       <span
-        className={`master-sort-indicator ${
-          isActive ? "master-sort-indicator--active" : ""
-        }`}
+        className={`master-sort-indicator ${isActive ? "master-sort-indicator--active" : ""
+          }`}
       >
         {isActive ? (
           sortDirection === "asc" ? (
@@ -289,7 +291,9 @@ export function SupplierIndex({
                 </tr>
               </thead>
               <tbody>
-                {paginatedRecords.length > 0 ? (
+                {isLoading && paginatedRecords.length === 0 ? (
+                  <TableLoadingRow colSpan={9} label="Loading Suppliers..." sublabel="Fetching vendor directory & compliance details..." />
+                ) : paginatedRecords.length > 0 ? (
                   paginatedRecords.map((item, index) => {
                     const rowNumber = (safeCurrentPage - 1) * pageSize + index + 1;
                     return (

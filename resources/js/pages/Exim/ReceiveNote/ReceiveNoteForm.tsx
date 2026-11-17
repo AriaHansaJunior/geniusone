@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Icon } from "../../../components/ui/Icon";
 import { CustomDatePicker } from "../../../components/ui/CustomDatePicker";
 import { CustomSelect } from "../../../components/ui/CustomSelect";
+import { LoadingBuffer } from "../../../components/ui/LoadingBuffer";
 import { PickPoItemModal } from "./PickPoItemModal";
 import { apiFetch } from "../../../data/api";
 import { suppliersList, docTypesList } from "./receive-note-data";
@@ -25,10 +26,12 @@ export function ReceiveNoteForm({ onBack, onSave, existingReceiveNotes = [] }: R
   );
   const [currency, setCurrency] = useState("IDR - RUPIAH");
   const [rate, setRate] = useState("1.0000");
+  const [loadingLookups, setLoadingLookups] = useState(true);
 
   // Load real suppliers on mount
   useEffect(() => {
     let isMounted = true;
+    setLoadingLookups(true);
     apiFetch("/api/procurement/master/suppliers")
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
@@ -40,7 +43,10 @@ export function ReceiveNoteForm({ onBack, onSave, existingReceiveNotes = [] }: R
           }
         }
       })
-      .catch(() => { });
+      .catch(() => { })
+      .finally(() => {
+        if (isMounted) setLoadingLookups(false);
+      });
     return () => {
       isMounted = false;
     };
@@ -394,6 +400,9 @@ export function ReceiveNoteForm({ onBack, onSave, existingReceiveNotes = [] }: R
       {/* Main Form Panel */}
       <div className="tx-panel">
         <form onSubmit={handleSubmit}>
+          {loadingLookups && (
+            <LoadingBuffer variant="inline" label="Loading master supplier list..." />
+          )}
           {/* Header Grid: Row 1 */}
           <div className="tx-header-grid master-form-row-mb">
             {/* Supplier */}
@@ -403,6 +412,8 @@ export function ReceiveNoteForm({ onBack, onSave, existingReceiveNotes = [] }: R
               </label>
               <CustomSelect
                 searchable
+                required
+                invalid={Boolean(formErrors.supplier)}
                 value={supplier}
                 onChange={(val) => {
                   setSupplier(val);
@@ -428,6 +439,7 @@ export function ReceiveNoteForm({ onBack, onSave, existingReceiveNotes = [] }: R
               </label>
               <CustomSelect
                 searchable
+                required
                 value={currency}
                 onChange={(val) => setCurrency(val)}
                 options={[
@@ -450,6 +462,7 @@ export function ReceiveNoteForm({ onBack, onSave, existingReceiveNotes = [] }: R
                 value={rate}
                 onChange={(e) => setRate(e.target.value)}
                 placeholder="1.0000"
+                required
               />
               {formErrors.rate && (
                 <span className="master-form-error">{formErrors.rate}</span>
@@ -463,6 +476,8 @@ export function ReceiveNoteForm({ onBack, onSave, existingReceiveNotes = [] }: R
               </label>
               <CustomSelect
                 searchable
+                required
+                invalid={Boolean(formErrors.typeOfDocument)}
                 value={typeOfDocument}
                 onChange={(val) => {
                   setTypeOfDocument(val);
@@ -588,6 +603,8 @@ export function ReceiveNoteForm({ onBack, onSave, existingReceiveNotes = [] }: R
                 Arrival Date <span className="required-asterisk">*</span>
               </label>
               <CustomDatePicker
+                required
+                invalid={Boolean(formErrors.arrivalDate)}
                 value={arrivalDate}
                 onChange={(val) => setArrivalDate(val)}
                 className={formErrors.arrivalDate ? "has-error" : ""}
@@ -746,7 +763,9 @@ export function ReceiveNoteForm({ onBack, onSave, existingReceiveNotes = [] }: R
                     No
                   </th>
                   <th rowSpan={2} style={{ width: "140px" }}>PO Number</th>
-                  <th rowSpan={2} style={{ minWidth: "200px" }}>Item Name</th>
+                  <th rowSpan={2} style={{ minWidth: "200px" }}>
+                    Item Name <span className="required-mark">*</span>
+                  </th>
                   <th rowSpan={2} style={{ width: "120px" }}>SJ Number</th>
                   <th rowSpan={2} style={{ width: "100px" }}>SJ Date</th>
                   <th rowSpan={2} className="th-right" style={{ width: "110px" }}>
@@ -767,7 +786,7 @@ export function ReceiveNoteForm({ onBack, onSave, existingReceiveNotes = [] }: R
                   <th className="th-right" style={{ width: "75px" }}>PO</th>
                   <th className="th-right" style={{ width: "75px" }}>DLVR</th>
                   <th className="th-right" style={{ width: "95px" }} title="Jumlah yang dimasukkan / diterima">
-                    Received
+                    Received <span className="required-mark">*</span>
                   </th>
                   <th className="th-right" style={{ width: "75px" }}>Rafaksi</th>
                 </tr>
@@ -792,6 +811,7 @@ export function ReceiveNoteForm({ onBack, onSave, existingReceiveNotes = [] }: R
                             placeholder="Enter item name..."
                             value={it.itemName}
                             onChange={(e) => handleUpdateItemField(it.id, "itemName", e.target.value)}
+                            required
                             style={{ height: "28px" }}
                           />
                         ) : (
@@ -833,6 +853,7 @@ export function ReceiveNoteForm({ onBack, onSave, existingReceiveNotes = [] }: R
                           min="0"
                           step="any"
                           placeholder="0.00"
+                          required
                           title="Jumlah yang dimasukkan / diterima"
                           style={{ width: "85px", height: "28px", textAlign: "right", fontFamily: "monospace" }}
                         />

@@ -6,12 +6,14 @@ import { Pagination } from "../../../components/ui/Pagination";
 import { Badge } from "../../../components/ui/Badge";
 import { Icon } from "../../../components/ui/Icon";
 import { StatusToggle } from "../../../components/ui/StatusToggle";
+import { TableLoadingRow } from "../../../components/ui/LoadingBuffer";
 import { toggleStockNotificationStatusApi } from "../../../data/masterApi";
 import { useNotification } from "../../../context/NotificationContext";
 import type { StockNotificationRecord, StockNotificationSortField } from "./stock-notification-types";
 
 interface StockNotificationIndexProps {
   records?: StockNotificationRecord[];
+  isLoading?: boolean;
   onAddNew: () => void;
   onEdit?: (record: StockNotificationRecord) => void;
   onToggleStatus?: (id: string) => Promise<void> | void;
@@ -21,6 +23,7 @@ type SortDirection = "none" | "asc" | "desc";
 
 export function StockNotificationIndex({
   records = [],
+  isLoading = false,
   onAddNew,
   onEdit,
   onToggleStatus,
@@ -273,7 +276,9 @@ export function StockNotificationIndex({
               </tr>
             </thead>
             <tbody>
-              {paginatedRecords.length === 0 ? (
+              {isLoading && paginatedRecords.length === 0 ? (
+                <TableLoadingRow colSpan={10} label="Loading Stock Buffer Rules..." />
+              ) : paginatedRecords.length === 0 ? (
                 <tr>
                   <td colSpan={10} className="wh-table-empty">
                     No stock buffer rules found matching filters.

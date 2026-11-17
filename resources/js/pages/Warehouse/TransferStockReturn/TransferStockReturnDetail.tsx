@@ -18,6 +18,7 @@ import {
 import type { TransferStockReturnRecord } from "./transfer-stock-return-types";
 import { useTheme } from "../../../context/ThemeContext";
 import { TransferStockReturnDefaultDetail } from "../../../themes/default/pages/TransferStockReturnDefaultDetail";
+import { LoadingBuffer } from "../../../components/ui/LoadingBuffer";
 
 interface TransferStockReturnDetailProps {
   code: string;
@@ -205,11 +206,12 @@ export function TransferStockReturnDetail({
   if (loading && !record) {
     return (
       <div className="full-page-detail tsr-detail-page">
-        <div className="panel tsr-empty-panel">
-          <strong className="tsr-loading-text">
-            Loading Stock Transfer Return details...
-          </strong>
-        </div>
+        <LoadingBuffer
+          variant="panel"
+          label="Loading Stock Transfer Return Details..."
+          sublabel="Fetching warehouse transfer lines and approval timeline..."
+          skeletonRows={4}
+        />
       </div>
     );
   }

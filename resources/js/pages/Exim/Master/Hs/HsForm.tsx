@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Button } from "../../../../components/ui/Button";
 import { Icon } from "../../../../components/ui/Icon";
 import { CustomSelect } from "../../../../components/ui/CustomSelect";
+import { LoadingBuffer } from "../../../../components/ui/LoadingBuffer";
 import { fetchHsRateTypesApi } from "../../../../data/masterApi";
 import type { HsRecord } from "./hs-types";
 
@@ -187,6 +188,9 @@ export function HsForm({ initialRecord, onBack, onSave }: HsFormProps) {
       )}
 
       <form onSubmit={handleSubmit} className="master-form-card" noValidate>
+        {loadingRates && (
+          <LoadingBuffer variant="inline" label="Loading duty and excise rate types..." />
+        )}
         <div className="hs-form-section">
           <h2 className="master-form-section-title">Basic Information</h2>
           <div className="master-form-grid-2">
@@ -205,6 +209,7 @@ export function HsForm({ initialRecord, onBack, onSave }: HsFormProps) {
                   setName(e.target.value);
                   if (error) setError(null);
                 }}
+                required
                 autoFocus={!isEdit}
               />
               {error && <span className="master-form-error-text">{error}</span>}

@@ -8,6 +8,7 @@ import { fetchDetail } from "../../../data/api";
 import { useTheme } from "../../../context/ThemeContext";
 import { PurchaseOrderReportDefaultDetail } from "../../../themes/default/pages/PurchaseOrderReportDefaultDetail";
 import type { TableRow } from "../../../types";
+import { LoadingBuffer } from "../../../components/ui/LoadingBuffer";
 
 interface PurchaseOrderReportDetailProps {
   code: string;
@@ -22,14 +23,20 @@ export function PurchaseOrderReportDetail({
 }: PurchaseOrderReportDetailProps) {
   const { isDefaultTheme } = useTheme();
   const [row, setRow] = useState<TableRow>({} as TableRow);
+  const [isLoadingDetail, setIsLoadingDetail] = useState<boolean>(true);
 
   useEffect(() => {
     let isMounted = true;
-    fetchDetail("report", code).then((item) => {
-      if (isMounted && item) {
-        setRow(item);
-      }
-    });
+    setIsLoadingDetail(true);
+    fetchDetail("report", code)
+      .then((item) => {
+        if (isMounted && item) {
+          setRow(item);
+        }
+      })
+      .finally(() => {
+        if (isMounted) setIsLoadingDetail(false);
+      });
     return () => {
       isMounted = false;
     };
@@ -60,18 +67,39 @@ export function PurchaseOrderReportDetail({
   const materialName = String(row._rawMaterialName || "—");
   const materialCode = String(row._rawMaterialCode || "—");
 
+  if (isLoadingDetail && !row._rawPo && !row._rawPr) {
+    return (
+      <div className="full-page-detail">
+        <LoadingBuffer
+          variant="panel"
+          label="Loading PR-PO Traceability Report..."
+          sublabel="Synchronizing linked Purchase Requisition, PO, and BPB data..."
+          skeletonRows={4}
+        />
+      </div>
+    );
+  }
+
   if (isDefaultTheme) {
     return (
-      <PurchaseOrderReportDefaultDetail
-        row={row}
-        onBack={onBack}
-        onNavigateDetail={onNavigateDetail}
-      />
+      <>
+        {isLoadingDetail && (
+          <LoadingBuffer variant="inline" label="Synchronizing traceability report..." />
+        )}
+        <PurchaseOrderReportDefaultDetail
+          row={row}
+          onBack={onBack}
+          onNavigateDetail={onNavigateDetail}
+        />
+      </>
     );
   }
 
   return (
     <div className="full-page-detail">
+      {isLoadingDetail && (
+        <LoadingBuffer variant="inline" label="Synchronizing traceability report..." />
+      )}
       {/* Detail Navigation & Action Bar */}
       <div className="detail-top-bar">
         <div className="detail-top-bar__left">

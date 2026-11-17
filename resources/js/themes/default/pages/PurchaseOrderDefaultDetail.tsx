@@ -449,7 +449,9 @@ export function PurchaseOrderDefaultDetail({
                     {costError && <div className="smartone-cost-form__error">{costError}</div>}
                     <div className="smartone-cost-form__grid">
                       <div className="master-form-group">
-                        <label className="master-form-label">Cost Name / Type *</label>
+                        <label className="master-form-label">
+                          Cost Name / Type <span className="required-mark">*</span>
+                        </label>
                         <input
                           type="text"
                           list="smartone-cost-type-suggestions"
@@ -457,6 +459,7 @@ export function PurchaseOrderDefaultDetail({
                           value={costName}
                           onChange={(e) => setCostName(e.target.value)}
                           placeholder="e.g. Freight"
+                          required
                         />
                         <datalist id="smartone-cost-type-suggestions">
                           {availableCostTypes.map((t) => (
@@ -467,7 +470,9 @@ export function PurchaseOrderDefaultDetail({
                         </datalist>
                       </div>
                       <div className="master-form-group">
-                        <label className="master-form-label">Amount ({currency}) *</label>
+                        <label className="master-form-label">
+                          Amount ({currency}) <span className="required-mark">*</span>
+                        </label>
                         <input
                           type="number"
                           min="0"
@@ -478,6 +483,7 @@ export function PurchaseOrderDefaultDetail({
                             setCostAmount(e.target.value === "" ? "" : parseFloat(e.target.value))
                           }
                           placeholder="0.00"
+                          required
                         />
                       </div>
                       <div className="master-form-group">

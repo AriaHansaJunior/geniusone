@@ -133,6 +133,7 @@ export function DepartmentForm({
                 setSectionName(e.target.value);
                 if (error) setError(null);
               }}
+              required
               autoFocus={!isEdit}
             />
             {error && (

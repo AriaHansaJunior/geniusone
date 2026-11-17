@@ -5,6 +5,7 @@ import { SearchField } from "../../../components/ui/SearchField";
 import { Icon } from "../../../components/ui/Icon";
 import { Pagination } from "../../../components/ui/Pagination";
 import { StatusToggle } from "../../../components/ui/StatusToggle";
+import { TableLoadingRow } from "../../../components/ui/LoadingBuffer";
 import { useNotification } from "../../../context/NotificationContext";
 import { initialWarehouseMasterRecords } from "./warehouse-master-data";
 import type {
@@ -15,6 +16,7 @@ import type {
 
 interface MasterWarehouseIndexProps {
   records?: WarehouseMasterRecord[];
+  isLoading?: boolean;
   onAddNew: () => void;
   onToggleStatus?: (id: string) => Promise<void> | void;
   onViewCoordinates: (warehouse: WarehouseMasterRecord) => void;
@@ -22,6 +24,7 @@ interface MasterWarehouseIndexProps {
 
 export function MasterWarehouseIndex({
   records = initialWarehouseMasterRecords,
+  isLoading = false,
   onAddNew,
   onToggleStatus,
   onViewCoordinates,
@@ -119,9 +122,8 @@ export function MasterWarehouseIndex({
     const isActive = sortField === field && sortDirection !== "none";
     return (
       <span
-        className={`master-sort-indicator ${
-          isActive ? "master-sort-indicator--active" : ""
-        }`}
+        className={`master-sort-indicator ${isActive ? "master-sort-indicator--active" : ""
+          }`}
       >
         {isActive ? (
           sortDirection === "asc" ? (
@@ -225,7 +227,9 @@ export function MasterWarehouseIndex({
                 </tr>
               </thead>
               <tbody>
-                {paginatedRecords.length === 0 ? (
+                {isLoading && paginatedRecords.length === 0 ? (
+                  <TableLoadingRow colSpan={5} label="Loading Warehouses..." />
+                ) : paginatedRecords.length === 0 ? (
                   <tr>
                     <td colSpan={5} className="empty-table-cell">
                       <div className="empty master-empty-box">

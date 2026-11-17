@@ -11,6 +11,7 @@ import { CustomDatePicker } from "../../components/ui/CustomDatePicker";
 import { Badge, type BadgeTone } from "../../components/ui/Badge";
 import { Icon } from "../../components/ui/Icon";
 import { Button } from "../../components/ui/Button";
+import { TableLoadingRow } from "../../components/ui/LoadingBuffer";
 import { useAuthPermission } from "../../context/AuthPermissionContext";
 import { apiFetch } from "../../data/api";
 
@@ -415,11 +416,11 @@ export function AuditLogAdmin({ onNavigateUsers }: AuditLogAdminProps) {
               </thead>
               <tbody>
                 {isLoading ? (
-                  <tr>
-                    <td colSpan={7} style={{ textAlign: "center", padding: "36px", color: "var(--muted)" }}>
-                      Loading system audit records...
-                    </td>
-                  </tr>
+                  <TableLoadingRow
+                    colSpan={7}
+                    label="Loading System Audit Records..."
+                    sublabel="Fetching latest user activity & security logs..."
+                  />
                 ) : logs.length > 0 ? (
                   logs.map((item, idx) => {
                     const rowNumber = (currentPage - 1) * pageSize + idx + 1;

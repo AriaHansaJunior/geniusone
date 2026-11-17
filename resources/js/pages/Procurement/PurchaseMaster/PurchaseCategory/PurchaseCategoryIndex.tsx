@@ -4,10 +4,12 @@ import { SearchField } from "../../../../components/ui/SearchField";
 import { Pagination } from "../../../../components/ui/Pagination";
 import { Icon } from "../../../../components/ui/Icon";
 import { StatusToggle } from "../../../../components/ui/StatusToggle";
+import { TableLoadingRow } from "../../../../components/ui/LoadingBuffer";
 import { type PurchaseCategoryRecord } from "./purchase-category-types";
 
 interface PurchaseCategoryIndexProps {
   records?: PurchaseCategoryRecord[];
+  isLoading?: boolean;
   onAddNew: () => void;
   onToggleHide?: (id: string) => void;
 }
@@ -17,6 +19,7 @@ type SortDirection = "asc" | "desc";
 
 export function PurchaseCategoryIndex({
   records = [],
+  isLoading = false,
   onAddNew,
   onToggleHide,
 }: PurchaseCategoryIndexProps) {
@@ -92,9 +95,8 @@ export function PurchaseCategoryIndex({
     const isActive = sortField === field;
     return (
       <span
-        className={`master-sort-indicator ${
-          isActive ? "master-sort-indicator--active" : ""
-        }`}
+        className={`master-sort-indicator ${isActive ? "master-sort-indicator--active" : ""
+          }`}
       >
         {isActive ? (
           sortDirection === "asc" ? (
@@ -157,7 +159,9 @@ export function PurchaseCategoryIndex({
                 </tr>
               </thead>
               <tbody>
-                {paginatedRecords.length > 0 ? (
+                {isLoading && paginatedRecords.length === 0 ? (
+                  <TableLoadingRow colSpan={4} label="Loading Purchase Categories..." />
+                ) : paginatedRecords.length > 0 ? (
                   paginatedRecords.map((item, index) => {
                     const rowNumber = (safeCurrentPage - 1) * pageSize + index + 1;
                     return (

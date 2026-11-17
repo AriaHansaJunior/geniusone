@@ -3,6 +3,7 @@ import { Icon } from "../../../../components/ui/Icon";
 import { Button } from "../../../../components/ui/Button";
 import { SearchField } from "../../../../components/ui/SearchField";
 import { Pagination } from "../../../../components/ui/Pagination";
+import { TableLoadingRow } from "../../../../components/ui/LoadingBuffer";
 import { fetchMasterItems } from "../../../../data/masterApi";
 import type { ItemRecord } from "../../../Exim/Master/Item/item-types";
 
@@ -18,17 +19,22 @@ export function ItemPickerModal({ isOpen, onClose, onSelectItems }: ItemPickerMo
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [itemsList, setItemsList] = useState<ItemRecord[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     if (!isOpen) return;
     let isMounted = true;
+    setIsLoading(true);
     fetchMasterItems()
       .then((res) => {
         if (isMounted && Array.isArray(res)) {
           setItemsList(res);
         }
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => {
+        if (isMounted) setIsLoading(false);
+      });
     return () => {
       isMounted = false;
     };
@@ -184,7 +190,13 @@ export function ItemPickerModal({ isOpen, onClose, onSelectItems }: ItemPickerMo
               </tr>
             </thead>
             <tbody>
-              {paginatedItems.length > 0 ? (
+              {isLoading && paginatedItems.length === 0 ? (
+                <TableLoadingRow
+                  colSpan={7}
+                  label="Loading Materials..."
+                  sublabel="Fetching item catalog & warehouse balances..."
+                />
+              ) : paginatedItems.length > 0 ? (
                 paginatedItems.map((item, index) => {
                   const isChecked = selectedIds.has(item.id);
                   const rowNumber = (safeCurrentPage - 1) * pageSize + index + 1;

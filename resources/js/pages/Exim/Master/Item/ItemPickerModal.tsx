@@ -4,12 +4,14 @@ import { SearchField } from "../../../../components/ui/SearchField";
 import { Pagination } from "../../../../components/ui/Pagination";
 import { Icon } from "../../../../components/ui/Icon";
 import { CustomSelect } from "../../../../components/ui/CustomSelect";
+import { TableLoadingRow } from "../../../../components/ui/LoadingBuffer";
 import { itemCategories, itemClassifications } from "./item-data";
 import type { ItemRecord } from "./item-types";
 
 interface ItemPickerModalProps {
   isOpen: boolean;
   items: ItemRecord[];
+  isLoading?: boolean;
   alreadySelectedCodes?: string[];
   onAddItems: (selectedItems: ItemRecord[]) => void;
   onClose: () => void;
@@ -18,6 +20,7 @@ interface ItemPickerModalProps {
 export function ItemPickerModal({
   isOpen,
   items,
+  isLoading = false,
   alreadySelectedCodes = [],
   onAddItems,
   onClose,
@@ -230,7 +233,14 @@ export function ItemPickerModal({
               </tr>
             </thead>
             <tbody>
-              {paginatedItems.length > 0 ? (
+              {isLoading && paginatedItems.length === 0 ? (
+                <TableLoadingRow
+                  colSpan={11}
+                  label="Loading master items..."
+                  sublabel="Fetching material catalog records..."
+                  skeletonRows={4}
+                />
+              ) : paginatedItems.length > 0 ? (
                 paginatedItems.map((item, index) => {
                   const isChecked = selectedCodes.has(item.itemCode);
                   const rowNumber =
@@ -267,11 +277,10 @@ export function ItemPickerModal({
                       <td>{item.brand}</td>
                       <td>
                         <span
-                          className={`badge ${
-                            item.facility === "FASILITAS"
-                              ? "badge--purple"
-                              : "badge--gray"
-                          }`}
+                          className={`badge ${item.facility === "FASILITAS"
+                            ? "badge--purple"
+                            : "badge--gray"
+                            }`}
                         >
                           {item.facility}
                         </span>

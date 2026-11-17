@@ -13,6 +13,7 @@ import { KwtPrintModal, KwtPrintTemplateNpb } from "../../../../components/print
 import { fetchRequestMaterials } from "../../../../data/masterApi";
 import { useTheme } from "../../../../context/ThemeContext";
 import { RequestMaterialDefaultDetail } from "../../../../themes/default/pages/RequestMaterialDefaultDetail";
+import { LoadingBuffer } from "../../../../components/ui/LoadingBuffer";
 
 interface RequestMaterialDetailProps {
   id: string;
@@ -35,6 +36,7 @@ export function RequestMaterialDetail({
 }: RequestMaterialDetailProps) {
   const { isDefaultTheme } = useTheme();
   const [fetchedRecords, setFetchedRecords] = useState<RequestMaterialRecord[] | null>(null);
+  const [isLoadingDetail, setIsLoadingDetail] = useState<boolean>(true);
 
   const effectiveRecords = fetchedRecords && fetchedRecords.length > 0 ? fetchedRecords : records;
 
@@ -52,17 +54,35 @@ export function RequestMaterialDetail({
 
   useEffect(() => {
     let active = true;
+    setIsLoadingDetail(true);
     fetchRequestMaterials()
       .then((list) => {
         if (active && Array.isArray(list) && list.length > 0) {
           setFetchedRecords(list);
         }
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => {
+        if (active) setIsLoadingDetail(false);
+      });
     return () => {
       active = false;
     };
   }, [id]);
+
+  // Show buffering animation while resolving direct-link request details
+  if (!record && isLoadingDetail) {
+    return (
+      <div className="full-page-detail">
+        <LoadingBuffer
+          variant="panel"
+          label="Loading Request Material Details..."
+          sublabel="Fetching requisition items and approval workflow status..."
+          skeletonRows={4}
+        />
+      </div>
+    );
+  }
 
   // Graceful Handling for Invalid Record ID
   if (!record) {
@@ -127,6 +147,9 @@ export function RequestMaterialDetail({
 
   return (
     <>
+      {isLoadingDetail && (
+        <LoadingBuffer variant="inline" label="Synchronizing Request Material details..." />
+      )}
       {isDefaultTheme ? (
         <RequestMaterialDefaultDetail
           record={record}

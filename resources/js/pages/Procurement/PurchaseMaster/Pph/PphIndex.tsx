@@ -4,10 +4,12 @@ import { SearchField } from "../../../../components/ui/SearchField";
 import { Pagination } from "../../../../components/ui/Pagination";
 import { Icon } from "../../../../components/ui/Icon";
 import { StatusToggle } from "../../../../components/ui/StatusToggle";
+import { TableLoadingRow } from "../../../../components/ui/LoadingBuffer";
 import { type PphRecord } from "./pph-types";
 
 interface PphIndexProps {
   records?: PphRecord[];
+  isLoading?: boolean;
   onAddNew: () => void;
   onToggleHide?: (id: string) => void;
 }
@@ -17,6 +19,7 @@ type SortDirection = "asc" | "desc";
 
 export function PphIndex({
   records = [],
+  isLoading = false,
   onAddNew,
   onToggleHide,
 }: PphIndexProps) {
@@ -171,7 +174,9 @@ export function PphIndex({
                 </tr>
               </thead>
               <tbody>
-                {paginatedRecords.length > 0 ? (
+                {isLoading && paginatedRecords.length === 0 ? (
+                  <TableLoadingRow colSpan={5} label="Loading PPH Rates..." />
+                ) : paginatedRecords.length > 0 ? (
                   paginatedRecords.map((item, index) => {
                     const rowNumber = (safeCurrentPage - 1) * pageSize + index + 1;
                     return (

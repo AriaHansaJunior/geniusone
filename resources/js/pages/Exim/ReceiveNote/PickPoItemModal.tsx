@@ -4,6 +4,7 @@ import { Button } from "../../../components/ui/Button";
 import { SearchField } from "../../../components/ui/SearchField";
 import { Pagination } from "../../../components/ui/Pagination";
 import { Badge } from "../../../components/ui/Badge";
+import { TableLoadingRow } from "../../../components/ui/LoadingBuffer";
 import { apiFetch } from "../../../data/api";
 import { availablePoItemsToPick } from "./receive-note-data";
 import type { PoItemToPick } from "./receive-note-types";
@@ -30,6 +31,7 @@ export function PickPoItemModal({
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [itemsList, setItemsList] = useState<PoItemToPick[]>(availablePoItemsToPick);
+  const [isLoading, setIsLoading] = useState(false);
   const [selectedFacility, setSelectedFacility] = useState<string>(facilityFilter || "All");
 
   // Keep local filter synced when prop changes or modal opens
@@ -44,6 +46,7 @@ export function PickPoItemModal({
   useEffect(() => {
     if (!isOpen) return;
     let isMounted = true;
+    setIsLoading(true);
     apiFetch("/api/procurement/po?per_page=100")
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
@@ -154,7 +157,10 @@ export function PickPoItemModal({
           }
         }
       })
-      .catch(() => { });
+      .catch(() => { })
+      .finally(() => {
+        if (isMounted) setIsLoading(false);
+      });
     return () => {
       isMounted = false;
     };
@@ -373,7 +379,13 @@ export function PickPoItemModal({
               </tr>
             </thead>
             <tbody>
-              {paginatedItems.length === 0 ? (
+              {isLoading && paginatedItems.length === 0 ? (
+                <TableLoadingRow
+                  colSpan={13}
+                  label="Loading Approved Purchase Order Items..."
+                  sublabel="Fetching available PO line items..."
+                />
+              ) : paginatedItems.length === 0 ? (
                 <tr>
                   <td colSpan={13} className="empty-table-cell">
                     <div className="empty">

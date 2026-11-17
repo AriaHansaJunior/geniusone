@@ -9,6 +9,7 @@ import {
 import { Button } from "../../../components/ui/Button";
 import { CustomDatePicker } from "../../../components/ui/CustomDatePicker";
 import { CustomSelect } from "../../../components/ui/CustomSelect";
+import { LoadingBuffer } from "../../../components/ui/LoadingBuffer";
 import { Icon } from "../../../components/ui/Icon";
 import type {
   TransferStockReturnItem,
@@ -560,6 +561,12 @@ export function TransferStockReturnForm({
 
         {/* Header Fields Card */}
         <div className="tsr-form-card">
+          {loadingLookups && (
+            <LoadingBuffer
+              variant="inline"
+              label="Loading warehouse, job number, and item options..."
+            />
+          )}
           <div className="tsr-form-card-header">
             <h3 className="tsr-form-card-title">
               {mode === "edit"
@@ -590,6 +597,7 @@ export function TransferStockReturnForm({
                 Transfer Date <span className="master-required-star">*</span>
               </label>
               <CustomDatePicker
+                required
                 value={transferDate}
                 onChange={(val: string) => setTransferDate(val)}
                 placeholder="DD-MM-YYYY"
@@ -602,6 +610,7 @@ export function TransferStockReturnForm({
               </label>
               <CustomSelect
                 searchable
+                required
                 value={warehousesId ? String(warehousesId) : ""}
                 onChange={(val: string) => setWarehousesId(val ? Number(val) : undefined)}
                 placeholder={loadingLookups ? "Loading warehouses..." : "-- Select Warehouse --"}
@@ -713,8 +722,12 @@ export function TransferStockReturnForm({
               <thead>
                 <tr>
                   <th className="tsr-th--center tsr-item-col-no">No</th>
-                  <th className="tsr-item-col-select">Item Material</th>
-                  <th className="tsr-th--right tsr-item-col-qty">Qty</th>
+                  <th className="tsr-item-col-select">
+                    Item Material <span className="required-mark">*</span>
+                  </th>
+                  <th className="tsr-th--right tsr-item-col-qty">
+                    Qty <span className="required-mark">*</span>
+                  </th>
                   <th className="tsr-th--center tsr-item-col-unit">Unit</th>
                   <th className="tsr-item-col-loc">Destination Location</th>
                   <th className="tsr-item-col-reason">Return Reason</th>
@@ -728,6 +741,7 @@ export function TransferStockReturnForm({
                     <td>
                       <CustomSelect
                         searchable
+                        required
                         value={it.items_id ? String(it.items_id) : ""}
                         onChange={(val: string) => handleItemChange(idx, "items_id", val)}
                         placeholder={loadingLookups ? "Loading items..." : "-- Select Item --"}
@@ -742,6 +756,7 @@ export function TransferStockReturnForm({
                         step="any"
                         className="tsr-inline-input tsr-inline-qty"
                         value={it.quantity}
+                        required
                         disabled={isLocked}
                         onChange={(e) =>
                           handleItemChange(idx, "quantity", Math.max(1, Number(e.target.value) || 1))

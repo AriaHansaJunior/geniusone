@@ -8,6 +8,7 @@ import { CustomSelect } from "../../../components/ui/CustomSelect";
 import { CustomDatePicker } from "../../../components/ui/CustomDatePicker";
 import { TableColumnSettings, type TableColumnOption } from "../../../components/ui/TableColumnSettings";
 import { ApprovalStatusBadge } from "../../../components/approval/ApprovalStatusBadge";
+import { TableLoadingRow } from "../../../components/ui/LoadingBuffer";
 import { formatDisplayDate } from "../../../data/masterApi";
 import {
   initialReceiveNoteReturnRecords,
@@ -35,12 +36,14 @@ const DEFAULT_RNR_COLUMNS: TableColumnOption[] = [
 
 interface ReceiveNoteReturnIndexProps {
   records?: ReceiveNoteReturnRecord[];
+  isLoading?: boolean;
   onAddNew: () => void;
   onViewDetail: (rnNumber: string) => void;
 }
 
 export function ReceiveNoteReturnIndex({
   records = initialReceiveNoteReturnRecords,
+  isLoading = false,
   onAddNew,
   onViewDetail,
 }: ReceiveNoteReturnIndexProps) {
@@ -544,7 +547,13 @@ export function ReceiveNoteReturnIndex({
               </tr>
             </thead>
             <tbody>
-              {paginatedRecords.length === 0 ? (
+              {isLoading && paginatedRecords.length === 0 ? (
+                <TableLoadingRow
+                  colSpan={2 + columns.filter((c) => c.visible).length}
+                  label="Loading Receive Note Returns..."
+                  sublabel="Fetching sales return receiving documents..."
+                />
+              ) : paginatedRecords.length === 0 ? (
                 <tr>
                   <td colSpan={2 + columns.filter((c) => c.visible).length} className="rnr-table-empty">
                     No Receive Note (Sales Return) records found.

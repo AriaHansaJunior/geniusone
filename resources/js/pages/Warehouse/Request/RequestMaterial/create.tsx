@@ -4,6 +4,7 @@ import { Icon } from "../../../../components/ui/Icon";
 import { ConfirmDialog } from "../../../../components/ui/ConfirmDialog";
 import { CustomDatePicker } from "../../../../components/ui/CustomDatePicker";
 import { CustomSelect } from "../../../../components/ui/CustomSelect";
+import { LoadingBuffer } from "../../../../components/ui/LoadingBuffer";
 import {
   requestMaterialTypesList,
   requestMaterialDestinationsList,
@@ -466,6 +467,12 @@ export function RequestMaterialCreate({
 
       {/* Header Fields Form Panel */}
       <form onSubmit={handleSave} className="tx-panel" style={{ padding: "20px 24px" }}>
+        {loadingLookups && (
+          <LoadingBuffer
+            variant="inline"
+            label="Loading request types, departments, warehouses, and job numbers..."
+          />
+        )}
         <h3 className="master-section-heading">
           Transaction Information
         </h3>
@@ -478,6 +485,8 @@ export function RequestMaterialCreate({
             </label>
             <CustomSelect
               searchable
+              required
+              invalid={Boolean(formErrors.typeOfRequest)}
               value={typeOfRequestId ? String(typeOfRequestId) : typeOfRequest}
               onChange={(val) => {
                 const chosen = lookups.typeOfRequests.find((t) => String(t.id) === val);
@@ -529,6 +538,8 @@ export function RequestMaterialCreate({
               Request Date <span className="required-asterisk">*</span>
             </label>
             <CustomDatePicker
+              required
+              invalid={Boolean(formErrors.requestDate)}
               value={requestDate}
               onChange={(val) => {
                 setRequestDate(val);
@@ -561,6 +572,8 @@ export function RequestMaterialCreate({
             </label>
             <CustomSelect
               searchable
+              required
+              invalid={Boolean(formErrors.department)}
               value={departmentsId ? String(departmentsId) : department}
               onChange={(val) => {
                 const chosen = lookups.departments.find((d) => String(d.id) === val);
@@ -613,6 +626,8 @@ export function RequestMaterialCreate({
             {lookups.jobNumbers.length > 0 && !customJobMode ? (
               <CustomSelect
                 searchable
+                required
+                invalid={Boolean(formErrors.jobNumber)}
                 value={jobNumberId ? String(jobNumberId) : ""}
                 onChange={(val) => {
                   if (val === "__CUSTOM__") {
@@ -649,6 +664,7 @@ export function RequestMaterialCreate({
                   className="master-form-input"
                   value={jobNumberHeader}
                   placeholder="e.g. JOB-2026-8812"
+                  required
                   style={{
                     borderColor: formErrors.jobNumber ? "var(--danger, #ef4444)" : undefined,
                     boxShadow: formErrors.jobNumber
@@ -700,6 +716,7 @@ export function RequestMaterialCreate({
               className="master-form-input"
               value={customer}
               placeholder="e.g. PT. Astra Honda Motor"
+              required
               style={{
                 borderColor: formErrors.customer ? "var(--danger, #ef4444)" : undefined,
                 boxShadow: formErrors.customer
@@ -736,6 +753,8 @@ export function RequestMaterialCreate({
             </label>
             <CustomSelect
               searchable
+              required
+              invalid={Boolean(formErrors.projectType)}
               value={projectType}
               onChange={(val) => {
                 setProjectType(val);
@@ -774,6 +793,8 @@ export function RequestMaterialCreate({
             </label>
             <CustomSelect
               searchable
+              required
+              invalid={Boolean(formErrors.warehouseDestination)}
               value={warehousesId ? String(warehousesId) : warehouseDestination}
               onChange={(val) => {
                 const chosen = lookups.warehouses.find((w) => String(w.id) === val);
@@ -832,6 +853,8 @@ export function RequestMaterialCreate({
             </label>
             <CustomSelect
               searchable
+              required
+              invalid={Boolean(formErrors.destinationLocation)}
               value={destinationLocationId ? String(destinationLocationId) : destinationLocation}
               onChange={(val) => {
                 const chosen = lookups.destinationLocations.find((d) => String(d.id) === val);
@@ -1053,6 +1076,8 @@ export function RequestMaterialCreate({
                               <CustomSelect
                                 className="tx-custom-select-cell"
                                 searchable
+                                required
+                                invalid={Boolean(rowNameError)}
                                 value={row.items_id ? String(row.items_id) : ""}
                                 onChange={(val) => {
                                   const picked = masterItems.find((m) => String(m.id) === val);
@@ -1094,6 +1119,7 @@ export function RequestMaterialCreate({
                                 }}
                                 value={row.itemName}
                                 placeholder="Item name / description *"
+                                required
                                 onChange={(e) =>
                                   handleUpdateRow(row.id, "itemName", e.target.value)
                                 }
@@ -1199,6 +1225,7 @@ export function RequestMaterialCreate({
                             }}
                             value={row.requestQty === 0 ? "" : row.requestQty}
                             placeholder="Qty *"
+                            required
                             onChange={(e) =>
                               handleUpdateRow(
                                 row.id,

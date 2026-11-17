@@ -4,6 +4,7 @@ import { SearchField } from "../../../../components/ui/SearchField";
 import { Icon } from "../../../../components/ui/Icon";
 import { Pagination } from "../../../../components/ui/Pagination";
 import { StatusToggle } from "../../../../components/ui/StatusToggle";
+import { TableLoadingRow } from "../../../../components/ui/LoadingBuffer";
 import { initialDepartmentRecords } from "./department-data";
 import type {
   DepartmentRecord,
@@ -13,12 +14,14 @@ import type {
 
 interface DepartmentIndexProps {
   records?: DepartmentRecord[];
+  isLoading?: boolean;
   onAddNew: () => void;
   onToggleStatus?: (id: string) => void;
 }
 
 export function DepartmentIndex({
   records = initialDepartmentRecords,
+  isLoading = false,
   onAddNew,
   onToggleStatus,
 }: DepartmentIndexProps) {
@@ -157,9 +160,8 @@ export function DepartmentIndex({
     const isActive = sortField === field && sortDirection !== "none";
     return (
       <span
-        className={`master-sort-indicator ${
-          isActive ? "master-sort-indicator--active" : ""
-        }`}
+        className={`master-sort-indicator ${isActive ? "master-sort-indicator--active" : ""
+          }`}
       >
         {isActive ? (
           sortDirection === "asc" ? (
@@ -262,7 +264,9 @@ export function DepartmentIndex({
                 </tr>
               </thead>
               <tbody>
-                {paginatedRecords.length > 0 ? (
+                {isLoading && paginatedRecords.length === 0 ? (
+                  <TableLoadingRow colSpan={4} label="Loading Departments & Sections..." />
+                ) : paginatedRecords.length > 0 ? (
                   paginatedRecords.map((item, index) => {
                     const rowNumber =
                       (safeCurrentPage - 1) * pageSize + index + 1;

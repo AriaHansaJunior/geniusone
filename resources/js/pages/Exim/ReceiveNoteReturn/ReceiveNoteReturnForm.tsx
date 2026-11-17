@@ -3,6 +3,7 @@ import { Icon } from "../../../components/ui/Icon";
 import { Button } from "../../../components/ui/Button";
 import { CustomDatePicker } from "../../../components/ui/CustomDatePicker";
 import { CustomSelect } from "../../../components/ui/CustomSelect";
+import { LoadingBuffer } from "../../../components/ui/LoadingBuffer";
 import { PickSalesDeliveryItemModal } from "./PickSalesDeliveryItemModal";
 import { fetchMasterAdditionalCosts } from "../../../data/masterApi";
 import type { AdditionalCostRecord } from "../../Procurement/PurchaseMaster/AdditionalCosts/additional-costs-types";
@@ -51,16 +52,21 @@ export function ReceiveNoteReturnForm({
   const [additionalCostRemark, setAdditionalCostRemark] = useState("");
   const [additionalCostAmount, setAdditionalCostAmount] = useState<number>(0);
   const [additionalCostsList, setAdditionalCostsList] = useState<AdditionalCostRecord[]>([]);
+  const [loadingLookups, setLoadingLookups] = useState(true);
 
   useEffect(() => {
     let isMounted = true;
+    setLoadingLookups(true);
     fetchMasterAdditionalCosts()
       .then((res) => {
         if (isMounted && Array.isArray(res)) {
           setAdditionalCostsList(res);
         }
       })
-      .catch(() => {});
+      .catch(() => { })
+      .finally(() => {
+        if (isMounted) setLoadingLookups(false);
+      });
     return () => {
       isMounted = false;
     };
@@ -226,22 +232,21 @@ export function ReceiveNoteReturnForm({
               notice.type === "warning"
                 ? "#fffbeb"
                 : notice.type === "success"
-                ? "#f0fdf4"
-                : "#eff6ff",
-            border: `1px solid ${
-              notice.type === "warning"
-                ? "#fde68a"
-                : notice.type === "success"
+                  ? "#f0fdf4"
+                  : "#eff6ff",
+            border: `1px solid ${notice.type === "warning"
+              ? "#fde68a"
+              : notice.type === "success"
                 ? "#bbf7d0"
                 : "#bfdbfe"
-            }`,
+              }`,
             borderRadius: "var(--radius-sm)",
             color:
               notice.type === "warning"
                 ? "#92400e"
                 : notice.type === "success"
-                ? "#166534"
-                : "#1e40af",
+                  ? "#166534"
+                  : "#1e40af",
             fontSize: "12.5px",
             fontWeight: 600,
             display: "flex",
@@ -255,8 +260,8 @@ export function ReceiveNoteReturnForm({
                 notice.type === "warning"
                   ? "alertTriangle"
                   : notice.type === "success"
-                  ? "check"
-                  : "info"
+                    ? "check"
+                    : "info"
               }
               size={16}
             />
@@ -281,6 +286,9 @@ export function ReceiveNoteReturnForm({
       {/* Main Form Panel */}
       <div className="tx-panel">
         <form onSubmit={handleSubmit}>
+          {loadingLookups && (
+            <LoadingBuffer variant="inline" label="Loading additional cost references..." />
+          )}
           {/* Header Row 1: Arrival Date, Customer, Currency, Jenis Retur */}
           <div className="tx-header-grid master-form-row-mb">
             {/* Arrival Date */}
@@ -289,6 +297,7 @@ export function ReceiveNoteReturnForm({
                 Arrival Date <span className="required-asterisk">*</span>
               </label>
               <CustomDatePicker
+                required
                 value={arrivalDate}
                 onChange={(val) => setArrivalDate(val)}
               />
@@ -301,6 +310,8 @@ export function ReceiveNoteReturnForm({
               </label>
               <CustomSelect
                 searchable
+                required
+                invalid={Boolean(formErrors.customer)}
                 value={customer}
                 onChange={(val) => {
                   setCustomer(val);
@@ -328,6 +339,8 @@ export function ReceiveNoteReturnForm({
               </label>
               <CustomSelect
                 searchable
+                required
+                invalid={Boolean(formErrors.currency)}
                 value={currency}
                 onChange={(val) => {
                   setCurrency(val);
@@ -348,6 +361,8 @@ export function ReceiveNoteReturnForm({
                 Jenis Retur <span className="required-asterisk">*</span>
               </label>
               <CustomSelect
+                required
+                invalid={Boolean(formErrors.jenisRetur)}
                 value={jenisRetur}
                 onChange={(val) => {
                   setJenisRetur(val);
@@ -477,7 +492,9 @@ export function ReceiveNoteReturnForm({
                     </tr>
                     <tr>
                       <th className="th-right" style={{ width: "80px" }}>Delivery</th>
-                      <th className="th-right" style={{ width: "80px" }}>Retur</th>
+                      <th className="th-right" style={{ width: "80px" }}>
+                        Retur <span className="required-mark">*</span>
+                      </th>
                       <th className="th-right" style={{ width: "70px" }}>Qty</th>
                       <th style={{ width: "90px" }}>Type</th>
                     </tr>
@@ -516,6 +533,7 @@ export function ReceiveNoteReturnForm({
                               }
                               min="0"
                               step="any"
+                              required
                               style={{ width: "75px", height: "28px" }}
                             />
                           </td>

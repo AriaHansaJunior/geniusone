@@ -6,6 +6,7 @@ import { Pagination } from "../../../../components/ui/Pagination";
 import { Badge } from "../../../../components/ui/Badge";
 import { Icon } from "../../../../components/ui/Icon";
 import { StatusToggle } from "../../../../components/ui/StatusToggle";
+import { TableLoadingRow } from "../../../../components/ui/LoadingBuffer";
 import { toggleWarehouseTypeOfRequestStatusApi } from "../../../../data/masterApi";
 import { useNotification } from "../../../../context/NotificationContext";
 import { initialTypeOfRequestRecords } from "./type-of-request-data";
@@ -13,6 +14,7 @@ import type { TypeOfRequestRecord, TypeOfRequestSortField } from "./type-of-requ
 
 interface TypeOfRequestIndexProps {
   records?: TypeOfRequestRecord[];
+  isLoading?: boolean;
   onAddNew: () => void;
   onToggleStatus?: (id: string) => Promise<void> | void;
 }
@@ -21,6 +23,7 @@ type SortDirection = "none" | "asc" | "desc";
 
 export function TypeOfRequestIndex({
   records = initialTypeOfRequestRecords,
+  isLoading = false,
   onAddNew,
   onToggleStatus,
 }: TypeOfRequestIndexProps) {
@@ -235,7 +238,9 @@ export function TypeOfRequestIndex({
               </tr>
             </thead>
             <tbody>
-              {paginatedRecords.length === 0 ? (
+              {isLoading && paginatedRecords.length === 0 ? (
+                <TableLoadingRow colSpan={6} label="Loading Request Types..." />
+              ) : paginatedRecords.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="wh-table-empty">
                     No request type records found matching filters.

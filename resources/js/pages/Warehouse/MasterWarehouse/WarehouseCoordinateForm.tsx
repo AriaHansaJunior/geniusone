@@ -72,6 +72,7 @@ export function WarehouseCoordinateForm({
                 if (error) setError(null);
               }}
               placeholder="Enter coordinate name"
+              required
               autoFocus
             />
             {error && <span className="wh-form-error">{error}</span>}

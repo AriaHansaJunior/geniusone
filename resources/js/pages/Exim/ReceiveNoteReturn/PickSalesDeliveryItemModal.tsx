@@ -3,6 +3,7 @@ import { Icon } from "../../../components/ui/Icon";
 import { Button } from "../../../components/ui/Button";
 import { SearchField } from "../../../components/ui/SearchField";
 import { Pagination } from "../../../components/ui/Pagination";
+import { TableLoadingRow } from "../../../components/ui/LoadingBuffer";
 import { availableSalesReturnItemsToPick } from "./receive-note-return-data";
 import { fetchMasterReceiveNotes } from "../../../data/masterApi";
 import type { SalesReturnItemToPick } from "./receive-note-return-types";
@@ -25,10 +26,12 @@ export function PickSalesDeliveryItemModal({
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [itemsToPick, setItemsToPick] = useState<SalesReturnItemToPick[]>(availableSalesReturnItemsToPick);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     if (!isOpen) return;
     let isMounted = true;
+    setIsLoading(true);
     fetchMasterReceiveNotes()
       .then((rns: any) => {
         if (!isMounted || !Array.isArray(rns)) return;
@@ -58,7 +61,10 @@ export function PickSalesDeliveryItemModal({
           setItemsToPick(mapped);
         }
       })
-      .catch(() => {});
+      .catch(() => { })
+      .finally(() => {
+        if (isMounted) setIsLoading(false);
+      });
     return () => {
       isMounted = false;
     };
@@ -242,7 +248,13 @@ export function PickSalesDeliveryItemModal({
               </tr>
             </thead>
             <tbody>
-              {paginatedItems.length === 0 ? (
+              {isLoading && paginatedItems.length === 0 ? (
+                <TableLoadingRow
+                  colSpan={11}
+                  label="Loading Sales Delivery Items..."
+                  sublabel="Fetching available delivery records for return..."
+                />
+              ) : paginatedItems.length === 0 ? (
                 <tr>
                   <td colSpan={11} className="empty-table-cell">
                     <div className="empty">

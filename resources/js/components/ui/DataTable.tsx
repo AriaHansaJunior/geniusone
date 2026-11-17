@@ -2,6 +2,7 @@ import React from "react";
 import { Icon } from "./Icon";
 import { Badge, type BadgeTone } from "./Badge";
 import { Pagination } from "./Pagination";
+import { LoadingBuffer, TableLoadingRow } from "./LoadingBuffer";
 import type { Column, TableRow } from "../../types";
 
 import { ApprovalStatusBadge } from "../approval/ApprovalStatusBadge";
@@ -54,6 +55,8 @@ interface DataTableProps {
   onSelectPo?: (poNumber: string, row: TableRow) => void;
   onSelectPr?: (prNumber: string, row: TableRow) => void;
   emptyTitle?: string;
+  isLoading?: boolean;
+  loadingMessage?: string;
 }
 
 export function DataTable({
@@ -63,6 +66,8 @@ export function DataTable({
   onSelectPo,
   onSelectPr,
   emptyTitle = "No matching documents",
+  isLoading = false,
+  loadingMessage = "Loading records...",
 }: DataTableProps) {
   const [currentPage, setCurrentPage] = React.useState(1);
   const [pageSize, setPageSize] = React.useState(25);
@@ -85,6 +90,11 @@ export function DataTable({
 
   return (
     <div className="table-frame">
+      {isLoading && rows.length > 0 && (
+        <div className="table-frame__buffer-bar">
+          <LoadingBuffer variant="inline" label={loadingMessage} />
+        </div>
+      )}
       <div className="table-scroll">
         <table role="table" aria-label="Data Table">
           <thead>
@@ -104,7 +114,13 @@ export function DataTable({
             </tr>
           </thead>
           <tbody>
-            {displayedRows.length ? (
+            {isLoading && rows.length === 0 ? (
+              <TableLoadingRow
+                colSpan={visibleColumns.length}
+                label={loadingMessage}
+                sublabel="Synchronizing documents from database..."
+              />
+            ) : displayedRows.length ? (
               displayedRows.map((row, index) => (
                 <tr
                   key={row._id || index}

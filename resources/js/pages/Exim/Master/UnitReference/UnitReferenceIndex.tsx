@@ -4,6 +4,7 @@ import { SearchField } from "../../../../components/ui/SearchField";
 import { Pagination } from "../../../../components/ui/Pagination";
 import { Icon } from "../../../../components/ui/Icon";
 import { StatusToggle } from "../../../../components/ui/StatusToggle";
+import { TableLoadingRow } from "../../../../components/ui/LoadingBuffer";
 import { useNotification } from "../../../../context/NotificationContext";
 import { initialUnitReferenceRecords } from "./unit-reference-data";
 import type {
@@ -14,12 +15,14 @@ import type {
 
 interface UnitReferenceIndexProps {
   records?: UnitReferenceRecord[];
+  isLoading?: boolean;
   onAddNew?: () => void;
   onToggleStatus?: (id: string) => Promise<void> | void;
 }
 
 export function UnitReferenceIndex({
   records = initialUnitReferenceRecords,
+  isLoading = false,
   onAddNew,
   onToggleStatus,
 }: UnitReferenceIndexProps) {
@@ -218,7 +221,13 @@ export function UnitReferenceIndex({
                 </tr>
               </thead>
               <tbody>
-                {paginatedRecords.length > 0 ? (
+                {isLoading && paginatedRecords.length === 0 ? (
+                  <TableLoadingRow
+                    colSpan={5}
+                    label="Loading Unit References..."
+                    sublabel="Fetching unit of measurement catalog..."
+                  />
+                ) : paginatedRecords.length > 0 ? (
                   paginatedRecords.map((item, index) => {
                     const rowNumber = (safeCurrentPage - 1) * pageSize + index + 1;
                     return (

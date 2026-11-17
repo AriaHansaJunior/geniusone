@@ -4,10 +4,12 @@ import { SearchField } from "../../../../components/ui/SearchField";
 import { Pagination } from "../../../../components/ui/Pagination";
 import { Icon } from "../../../../components/ui/Icon";
 import { StatusToggle } from "../../../../components/ui/StatusToggle";
+import { TableLoadingRow } from "../../../../components/ui/LoadingBuffer";
 import { type PaymentTermRecord } from "./payment-term-types";
 
 interface PaymentTermIndexProps {
   records?: PaymentTermRecord[];
+  isLoading?: boolean;
   onAddNew: () => void;
   onToggleHide?: (id: string) => void;
 }
@@ -16,6 +18,7 @@ type SortDirection = "none" | "asc" | "desc";
 
 export function PaymentTermIndex({
   records = [],
+  isLoading = false,
   onAddNew,
   onToggleHide,
 }: PaymentTermIndexProps) {
@@ -112,9 +115,8 @@ export function PaymentTermIndex({
                   >
                     <span>Payment Term Name</span>
                     <span
-                      className={`master-sort-indicator ${
-                        sortDirection !== "none" ? "master-sort-indicator--active" : ""
-                      }`}
+                      className={`master-sort-indicator ${sortDirection !== "none" ? "master-sort-indicator--active" : ""
+                        }`}
                     >
                       {sortDirection === "asc" ? (
                         <Icon name="arrowUp" size={12} />
@@ -131,7 +133,9 @@ export function PaymentTermIndex({
                 </tr>
               </thead>
               <tbody>
-                {paginatedRecords.length > 0 ? (
+                {isLoading && paginatedRecords.length === 0 ? (
+                  <TableLoadingRow colSpan={3} label="Loading Payment Terms..." />
+                ) : paginatedRecords.length > 0 ? (
                   paginatedRecords.map((item, index) => {
                     const rowNumber = (safeCurrentPage - 1) * pageSize + index + 1;
                     return (

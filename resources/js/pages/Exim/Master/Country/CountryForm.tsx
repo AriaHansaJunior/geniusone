@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Button } from "../../../../components/ui/Button";
+import { LoadingBuffer } from "../../../../components/ui/LoadingBuffer";
 import type { CountryRecord } from "./country-types";
 
 export interface CountryFormData {
@@ -94,7 +95,7 @@ export function CountryForm({
     return (
       <div className="master-form-page">
         <div className="master-form-card">
-          <div className="master-form-loading">Loading Country data...</div>
+          <LoadingBuffer variant="panel" label="Loading Country data..." />
         </div>
       </div>
     );
@@ -142,6 +143,7 @@ export function CountryForm({
                 if (errors.code) setErrors((prev) => ({ ...prev, code: undefined }));
               }}
               maxLength={10}
+              required
               autoFocus
             />
             {errors.code && <span className="master-error-msg">{errors.code}</span>}
@@ -162,6 +164,7 @@ export function CountryForm({
                 if (errors.name) setErrors((prev) => ({ ...prev, name: undefined }));
               }}
               maxLength={45}
+              required
             />
             {errors.name && <span className="master-error-msg">{errors.name}</span>}
           </div>

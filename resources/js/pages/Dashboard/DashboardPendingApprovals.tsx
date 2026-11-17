@@ -6,6 +6,7 @@ import { SearchField } from "../../components/ui/SearchField";
 import { Pagination } from "../../components/ui/Pagination";
 import { CustomSelect } from "../../components/ui/CustomSelect";
 import { ApprovalStatusBadge } from "../../components/approval/ApprovalStatusBadge";
+import { TableLoadingRow } from "../../components/ui/LoadingBuffer";
 import {
   getLocalApprovalState,
   executeApprove,
@@ -30,12 +31,12 @@ export interface PendingApprovalItem {
   rawId?: string;
   module: ApprovalModule;
   docType:
-    | "PR"
-    | "PO"
-    | "Receive Note"
-    | "Receive Material (BPB)"
-    | "Request Material"
-    | "Transfer Stock Return";
+  | "PR"
+  | "PO"
+  | "Receive Note"
+  | "Receive Material (BPB)"
+  | "Request Material"
+  | "Transfer Stock Return";
   docNumber: string;
   date: string;
   party: string;
@@ -367,11 +368,10 @@ export function DashboardPendingApprovals({
         );
         setNotification({
           type: "success",
-          message: `${item.docType} "${item.docNumber}" successfully approved for Stage ${tier}! (${
-            nextStatus === "APPROVED"
-              ? "Fully Approved ✓"
-              : "Advanced to Waiting Approve 2"
-          })`,
+          message: `${item.docType} "${item.docNumber}" successfully approved for Stage ${tier}! (${nextStatus === "APPROVED"
+            ? "Fully Approved ✓"
+            : "Advanced to Waiting Approve 2"
+            })`,
         });
         setItems((prev) => {
           if (nextStatus === "APPROVED") {
@@ -380,10 +380,10 @@ export function DashboardPendingApprovals({
           return prev.map((i) =>
             i.id === item.id
               ? {
-                  ...i,
-                  status: "WAITING_APPROVE_2",
-                  currentTier: 2,
-                }
+                ...i,
+                status: "WAITING_APPROVE_2",
+                currentTier: 2,
+              }
               : i
           );
         });
@@ -406,11 +406,10 @@ export function DashboardPendingApprovals({
         const nextStatus = res.status;
         setNotification({
           type: "success",
-          message: `${item.docType} "${item.docNumber}" successfully approved for Stage ${tier}! (${
-            nextStatus === "APPROVED"
-              ? "Fully Approved ✓"
-              : "Advanced to Waiting Approve 2"
-          })`,
+          message: `${item.docType} "${item.docNumber}" successfully approved for Stage ${tier}! (${nextStatus === "APPROVED"
+            ? "Fully Approved ✓"
+            : "Advanced to Waiting Approve 2"
+            })`,
         });
 
         // Update local item list immediately
@@ -421,10 +420,10 @@ export function DashboardPendingApprovals({
           return prev.map((i) =>
             i.id === item.id
               ? {
-                  ...i,
-                  status: nextStatus as "WAITING_APPROVE_2",
-                  currentTier: 2,
-                }
+                ...i,
+                status: nextStatus as "WAITING_APPROVE_2",
+                currentTier: 2,
+              }
               : i
           );
         });
@@ -435,17 +434,17 @@ export function DashboardPendingApprovals({
             prev.map((r) =>
               r.rnNumber === item.docNumber
                 ? {
-                    ...r,
-                    status: nextStatus === "APPROVED" ? "Approved" : "Waiting for Approve 2",
-                    approval1At:
-                      tier === 1
-                        ? `${new Date().toLocaleDateString("id-ID")} by Administrator GeniusOne`
-                        : r.approval1At,
-                    approval2At:
-                      tier === 2
-                        ? `${new Date().toLocaleDateString("id-ID")} by Administrator GeniusOne`
-                        : r.approval2At,
-                  }
+                  ...r,
+                  status: nextStatus === "APPROVED" ? "Approved" : "Waiting for Approve 2",
+                  approval1At:
+                    tier === 1
+                      ? `${new Date().toLocaleDateString("id-ID")} by Administrator GeniusOne`
+                      : r.approval1At,
+                  approval2At:
+                    tier === 2
+                      ? `${new Date().toLocaleDateString("id-ID")} by Administrator GeniusOne`
+                      : r.approval2At,
+                }
                 : r
             )
           );
@@ -832,7 +831,13 @@ export function DashboardPendingApprovals({
                 </tr>
               </thead>
               <tbody>
-                {paginatedItems.length === 0 ? (
+                {isLoading && paginatedItems.length === 0 ? (
+                  <TableLoadingRow
+                    colSpan={8}
+                    label="Loading Pending Approvals..."
+                    sublabel="Collecting pending authorization items across Procurement, EXIM, and Warehouse..."
+                  />
+                ) : paginatedItems.length === 0 ? (
                   <tr>
                     <td
                       colSpan={8}

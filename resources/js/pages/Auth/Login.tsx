@@ -105,7 +105,9 @@ export function Login({ onNavigateHome, onLoginSuccess }: LoginProps) {
 
             <form onSubmit={handleSubmit} className="login-form">
               <div className="form-group">
-                <label htmlFor="login-username">Username or Email</label>
+                <label htmlFor="login-username">
+                  Username or Email <span className="required-mark">*</span>
+                </label>
                 <div className="input-with-icon">
                   <Icon name="user" size={16} className="input-icon" />
                   <input
@@ -126,7 +128,9 @@ export function Login({ onNavigateHome, onLoginSuccess }: LoginProps) {
 
               <div className="form-group">
                 <div className="form-group__label-row">
-                  <label htmlFor="login-password">Password</label>
+                  <label htmlFor="login-password">
+                    Password <span className="required-mark">*</span>
+                  </label>
                   <a
                     href="#forgot-password"
                     className="login-forgot-link"

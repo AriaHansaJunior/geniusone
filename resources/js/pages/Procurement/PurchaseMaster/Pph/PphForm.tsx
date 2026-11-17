@@ -245,6 +245,7 @@ export function PphForm({ initialRecord, onBack, onSave }: PphFormProps) {
             <CustomSelect
               id="jenisPph"
               searchable
+              required
               value={selectedTypeId}
               onChange={(val) => setSelectedTypeId(val)}
               placeholder={loadingTypes ? "Loading PPH types..." : "Select PPH Type"}

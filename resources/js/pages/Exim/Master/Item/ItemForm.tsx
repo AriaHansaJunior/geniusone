@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { Button } from "../../../../components/ui/Button";
 import { Icon } from "../../../../components/ui/Icon";
 import { CustomSelect } from "../../../../components/ui/CustomSelect";
+import { LoadingBuffer } from "../../../../components/ui/LoadingBuffer";
 import { fetchMasterLookupsApi, fetchMasterStyles } from "../../../../data/masterApi";
 import type { ItemRecord } from "./item-types";
 
@@ -623,6 +624,12 @@ export function ItemForm({ initialRecord, onBack, onSave }: ItemFormProps) {
 
       {/* Form Card */}
       <form onSubmit={handleSubmit} className="item-form-card">
+        {loadingLookups && (
+          <LoadingBuffer
+            variant="inline"
+            label="Loading classifications, units, and customs lookups..."
+          />
+        )}
         {/* Section 1: Identification & Basic Info */}
         <div>
           <h3 className="item-form-section-title">Item Identification</h3>
@@ -641,6 +648,7 @@ export function ItemForm({ initialRecord, onBack, onSave }: ItemFormProps) {
                   setItemName(e.target.value);
                   if (error) setError(null);
                 }}
+                required
                 autoFocus
               />
               {error && <span className="item-form-error-msg">{error}</span>}
@@ -705,6 +713,7 @@ export function ItemForm({ initialRecord, onBack, onSave }: ItemFormProps) {
               <CustomSelect
                 id="classification"
                 searchable
+                required
                 value={classificationsId ? String(classificationsId) : ""}
                 onChange={(val) => setClassificationsId(val ? Number(val) : undefined)}
                 placeholder={loadingLookups ? "Loading classifications..." : "Select classification..."}
@@ -735,6 +744,7 @@ export function ItemForm({ initialRecord, onBack, onSave }: ItemFormProps) {
               <CustomSelect
                 id="facility"
                 searchable
+                required
                 value={facilitiesId ? String(facilitiesId) : ""}
                 onChange={(val) => setFacilitiesId(val ? Number(val) : undefined)}
                 placeholder={loadingLookups ? "Loading facilities..." : "Select facility..."}
@@ -801,6 +811,7 @@ export function ItemForm({ initialRecord, onBack, onSave }: ItemFormProps) {
               <CustomSelect
                 id="smallestUnitCode"
                 searchable
+                required
                 value={smallestUnitId ? String(smallestUnitId) : ""}
                 onChange={(val) => {
                   const nextId = val ? Number(val) : undefined;

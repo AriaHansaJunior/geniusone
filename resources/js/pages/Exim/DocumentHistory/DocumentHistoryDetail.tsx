@@ -8,6 +8,7 @@ import type { DocumentHistoryRecord } from "./document-history-types";
 import { fetchDocumentHistories } from "../../../data/masterApi";
 import { useTheme } from "../../../context/ThemeContext";
 import { DocumentHistoryDefaultDetail } from "../../../themes/default/pages/DocumentHistoryDefaultDetail";
+import { LoadingBuffer } from "../../../components/ui/LoadingBuffer";
 
 interface DocumentHistoryDetailProps {
   code: string;
@@ -23,6 +24,7 @@ export function DocumentHistoryDetail({
   const { isDefaultTheme } = useTheme();
   const [generateMenuOpen, setGenerateMenuOpen] = useState(false);
   const [fetchedRecord, setFetchedRecord] = useState<DocumentHistoryRecord | null>(null);
+  const [isLoadingDetail, setIsLoadingDetail] = useState<boolean>(() => !record);
   const [expandedRowIds, setExpandedRowIds] = useState<Set<string>>(new Set());
   const [notice, setNotice] = useState<{
     type: "info" | "success" | "warning";
@@ -30,8 +32,12 @@ export function DocumentHistoryDetail({
   } | null>(null);
 
   useEffect(() => {
-    if (record) return;
+    if (record) {
+      setIsLoadingDetail(false);
+      return;
+    }
     let active = true;
+    setIsLoadingDetail(true);
     const cleanCode = code.replace(/^details?\//i, "").trim();
     fetchDocumentHistories()
       .then((list) => {
@@ -44,7 +50,10 @@ export function DocumentHistoryDetail({
         );
         if (found) setFetchedRecord(found);
       })
-      .catch(() => {});
+      .catch(() => { })
+      .finally(() => {
+        if (active) setIsLoadingDetail(false);
+      });
     return () => {
       active = false;
     };
@@ -241,6 +250,19 @@ export function DocumentHistoryDetail({
       setTimeout(() => setNotice(null), 3500);
     }
   };
+
+  if (isLoadingDetail && !record && !fetchedRecord) {
+    return (
+      <div className="dh-detail-page">
+        <LoadingBuffer
+          variant="panel"
+          label="Loading Document History Details..."
+          sublabel="Fetching invoice records and item trace history..."
+          skeletonRows={4}
+        />
+      </div>
+    );
+  }
 
   if (isDefaultTheme) {
     return (

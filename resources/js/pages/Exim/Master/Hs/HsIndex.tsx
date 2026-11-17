@@ -4,6 +4,7 @@ import { SearchField } from "../../../../components/ui/SearchField";
 import { Icon } from "../../../../components/ui/Icon";
 import { StatusToggle } from "../../../../components/ui/StatusToggle";
 import { Pagination } from "../../../../components/ui/Pagination";
+import { TableLoadingRow } from "../../../../components/ui/LoadingBuffer";
 import { useNotification } from "../../../../context/NotificationContext";
 import { initialHsRecords } from "./hs-data";
 import type {
@@ -14,11 +15,13 @@ import type {
 
 interface HsIndexProps {
   records?: HsRecord[];
+  isLoading?: boolean;
   onAddNew: () => void;
 }
 
 export function HsIndex({
   records = initialHsRecords,
+  isLoading = false,
   onAddNew,
 }: HsIndexProps) {
   const { notifySuccess, notifyError, notifyWarning } = useNotification();
@@ -283,7 +286,9 @@ export function HsIndex({
                 </tr>
               </thead>
               <tbody>
-                {paginatedRecords.length > 0 ? (
+                {isLoading && paginatedRecords.length === 0 ? (
+                  <TableLoadingRow colSpan={8} label="Loading HS Codes..." sublabel="Synchronizing tariff & HS code catalog..." />
+                ) : paginatedRecords.length > 0 ? (
                   paginatedRecords.map((item, index) => {
                     const rowNumber = (safeCurrentPage - 1) * pageSize + index + 1;
                     return (

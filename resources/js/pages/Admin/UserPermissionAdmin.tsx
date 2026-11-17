@@ -12,6 +12,7 @@ import { Icon } from "../../components/ui/Icon";
 import { StatusToggle } from "../../components/ui/StatusToggle";
 import { ConfirmDialog } from "../../components/ui/ConfirmDialog";
 import { CustomSelect } from "../../components/ui/CustomSelect";
+import { TableLoadingRow } from "../../components/ui/LoadingBuffer";
 import { useAuthPermission } from "../../context/AuthPermissionContext";
 import { apiFetch } from "../../data/api";
 import {
@@ -1264,11 +1265,11 @@ export function UserPermissionAdmin({ onNavigateAudit }: UserPermissionAdminProp
               </thead>
               <tbody>
                 {isLoading ? (
-                  <tr>
-                    <td colSpan={7} style={{ textAlign: "center", padding: "32px", color: "var(--muted)" }}>
-                      Loading enterprise users from database...
-                    </td>
-                  </tr>
+                  <TableLoadingRow
+                    colSpan={7}
+                    label="Loading Enterprise Users..."
+                    sublabel="Synchronizing user directory & role permissions..."
+                  />
                 ) : paginatedUsers.length > 0 ? (
                   paginatedUsers.map((user, idx) => {
                     const rowNumber = (safePage - 1) * pageSize + idx + 1;
@@ -1498,7 +1499,7 @@ export function UserPermissionAdmin({ onNavigateAudit }: UserPermissionAdminProp
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "14px" }}>
                   <div className="form-field">
                     <label className="form-label">
-                      Role Name <span style={{ color: "#dc2626" }}>*</span>
+                      Role Name <span className="required-mark">*</span>
                     </label>
                     <input
                       type="text"

@@ -17,6 +17,7 @@ export function Warehouse({ onDetail, onCreate }: WarehouseProps) {
   const [search, setSearch] = useState("");
   const columns = listColumns.warehouse;
   const [rows, setRows] = useState<TableRow[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [whFilters, setWhFilters] = useState<Record<string, any>>({
     dateRange: "all",
     docType: "all",
@@ -26,11 +27,16 @@ export function Warehouse({ onDetail, onCreate }: WarehouseProps) {
 
   useEffect(() => {
     let isMounted = true;
-    fetchList("warehouse").then((res) => {
-      if (isMounted) {
-        setRows(res.rows);
-      }
-    });
+    setIsLoading(true);
+    fetchList("warehouse")
+      .then((res) => {
+        if (isMounted) {
+          setRows(res.rows);
+        }
+      })
+      .finally(() => {
+        if (isMounted) setIsLoading(false);
+      });
     return () => {
       isMounted = false;
     };
@@ -170,6 +176,8 @@ export function Warehouse({ onDetail, onCreate }: WarehouseProps) {
           columns={columns}
           rows={filtered}
           onDetail={onDetail}
+          isLoading={isLoading}
+          loadingMessage="Loading Receive Material (BPB) records..."
         />
       </section>
     </>

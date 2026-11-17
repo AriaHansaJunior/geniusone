@@ -4,6 +4,7 @@ import { Button } from "../../../components/ui/Button";
 import { SearchField } from "../../../components/ui/SearchField";
 import { Pagination } from "../../../components/ui/Pagination";
 import { Badge } from "../../../components/ui/Badge";
+import { TableLoadingRow } from "../../../components/ui/LoadingBuffer";
 import { apiFetch } from "../../../data/api";
 
 export interface PrItemToPick {
@@ -357,13 +358,11 @@ export function PickPrItemModal({
             </thead>
             <tbody>
               {loading ? (
-                <tr>
-                  <td colSpan={12} className="empty-table-cell" style={{ padding: "40px 20px" }}>
-                    <div className="empty">
-                      <strong>Loading approved requisition items...</strong>
-                    </div>
-                  </td>
-                </tr>
+                <TableLoadingRow
+                  colSpan={12}
+                  label="Loading Approved Requisition Items..."
+                  sublabel="Retrieving available PR line items from server..."
+                />
               ) : paginatedItems.length === 0 ? (
                 <tr>
                   <td colSpan={12} className="empty-table-cell" style={{ padding: "40px 20px" }}>

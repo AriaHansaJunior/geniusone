@@ -179,7 +179,7 @@ export function UserPermissionModals({
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
                   <div className="form-field">
                     <label className="form-label">
-                      Full Name <span style={{ color: "#dc2626" }}>*</span>
+                      Full Name <span className="required-mark">*</span>
                     </label>
                     <input
                       type="text"
@@ -193,7 +193,7 @@ export function UserPermissionModals({
 
                   <div className="form-field">
                     <label className="form-label">
-                      Username <span style={{ color: "#dc2626" }}>*</span>
+                      Username <span className="required-mark">*</span>
                     </label>
                     <input
                       type="text"
@@ -207,7 +207,7 @@ export function UserPermissionModals({
 
                   <div className="form-field">
                     <label className="form-label">
-                      Email Address <span style={{ color: "#dc2626" }}>*</span>
+                      Email Address <span className="required-mark">*</span>
                     </label>
                     <input
                       type="email"
@@ -221,7 +221,7 @@ export function UserPermissionModals({
 
                   <div className="form-field">
                     <label className="form-label">
-                      Initial Password <span style={{ color: "#dc2626" }}>*</span>
+                      Initial Password <span className="required-mark">*</span>
                     </label>
                     <input
                       type="text"
@@ -247,9 +247,12 @@ export function UserPermissionModals({
                   </div>
 
                   <div className="form-field">
-                    <label className="form-label">System Role (Inherits Role Permissions)</label>
+                    <label className="form-label">
+                      System Role (Inherits Role Permissions) <span className="required-mark">*</span>
+                    </label>
                     <CustomSelect
                       searchable
+                      required
                       value={newUserData.role}
                       disabled={newUserData.isSuperAdmin}
                       onChange={(val) => setNewUserData({ ...newUserData, role: val })}
@@ -823,7 +826,7 @@ export function UserPermissionModals({
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
                   <div className="form-field">
                     <label className="form-label">
-                      Full Name <span style={{ color: "#dc2626" }}>*</span>
+                      Full Name <span className="required-mark">*</span>
                     </label>
                     <input
                       type="text"
@@ -839,7 +842,7 @@ export function UserPermissionModals({
 
                   <div className="form-field">
                     <label className="form-label">
-                      Username <span style={{ color: "#dc2626" }}>*</span>
+                      Username <span className="required-mark">*</span>
                     </label>
                     <input
                       type="text"
@@ -855,7 +858,7 @@ export function UserPermissionModals({
 
                   <div className="form-field" style={{ gridColumn: "1 / -1" }}>
                     <label className="form-label">
-                      Email Address <span style={{ color: "#dc2626" }}>*</span>
+                      Email Address <span className="required-mark">*</span>
                     </label>
                     <input
                       type="email"
@@ -930,9 +933,12 @@ export function UserPermissionModals({
                   </div>
 
                   <div className="form-field">
-                    <label className="form-label">System Role (Inherits Role Permissions)</label>
+                    <label className="form-label">
+                      System Role (Inherits Role Permissions) <span className="required-mark">*</span>
+                    </label>
                     <CustomSelect
                       searchable
+                      required
                       value={editUserProfileData.role}
                       disabled={editUserProfileData.isSuperAdmin}
                       menuPlacement="top"

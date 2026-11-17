@@ -24,6 +24,7 @@ export function PurchaseOrderReport({
   const columns = listColumns.report;
   const [stats, setStats] = useState<[string, string, string][]>([]);
   const [rows, setRows] = useState<TableRow[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [reportFilters, setReportFilters] = useState<Record<string, any>>({
     poDateRange: "all",
     prDateRange: "all",
@@ -38,12 +39,17 @@ export function PurchaseOrderReport({
 
   useEffect(() => {
     let isMounted = true;
-    fetchList("report").then((res) => {
-      if (isMounted) {
-        setStats(res.stats);
-        setRows(res.rows);
-      }
-    });
+    setIsLoading(true);
+    fetchList("report")
+      .then((res) => {
+        if (isMounted) {
+          setStats(res.stats);
+          setRows(res.rows);
+        }
+      })
+      .finally(() => {
+        if (isMounted) setIsLoading(false);
+      });
     return () => {
       isMounted = false;
     };
@@ -206,6 +212,8 @@ export function PurchaseOrderReport({
           onDetail={onDetail}
           onSelectPo={(po) => (onSelectPo ? onSelectPo(po) : undefined)}
           onSelectPr={(pr) => (onSelectPr ? onSelectPr(pr) : undefined)}
+          isLoading={isLoading}
+          loadingMessage="Loading PR-PO tracking report..."
         />
       </section>
     </>

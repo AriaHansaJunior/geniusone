@@ -100,7 +100,7 @@ export function scrollOptionIntoContainer(containerEl: HTMLElement | null, selec
   if (!targetEl) return;
   const scrollBox =
     (containerEl.querySelector(".custom-select-options-list") as HTMLElement | null) || containerEl;
-    const elRect = targetEl.getBoundingClientRect();
+  const elRect = targetEl.getBoundingClientRect();
   const boxRect = scrollBox.getBoundingClientRect();
   if (elRect.top < boxRect.top) {
     scrollBox.scrollTop -= boxRect.top - elRect.top + 6;
@@ -313,6 +313,8 @@ export interface CustomSelectProps {
   menuPlacement?: "auto" | "bottom" | "top";
   searchable?: boolean;
   searchPlaceholder?: string;
+  required?: boolean;
+  invalid?: boolean;
 }
 
 export function CustomSelect({
@@ -330,6 +332,8 @@ export function CustomSelect({
   menuPlacement = "auto",
   searchable,
   searchPlaceholder = "Type to search...",
+  required = false,
+  invalid = false,
 }: CustomSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [portalPos, setPortalPos] = useState<PortalDropdownPosition>({
@@ -433,9 +437,8 @@ export function CustomSelect({
       return (
         <div
           key={opt.value}
-          className={`custom-select-option ${isSelected ? "is-selected" : ""} ${
-            isHighlighted ? "is-highlighted" : ""
-          } ${opt.description ? "has-desc" : ""}`}
+          className={`custom-select-option ${isSelected ? "is-selected" : ""} ${isHighlighted ? "is-highlighted" : ""
+            } ${opt.description ? "has-desc" : ""}`}
           role="option"
           aria-selected={isSelected}
           onClick={(e) => {
@@ -467,57 +470,55 @@ export function CustomSelect({
   const dropdownMenu =
     isOpen && typeof document !== "undefined"
       ? createPortal(
-          <div
-            className={`custom-select-dropdown custom-select-dropdown--portal ${dropdownClassName} ${
-              isSearchEnabled ? "custom-select-dropdown--searchable" : ""
-            } ${portalPos.openUpwards ? "custom-select-dropdown--top" : ""} ${
-              portalPos.alignRight ? "custom-select-dropdown--align-right" : ""
+        <div
+          className={`custom-select-dropdown custom-select-dropdown--portal ${dropdownClassName} ${isSearchEnabled ? "custom-select-dropdown--searchable" : ""
+            } ${portalPos.openUpwards ? "custom-select-dropdown--top" : ""} ${portalPos.alignRight ? "custom-select-dropdown--align-right" : ""
             }`}
-            ref={listRef}
-            role="listbox"
-            style={portalPos.style}
-            onClick={(e) => e.stopPropagation()}
-          >
-            {isSearchEnabled && (
-              <div className="custom-select-search-box">
-                <span className="custom-select-search-icon" aria-hidden="true">
-                  <Icon name="search" size={14} />
-                </span>
-                <input
-                  ref={searchInputRef}
-                  type="text"
-                  className="custom-select-search-input"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onKeyDown={handleSearchKeyDown}
-                  placeholder={searchPlaceholder}
-                  aria-label="Search options"
-                />
-                {searchQuery && (
-                  <button
-                    type="button"
-                    className="custom-select-search-clear"
-                    onClick={() => {
-                      setSearchQuery("");
-                      searchInputRef.current?.focus({ preventScroll: true });
-                    }}
-                    aria-label="Clear search"
-                    title="Clear search"
-                  >
-                    <Icon name="close" size={13} />
-                  </button>
-                )}
-              </div>
-            )}
+          ref={listRef}
+          role="listbox"
+          style={portalPos.style}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {isSearchEnabled && (
+            <div className="custom-select-search-box">
+              <span className="custom-select-search-icon" aria-hidden="true">
+                <Icon name="search" size={14} />
+              </span>
+              <input
+                ref={searchInputRef}
+                type="text"
+                className="custom-select-search-input"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={handleSearchKeyDown}
+                placeholder={searchPlaceholder}
+                aria-label="Search options"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  className="custom-select-search-clear"
+                  onClick={() => {
+                    setSearchQuery("");
+                    searchInputRef.current?.focus({ preventScroll: true });
+                  }}
+                  aria-label="Clear search"
+                  title="Clear search"
+                >
+                  <Icon name="close" size={13} />
+                </button>
+              )}
+            </div>
+          )}
 
-            {isSearchEnabled ? (
-              <div className="custom-select-options-list">{renderOptionsList()}</div>
-            ) : (
-              renderOptionsList()
-            )}
-          </div>,
-          document.body
-        )
+          {isSearchEnabled ? (
+            <div className="custom-select-options-list">{renderOptionsList()}</div>
+          ) : (
+            renderOptionsList()
+          )}
+        </div>,
+        document.body
+      )
       : null;
 
   return (
@@ -533,11 +534,15 @@ export function CustomSelect({
       {/* Trigger Button - Entire surface clickable */}
       <div
         ref={triggerRef}
-        className={`custom-select-trigger ${isOpen ? "is-open" : ""}`}
+        className={`custom-select-trigger ${isOpen ? "is-open" : ""} ${invalid || className.includes("has-error") ? "has-error" : ""
+          }`.trim()}
         onClick={handleToggleOpen}
         role="combobox"
         aria-expanded={isOpen}
         aria-haspopup="listbox"
+        aria-required={required ? "true" : undefined}
+        aria-invalid={invalid || className.includes("has-error") ? "true" : undefined}
+        data-required={required ? "true" : undefined}
         tabIndex={disabled ? -1 : 0}
         onKeyDown={(e) => {
           if (disabled) return;

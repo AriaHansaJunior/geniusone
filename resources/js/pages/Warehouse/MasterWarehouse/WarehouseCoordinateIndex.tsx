@@ -4,6 +4,7 @@ import { SearchField } from "../../../components/ui/SearchField";
 import { Icon } from "../../../components/ui/Icon";
 import { Pagination } from "../../../components/ui/Pagination";
 import { StatusToggle } from "../../../components/ui/StatusToggle";
+import { TableLoadingRow } from "../../../components/ui/LoadingBuffer";
 import type {
   WarehouseCoordinateRecord,
   WarehouseCoordinateSortField,
@@ -13,6 +14,7 @@ import type {
 
 interface WarehouseCoordinateIndexProps {
   warehouse: WarehouseMasterRecord;
+  isLoading?: boolean;
   onAddNew: () => void;
   onBack: () => void;
   onToggleCoordinateStatus?: (coordinateId: string) => Promise<void> | void;
@@ -20,6 +22,7 @@ interface WarehouseCoordinateIndexProps {
 
 export function WarehouseCoordinateIndex({
   warehouse,
+  isLoading = false,
   onAddNew,
   onBack,
   onToggleCoordinateStatus,
@@ -160,7 +163,9 @@ export function WarehouseCoordinateIndex({
               </tr>
             </thead>
             <tbody>
-              {paginatedCoordinates.length === 0 ? (
+              {isLoading && paginatedCoordinates.length === 0 ? (
+                <TableLoadingRow colSpan={3} label="Loading Warehouse Coordinates..." />
+              ) : paginatedCoordinates.length === 0 ? (
                 <tr>
                   <td colSpan={3} className="wh-table-empty">
                     No coordinate records found for this warehouse.

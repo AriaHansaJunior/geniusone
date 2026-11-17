@@ -23,6 +23,7 @@ import { useNotification } from "../../../context/NotificationContext";
 import { useTheme } from "../../../context/ThemeContext";
 import { KwtPrintModal, KwtPrintTemplatePr } from "../../../components/print";
 import { PurchaseRequisitionDefaultDetail } from "../../../themes/default/pages/PurchaseRequisitionDefaultDetail";
+import { LoadingBuffer } from "../../../components/ui/LoadingBuffer";
 
 interface PurchaseRequisitionDetailProps {
   code: string;
@@ -71,14 +72,22 @@ export function PurchaseRequisitionDetail({
     } as TableRow;
   });
 
+  const [isLoadingDetail, setIsLoadingDetail] = useState<boolean>(
+    () => row.deptRequest === "Loading..."
+  );
+
   useEffect(() => {
     let isMounted = true;
-    fetchDetail("pr", code).then((item) => {
-      if (isMounted && item) {
-        setRow(item);
-
-      }
-    });
+    setIsLoadingDetail(true);
+    fetchDetail("pr", code)
+      .then((item) => {
+        if (isMounted && item) {
+          setRow(item);
+        }
+      })
+      .finally(() => {
+        if (isMounted) setIsLoadingDetail(false);
+      });
     return () => {
       isMounted = false;
     };
@@ -509,8 +518,27 @@ export function PurchaseRequisitionDetail({
     }
   };
 
+  if (isLoadingDetail && row.deptRequest === "Loading...") {
+    return (
+      <div className="full-page-detail">
+        <LoadingBuffer
+          variant="panel"
+          label="Loading Purchase Requisition Details..."
+          sublabel="Fetching requisition header and requested material items..."
+          skeletonRows={4}
+        />
+      </div>
+    );
+  }
+
   return (
     <>
+      {isLoadingDetail && (
+        <LoadingBuffer
+          variant="inline"
+          label="Synchronizing latest Purchase Requisition details..."
+        />
+      )}
       {isDefaultTheme ? (
         <PurchaseRequisitionDefaultDetail
           row={row}
@@ -540,517 +568,517 @@ export function PurchaseRequisitionDetail({
         />
       ) : (
         <div className="full-page-detail">
-      {/* Detail Navigation & Action Bar */}
-      <div className="detail-top-bar">
-        <div className="detail-top-bar__left">
-          <div className="detail-breadcrumb-trail">
-            <a onClick={onBack}>Procurement</a>
-            <span>/</span>
-            <a onClick={onBack}>Purchase Requisition</a>
-            <span>/</span>
-            <span className="current">{docNumber}</span>
+          {/* Detail Navigation & Action Bar */}
+          <div className="detail-top-bar">
+            <div className="detail-top-bar__left">
+              <div className="detail-breadcrumb-trail">
+                <a onClick={onBack}>Procurement</a>
+                <span>/</span>
+                <a onClick={onBack}>Purchase Requisition</a>
+                <span>/</span>
+                <span className="current">{docNumber}</span>
+              </div>
+            </div>
+
+            <div className="detail-top-bar__right">
+              <Badge tone="purple">{dept}</Badge>
+              <Button variant="secondary" icon="print" onClick={handlePrintPdf}>
+                Print PDF
+              </Button>
+              <Button variant="excel" onClick={handleExportDetailXLSX}>Export XLSX</Button>
+            </div>
           </div>
-        </div>
 
-        <div className="detail-top-bar__right">
-          <Badge tone="purple">{dept}</Badge>
-          <Button variant="secondary" icon="print" onClick={handlePrintPdf}>
-            Print PDF
-          </Button>
-          <Button variant="excel" onClick={handleExportDetailXLSX}>Export XLSX</Button>
-        </div>
-      </div>
+          {/* Main Document Header Card */}
+          <div className="detail-header-card">
+            <div className="detail-header-card__info">
+              <span className="detail-header-card__eyebrow">REQUISITION SPECIFICATION</span>
+              <div className="detail-header-card__title-row">
+                <h2 className="detail-header-card__title">{docNumber}</h2>
+                <ApprovalStatusBadge status={approvalState.status} />
+                <Badge tone={rawType.toLowerCase().includes("internal") ? "blue" : "purple"}>
+                  {rawType.toLowerCase().includes("internal") ? "Internal" : "Eksternal"}
+                </Badge>
+              </div>
+              <span className="detail-header-card__meta">
+                Requested by <strong>{createdBy}</strong> · Department: <strong>{dept}</strong> · Required before <strong>{dueDate}</strong>
+              </span>
+            </div>
 
-      {/* Main Document Header Card */}
-      <div className="detail-header-card">
-        <div className="detail-header-card__info">
-          <span className="detail-header-card__eyebrow">REQUISITION SPECIFICATION</span>
-          <div className="detail-header-card__title-row">
-            <h2 className="detail-header-card__title">{docNumber}</h2>
-            <ApprovalStatusBadge status={approvalState.status} />
-            <Badge tone={rawType.toLowerCase().includes("internal") ? "blue" : "purple"}>
-              {rawType.toLowerCase().includes("internal") ? "Internal" : "Eksternal"}
-            </Badge>
+            <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+              <Button variant="secondary" onClick={handleDownloadAttachment}>
+                Download Attachments
+              </Button>
+            </div>
           </div>
-          <span className="detail-header-card__meta">
-            Requested by <strong>{createdBy}</strong> · Department: <strong>{dept}</strong> · Required before <strong>{dueDate}</strong>
-          </span>
-        </div>
 
-        <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-          <Button variant="secondary" onClick={handleDownloadAttachment}>
-            Download Attachments
-          </Button>
-        </div>
-      </div>
-
-      {/* Dynamic Two-Stage Approval Action Bar */}
-      <div className="panel" style={{ padding: "14px 20px", marginBottom: "16px" }}>
-        <ApprovalActionBar
-          module="purchase_requisition"
-          documentId={row.id ? String(row.id) : docNumber}
-          documentNumber={docNumber}
-          state={approvalState}
-          onResubmitClick={handleRecordRevision}
-          onStateChange={(newState) => {
-            setApprovalState(newState);
-            setRow((prev) => ({ ...prev, _rawStatus: newState.status, status: newState.status }));
-          }}
-        />
-      </div>
-
-      {/* 4-Column Hero KPI Summary Grid */}
-      <div className="detail-kpi-grid detail-kpi-grid--4">
-        <div className="detail-kpi-card">
-          <span>DEPARTMENT & SECTION</span>
-          <strong>{dept}</strong>
-          <small>{sectionName}</small>
-        </div>
-
-        <div className="detail-kpi-card">
-          <span>REQUISITION DATES</span>
-          <strong>{reqDate}</strong>
-          <small>Required Target: {dueDate}</small>
-        </div>
-
-        <div className="detail-kpi-card">
-          <span>TOTAL ITEMS & QUANTITY</span>
-          <strong>{totalQty}</strong>
-          <small>{items.length || 1} Material Item Record{items.length !== 1 ? "s" : ""} Requested</small>
-        </div>
-
-        <div className="detail-kpi-card">
-          <span>AUTHORIZATION STAGE</span>
-          <strong>{approvalState.status.replace(/_/g, " ")}</strong>
-          <small>
-            {isApproved || approvalState.approved2By
-              ? `Approved by ${approvalState.approved2By || "-"}`
-              : approvalState.status === "WAITING_APPROVE_2" || approvalState.approved1By
-                ? `Verified by Stage 1: ${approvalState.approved1By || "-"}`
-                : approvalState.status === "REJECTED"
-                  ? `Rejected by ${approvalState.rejectedBy || "-"}`
-                  : "Awaiting Stage 1 verification"}
-          </small>
-        </div>
-      </div>
-
-      {/* Document Relationship Workflow Pipeline */}
-      <div className="detail-pipeline">
-        <div className={`pipeline-node ${isApproved ? "complete" : "current"}`}>
-          <div className="pipeline-node__icon">
-            <Icon name="file" size={16} />
-          </div>
-          <div className="pipeline-node__text">
-            <span>Step 1 · Purchase Requisition</span>
-            <strong>{docNumber}</strong>
-          </div>
-        </div>
-
-        <Icon name="arrowRight" size={16} className="pipeline-arrow" />
-
-        {(() => {
-          const hasActiveItems = items.some((it, idx) => !isPrItemClosed(docNumber, it, idx));
-          const isAllClosed = items.length > 0 && !hasActiveItems;
-          const canConvertToPo = isApproved && hasActiveItems && status !== "Closing";
-
-          return (
-            <div
-              className={`pipeline-node ${poNumbersList.length > 0 ? "active" : canConvertToPo ? "current" : ""}`}
-              style={{
-                cursor: poNumbersList.length > 0 || canConvertToPo ? "pointer" : "not-allowed",
-                opacity: poNumbersList.length > 0 || canConvertToPo ? 1 : 0.5,
+          {/* Dynamic Two-Stage Approval Action Bar */}
+          <div className="panel" style={{ padding: "14px 20px", marginBottom: "16px" }}>
+            <ApprovalActionBar
+              module="purchase_requisition"
+              documentId={row.id ? String(row.id) : docNumber}
+              documentNumber={docNumber}
+              state={approvalState}
+              onResubmitClick={handleRecordRevision}
+              onStateChange={(newState) => {
+                setApprovalState(newState);
+                setRow((prev) => ({ ...prev, _rawStatus: newState.status, status: newState.status }));
               }}
-              onClick={() => {
-                if (poNumbersList.length === 1 && onNavigateDetail) {
-                  onNavigateDetail("po", docToSlug(poNumbersList[0]));
-                } else if (poNumbersList.length === 0 && canConvertToPo && onNavigateDetail) {
-                  onNavigateDetail("po-create" as any, docNumber);
-                }
-              }}
-              title={
-                poNumbersList.length > 0
-                  ? `View Purchase Order (${poNumbersList.join(", ")})`
-                  : isAllClosed
-                    ? "All items in this PR are closed (cannot convert to PO)"
-                    : !isApproved
-                      ? "Locked: Requires Stage 2 Director Approval"
-                      : "Proceed to Create Purchase Order from this PR"
-              }
-            >
+            />
+          </div>
+
+          {/* 4-Column Hero KPI Summary Grid */}
+          <div className="detail-kpi-grid detail-kpi-grid--4">
+            <div className="detail-kpi-card">
+              <span>DEPARTMENT & SECTION</span>
+              <strong>{dept}</strong>
+              <small>{sectionName}</small>
+            </div>
+
+            <div className="detail-kpi-card">
+              <span>REQUISITION DATES</span>
+              <strong>{reqDate}</strong>
+              <small>Required Target: {dueDate}</small>
+            </div>
+
+            <div className="detail-kpi-card">
+              <span>TOTAL ITEMS & QUANTITY</span>
+              <strong>{totalQty}</strong>
+              <small>{items.length || 1} Material Item Record{items.length !== 1 ? "s" : ""} Requested</small>
+            </div>
+
+            <div className="detail-kpi-card">
+              <span>AUTHORIZATION STAGE</span>
+              <strong>{approvalState.status.replace(/_/g, " ")}</strong>
+              <small>
+                {isApproved || approvalState.approved2By
+                  ? `Approved by ${approvalState.approved2By || "-"}`
+                  : approvalState.status === "WAITING_APPROVE_2" || approvalState.approved1By
+                    ? `Verified by Stage 1: ${approvalState.approved1By || "-"}`
+                    : approvalState.status === "REJECTED"
+                      ? `Rejected by ${approvalState.rejectedBy || "-"}`
+                      : "Awaiting Stage 1 verification"}
+              </small>
+            </div>
+          </div>
+
+          {/* Document Relationship Workflow Pipeline */}
+          <div className="detail-pipeline">
+            <div className={`pipeline-node ${isApproved ? "complete" : "current"}`}>
               <div className="pipeline-node__icon">
-                <Icon name="archive" size={16} />
+                <Icon name="file" size={16} />
               </div>
               <div className="pipeline-node__text">
-                <span>Step 2 · Purchase Order</span>
-                <strong>
-                  {poNumbersList.length > 0 ? (
-                    <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "4px" }}>
-                      {poNumbersList.map((po: string, idx: number) => (
-                        <span
-                          key={idx}
-                          style={{
-                            textDecoration: "underline",
-                            cursor: "pointer",
-                            color: "var(--blue-700, #1d4ed8)",
-                          }}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (onNavigateDetail) onNavigateDetail("po", docToSlug(po));
-                          }}
-                          title={`Open Purchase Order ${po}`}
-                        >
-                          {po}{idx < poNumbersList.length - 1 ? "," : ""}
-                        </span>
-                      ))}
-                      {canConvertToPo && (
-                        <span
-                          style={{
-                            fontSize: "10px",
-                            padding: "1px 6px",
-                            borderRadius: "4px",
-                            background: "var(--blue-50, #eff6ff)",
-                            color: "var(--blue-700, #1d4ed8)",
-                            cursor: "pointer",
-                            border: "1px solid var(--blue-200, #bfdbfe)",
-                            marginLeft: "4px",
-                          }}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (onNavigateDetail) onNavigateDetail("po-create" as any, docNumber);
-                          }}
-                          title="Create another PO from remaining items"
-                        >
-                          + New PO
-                        </span>
-                      )}
-                    </div>
-                  ) : isAllClosed ? (
-                    "PR Closing (All Items Closed)"
-                  ) : canConvertToPo ? (
-                    "Ready for PO Conversion"
-                  ) : (
-                    "Pending PR Approval"
-                  )}
-                </strong>
+                <span>Step 1 · Purchase Requisition</span>
+                <strong>{docNumber}</strong>
               </div>
             </div>
-          );
-        })()}
 
-        <Icon name="arrowRight" size={16} className="pipeline-arrow" />
+            <Icon name="arrowRight" size={16} className="pipeline-arrow" />
 
-        <div
-          className={`pipeline-node ${poNumbersList.length > 0 ? "active" : ""}`}
-          style={{ opacity: poNumbersList.length > 0 ? 1 : 0.5 }}
-          title={poNumbersList.length > 0 ? "Track fulfillment in Purchase Order / Warehouse" : "Inbound Warehouse Gate Receiving"}
-        >
-          <div className="pipeline-node__icon">
-            <Icon name="box" size={16} />
-          </div>
-          <div className="pipeline-node__text">
-            <span>Step 3 · Receive Material</span>
-            <strong>{poNumbersList.length > 0 ? "Track in PO / Warehouse" : "Pending Fulfillment"}</strong>
-          </div>
-        </div>
-      </div>
+            {(() => {
+              const hasActiveItems = items.some((it, idx) => !isPrItemClosed(docNumber, it, idx));
+              const isAllClosed = items.length > 0 && !hasActiveItems;
+              const canConvertToPo = isApproved && hasActiveItems && status !== "Closing";
 
-      {/* Full-Width Requisition Items Table */}
-      <div className="detail-table-card">
-        <div className="detail-table-card__header">
-          <div className="detail-table-card__title">
-            <Icon name="list" size={16} />
-            <span>Requested Material Items ({items.length})</span>
-          </div>
-          <span style={{ fontSize: "11.5px", color: "var(--muted)" }}>
-            Document Reference: <strong style={{ color: "var(--ink)" }}>{docNumber}</strong>
-          </span>
-        </div>
-
-        <div style={{ overflowX: "auto" }}>
-          <table className="detail-data-table">
-            <thead>
-              <tr>
-                <th style={{ width: "36px", textAlign: "center" }}>No</th>
-                <th style={{ minWidth: "150px" }}>Material Item</th>
-                <th style={{ width: "95px" }}>Facility Type</th>
-                <th style={{ width: "75px", textAlign: "right" }}>Quantity</th>
-                <th style={{ width: "45px" }}>Unit</th>
-                <th style={{ width: "85px" }}>Due Date</th>
-                <th style={{ width: "75px" }}>Job Number</th>
-                <th style={{ width: "85px" }}>Department</th>
-                <th style={{ minWidth: "125px" }}>PO Reference</th>
-                <th style={{ minWidth: "120px" }}>Purpose / Remark</th>
-                <th style={{ width: "105px", textAlign: "center" }}>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.length > 0 ? (
-                items.map((it: any, idx: number) => {
-                  const qtyStr = it.quantity ? String(it.quantity) : "1.0000";
-                  const qtyOnly = parseFloat(qtyStr.replace(/[^0-9.]/g, "") || "1").toFixed(4);
-                  const unitStr = it.unit || qtyStr.replace(/[0-9.\s]/g, "") || "-";
-                  const itFacility = /non/i.test(String(it.facility || it.facility_status || "")) ? "NON FASILITAS" : "FASILITAS";
-                  // UI-05: Check Closing status (closedMapVersion triggers re-evaluation)
-                  const isClosed = closedMapVersion >= 0 && isPrItemClosed(docNumber, it, idx);
-                  return (
-                    <tr
-                      key={idx}
-                      style={{
-                        background: isClosed ? "rgba(239, 68, 68, 0.04)" : undefined,
-                      }}
-                    >
-                      <td style={{ textAlign: "center", fontWeight: 700, color: "var(--muted)" }}>{idx + 1}</td>
-                      <td>
-                        <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-                          <Material name={it.item || it.itemName || "-"} code={it.itemCode || "-"} />
-                          {isClosed && (
-                            <Badge tone="red" style={{ fontSize: "10.5px", padding: "1px 7px" }}>
-                              Closing
-                            </Badge>
+              return (
+                <div
+                  className={`pipeline-node ${poNumbersList.length > 0 ? "active" : canConvertToPo ? "current" : ""}`}
+                  style={{
+                    cursor: poNumbersList.length > 0 || canConvertToPo ? "pointer" : "not-allowed",
+                    opacity: poNumbersList.length > 0 || canConvertToPo ? 1 : 0.5,
+                  }}
+                  onClick={() => {
+                    if (poNumbersList.length === 1 && onNavigateDetail) {
+                      onNavigateDetail("po", docToSlug(poNumbersList[0]));
+                    } else if (poNumbersList.length === 0 && canConvertToPo && onNavigateDetail) {
+                      onNavigateDetail("po-create" as any, docNumber);
+                    }
+                  }}
+                  title={
+                    poNumbersList.length > 0
+                      ? `View Purchase Order (${poNumbersList.join(", ")})`
+                      : isAllClosed
+                        ? "All items in this PR are closed (cannot convert to PO)"
+                        : !isApproved
+                          ? "Locked: Requires Stage 2 Director Approval"
+                          : "Proceed to Create Purchase Order from this PR"
+                  }
+                >
+                  <div className="pipeline-node__icon">
+                    <Icon name="archive" size={16} />
+                  </div>
+                  <div className="pipeline-node__text">
+                    <span>Step 2 · Purchase Order</span>
+                    <strong>
+                      {poNumbersList.length > 0 ? (
+                        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "4px" }}>
+                          {poNumbersList.map((po: string, idx: number) => (
+                            <span
+                              key={idx}
+                              style={{
+                                textDecoration: "underline",
+                                cursor: "pointer",
+                                color: "var(--blue-700, #1d4ed8)",
+                              }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (onNavigateDetail) onNavigateDetail("po", docToSlug(po));
+                              }}
+                              title={`Open Purchase Order ${po}`}
+                            >
+                              {po}{idx < poNumbersList.length - 1 ? "," : ""}
+                            </span>
+                          ))}
+                          {canConvertToPo && (
+                            <span
+                              style={{
+                                fontSize: "10px",
+                                padding: "1px 6px",
+                                borderRadius: "4px",
+                                background: "var(--blue-50, #eff6ff)",
+                                color: "var(--blue-700, #1d4ed8)",
+                                cursor: "pointer",
+                                border: "1px solid var(--blue-200, #bfdbfe)",
+                                marginLeft: "4px",
+                              }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (onNavigateDetail) onNavigateDetail("po-create" as any, docNumber);
+                              }}
+                              title="Create another PO from remaining items"
+                            >
+                              + New PO
+                            </span>
                           )}
                         </div>
-                      </td>
-                      <td>
-                        <Badge tone={itFacility === "NON FASILITAS" ? "gray" : "purple"}>{itFacility}</Badge>
-                      </td>
-                      <td style={{ textAlign: "right", fontFamily: "ui-monospace, monospace", fontWeight: 700 }}>
-                        {qtyOnly}
-                      </td>
-                      <td style={{ fontWeight: 600 }}>{unitStr}</td>
-                      <td>{it.dueDate || dueDate}</td>
-                      <td>{it.jobNumber || "—"}</td>
-                      <td><strong style={{ color: "var(--ink)" }}>{dept}</strong></td>
-                      <td>
-                        {(() => {
-                          const itemPoStr = it.poNumber || it.po_number;
-                          if (!itemPoStr || itemPoStr === "—") {
-                            return <span style={{ color: "var(--muted)" }}>—</span>;
-                          }
-                          const pos = String(itemPoStr).split(",").map((p) => p.trim()).filter(Boolean);
-                          return (
-                            <div style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}>
-                              {pos.map((po, pIdx) => (
-                                <strong
-                                  key={pIdx}
-                                  className="cell-code"
-                                  style={{
-                                    color: "var(--blue-700, #1d4ed8)",
-                                    textDecoration: "underline",
-                                    cursor: "pointer",
-                                    fontSize: "11px",
-                                  }}
-                                  title={`Open Purchase Order ${po}`}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    if (onNavigateDetail) onNavigateDetail("po", docToSlug(po));
-                                  }}
-                                >
-                                  {po}{pIdx < pos.length - 1 ? "," : ""}
-                                </strong>
-                              ))}
-                            </div>
-                          );
-                        })()}
-                      </td>
-                      <td style={{ fontSize: "11px", color: "var(--ink-soft)" }}>
-                        {it.remark || remark}
-                      </td>
-                      <td style={{ textAlign: "center" }}>
-                        <button
-                          type="button"
-                          onClick={() => handleToggleItemClosing(it, idx)}
-                          style={{
-                            padding: "4px 10px",
-                            fontSize: "11px",
-                            fontWeight: 600,
-                            borderRadius: "6px",
-                            cursor: "pointer",
-                            border: isClosed
-                              ? "1px solid rgba(16, 185, 129, 0.35)"
-                              : "1px solid rgba(239, 68, 68, 0.35)",
-                            background: isClosed
-                              ? "rgba(16, 185, 129, 0.1)"
-                              : "rgba(239, 68, 68, 0.08)",
-                            color: isClosed ? "#047857" : "#b91c1c",
-                          }}
-                          title={
-                            isClosed
-                              ? "Unclosing: Reactivate item so it can be forwarded to Purchase Order"
-                              : "Closing: Close item so it is excluded from Purchase Order"
-                          }
-                        >
-                          {isClosed ? "Unclosing" : "Closing"}
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })
-              ) : (
-                <tr>
-                  <td colSpan={11} style={{ textAlign: "center", padding: "16px", color: "var(--muted)" }}>
-                    No requisition line items found.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-            <tfoot>
-              <tr style={{ background: "#f8fafc", fontWeight: 700 }}>
-                <td colSpan={3} style={{ textAlign: "right", padding: "8px 10px" }}>
-                  Total Requested Quantity:
-                </td>
-                <td style={{ textAlign: "right", padding: "8px 10px", fontFamily: "ui-monospace, monospace" }}>
-                  {items.reduce((sum: number, it: any) => sum + (parseFloat(String(it.quantity).replace(/[^0-9.]/g, "")) || 0), 0).toFixed(4)}
-                </td>
-                <td style={{ padding: "8px 10px" }}>{items[0]?.unit || "-"}</td>
-                <td colSpan={6} style={{ padding: "8px 10px", color: "var(--muted)", fontSize: "11px" }}>
-                  {items.filter((it, idx) => !isPrItemClosed(docNumber, it, idx)).length} active ·{" "}
-                  {items.filter((it, idx) => isPrItemClosed(docNumber, it, idx)).length} closing
-                </td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
-      </div>
-
-      {/* Full-Width Stacked Content Cards */}
-      <div className="detail-lower-grid">
-        {/* Top Card: Requisition Purpose & Document Attachments (Full Width) */}
-        <div className="detail-section-card">
-          <div className="detail-section-card__header">
-            <strong>Requisition Purpose & Documentation</strong>
-            <span>Internal Procurement Notes</span>
-          </div>
-          <div className="detail-section-card__body">
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))", gap: "16px" }}>
-              <div>
-                <span style={{ fontSize: "10.5px", fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.4px" }}>
-                  PR Note & Internal Reference
-                </span>
-                <div
-                  style={{
-                    background: "var(--canvas)",
-                    padding: "12px 16px",
-                    borderRadius: "var(--radius-sm)",
-                    fontSize: "12px",
-                    color: "var(--ink)",
-                    marginTop: "6px",
-                    border: "1px solid var(--line)",
-                    lineHeight: "1.45",
-                  }}
-                >
-                  <strong>{remark}</strong>
-                  <p style={{ margin: "4px 0 0", color: "var(--ink-soft)", fontSize: "11.5px" }}>
-                    Requisition submitted for mandatory personnel safety compliance. Approved for procurement processing under standard HSE consumable quota.
-                  </p>
-                </div>
-              </div>
-
-              <div>
-                <span style={{ fontSize: "10.5px", fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.4px" }}>
-                  Attached Technical Specifications
-                </span>
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    background: "var(--canvas)",
-                    padding: "10px 14px",
-                    borderRadius: "var(--radius-sm)",
-                    border: "1px solid var(--line)",
-                    marginTop: "6px",
-                  }}
-                >
-                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                    <Icon name="file" size={16} />
-                    <div>
-                      <strong style={{ fontSize: "12px" }}>{row.attachment_file || "No attachment uploaded"}</strong>
-                      {row.attachment_file && (
-                        <small style={{ display: "block", color: "var(--muted)", fontSize: "10.5px" }}>
-                          Uploaded by {createdBy !== "-" ? createdBy : "—"}
-                        </small>
+                      ) : isAllClosed ? (
+                        "PR Closing (All Items Closed)"
+                      ) : canConvertToPo ? (
+                        "Ready for PO Conversion"
+                      ) : (
+                        "Pending PR Approval"
                       )}
-                    </div>
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                    <input
-                      ref={attachmentInputRef}
-                      type="file"
-                      accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png"
-                      className="master-hidden-input"
-                      onChange={handleUploadAttachment}
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      disabled={isUploadingAttachment}
-                      onClick={() => attachmentInputRef.current?.click()}
-                    >
-                      {isUploadingAttachment
-                        ? "Uploading..."
-                        : row.attachment_file
-                          ? "Replace File"
-                          : "Upload File"}
-                    </Button>
-                    {(row.attachment_file || row.attachment_url) && (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={handleDownloadAttachment}
-                      >
-                        Download
-                      </Button>
-                    )}
+                    </strong>
                   </div>
                 </div>
+              );
+            })()}
+
+            <Icon name="arrowRight" size={16} className="pipeline-arrow" />
+
+            <div
+              className={`pipeline-node ${poNumbersList.length > 0 ? "active" : ""}`}
+              style={{ opacity: poNumbersList.length > 0 ? 1 : 0.5 }}
+              title={poNumbersList.length > 0 ? "Track fulfillment in Purchase Order / Warehouse" : "Inbound Warehouse Gate Receiving"}
+            >
+              <div className="pipeline-node__icon">
+                <Icon name="box" size={16} />
+              </div>
+              <div className="pipeline-node__text">
+                <span>Step 3 · Receive Material</span>
+                <strong>{poNumbersList.length > 0 ? "Track in PO / Warehouse" : "Pending Fulfillment"}</strong>
               </div>
             </div>
           </div>
-        </div>
 
-        {/* Bottom Card: Transaction History & Activity Log (Full Width with Horizontal Scroll Support) */}
-        <div className="detail-section-card">
-          <div className="detail-section-card__header">
-            <strong>Transaction History & Activity Log</strong>
-            <span>{activityLogEntries.length} Activity Records</span>
-          </div>
-          <div className="detail-section-card__body" style={{ padding: 0 }}>
-            <div className="table-scroll">
-              <table className="audit-log-table">
+          {/* Full-Width Requisition Items Table */}
+          <div className="detail-table-card">
+            <div className="detail-table-card__header">
+              <div className="detail-table-card__title">
+                <Icon name="list" size={16} />
+                <span>Requested Material Items ({items.length})</span>
+              </div>
+              <span style={{ fontSize: "11.5px", color: "var(--muted)" }}>
+                Document Reference: <strong style={{ color: "var(--ink)" }}>{docNumber}</strong>
+              </span>
+            </div>
+
+            <div style={{ overflowX: "auto" }}>
+              <table className="detail-data-table">
                 <thead>
                   <tr>
-                    <th style={{ width: "160px" }}>User / Actor</th>
-                    <th>Activity Performed</th>
-                    <th style={{ width: "180px" }}>Timestamp</th>
-                    <th style={{ width: "120px" }}>Activity Type</th>
+                    <th style={{ width: "36px", textAlign: "center" }}>No</th>
+                    <th style={{ minWidth: "150px" }}>Material Item</th>
+                    <th style={{ width: "95px" }}>Facility Type</th>
+                    <th style={{ width: "75px", textAlign: "right" }}>Quantity</th>
+                    <th style={{ width: "45px" }}>Unit</th>
+                    <th style={{ width: "85px" }}>Due Date</th>
+                    <th style={{ width: "75px" }}>Job Number</th>
+                    <th style={{ width: "85px" }}>Department</th>
+                    <th style={{ minWidth: "125px" }}>PO Reference</th>
+                    <th style={{ minWidth: "120px" }}>Purpose / Remark</th>
+                    <th style={{ width: "105px", textAlign: "center" }}>Action</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {activityLogEntries.map((log) => (
-                    <tr key={log.id}>
-                      <td>
-                        <strong>{log.actor}</strong>
-                        <small style={{ display: "block", color: "var(--muted)", fontSize: "10px" }}>
-                          {log.role}
-                        </small>
-                      </td>
-                      <td>{log.action}</td>
-                      <td style={{ fontFamily: "ui-monospace, monospace", fontSize: "11px" }}>
-                        {log.timestamp}
-                      </td>
-                      <td>
-                        <Badge tone={log.tone}>{log.statusLabel}</Badge>
+                  {items.length > 0 ? (
+                    items.map((it: any, idx: number) => {
+                      const qtyStr = it.quantity ? String(it.quantity) : "1.0000";
+                      const qtyOnly = parseFloat(qtyStr.replace(/[^0-9.]/g, "") || "1").toFixed(4);
+                      const unitStr = it.unit || qtyStr.replace(/[0-9.\s]/g, "") || "-";
+                      const itFacility = /non/i.test(String(it.facility || it.facility_status || "")) ? "NON FASILITAS" : "FASILITAS";
+                      // UI-05: Check Closing status (closedMapVersion triggers re-evaluation)
+                      const isClosed = closedMapVersion >= 0 && isPrItemClosed(docNumber, it, idx);
+                      return (
+                        <tr
+                          key={idx}
+                          style={{
+                            background: isClosed ? "rgba(239, 68, 68, 0.04)" : undefined,
+                          }}
+                        >
+                          <td style={{ textAlign: "center", fontWeight: 700, color: "var(--muted)" }}>{idx + 1}</td>
+                          <td>
+                            <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                              <Material name={it.item || it.itemName || "-"} code={it.itemCode || "-"} />
+                              {isClosed && (
+                                <Badge tone="red" style={{ fontSize: "10.5px", padding: "1px 7px" }}>
+                                  Closing
+                                </Badge>
+                              )}
+                            </div>
+                          </td>
+                          <td>
+                            <Badge tone={itFacility === "NON FASILITAS" ? "gray" : "purple"}>{itFacility}</Badge>
+                          </td>
+                          <td style={{ textAlign: "right", fontFamily: "ui-monospace, monospace", fontWeight: 700 }}>
+                            {qtyOnly}
+                          </td>
+                          <td style={{ fontWeight: 600 }}>{unitStr}</td>
+                          <td>{it.dueDate || dueDate}</td>
+                          <td>{it.jobNumber || "—"}</td>
+                          <td><strong style={{ color: "var(--ink)" }}>{dept}</strong></td>
+                          <td>
+                            {(() => {
+                              const itemPoStr = it.poNumber || it.po_number;
+                              if (!itemPoStr || itemPoStr === "—") {
+                                return <span style={{ color: "var(--muted)" }}>—</span>;
+                              }
+                              const pos = String(itemPoStr).split(",").map((p) => p.trim()).filter(Boolean);
+                              return (
+                                <div style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}>
+                                  {pos.map((po, pIdx) => (
+                                    <strong
+                                      key={pIdx}
+                                      className="cell-code"
+                                      style={{
+                                        color: "var(--blue-700, #1d4ed8)",
+                                        textDecoration: "underline",
+                                        cursor: "pointer",
+                                        fontSize: "11px",
+                                      }}
+                                      title={`Open Purchase Order ${po}`}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        if (onNavigateDetail) onNavigateDetail("po", docToSlug(po));
+                                      }}
+                                    >
+                                      {po}{pIdx < pos.length - 1 ? "," : ""}
+                                    </strong>
+                                  ))}
+                                </div>
+                              );
+                            })()}
+                          </td>
+                          <td style={{ fontSize: "11px", color: "var(--ink-soft)" }}>
+                            {it.remark || remark}
+                          </td>
+                          <td style={{ textAlign: "center" }}>
+                            <button
+                              type="button"
+                              onClick={() => handleToggleItemClosing(it, idx)}
+                              style={{
+                                padding: "4px 10px",
+                                fontSize: "11px",
+                                fontWeight: 600,
+                                borderRadius: "6px",
+                                cursor: "pointer",
+                                border: isClosed
+                                  ? "1px solid rgba(16, 185, 129, 0.35)"
+                                  : "1px solid rgba(239, 68, 68, 0.35)",
+                                background: isClosed
+                                  ? "rgba(16, 185, 129, 0.1)"
+                                  : "rgba(239, 68, 68, 0.08)",
+                                color: isClosed ? "#047857" : "#b91c1c",
+                              }}
+                              title={
+                                isClosed
+                                  ? "Unclosing: Reactivate item so it can be forwarded to Purchase Order"
+                                  : "Closing: Close item so it is excluded from Purchase Order"
+                              }
+                            >
+                              {isClosed ? "Unclosing" : "Closing"}
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  ) : (
+                    <tr>
+                      <td colSpan={11} style={{ textAlign: "center", padding: "16px", color: "var(--muted)" }}>
+                        No requisition line items found.
                       </td>
                     </tr>
-                  ))}
+                  )}
                 </tbody>
+                <tfoot>
+                  <tr style={{ background: "#f8fafc", fontWeight: 700 }}>
+                    <td colSpan={3} style={{ textAlign: "right", padding: "8px 10px" }}>
+                      Total Requested Quantity:
+                    </td>
+                    <td style={{ textAlign: "right", padding: "8px 10px", fontFamily: "ui-monospace, monospace" }}>
+                      {items.reduce((sum: number, it: any) => sum + (parseFloat(String(it.quantity).replace(/[^0-9.]/g, "")) || 0), 0).toFixed(4)}
+                    </td>
+                    <td style={{ padding: "8px 10px" }}>{items[0]?.unit || "-"}</td>
+                    <td colSpan={6} style={{ padding: "8px 10px", color: "var(--muted)", fontSize: "11px" }}>
+                      {items.filter((it, idx) => !isPrItemClosed(docNumber, it, idx)).length} active ·{" "}
+                      {items.filter((it, idx) => isPrItemClosed(docNumber, it, idx)).length} closing
+                    </td>
+                  </tr>
+                </tfoot>
               </table>
             </div>
           </div>
-        </div>
-      </div>
+
+          {/* Full-Width Stacked Content Cards */}
+          <div className="detail-lower-grid">
+            {/* Top Card: Requisition Purpose & Document Attachments (Full Width) */}
+            <div className="detail-section-card">
+              <div className="detail-section-card__header">
+                <strong>Requisition Purpose & Documentation</strong>
+                <span>Internal Procurement Notes</span>
+              </div>
+              <div className="detail-section-card__body">
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))", gap: "16px" }}>
+                  <div>
+                    <span style={{ fontSize: "10.5px", fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.4px" }}>
+                      PR Note & Internal Reference
+                    </span>
+                    <div
+                      style={{
+                        background: "var(--canvas)",
+                        padding: "12px 16px",
+                        borderRadius: "var(--radius-sm)",
+                        fontSize: "12px",
+                        color: "var(--ink)",
+                        marginTop: "6px",
+                        border: "1px solid var(--line)",
+                        lineHeight: "1.45",
+                      }}
+                    >
+                      <strong>{remark}</strong>
+                      <p style={{ margin: "4px 0 0", color: "var(--ink-soft)", fontSize: "11.5px" }}>
+                        Requisition submitted for mandatory personnel safety compliance. Approved for procurement processing under standard HSE consumable quota.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div>
+                    <span style={{ fontSize: "10.5px", fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.4px" }}>
+                      Attached Technical Specifications
+                    </span>
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        background: "var(--canvas)",
+                        padding: "10px 14px",
+                        borderRadius: "var(--radius-sm)",
+                        border: "1px solid var(--line)",
+                        marginTop: "6px",
+                      }}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                        <Icon name="file" size={16} />
+                        <div>
+                          <strong style={{ fontSize: "12px" }}>{row.attachment_file || "No attachment uploaded"}</strong>
+                          {row.attachment_file && (
+                            <small style={{ display: "block", color: "var(--muted)", fontSize: "10.5px" }}>
+                              Uploaded by {createdBy !== "-" ? createdBy : "—"}
+                            </small>
+                          )}
+                        </div>
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                        <input
+                          ref={attachmentInputRef}
+                          type="file"
+                          accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png"
+                          className="master-hidden-input"
+                          onChange={handleUploadAttachment}
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          disabled={isUploadingAttachment}
+                          onClick={() => attachmentInputRef.current?.click()}
+                        >
+                          {isUploadingAttachment
+                            ? "Uploading..."
+                            : row.attachment_file
+                              ? "Replace File"
+                              : "Upload File"}
+                        </Button>
+                        {(row.attachment_file || row.attachment_url) && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={handleDownloadAttachment}
+                          >
+                            Download
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Bottom Card: Transaction History & Activity Log (Full Width with Horizontal Scroll Support) */}
+            <div className="detail-section-card">
+              <div className="detail-section-card__header">
+                <strong>Transaction History & Activity Log</strong>
+                <span>{activityLogEntries.length} Activity Records</span>
+              </div>
+              <div className="detail-section-card__body" style={{ padding: 0 }}>
+                <div className="table-scroll">
+                  <table className="audit-log-table">
+                    <thead>
+                      <tr>
+                        <th style={{ width: "160px" }}>User / Actor</th>
+                        <th>Activity Performed</th>
+                        <th style={{ width: "180px" }}>Timestamp</th>
+                        <th style={{ width: "120px" }}>Activity Type</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {activityLogEntries.map((log) => (
+                        <tr key={log.id}>
+                          <td>
+                            <strong>{log.actor}</strong>
+                            <small style={{ display: "block", color: "var(--muted)", fontSize: "10px" }}>
+                              {log.role}
+                            </small>
+                          </td>
+                          <td>{log.action}</td>
+                          <td style={{ fontFamily: "ui-monospace, monospace", fontSize: "11px" }}>
+                            {log.timestamp}
+                          </td>
+                          <td>
+                            <Badge tone={log.tone}>{log.statusLabel}</Badge>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Button } from "../../../../components/ui/Button";
 import { CustomSelect } from "../../../../components/ui/CustomSelect";
+import { LoadingBuffer } from "../../../../components/ui/LoadingBuffer";
 import type { DepartmentRecord } from "../../../Exim/Master/Department/department-types";
 import type { JobNumberRecord } from "./job-number-types";
 
@@ -105,7 +106,7 @@ export function JobNumberForm({
     return (
       <div className="master-form-page">
         <div className="master-form-card">
-          <div className="master-form-loading">Loading Job Number data...</div>
+          <LoadingBuffer variant="panel" label="Loading Job Number data..." />
         </div>
       </div>
     );
@@ -153,6 +154,7 @@ export function JobNumberForm({
                 if (errors.jobNumber) setErrors((prev) => ({ ...prev, jobNumber: undefined }));
               }}
               maxLength={30}
+              required
               autoFocus
             />
             {errors.jobNumber && <span className="master-error-msg">{errors.jobNumber}</span>}
@@ -173,6 +175,7 @@ export function JobNumberForm({
                 if (errors.jobName) setErrors((prev) => ({ ...prev, jobName: undefined }));
               }}
               maxLength={45}
+              required
             />
             {errors.jobName && <span className="master-error-msg">{errors.jobName}</span>}
           </div>

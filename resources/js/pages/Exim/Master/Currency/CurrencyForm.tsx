@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Button } from "../../../../components/ui/Button";
+import { LoadingBuffer } from "../../../../components/ui/LoadingBuffer";
 import type { CurrencyRecord } from "./currency-types";
 
 export interface CurrencyFormData {
@@ -81,7 +82,7 @@ export function CurrencyForm({
     return (
       <div className="master-form-page">
         <div className="master-form-card">
-          <div className="master-form-loading">Loading Currency data...</div>
+          <LoadingBuffer variant="panel" label="Loading Currency data..." />
         </div>
       </div>
     );
@@ -129,6 +130,7 @@ export function CurrencyForm({
                 if (errors.currencyCode) setErrors((prev) => ({ ...prev, currencyCode: undefined }));
               }}
               maxLength={6}
+              required
               autoFocus
             />
             {errors.currencyCode && <span className="master-error-msg">{errors.currencyCode}</span>}

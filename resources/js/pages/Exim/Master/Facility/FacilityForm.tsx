@@ -128,6 +128,7 @@ export function FacilityForm({
               setName(e.target.value);
               if (error) setError(null);
             }}
+            required
             autoFocus={!isEdit}
           />
           {error && (

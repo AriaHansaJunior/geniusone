@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Button } from "../../../../components/ui/Button";
+import { LoadingBuffer } from "../../../../components/ui/LoadingBuffer";
 import type { RafaksiTypeRecord } from "./rafaksi-type-types";
 
 export interface RafaksiTypeFormData {
@@ -94,7 +95,7 @@ export function RafaksiTypeForm({
     return (
       <div className="master-form-page">
         <div className="master-form-card">
-          <div className="master-form-loading">Loading Rafaksi Type data...</div>
+          <LoadingBuffer variant="panel" label="Loading Rafaksi Type data..." />
         </div>
       </div>
     );
@@ -157,6 +158,7 @@ export function RafaksiTypeForm({
                 if (errors.name) setErrors((prev) => ({ ...prev, name: undefined }));
               }}
               maxLength={45}
+              required
               autoFocus
             />
             {errors.name && <span className="master-error-msg">{errors.name}</span>}

@@ -4,6 +4,7 @@ import { Button } from "../../../components/ui/Button";
 import { ConfirmDialog } from "../../../components/ui/ConfirmDialog";
 import { CustomDatePicker } from "../../../components/ui/CustomDatePicker";
 import { CustomSelect } from "../../../components/ui/CustomSelect";
+import { LoadingBuffer } from "../../../components/ui/LoadingBuffer";
 import { apiFetch, fetchList, fetchDetail, createWarehouseBpb } from "../../../data/api";
 import { getLocalApprovalState } from "../../../services/approvalApi";
 import {
@@ -454,12 +455,15 @@ export function WarehouseCreate({
     return false;
   };
 
+  const [loadingLookups, setLoadingLookups] = useState(true);
+
   // Load reference POs, RNs, and Master data on mount
   useEffect(() => {
     let isMounted = true;
+    setLoadingLookups(true);
 
     // 1. Fetch PO list (request up to 100 POs so all approved POs are included)
-    fetchList("po", { perPage: 100 }).then((res) => {
+    const p1 = fetchList("po", { perPage: 100 }).then((res) => {
       if (!isMounted) return;
       const rawList = res.rows || [];
 
@@ -495,10 +499,10 @@ export function WarehouseCreate({
           .trim();
         setSupplier(rawSup);
       }
-    });
+    }).catch(() => { });
 
     // 2. Fetch existing Receive Notes
-    apiFetch("/api/warehouse/rn?per_page=100")
+    const p2 = apiFetch("/api/warehouse/rn?per_page=100")
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
         if (!isMounted) return;
@@ -534,7 +538,7 @@ export function WarehouseCreate({
       .catch(() => { });
 
     // 2b. Fetch existing BPBs to detect duplicate material receipts (Double BPB)
-    fetchList("warehouse", { perPage: 100 })
+    const p2b = fetchList("warehouse", { perPage: 100 })
       .then((res) => {
         if (!isMounted) return;
         const bpbs = res.rows || [];
@@ -543,7 +547,7 @@ export function WarehouseCreate({
       .catch(() => { });
 
     // 3. Fetch Master Suppliers
-    apiFetch("/api/procurement/master/suppliers?per_page=100")
+    const p3 = apiFetch("/api/procurement/master/suppliers?per_page=100")
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
         if (isMounted && d?.data && Array.isArray(d.data) && d.data.length > 0) {
@@ -554,7 +558,7 @@ export function WarehouseCreate({
       .catch(() => { });
 
     // 4. Fetch Master Warehouses
-    apiFetch("/api/warehouse/master/warehouses?per_page=100")
+    const p4 = apiFetch("/api/warehouse/master/warehouses?per_page=100")
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
         if (isMounted && d?.data && Array.isArray(d.data) && d.data.length > 0) {
@@ -564,7 +568,7 @@ export function WarehouseCreate({
       .catch(() => { });
 
     // 5. Fetch Master Items
-    apiFetch("/api/exim/master/items?per_page=100")
+    const p5 = apiFetch("/api/exim/master/items?per_page=100")
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
         if (isMounted && d?.data && Array.isArray(d.data) && d.data.length > 0) {
@@ -574,7 +578,7 @@ export function WarehouseCreate({
       .catch(() => { });
 
     // 6. Fetch Master Job Numbers
-    apiFetch("/api/exim/master/job-numbers?per_page=100")
+    const p6 = apiFetch("/api/exim/master/job-numbers?per_page=100")
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
         if (isMounted && d?.data && Array.isArray(d.data) && d.data.length > 0) {
@@ -582,6 +586,10 @@ export function WarehouseCreate({
         }
       })
       .catch(() => { });
+
+    Promise.all([p1, p2, p2b, p3, p4, p5, p6]).finally(() => {
+      if (isMounted) setLoadingLookups(false);
+    });
 
     return () => {
       isMounted = false;
@@ -990,6 +998,12 @@ export function WarehouseCreate({
       {/* Main Transaction Panel */}
       <div className="tx-panel">
         <form onSubmit={handleSaveClick}>
+          {loadingLookups && (
+            <LoadingBuffer
+              variant="inline"
+              label="Loading approved POs, Receive Notes, warehouses, and item master..."
+            />
+          )}
           {/* Header Field Grid (Structured 4-column layout with balanced rows) */}
           <div className="tx-header-grid">
             {/* Row 1: Source Type | RN or PO Number | BPB Type | Receive Date */}
@@ -999,6 +1013,7 @@ export function WarehouseCreate({
               </label>
               <CustomSelect
                 id="bpbSourceType"
+                required
                 value={sourceType}
                 onChange={(val) => {
                   const next = (val === "PO" ? "PO" : "RN") as BpbSourceType;
@@ -1029,6 +1044,8 @@ export function WarehouseCreate({
                 <CustomSelect
                   id="bpbRnNumber"
                   searchable
+                  required
+                  invalid={Boolean(formErrors.rnNumber)}
                   value={rnNumber}
                   onChange={(val) => handleSelectRn(val)}
                   placeholder="Select RN Number..."
@@ -1077,6 +1094,8 @@ export function WarehouseCreate({
                 <CustomSelect
                   id="bpbPoNumber"
                   searchable
+                  required
+                  invalid={Boolean(formErrors.poNumber)}
                   value={poNumberHeader}
                   onChange={(val) => handleSelectPo(val)}
                   placeholder="Select Non-Berikat PO..."
@@ -1097,6 +1116,7 @@ export function WarehouseCreate({
               </label>
               <CustomSelect
                 id="bpbType"
+                required
                 value={bpbType}
                 onChange={(val) => setBpbType(val)}
                 options={[
@@ -1113,6 +1133,8 @@ export function WarehouseCreate({
               </label>
               <CustomDatePicker
                 id="bpbReceiveDate"
+                required
+                invalid={Boolean(formErrors.receiveDate)}
                 value={receiveDate}
                 onChange={(val) => setReceiveDate(val)}
                 className={formErrors.receiveDate ? "has-error" : ""}
@@ -1303,8 +1325,12 @@ export function WarehouseCreate({
                     <th style={{ width: "120px", minWidth: "120px" }}>Job Number</th>
                     <th style={{ width: "140px", minWidth: "140px" }}>PO Number</th>
                     <th style={{ width: "150px", minWidth: "150px" }}>Delivery Note (SJ)</th>
-                    <th style={{ width: "140px", minWidth: "140px", textAlign: "right" }}>Receive Quantity *</th>
-                    <th style={{ minWidth: "180px" }}>Warehouse Location</th>
+                    <th style={{ width: "140px", minWidth: "140px", textAlign: "right" }}>
+                      Receive Quantity <span className="required-mark">*</span>
+                    </th>
+                    <th style={{ minWidth: "180px" }}>
+                      Warehouse Location <span className="required-mark">*</span>
+                    </th>
                     <th style={{ minWidth: "180px" }}>Remark</th>
                     <th style={{ width: "50px", minWidth: "50px", textAlign: "center" }}>Action</th>
                   </tr>
@@ -1344,6 +1370,7 @@ export function WarehouseCreate({
                                 placeholder="Material Item name..."
                                 value={it.name}
                                 onChange={(e) => handleUpdateItemField(it.id, "name", e.target.value)}
+                                required
                               />
                               <input
                                 type="text"
@@ -1382,6 +1409,7 @@ export function WarehouseCreate({
                               className={`tx-input-cell tx-input-cell--num ${formErrors[`item_${idx}_qty`] ? "has-error" : ""}`}
                               style={{ width: "95px" }}
                               value={it.receiveQty ?? ""}
+                              required
                               onChange={(e) =>
                                 handleUpdateItemField(
                                   it.id,
@@ -1410,6 +1438,7 @@ export function WarehouseCreate({
                           <CustomSelect
                             className="tx-custom-select-cell"
                             searchable
+                            required
                             value={it.location}
                             onChange={(val) => handleUpdateItemField(it.id, "location", val)}
                             options={warehouseOptions.map((loc) => ({ value: loc, label: loc }))}

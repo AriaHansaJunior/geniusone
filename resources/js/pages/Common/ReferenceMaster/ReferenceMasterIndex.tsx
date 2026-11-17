@@ -4,6 +4,7 @@ import { SearchField } from "../../../components/ui/SearchField";
 import { Pagination } from "../../../components/ui/Pagination";
 import { Icon } from "../../../components/ui/Icon";
 import { StatusToggle } from "../../../components/ui/StatusToggle";
+import { TableLoadingRow } from "../../../components/ui/LoadingBuffer";
 import { useNotification } from "../../../context/NotificationContext";
 import type {
   ReferenceMasterConfig,
@@ -218,11 +219,11 @@ export function ReferenceMasterIndex({
               </thead>
               <tbody>
                 {isLoading && paginatedRecords.length === 0 ? (
-                  <tr>
-                    <td colSpan={columnCount} className="master-form-loading">
-                      Loading {config.title.toLowerCase()} records...
-                    </td>
-                  </tr>
+                  <TableLoadingRow
+                    colSpan={columnCount}
+                    label={`Loading ${config.title}...`}
+                    sublabel="Synchronizing reference records from database..."
+                  />
                 ) : paginatedRecords.length > 0 ? (
                   paginatedRecords.map((item, idx) => {
                     const rowNumber = (safeCurrentPage - 1) * pageSize + idx + 1;

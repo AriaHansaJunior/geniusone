@@ -8,6 +8,7 @@ import { Pagination } from "../../../../components/ui/Pagination";
 import { CustomDatePicker } from "../../../../components/ui/CustomDatePicker";
 import { CustomSelect } from "../../../../components/ui/CustomSelect";
 import { ApprovalStatusBadge } from "../../../../components/approval/ApprovalStatusBadge";
+import { TableLoadingRow } from "../../../../components/ui/LoadingBuffer";
 import { getLocalApprovalState } from "../../../../services/approvalApi";
 import { normalizeApprovalStatus } from "../../../../types/approval";
 import {
@@ -23,12 +24,14 @@ import type { RequestMaterialRecord } from "./request-material-types";
 
 interface RequestMaterialIndexProps {
   records?: RequestMaterialRecord[];
+  isLoading?: boolean;
   onAddNew: () => void;
   onOpenDetail: (id: string) => void;
 }
 
 export function RequestMaterialIndex({
   records = initialRequestMaterialRecords,
+  isLoading = false,
   onAddNew,
   onOpenDetail,
 }: RequestMaterialIndexProps) {
@@ -251,22 +254,21 @@ export function RequestMaterialIndex({
               notification.type === "error"
                 ? "#fef2f2"
                 : notification.type === "warning"
-                ? "#fffbeb"
-                : "#f0fdf4",
-            border: `1px solid ${
-              notification.type === "error"
-                ? "#fecaca"
-                : notification.type === "warning"
+                  ? "#fffbeb"
+                  : "#f0fdf4",
+            border: `1px solid ${notification.type === "error"
+              ? "#fecaca"
+              : notification.type === "warning"
                 ? "#fde68a"
                 : "#bbf7d0"
-            }`,
+              }`,
             borderRadius: "var(--radius-sm)",
             color:
               notification.type === "error"
                 ? "#b91c1c"
                 : notification.type === "warning"
-                ? "#92400e"
-                : "#15803d",
+                  ? "#92400e"
+                  : "#15803d",
             fontSize: "12.5px",
             fontWeight: 600,
             display: "flex",
@@ -482,7 +484,13 @@ export function RequestMaterialIndex({
                 </tr>
               </thead>
               <tbody>
-                {paginatedRecords.length > 0 ? (
+                {isLoading && paginatedRecords.length === 0 ? (
+                  <TableLoadingRow
+                    colSpan={14}
+                    label="Loading Material Requests..."
+                    sublabel="Retrieving request material records & approval statuses..."
+                  />
+                ) : paginatedRecords.length > 0 ? (
                   paginatedRecords.map((item, index) => {
                     const rowNumber =
                       (safeCurrentPage - 1) * pageSize + index + 1;

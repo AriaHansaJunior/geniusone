@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Button } from "../../../components/ui/Button";
 import { Icon } from "../../../components/ui/Icon";
 import { CustomSelect } from "../../../components/ui/CustomSelect";
+import { LoadingBuffer } from "../../../components/ui/LoadingBuffer";
 import type {
   WarehouseMasterRecord,
   WarehouseTypeOption,
@@ -117,6 +118,9 @@ export function WarehouseMasterForm({
       )}
 
       <form onSubmit={handleSubmit} className="master-form-card" noValidate>
+        {isWarehouseTypesLoading && (
+          <LoadingBuffer variant="inline" label="Loading warehouse types..." />
+        )}
         <div className="master-form-grid-2">
           <div className="master-form-group">
             <label htmlFor="wh-name" className="master-form-label">
@@ -135,6 +139,7 @@ export function WarehouseMasterForm({
                 }
               }}
               placeholder="Enter warehouse name"
+              required
               autoFocus
             />
             {errors.name && <span className="master-form-error-text">{errors.name}</span>}
@@ -147,6 +152,8 @@ export function WarehouseMasterForm({
             <CustomSelect
               id="wh-type"
               searchable
+              required
+              invalid={Boolean(errors.type)}
               value={warehouseTypeId}
               onChange={(val) => {
                 setWarehouseTypeId(val);

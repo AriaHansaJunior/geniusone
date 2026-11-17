@@ -93,6 +93,7 @@ export function TypeOfRequestForm({
               placeholder="e.g. Quality Inspection Batch"
               value={name}
               onChange={(e) => setName(e.target.value)}
+              required
               autoFocus
             />
           </div>
@@ -102,6 +103,7 @@ export function TypeOfRequestForm({
             </label>
             <CustomSelect
               searchable
+              required
               value={departmentId}
               onChange={setDepartmentId}
               options={[

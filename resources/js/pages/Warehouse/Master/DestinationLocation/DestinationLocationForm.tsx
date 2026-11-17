@@ -81,6 +81,7 @@ export function DestinationLocationForm({
               placeholder="e.g. Smelter 2 Furnace Charging Deck"
               value={name}
               onChange={(e) => setName(e.target.value)}
+              required
               autoFocus
             />
           </div>

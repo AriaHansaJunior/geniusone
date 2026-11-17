@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Button } from "../../../../components/ui/Button";
 import { Icon } from "../../../../components/ui/Icon";
 import { CustomSelect } from "../../../../components/ui/CustomSelect";
+import { LoadingBuffer } from "../../../../components/ui/LoadingBuffer";
 import { fetchMasterLookupsApi, fetchSupplierDetailApi } from "../../../../data/masterApi";
 import type { SupplierFormData, SupplierRecord } from "./supplier-types";
 
@@ -213,7 +214,12 @@ export function SupplierForm({
     return (
       <div className="supplier-form-page master-form-page">
         <div className="master-form-card">
-          <div className="master-form-loading">Loading supplier details...</div>
+          <LoadingBuffer
+            variant="panel"
+            label="Loading supplier details..."
+            sublabel="Fetching supplier profile and financial configuration..."
+            skeletonRows={3}
+          />
         </div>
       </div>
     );
@@ -258,6 +264,12 @@ export function SupplierForm({
 
       {/* Main Form Container Card */}
       <form onSubmit={handleSave} className="supplier-card-form">
+        {loadingLookups && (
+          <LoadingBuffer
+            variant="inline"
+            label="Loading supplier reference options..."
+          />
+        )}
         <div className="supplier-form-grid">
           {/* Row 1: Supplier Code & Supplier Name */}
           <div className="form-field-group col-span-1">
@@ -288,7 +300,7 @@ export function SupplierForm({
 
           <div className="form-field-group col-span-2">
             <label htmlFor="supplierName" className="field-label">
-              Supplier Name
+              Supplier Name <span className="required-mark">*</span>
             </label>
             <input
               id="supplierName"

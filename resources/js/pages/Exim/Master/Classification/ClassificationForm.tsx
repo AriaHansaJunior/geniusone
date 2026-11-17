@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Button } from "../../../../components/ui/Button";
 import { Icon } from "../../../../components/ui/Icon";
 import { CustomSelect } from "../../../../components/ui/CustomSelect";
+import { LoadingBuffer } from "../../../../components/ui/LoadingBuffer";
 import type { AccountRecord } from "../Account/account-types";
 import type {
   ClassificationRecord,
@@ -167,6 +168,12 @@ export function ClassificationForm({
 
       {/* Form Content Card */}
       <form onSubmit={handleSubmit} className="classification-form-card">
+        {(isReportingTypesLoading || isAccountsLoading) && (
+          <LoadingBuffer
+            variant="inline"
+            label="Loading reporting types and accounts..."
+          />
+        )}
         <div className="master-form-grid-2">
           {/* 1. Classification Code */}
           <div className="classification-form-group">
@@ -185,6 +192,7 @@ export function ClassificationForm({
                 setCode(e.target.value);
                 if (errors.code) setErrors((prev) => ({ ...prev, code: undefined }));
               }}
+              required
               autoFocus={!isEdit}
             />
             {errors.code && (
@@ -209,6 +217,7 @@ export function ClassificationForm({
                 setName(e.target.value);
                 if (errors.name) setErrors((prev) => ({ ...prev, name: undefined }));
               }}
+              required
             />
             {errors.name && (
               <span className="classification-form-error-msg">{errors.name}</span>
@@ -225,6 +234,8 @@ export function ClassificationForm({
             <CustomSelect
               id="classificationReportingType"
               searchable
+              required
+              invalid={Boolean(errors.reportingType)}
               value={reportingTypeId}
               onChange={(val) => {
                 setReportingTypeId(val);
@@ -260,6 +271,8 @@ export function ClassificationForm({
             <CustomSelect
               id="classificationAccount"
               searchable
+              required
+              invalid={Boolean(errors.account)}
               value={accountId}
               onChange={(val) => {
                 setAccountId(val);

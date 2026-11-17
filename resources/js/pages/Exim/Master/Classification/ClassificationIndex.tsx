@@ -4,6 +4,7 @@ import { SearchField } from "../../../../components/ui/SearchField";
 import { Icon } from "../../../../components/ui/Icon";
 import { Pagination } from "../../../../components/ui/Pagination";
 import { StatusToggle } from "../../../../components/ui/StatusToggle";
+import { TableLoadingRow } from "../../../../components/ui/LoadingBuffer";
 import { initialClassificationRecords } from "./classification-data";
 import type {
   ClassificationRecord,
@@ -13,12 +14,14 @@ import type {
 
 interface ClassificationIndexProps {
   records?: ClassificationRecord[];
+  isLoading?: boolean;
   onAddNew: () => void;
   onToggleStatus?: (id: string) => void;
 }
 
 export function ClassificationIndex({
   records = initialClassificationRecords,
+  isLoading = false,
   onAddNew,
   onToggleStatus,
 }: ClassificationIndexProps) {
@@ -295,7 +298,9 @@ export function ClassificationIndex({
                 </tr>
               </thead>
               <tbody>
-                {paginatedRecords.length > 0 ? (
+                {isLoading && paginatedRecords.length === 0 ? (
+                  <TableLoadingRow colSpan={6} label="Loading Classifications..." />
+                ) : paginatedRecords.length > 0 ? (
                   paginatedRecords.map((item, index) => {
                     const rowNumber =
                       (safeCurrentPage - 1) * pageSize + index + 1;

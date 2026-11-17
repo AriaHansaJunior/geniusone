@@ -13,6 +13,8 @@ export interface CustomDatePickerProps {
   style?: React.CSSProperties;
   min?: string; // Format: "YYYY-MM-DD"
   max?: string; // Format: "YYYY-MM-DD"
+  required?: boolean;
+  invalid?: boolean;
 }
 
 const MONTH_NAMES = [
@@ -71,6 +73,8 @@ export function CustomDatePicker({
   style,
   min,
   max,
+  required = false,
+  invalid = false,
 }: CustomDatePickerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isYearPickerOpen, setIsYearPickerOpen] = useState(false);
@@ -294,7 +298,9 @@ export function CustomDatePicker({
 
       {/* Trigger Field - Click anywhere opens popup */}
       <div
-        className={`custom-datepicker-trigger ${isOpen ? "is-active" : ""}`}
+        className={`custom-datepicker-trigger ${isOpen ? "is-active" : ""} ${
+          invalid || className.includes("has-error") ? "has-error" : ""
+        }`.trim()}
         onClick={() => {
           if (!disabled) {
             setIsOpen((prev) => !prev);
@@ -310,6 +316,9 @@ export function CustomDatePicker({
         }}
         aria-haspopup="dialog"
         aria-expanded={isOpen}
+        aria-required={required ? "true" : undefined}
+        aria-invalid={invalid || className.includes("has-error") ? "true" : undefined}
+        data-required={required ? "true" : undefined}
       >
         <span className={`custom-datepicker-value ${!displayString ? "is-placeholder" : ""}`}>
           {displayString || placeholder}

@@ -5,6 +5,7 @@ import { SearchField } from "../../../components/ui/SearchField";
 import { Pagination } from "../../../components/ui/Pagination";
 import { CustomDatePicker } from "../../../components/ui/CustomDatePicker";
 import { Badge } from "../../../components/ui/Badge";
+import { LoadingBuffer, TableLoadingRow } from "../../../components/ui/LoadingBuffer";
 import { apiFetch } from "../../../data/api";
 
 export type WarehouseReportKind =
@@ -264,6 +265,11 @@ export function WarehouseOperationalReport({ reportKind }: WarehouseOperationalR
       </div>
 
       <div className="panel table-panel">
+        {isLoading && rows.length > 0 && (
+          <div className="table-frame__buffer-bar">
+            <LoadingBuffer variant="inline" label={`Updating ${config.sheetName}...`} />
+          </div>
+        )}
         <div className="table-scroll">
           <table className="data-table">
             <thead>
@@ -277,12 +283,12 @@ export function WarehouseOperationalReport({ reportKind }: WarehouseOperationalR
               </tr>
             </thead>
             <tbody>
-              {isLoading ? (
-                <tr>
-                  <td colSpan={config.columns.length + 1} className="table-empty-cell">
-                    Loading report records...
-                  </td>
-                </tr>
+              {isLoading && rows.length === 0 ? (
+                <TableLoadingRow
+                  colSpan={config.columns.length + 1}
+                  label={`Loading ${config.sheetName}...`}
+                  sublabel="Fetching warehouse movement & stock data from server..."
+                />
               ) : paginatedRows.length === 0 ? (
                 <tr>
                   <td colSpan={config.columns.length + 1} className="table-empty-cell">

@@ -11,6 +11,7 @@ import { normalizeApprovalStatus, type DocumentApprovalState } from "../../../ty
 import { fetchReceiveNoteReturns } from "../../../data/masterApi";
 import { useTheme } from "../../../context/ThemeContext";
 import { ReceiveNoteReturnDefaultDetail } from "../../../themes/default/pages/ReceiveNoteReturnDefaultDetail";
+import { LoadingBuffer } from "../../../components/ui/LoadingBuffer";
 
 interface ReceiveNoteReturnDetailProps {
   code: string;
@@ -26,11 +27,16 @@ export function ReceiveNoteReturnDetail({
   const { isDefaultTheme } = useTheme();
   const [printMenuOpen, setPrintMenuOpen] = useState(false);
   const [fetchedRecord, setFetchedRecord] = useState<ReceiveNoteReturnRecord | null>(null);
+  const [isLoadingDetail, setIsLoadingDetail] = useState<boolean>(() => !record);
   const printMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (record) return;
+    if (record) {
+      setIsLoadingDetail(false);
+      return;
+    }
     let active = true;
+    setIsLoadingDetail(true);
     const cleanCode = code.replace(/^details?\//i, "").trim();
     fetchReceiveNoteReturns()
       .then((list) => {
@@ -43,7 +49,10 @@ export function ReceiveNoteReturnDetail({
         );
         if (found) setFetchedRecord(found);
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => {
+        if (active) setIsLoadingDetail(false);
+      });
     return () => {
       active = false;
     };
@@ -128,6 +137,19 @@ export function ReceiveNoteReturnDetail({
     setPrintMenuOpen(false);
     window.print();
   };
+
+  if (isLoadingDetail && !record && !fetchedRecord) {
+    return (
+      <div className="rnr-detail-page">
+        <LoadingBuffer
+          variant="panel"
+          label="Loading Receive Note Return Details..."
+          sublabel="Fetching return note metadata and returned item lines..."
+          skeletonRows={4}
+        />
+      </div>
+    );
+  }
 
   if (isDefaultTheme) {
     return (

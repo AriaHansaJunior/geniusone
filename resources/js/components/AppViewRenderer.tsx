@@ -741,6 +741,7 @@ export function AppViewRenderer({
       {viewState.type === "list" && viewState.page === "supplier" && (
         <SupplierIndex
           records={supplierRecords}
+          isLoading={masterFetchStates["suppliers"] !== "done"}
           onToggleHide={handleToggleSupplierHide}
           onAddNew={() => handleNavigateCreate("supplier")}
         />
@@ -750,6 +751,7 @@ export function AppViewRenderer({
       {viewState.type === "list" && viewState.page === "payment-term" && (
         <PaymentTermIndex
           records={paymentTermRecords}
+          isLoading={masterFetchStates["payment-terms"] !== "done"}
           onToggleHide={handleTogglePaymentTermHide}
           onAddNew={() => handleNavigateCreate("payment-term")}
         />
@@ -759,6 +761,7 @@ export function AppViewRenderer({
       {viewState.type === "list" && viewState.page === "purchase-category" && (
         <PurchaseCategoryIndex
           records={purchaseCategoryRecords}
+          isLoading={masterFetchStates["purchase-categories"] !== "done"}
           onToggleHide={handleTogglePurchaseCategoryHide}
           onAddNew={() => handleNavigateCreate("purchase-category")}
         />
@@ -768,6 +771,7 @@ export function AppViewRenderer({
       {viewState.type === "list" && viewState.page === "delivery-terms" && (
         <DeliveryTermsIndex
           records={deliveryTermRecords}
+          isLoading={masterFetchStates["delivery-terms"] !== "done"}
           onToggleHide={handleToggleDeliveryTermHide}
           onAddNew={() => handleNavigateCreate("delivery-terms")}
         />
@@ -777,6 +781,7 @@ export function AppViewRenderer({
       {viewState.type === "list" && viewState.page === "additional-costs" && (
         <AdditionalCostsIndex
           records={additionalCostRecords}
+          isLoading={masterFetchStates["additional-costs"] !== "done"}
           onToggleHide={handleToggleAdditionalCostHide}
           onAddNew={() => handleNavigateCreate("additional-costs")}
         />
@@ -786,6 +791,7 @@ export function AppViewRenderer({
       {viewState.type === "list" && viewState.page === "pph" && (
         <PphIndex
           records={pphRecords}
+          isLoading={masterFetchStates["pph"] !== "done"}
           onToggleHide={handleTogglePphHide}
           onAddNew={() => handleNavigateCreate("pph")}
         />
@@ -795,6 +801,7 @@ export function AppViewRenderer({
       {viewState.type === "list" && viewState.page === "unit" && (
         <UnitIndex
           records={unitRecords}
+          isLoading={masterFetchStates["units"] !== "done"}
           onAddNew={() => handleNavigateCreate("unit")}
           onToggleStatus={handleToggleUnitStatus}
         />
@@ -804,6 +811,7 @@ export function AppViewRenderer({
       {viewState.type === "list" && (viewState.page === "satuan" || (viewState.page as string) === "unit-reference") && (
         <UnitReferenceIndex
           records={unitReferenceRecords}
+          isLoading={masterFetchStates["unit-references"] !== "done"}
           onAddNew={handleNavigateUnitReferenceCreate}
           onToggleStatus={handleToggleUnitReferenceStatus}
         />
@@ -813,6 +821,7 @@ export function AppViewRenderer({
       {viewState.type === "list" && viewState.page === "classification" && (
         <ClassificationIndex
           records={classificationRecords}
+          isLoading={masterFetchStates["classifications"] !== "done"}
           onAddNew={() => handleNavigateCreate("classification")}
           onToggleStatus={handleToggleClassificationStatus}
         />
@@ -822,6 +831,7 @@ export function AppViewRenderer({
       {viewState.type === "list" && viewState.page === "department" && (
         <DepartmentIndex
           records={departmentRecords}
+          isLoading={masterFetchStates["departments"] !== "done"}
           onAddNew={() => handleNavigateCreate("department")}
           onToggleStatus={handleToggleDepartmentStatus}
         />
@@ -831,6 +841,7 @@ export function AppViewRenderer({
       {viewState.type === "list" && viewState.page === "brand" && (
         <BrandIndex
           records={brandRecords}
+          isLoading={masterFetchStates["brands"] !== "done"}
           onAddNew={() => handleNavigateCreate("brand")}
           onToggleStatus={handleToggleBrandStatus}
         />
@@ -840,6 +851,7 @@ export function AppViewRenderer({
       {viewState.type === "list" && viewState.page === "facility" && (
         <FacilityIndex
           records={facilityRecords}
+          isLoading={masterFetchStates["facilities"] !== "done"}
           onAddNew={() => handleNavigateCreate("facility")}
           onToggleStatus={handleToggleFacilityStatus}
         />
@@ -849,6 +861,7 @@ export function AppViewRenderer({
       {viewState.type === "list" && viewState.page === "hs" && (
         <HsIndex
           records={hsRecords}
+          isLoading={masterFetchStates["hs-codes"] !== "done"}
           onAddNew={() => handleNavigateCreate("hs")}
         />
       )}
@@ -857,6 +870,7 @@ export function AppViewRenderer({
       {viewState.type === "list" && viewState.page === "category" && (
         <CategoryIndex
           records={categoryRecords}
+          isLoading={masterFetchStates["categories"] !== "done"}
           onAddNew={() => handleNavigateCreate("category")}
           onToggleStatus={handleToggleCategoryStatus}
         />
@@ -866,6 +880,7 @@ export function AppViewRenderer({
       {viewState.type === "list" && viewState.page === "style" && (
         <StyleIndex
           records={styleRecords}
+          isLoading={masterFetchStates["styles"] !== "done"}
           onAddNew={() => handleNavigateCreate("style")}
           onImportExcel={handleNavigateStyleImport}
           onToggleStatus={handleToggleStyleStatus}
@@ -876,6 +891,7 @@ export function AppViewRenderer({
       {viewState.type === "list" && viewState.page === "colour" && (
         <ColorIndex
           records={colorRecords}
+          isLoading={masterFetchStates["colours"] !== "done"}
           onAddNew={() => handleNavigateCreate("colour")}
           onToggleStatus={handleToggleColorStatus}
         />
@@ -885,6 +901,7 @@ export function AppViewRenderer({
       {viewState.type === "list" && viewState.page === "item" && (
         <ItemIndex
           records={itemRecords}
+          isLoading={masterFetchStates["items"] !== "done"}
           onAddNew={() => handleNavigateCreate("item")}
           onGenerateQr={handleNavigateGenerateQr}
           onToggleStatus={handleToggleItemStatus}
@@ -895,6 +912,7 @@ export function AppViewRenderer({
       {viewState.type === "list" && viewState.page === "receive-note" && (
         <ReceiveNoteIndex
           records={receiveNoteRecords}
+          isLoading={masterFetchStates["receive-notes"] !== "done"}
           onAddNew={() => handleNavigateCreate("receive-note")}
           onViewDetail={handleNavigateReceiveNoteDetail}
         />
@@ -904,6 +922,7 @@ export function AppViewRenderer({
       {viewState.type === "list" && viewState.page === "receive-note-return" && (
         <ReceiveNoteReturnIndex
           records={receiveNoteReturnRecords}
+          isLoading={masterFetchStates["receive-note-returns"] !== "done"}
           onAddNew={() => handleNavigateCreate("receive-note-return")}
           onViewDetail={handleNavigateReceiveNoteReturnDetail}
         />
@@ -913,6 +932,7 @@ export function AppViewRenderer({
       {viewState.type === "list" && viewState.page === "document-history" && (
         <DocumentHistoryIndex
           records={documentHistoryRecords}
+          isLoading={masterFetchStates["document-histories"] !== "done"}
           onViewDetail={handleNavigateDocumentHistoryDetail}
         />
       )}
@@ -921,6 +941,7 @@ export function AppViewRenderer({
       {viewState.type === "list" && viewState.page === "warehouse-master" && (
         <MasterWarehouseIndex
           records={warehouseMasterRecords}
+          isLoading={masterFetchStates["warehouses"] !== "done"}
           onAddNew={handleNavigateMasterWarehouseCreate}
           onToggleStatus={handleToggleWarehouseMasterStatus}
           onViewCoordinates={handleNavigateWarehouseCoordinates}
@@ -931,6 +952,7 @@ export function AppViewRenderer({
       {viewState.type === "list" && viewState.page === "country" && (
         <CountryIndex
           records={countryRecords}
+          isLoading={masterFetchStates["countries"] !== "done"}
           onAddNew={handleNavigateCountryCreate}
           onToggleStatus={handleToggleCountryStatus}
         />
@@ -940,6 +962,7 @@ export function AppViewRenderer({
       {viewState.type === "list" && viewState.page === "account" && (
         <AccountIndex
           records={accountRecords}
+          isLoading={masterFetchStates["accounts"] !== "done"}
           onAddNew={handleNavigateAccountCreate}
           onToggleStatus={handleToggleAccountStatus}
         />
@@ -949,6 +972,7 @@ export function AppViewRenderer({
       {viewState.type === "list" && viewState.page === "job-number" && (
         <JobNumberIndex
           records={jobNumberRecords}
+          isLoading={masterFetchStates["job-numbers"] !== "done"}
           onAddNew={handleNavigateJobNumberCreate}
           onToggleStatus={handleToggleJobNumberStatus}
         />
@@ -958,6 +982,7 @@ export function AppViewRenderer({
       {viewState.type === "list" && viewState.page === "rafaksi-type" && (
         <RafaksiTypeIndex
           records={rafaksiTypeRecords}
+          isLoading={masterFetchStates["rafaksi-types"] !== "done"}
           onAddNew={handleNavigateRafaksiTypeCreate}
           onToggleStatus={handleToggleRafaksiTypeStatus}
         />
@@ -967,6 +992,7 @@ export function AppViewRenderer({
       {viewState.type === "list" && viewState.page === "currency" && (
         <CurrencyIndex
           records={currencyRecords}
+          isLoading={masterFetchStates["currencies"] !== "done"}
           onAddNew={handleNavigateCurrencyCreate}
           onToggleStatus={handleToggleCurrencyStatus}
         />
@@ -1006,6 +1032,7 @@ export function AppViewRenderer({
       {viewState.type === "list" && viewState.page === "wh-req-material" && (
         <RequestMaterialIndex
           records={requestMaterialRecords}
+          isLoading={masterFetchStates["request-materials"] !== "done"}
           onAddNew={handleNavigateRequestMaterialCreate}
           onOpenDetail={handleNavigateRequestMaterialDetail}
         />
@@ -1015,6 +1042,7 @@ export function AppViewRenderer({
       {viewState.type === "list" && viewState.page === "stock-notification-master" && (
         <StockNotificationIndex
           records={stockNotificationRecords}
+          isLoading={masterFetchStates["stock-notifications"] !== "done"}
           onAddNew={() => handleNavigateStockNotificationCreate("master")}
           onEdit={(record) => handleEditStockNotification(record, "master")}
           onToggleStatus={handleToggleStockNotificationStatus}
@@ -1025,6 +1053,7 @@ export function AppViewRenderer({
       {viewState.type === "list" && viewState.page === "wh-type-of-request" && (
         <TypeOfRequestIndex
           records={typeOfRequestRecords}
+          isLoading={masterFetchStates["wh-type-of-requests"] !== "done"}
           onAddNew={handleNavigateTypeOfRequestCreate}
           onToggleStatus={handleToggleTypeOfRequestStatus}
         />
@@ -1034,6 +1063,7 @@ export function AppViewRenderer({
       {viewState.type === "list" && viewState.page === "wh-destination-location" && (
         <DestinationLocationIndex
           records={destinationLocationRecords}
+          isLoading={masterFetchStates["wh-destination-locations"] !== "done"}
           onAddNew={handleNavigateDestinationLocationCreate}
           onToggleStatus={handleToggleDestinationLocationStatus}
         />
@@ -1057,7 +1087,7 @@ export function AppViewRenderer({
             <ReferenceMasterIndex
               config={config}
               records={referenceRecordsMap[refKey] || []}
-              isLoading={masterFetchStates[`ref-${refKey}`] === "loading"}
+              isLoading={masterFetchStates[`ref-${refKey}`] !== "done"}
               onAddNew={() => handleNavigateReferenceCreate(refKey)}
             />
           );
@@ -1262,6 +1292,7 @@ export function AppViewRenderer({
         return (
           <WarehouseCoordinateIndex
             warehouse={activeWarehouse}
+            isLoading={masterFetchStates["warehouses"] !== "done"}
             onAddNew={() => handleNavigateWarehouseCoordinateCreate(viewState.warehouseId)}
             onBack={() => handleNavigateList("warehouse-master", "/warehouse/master/warehouse")}
             onToggleCoordinateStatus={(coordId) =>

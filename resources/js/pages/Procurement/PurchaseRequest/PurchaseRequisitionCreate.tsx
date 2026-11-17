@@ -5,6 +5,7 @@ import { Icon } from "../../../components/ui/Icon";
 import { ConfirmDialog } from "../../../components/ui/ConfirmDialog";
 import { CustomDatePicker } from "../../../components/ui/CustomDatePicker";
 import { CustomSelect } from "../../../components/ui/CustomSelect";
+import { LoadingBuffer } from "../../../components/ui/LoadingBuffer";
 import { ItemPickerModal } from "../../Exim/Master/Item/ItemPickerModal";
 import type { ItemRecord } from "../../Exim/Master/Item/item-types";
 import { apiFetch } from "../../../data/api";
@@ -51,29 +52,34 @@ export function PurchaseRequisitionCreate({
   const [note, setNote] = useState("");
   const [dbDepartments, setDbDepartments] = useState<string[]>([]);
   const [dbSections, setDbSections] = useState<string[]>([]);
+  const [loadingLookups, setLoadingLookups] = useState(true);
 
   // Load Departments and Sections from API on mount
   useEffect(() => {
     let isMounted = true;
-    apiFetch("/api/exim/master/departments?per_page=100")
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d) => {
-        if (isMounted && d?.data && Array.isArray(d.data)) {
-          const names = d.data.map((item: any) => item.name || item.departmentName).filter(Boolean);
-          if (names.length > 0) setDbDepartments(names);
-        }
-      })
-      .catch(() => {});
-
-    apiFetch("/api/exim/master/sections?per_page=100")
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d) => {
-        if (isMounted && d?.data && Array.isArray(d.data)) {
-          const names = d.data.map((item: any) => item.name || item.sectionName).filter(Boolean);
-          if (names.length > 0) setDbSections(names);
-        }
-      })
-      .catch(() => {});
+    setLoadingLookups(true);
+    Promise.all([
+      apiFetch("/api/exim/master/departments?per_page=100")
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d) => {
+          if (isMounted && d?.data && Array.isArray(d.data)) {
+            const names = d.data.map((item: any) => item.name || item.departmentName).filter(Boolean);
+            if (names.length > 0) setDbDepartments(names);
+          }
+        })
+        .catch(() => {}),
+      apiFetch("/api/exim/master/sections?per_page=100")
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d) => {
+          if (isMounted && d?.data && Array.isArray(d.data)) {
+            const names = d.data.map((item: any) => item.name || item.sectionName).filter(Boolean);
+            if (names.length > 0) setDbSections(names);
+          }
+        })
+        .catch(() => {}),
+    ]).finally(() => {
+      if (isMounted) setLoadingLookups(false);
+    });
 
     return () => {
       isMounted = false;
@@ -501,6 +507,9 @@ export function PurchaseRequisitionCreate({
       {/* Main Form Panel */}
       <div className="tx-panel">
         <form onSubmit={handleSaveClick}>
+          {loadingLookups && (
+            <LoadingBuffer variant="inline" label="Loading departments and sections..." />
+          )}
           {/* Header 5-column layout */}
             <div className="tx-header-grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))" }}>
               {/* 1. Date */}
@@ -510,6 +519,8 @@ export function PurchaseRequisitionCreate({
                 </label>
                 <CustomDatePicker
                   id="prDate"
+                  required
+                  invalid={Boolean(formErrors.date)}
                   value={date}
                   onChange={(val) => {
                     setDate(val);
@@ -530,6 +541,8 @@ export function PurchaseRequisitionCreate({
                 </label>
                 <CustomDatePicker
                   id="prDueDate"
+                  required
+                  invalid={Boolean(formErrors.dueDate)}
                   value={dueDate}
                   min={date}
                   onChange={(val) => {
@@ -557,6 +570,8 @@ export function PurchaseRequisitionCreate({
                 <CustomSelect
                   id="prDept"
                   searchable
+                  required
+                  invalid={Boolean(formErrors.deptRequest)}
                   value={deptRequest}
                   onChange={(val) => {
                     setDeptRequest(val);
@@ -579,6 +594,8 @@ export function PurchaseRequisitionCreate({
                 <CustomSelect
                   id="prSection"
                   searchable
+                  required
+                  invalid={Boolean(formErrors.section)}
                   value={section}
                   onChange={(val) => {
                     setSection(val);
@@ -600,6 +617,7 @@ export function PurchaseRequisitionCreate({
                 </label>
                 <CustomSelect
                   id="prType"
+                  required
                   value={prType}
                   onChange={(val) => setPrType(val as any)}
                   options={[
@@ -785,10 +803,14 @@ export function PurchaseRequisitionCreate({
                   <tr>
                     <th style={{ minWidth: "48px", width: "48px", textAlign: "center" }}>No</th>
                     <th style={{ minWidth: "170px" }}>Job Number</th>
-                    <th style={{ minWidth: "260px" }}>Item Name *</th>
+                    <th style={{ minWidth: "260px" }}>
+                      Item Name <span className="required-mark">*</span>
+                    </th>
                     <th style={{ minWidth: "100px" }}>Unit</th>
                     <th style={{ minWidth: "110px", textAlign: "right" }}>Current Stock</th>
-                    <th style={{ minWidth: "115px", textAlign: "right" }}>Quantity *</th>
+                    <th style={{ minWidth: "115px", textAlign: "right" }}>
+                      Quantity <span className="required-mark">*</span>
+                    </th>
                     <th style={{ minWidth: "145px" }}>Due Date</th>
                     <th style={{ minWidth: "160px" }}>Facility Status</th>
                     <th style={{ minWidth: "200px" }}>Remark</th>
@@ -862,6 +884,7 @@ export function PurchaseRequisitionCreate({
                             className={`tx-input-cell tx-input-cell--num ${formErrors[`item_${index}_qty`] ? "has-error" : ""}`}
                             value={row.quantity}
                             onChange={(e) => handleUpdateRow(row.id, "quantity", parseFloat(e.target.value) || 0)}
+                            required
                           />
                           {formErrors[`item_${index}_qty`] && (
                             <span style={{ color: "var(--red-600)", fontSize: "10.5px", display: "block" }}>

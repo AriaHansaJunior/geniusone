@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Button } from "../../../../components/ui/Button";
+import { LoadingBuffer } from "../../../../components/ui/LoadingBuffer";
 import type { AccountRecord } from "./account-types";
 
 export interface AccountFormData {
@@ -92,7 +93,7 @@ export function AccountForm({
     return (
       <div className="master-form-page">
         <div className="master-form-card">
-          <div className="master-form-loading">Loading Account data...</div>
+          <LoadingBuffer variant="panel" label="Loading Account data..." />
         </div>
       </div>
     );
@@ -140,6 +141,7 @@ export function AccountForm({
                 if (errors.accountCode) setErrors((prev) => ({ ...prev, accountCode: undefined }));
               }}
               maxLength={20}
+              required
               autoFocus
             />
             {errors.accountCode && <span className="master-error-msg">{errors.accountCode}</span>}
@@ -160,6 +162,7 @@ export function AccountForm({
                 if (errors.accountName) setErrors((prev) => ({ ...prev, accountName: undefined }));
               }}
               maxLength={45}
+              required
             />
             {errors.accountName && <span className="master-error-msg">{errors.accountName}</span>}
           </div>

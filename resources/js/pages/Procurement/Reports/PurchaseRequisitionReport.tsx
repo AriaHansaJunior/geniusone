@@ -4,6 +4,7 @@ import { Badge } from "../../../components/ui/Badge";
 import { Pagination } from "../../../components/ui/Pagination";
 import { CustomSelect } from "../../../components/ui/CustomSelect";
 import { CustomDatePicker } from "../../../components/ui/CustomDatePicker";
+import { TableLoadingRow } from "../../../components/ui/LoadingBuffer";
 import {
   fetchPrReportApi,
   fetchMasterDepartments,
@@ -94,17 +95,22 @@ export function PurchaseRequisitionReport({
   // Row Expansion State for Nested PO Details
   // ---------------------------------------------------------------------------
   const [records, setRecords] = useState<PrReportRecord[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [departmentsList, setDepartmentsList] = useState<string[]>(["All Departemen"]);
   const [sectionsList, setSectionsList] = useState<string[]>(["All Section"]);
   const [expandedRowIds, setExpandedRowIds] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     let isMounted = true;
+    setIsLoading(true);
     fetchPrReportApi()
       .then((rows) => {
         if (isMounted && Array.isArray(rows)) setRecords(rows);
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => {
+        if (isMounted) setIsLoading(false);
+      });
     fetchMasterDepartments()
       .then((rows) => {
         if (isMounted && Array.isArray(rows)) {
@@ -841,7 +847,13 @@ export function PurchaseRequisitionReport({
             </thead>
 
             <tbody>
-              {paginatedRecords.length === 0 ? (
+              {isLoading && paginatedRecords.length === 0 ? (
+                <TableLoadingRow
+                  colSpan={16}
+                  label="Loading Purchase Requisition Report..."
+                  sublabel="Fetching requisition tracking & approval data..."
+                />
+              ) : paginatedRecords.length === 0 ? (
                 <tr>
                   <td colSpan={16} style={{ textAlign: "center", padding: "36px" }}>
                     <div style={{ color: "#64748b", fontSize: "13px" }}>

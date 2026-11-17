@@ -19,6 +19,7 @@ import type { TableRow } from "../../../types";
 import { KwtPrintModal, KwtPrintTemplateBpb } from "../../../components/print";
 import { useTheme } from "../../../context/ThemeContext";
 import { WarehouseDefaultDetail } from "../../../themes/default/pages/WarehouseDefaultDetail";
+import { LoadingBuffer } from "../../../components/ui/LoadingBuffer";
 
 interface WarehouseDetailProps {
   code: string;
@@ -75,14 +76,22 @@ export function WarehouseDetail({
 
   const { currentUser } = useAuthPermission();
   const { isDefaultTheme } = useTheme();
+  const [isLoadingDetail, setIsLoadingDetail] = useState<boolean>(
+    () => row._rawSupplier === "Loading..."
+  );
 
   useEffect(() => {
     let isMounted = true;
-    fetchDetail("warehouse", code).then((item) => {
-      if (isMounted && item) {
-        setRow(item);
-      }
-    });
+    setIsLoadingDetail(true);
+    fetchDetail("warehouse", code)
+      .then((item) => {
+        if (isMounted && item) {
+          setRow(item);
+        }
+      })
+      .finally(() => {
+        if (isMounted) setIsLoadingDetail(false);
+      });
     return () => {
       isMounted = false;
     };
@@ -279,8 +288,24 @@ export function WarehouseDetail({
     XLSX.writeFile(wb, `BPB_${docToSlug(docNumber)}.xlsx`);
   };
 
+  if (isLoadingDetail && row._rawSupplier === "Loading...") {
+    return (
+      <div className="full-page-detail">
+        <LoadingBuffer
+          variant="panel"
+          label="Loading Receive Material (BPB) Details..."
+          sublabel="Fetching customs info, supplier data, and received items..."
+          skeletonRows={4}
+        />
+      </div>
+    );
+  }
+
   return (
     <>
+      {isLoadingDetail && (
+        <LoadingBuffer variant="inline" label="Synchronizing Receive Material details..." />
+      )}
       {isDefaultTheme ? (
         <WarehouseDefaultDetail
           row={row}

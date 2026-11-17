@@ -4,6 +4,7 @@ import { SearchField } from "../../../../components/ui/SearchField";
 import { Pagination } from "../../../../components/ui/Pagination";
 import { Icon } from "../../../../components/ui/Icon";
 import { StatusToggle } from "../../../../components/ui/StatusToggle";
+import { TableLoadingRow } from "../../../../components/ui/LoadingBuffer";
 import {
   type RafaksiTypeRecord,
   type RafaksiTypeSortField,
@@ -12,12 +13,14 @@ import {
 
 interface RafaksiTypeIndexProps {
   records?: RafaksiTypeRecord[];
+  isLoading?: boolean;
   onAddNew?: () => void;
   onToggleStatus?: (id: string) => Promise<void> | void;
 }
 
 export function RafaksiTypeIndex({
   records = [],
+  isLoading = false,
   onAddNew,
   onToggleStatus,
 }: RafaksiTypeIndexProps) {
@@ -60,14 +63,14 @@ export function RafaksiTypeIndex({
         sortField === "code"
           ? a.code.toLowerCase()
           : sortField === "name"
-          ? a.name.toLowerCase()
-          : a.description.toLowerCase();
+            ? a.name.toLowerCase()
+            : a.description.toLowerCase();
       const bVal =
         sortField === "code"
           ? b.code.toLowerCase()
           : sortField === "name"
-          ? b.name.toLowerCase()
-          : b.description.toLowerCase();
+            ? b.name.toLowerCase()
+            : b.description.toLowerCase();
 
       if (aVal < bVal) return sortDirection === "asc" ? -1 : 1;
       if (aVal > bVal) return sortDirection === "asc" ? 1 : -1;
@@ -265,7 +268,9 @@ export function RafaksiTypeIndex({
                 </tr>
               </thead>
               <tbody>
-                {paginatedRecords.length > 0 ? (
+                {isLoading && paginatedRecords.length === 0 ? (
+                  <TableLoadingRow colSpan={5} label="Loading Rafaksi Types..." />
+                ) : paginatedRecords.length > 0 ? (
                   paginatedRecords.map((item, index) => {
                     const rowNumber = (safeCurrentPage - 1) * pageSize + index + 1;
                     return (

@@ -119,6 +119,7 @@ export function UnitForm({ initialRecord, onBack, onSave }: UnitFormProps) {
               setName(e.target.value);
               if (error) setError(null);
             }}
+            required
             autoFocus
           />
           {error && <span className="unit-form-error-msg">{error}</span>}

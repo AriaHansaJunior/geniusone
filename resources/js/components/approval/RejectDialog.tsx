@@ -112,7 +112,7 @@ export function RejectDialog({
 
             <div className="form-field">
               <label htmlFor="reject-reason" className="form-label" style={{ fontWeight: 700 }}>
-                Revision Reason / Note <span style={{ color: "#dc2626" }}>*</span>
+                Revision Reason / Note <span className="required-mark">*</span>
               </label>
               <textarea
                 id="reject-reason"

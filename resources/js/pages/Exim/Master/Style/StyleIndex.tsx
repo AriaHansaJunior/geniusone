@@ -4,6 +4,7 @@ import { SearchField } from "../../../../components/ui/SearchField";
 import { Icon } from "../../../../components/ui/Icon";
 import { Pagination } from "../../../../components/ui/Pagination";
 import { StatusToggle } from "../../../../components/ui/StatusToggle";
+import { TableLoadingRow } from "../../../../components/ui/LoadingBuffer";
 import { initialStyleRecords } from "./style-data";
 import type {
   StyleRecord,
@@ -13,6 +14,7 @@ import type {
 
 interface StyleIndexProps {
   records?: StyleRecord[];
+  isLoading?: boolean;
   onAddNew: () => void;
   onImportExcel: () => void;
   onToggleStatus?: (id: string) => void;
@@ -20,6 +22,7 @@ interface StyleIndexProps {
 
 export function StyleIndex({
   records = initialStyleRecords,
+  isLoading = false,
   onAddNew,
   onImportExcel,
   onToggleStatus,
@@ -295,7 +298,9 @@ export function StyleIndex({
                 </tr>
               </thead>
               <tbody>
-                {paginatedRecords.length > 0 ? (
+                {isLoading && paginatedRecords.length === 0 ? (
+                  <TableLoadingRow colSpan={5} label="Loading Styles / Models..." />
+                ) : paginatedRecords.length > 0 ? (
                   paginatedRecords.map((item, index) => {
                     const rowNumber =
                       (safeCurrentPage - 1) * pageSize + index + 1;

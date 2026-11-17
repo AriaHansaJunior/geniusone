@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Button } from "../../../../components/ui/Button";
 import { Icon } from "../../../../components/ui/Icon";
+import { LoadingBuffer } from "../../../../components/ui/LoadingBuffer";
 import type { UnitReferenceRecord } from "./unit-reference-types";
 
 export interface UnitReferenceFormProps {
@@ -96,7 +97,7 @@ export function UnitReferenceForm({
     return (
       <div className="master-form-page">
         <div className="master-form-card">
-          <div className="master-form-loading">Loading Unit Reference data...</div>
+          <LoadingBuffer variant="panel" label="Loading Unit Reference data..." />
         </div>
       </div>
     );
@@ -171,6 +172,7 @@ export function UnitReferenceForm({
                 setName(e.target.value);
                 if (errors.name) setErrors((prev) => ({ ...prev, name: undefined }));
               }}
+              required
             />
             {errors.name && <span className="master-form-error-text">{errors.name}</span>}
           </div>

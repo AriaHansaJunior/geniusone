@@ -6,6 +6,7 @@ import { Pagination } from "../../../../components/ui/Pagination";
 import { Badge } from "../../../../components/ui/Badge";
 import { Icon } from "../../../../components/ui/Icon";
 import { StatusToggle } from "../../../../components/ui/StatusToggle";
+import { TableLoadingRow } from "../../../../components/ui/LoadingBuffer";
 import { toggleDestinationLocationStatusApi } from "../../../../data/masterApi";
 import { useNotification } from "../../../../context/NotificationContext";
 import { initialDestinationLocationRecords } from "./destination-location-data";
@@ -13,6 +14,7 @@ import type { DestinationLocationRecord, DestinationLocationSortField } from "./
 
 interface DestinationLocationIndexProps {
   records?: DestinationLocationRecord[];
+  isLoading?: boolean;
   onAddNew: () => void;
   onToggleStatus?: (id: string) => Promise<void> | void;
 }
@@ -21,6 +23,7 @@ type SortDirection = "none" | "asc" | "desc";
 
 export function DestinationLocationIndex({
   records = initialDestinationLocationRecords,
+  isLoading = false,
   onAddNew,
   onToggleStatus,
 }: DestinationLocationIndexProps) {
@@ -270,7 +273,9 @@ export function DestinationLocationIndex({
               </tr>
             </thead>
             <tbody>
-              {paginatedRecords.length === 0 ? (
+              {isLoading && paginatedRecords.length === 0 ? (
+                <TableLoadingRow colSpan={7} label="Loading Destination Locations..." />
+              ) : paginatedRecords.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="wh-table-empty">
                     No destination location records found matching filters.

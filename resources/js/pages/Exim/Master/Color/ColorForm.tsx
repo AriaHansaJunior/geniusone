@@ -119,6 +119,7 @@ export function ColorForm({ initialRecord, onBack, onSave }: ColorFormProps) {
                 setCode(e.target.value);
                 if (errors.code) setErrors((prev) => ({ ...prev, code: undefined }));
               }}
+              required
               autoFocus
             />
             {errors.code && <span className="master-form-error-text">{errors.code}</span>}
@@ -139,6 +140,7 @@ export function ColorForm({ initialRecord, onBack, onSave }: ColorFormProps) {
                 setName(e.target.value);
                 if (errors.name) setErrors((prev) => ({ ...prev, name: undefined }));
               }}
+              required
             />
             {errors.name && <span className="master-form-error-text">{errors.name}</span>}
           </div>

@@ -4,6 +4,7 @@ import { SearchField } from "../../../../components/ui/SearchField";
 import { Pagination } from "../../../../components/ui/Pagination";
 import { Icon } from "../../../../components/ui/Icon";
 import { StatusToggle } from "../../../../components/ui/StatusToggle";
+import { TableLoadingRow } from "../../../../components/ui/LoadingBuffer";
 import {
   type CountryRecord,
   type CountrySortField,
@@ -12,12 +13,14 @@ import {
 
 interface CountryIndexProps {
   records?: CountryRecord[];
+  isLoading?: boolean;
   onAddNew?: () => void;
   onToggleStatus?: (id: string) => Promise<void> | void;
 }
 
 export function CountryIndex({
   records = [],
+  isLoading = false,
   onAddNew,
   onToggleStatus,
 }: CountryIndexProps) {
@@ -235,7 +238,9 @@ export function CountryIndex({
                 </tr>
               </thead>
               <tbody>
-                {paginatedRecords.length > 0 ? (
+                {isLoading && paginatedRecords.length === 0 ? (
+                  <TableLoadingRow colSpan={4} label="Loading Countries..." />
+                ) : paginatedRecords.length > 0 ? (
                   paginatedRecords.map((item, index) => {
                     const rowNumber = (safeCurrentPage - 1) * pageSize + index + 1;
                     return (

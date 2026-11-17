@@ -87,6 +87,7 @@ export function ReferenceMasterForm({
                   setCode(e.target.value);
                   if (errors.code) setErrors((prev) => ({ ...prev, code: undefined }));
                 }}
+                required
               />
               {errors.code && <span className="master-form-error-text">{errors.code}</span>}
             </div>
@@ -107,6 +108,7 @@ export function ReferenceMasterForm({
                 setName(e.target.value);
                 if (errors.name) setErrors((prev) => ({ ...prev, name: undefined }));
               }}
+              required
               autoFocus={!config.hasCode}
             />
             {errors.name && <span className="master-form-error-text">{errors.name}</span>}

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Icon } from "../../components/ui/Icon";
+import { LoadingBuffer } from "../../components/ui/LoadingBuffer";
 import { Button } from "../../components/ui/Button";
 import { Badge } from "../../components/ui/Badge";
 import type { StockNotificationRecord } from "./StockNotificationMaster/stock-notification-types";
@@ -204,9 +205,10 @@ export function DashboardStockAlert({
           }}
         >
           {isLoading ? (
-            <div style={{ textAlign: "center", padding: "18px 16px", color: "var(--muted)", fontSize: "12.5px" }}>
-              Loading stock buffer alerts...
-            </div>
+            <LoadingBuffer
+              variant="inline"
+              label="Loading stock buffer alerts..."
+            />
           ) : triggeredItems.length === 0 ? (
             <div
               style={{

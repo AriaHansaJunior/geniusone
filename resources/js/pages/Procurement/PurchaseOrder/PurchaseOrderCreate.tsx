@@ -4,6 +4,7 @@ import { Icon } from "../../../components/ui/Icon";
 import { ConfirmDialog } from "../../../components/ui/ConfirmDialog";
 import { CustomDatePicker } from "../../../components/ui/CustomDatePicker";
 import { CustomSelect } from "../../../components/ui/CustomSelect";
+import { LoadingBuffer } from "../../../components/ui/LoadingBuffer";
 import { type AdditionalCostRecord } from "../PurchaseMaster/AdditionalCosts/additional-costs-types";
 import type { ItemRecord } from "../../Exim/Master/Item/item-types";
 import { apiFetch, fetchList, fetchDetail, createPurchaseOrder } from "../../../data/api";
@@ -359,12 +360,15 @@ export function PurchaseOrderCreate({
     setItems(newRows);
   };
 
+  const [loadingLookups, setLoadingLookups] = useState(true);
+
   // Fetch approved PRs and master datasets on mount
   useEffect(() => {
     let isMounted = true;
+    setLoadingLookups(true);
 
     // 1. Fetch approved PRs from real API
-    fetchList("pr", { perPage: 100 }).then((res) => {
+    const p1 = fetchList("pr", { perPage: 100 }).then((res) => {
       if (isMounted && res.rows && res.rows.length > 0) {
         // Collect PRs that have passed approval stages (Backend or LocalStorage)
         const approved = res.rows.filter((r: any) => {
@@ -413,10 +417,10 @@ export function PurchaseOrderCreate({
           }
         }
       }
-    });
+    }).catch(() => { });
 
     // 2. Fetch master suppliers
-    apiFetch("/api/procurement/master/suppliers")
+    const p2 = apiFetch("/api/procurement/master/suppliers")
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
         if (isMounted && d?.data && Array.isArray(d.data) && d.data.length > 0) {
@@ -431,7 +435,7 @@ export function PurchaseOrderCreate({
       .catch(() => { });
 
     // 3. Fetch master payment terms
-    apiFetch("/api/procurement/master/payment-terms")
+    const p3 = apiFetch("/api/procurement/master/payment-terms")
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
         if (isMounted && d?.data && Array.isArray(d.data) && d.data.length > 0) {
@@ -441,7 +445,7 @@ export function PurchaseOrderCreate({
       .catch(() => { });
 
     // 4. Fetch master delivery terms
-    apiFetch("/api/procurement/master/delivery-terms")
+    const p4 = apiFetch("/api/procurement/master/delivery-terms")
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
         if (isMounted && d?.data && Array.isArray(d.data) && d.data.length > 0) {
@@ -451,7 +455,7 @@ export function PurchaseOrderCreate({
       .catch(() => { });
 
     // 5. Fetch master currencies
-    apiFetch("/api/procurement/master/currencies")
+    const p5 = apiFetch("/api/procurement/master/currencies")
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
         if (isMounted && d?.data && Array.isArray(d.data) && d.data.length > 0) {
@@ -461,7 +465,7 @@ export function PurchaseOrderCreate({
       .catch(() => { });
 
     // 6. Fetch master additional costs for dropdown (UI-01)
-    apiFetch("/api/procurement/master/additional-costs?per_page=100")
+    const p6 = apiFetch("/api/procurement/master/additional-costs?per_page=100")
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
         if (isMounted && d?.data && Array.isArray(d.data) && d.data.length > 0) {
@@ -479,7 +483,7 @@ export function PurchaseOrderCreate({
       .catch(() => { });
 
     // 7. Fetch existing POs to check duplicate PR processing
-    fetchList("po", { perPage: 100 })
+    const p7 = fetchList("po", { perPage: 100 })
       .then((res) => {
         if (isMounted && res.rows && res.rows.length > 0) {
           setExistingPos(res.rows);
@@ -488,7 +492,7 @@ export function PurchaseOrderCreate({
       .catch(() => { });
 
     // 8. Fetch master items for facility resolution
-    apiFetch("/api/exim/master/items?per_page=100")
+    const p8 = apiFetch("/api/exim/master/items?per_page=100")
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => {
         if (isMounted && d?.data && Array.isArray(d.data) && d.data.length > 0) {
@@ -496,6 +500,10 @@ export function PurchaseOrderCreate({
         }
       })
       .catch(() => { });
+
+    Promise.all([p1, p2, p3, p4, p5, p6, p7, p8]).finally(() => {
+      if (isMounted) setLoadingLookups(false);
+    });
 
     return () => {
       isMounted = false;
@@ -1313,6 +1321,12 @@ return (
     {/* Main Panel */}
     <div className="tx-panel">
       <form onSubmit={handleSaveClick}>
+        {loadingLookups && (
+          <LoadingBuffer
+            variant="inline"
+            label="Loading approved PRs, suppliers, currencies, and payment terms..."
+          />
+        )}
         {/* Header Field Grid (Structured 4-column layout with balanced rows) */}
         <div className="tx-header-grid">
           {/* Row 1: PO Type | Date | Due Date | Latest Delivery Date */}
@@ -1322,6 +1336,8 @@ return (
             </label>
             <CustomSelect
               id="poType"
+              required
+              invalid={Boolean(formErrors.poType)}
               value={poType}
               onChange={(val) => setPoType(val)}
               options={[
@@ -1340,6 +1356,8 @@ return (
             </label>
             <CustomDatePicker
               id="poDate"
+              required
+              invalid={Boolean(formErrors.date)}
               value={date}
               onChange={(val) => setDate(val)}
               className={formErrors.date ? "has-error" : ""}
@@ -1353,6 +1371,8 @@ return (
             </label>
             <CustomDatePicker
               id="poDueDate"
+              required
+              invalid={Boolean(formErrors.dueDate)}
               value={dueDate}
               onChange={(val) => setDueDate(val)}
               className={formErrors.dueDate ? "has-error" : ""}
@@ -1366,6 +1386,8 @@ return (
             </label>
             <CustomDatePicker
               id="poLatestDelivery"
+              required
+              invalid={Boolean(formErrors.latestDelivery)}
               value={latestDelivery}
               onChange={(val) => setLatestDelivery(val)}
               className={formErrors.latestDelivery ? "has-error" : ""}
@@ -1381,6 +1403,8 @@ return (
             <CustomSelect
               id="poSupplier"
               searchable
+              required
+              invalid={Boolean(formErrors.supplier)}
               value={selectedSupplierId}
               onChange={(val) => handleSupplierChange(val)}
               placeholder="Find Supplier"
@@ -1402,6 +1426,8 @@ return (
             <CustomSelect
               id="poValuta"
               searchable
+              required
+              invalid={Boolean(formErrors.currency)}
               value={currency}
               onChange={(val) => {
                 setCurrency(val);
@@ -1429,6 +1455,7 @@ return (
               className={`master-form-input ${formErrors.exchangeRate ? "has-error" : ""}`}
               value={exchangeRate}
               onChange={(e) => setExchangeRate(parseFloat(e.target.value) || 1)}
+              required
             />
             {formErrors.exchangeRate && <span className="master-form-error">{formErrors.exchangeRate}</span>}
           </div>

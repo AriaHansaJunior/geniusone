@@ -7,6 +7,7 @@ import { Badge } from "../../../../components/ui/Badge";
 import { Pagination } from "../../../../components/ui/Pagination";
 import { CustomDatePicker } from "../../../../components/ui/CustomDatePicker";
 import { CustomSelect } from "../../../../components/ui/CustomSelect";
+import { LoadingBuffer, TableLoadingRow } from "../../../../components/ui/LoadingBuffer";
 import { apiFetch } from "../../../../data/api";
 import {
   stockItemClassificationsList,
@@ -59,9 +60,11 @@ export function StockItemIndex() {
   };
 
   const [liveRecords, setLiveRecords] = useState<WarehouseStockRecord[]>(initialWarehouseStockRecords);
+  const [isLoading, setIsLoading] = useState(true);
 
   React.useEffect(() => {
     let isMounted = true;
+    setIsLoading(true);
     const params = new URLSearchParams();
     if (search.trim()) params.set("search", search.trim());
 
@@ -103,6 +106,9 @@ export function StockItemIndex() {
       })
       .catch((err) => {
         console.warn("[GeniusOne Stock Item] Network error, using baseline records:", err);
+      })
+      .finally(() => {
+        if (isMounted) setIsLoading(false);
       });
 
     return () => {
@@ -253,22 +259,21 @@ export function StockItemIndex() {
               notification.type === "error"
                 ? "#fef2f2"
                 : notification.type === "warning"
-                ? "#fffbeb"
-                : "#f0fdf4",
-            border: `1px solid ${
-              notification.type === "error"
-                ? "#fecaca"
-                : notification.type === "warning"
+                  ? "#fffbeb"
+                  : "#f0fdf4",
+            border: `1px solid ${notification.type === "error"
+              ? "#fecaca"
+              : notification.type === "warning"
                 ? "#fde68a"
                 : "#bbf7d0"
-            }`,
+              }`,
             borderRadius: "var(--radius-sm)",
             color:
               notification.type === "error"
                 ? "#b91c1c"
                 : notification.type === "warning"
-                ? "#92400e"
-                : "#15803d",
+                  ? "#92400e"
+                  : "#15803d",
             fontSize: "12.5px",
             fontWeight: 600,
             display: "flex",
@@ -492,6 +497,11 @@ export function StockItemIndex() {
       {/* Table Panel */}
       <div className="panel" style={{ padding: "0" }}>
         <div className="table-frame">
+          {isLoading && liveRecords.length > 0 && (
+            <div className="table-frame__buffer-bar">
+              <LoadingBuffer variant="inline" label="Updating warehouse stock balances..." />
+            </div>
+          )}
           <div className="table-scroll">
             <table className="data-table">
               <thead>
@@ -507,7 +517,13 @@ export function StockItemIndex() {
                 </tr>
               </thead>
               <tbody>
-                {paginatedRecords.length > 0 ? (
+                {isLoading && liveRecords.length === 0 ? (
+                  <TableLoadingRow
+                    colSpan={8}
+                    label="Loading Warehouse Stock Items..."
+                    sublabel="Calculating latest on-hand stock quantities across locations..."
+                  />
+                ) : paginatedRecords.length > 0 ? (
                   paginatedRecords.map((item, index) => {
                     const rowNumber =
                       (safeCurrentPage - 1) * pageSize + index + 1;

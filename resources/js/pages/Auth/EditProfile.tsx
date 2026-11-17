@@ -464,7 +464,7 @@ export function EditProfile({ onBack, onSaveConfirmed }: EditProfileProps) {
               <div className="profile-form-fields-grid">
                 <div className="master-form-group">
                   <label className="master-form-label">
-                    Full Name <span style={{ color: "var(--red-600)" }}>*</span>
+                    Full Name <span className="required-mark">*</span>
                   </label>
                   <input
                     type="text"
@@ -478,7 +478,7 @@ export function EditProfile({ onBack, onSaveConfirmed }: EditProfileProps) {
 
                 <div className="master-form-group">
                   <label className="master-form-label">
-                    Username <span style={{ color: "var(--red-600)" }}>*</span>
+                    Username <span className="required-mark">*</span>
                   </label>
                   <input
                     type="text"
@@ -492,7 +492,7 @@ export function EditProfile({ onBack, onSaveConfirmed }: EditProfileProps) {
 
                 <div className="master-form-group">
                   <label className="master-form-label">
-                    Corporate Email <span style={{ color: "var(--red-600)" }}>*</span>
+                    Corporate Email <span className="required-mark">*</span>
                   </label>
                   <input
                     type="email"

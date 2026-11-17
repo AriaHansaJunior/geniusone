@@ -4,10 +4,12 @@ import { SearchField } from "../../../../components/ui/SearchField";
 import { Pagination } from "../../../../components/ui/Pagination";
 import { Icon } from "../../../../components/ui/Icon";
 import { StatusToggle } from "../../../../components/ui/StatusToggle";
+import { TableLoadingRow } from "../../../../components/ui/LoadingBuffer";
 import { type DeliveryTermRecord } from "./delivery-terms-types";
 
 interface DeliveryTermsIndexProps {
   records?: DeliveryTermRecord[];
+  isLoading?: boolean;
   onAddNew: () => void;
   onToggleHide?: (id: string) => void;
 }
@@ -16,6 +18,7 @@ type SortDirection = "none" | "asc" | "desc";
 
 export function DeliveryTermsIndex({
   records = [],
+  isLoading = false,
   onAddNew,
   onToggleHide,
 }: DeliveryTermsIndexProps) {
@@ -129,7 +132,9 @@ export function DeliveryTermsIndex({
                 </tr>
               </thead>
               <tbody>
-                {paginatedRecords.length > 0 ? (
+                {isLoading && paginatedRecords.length === 0 ? (
+                  <TableLoadingRow colSpan={3} label="Loading Delivery Terms..." />
+                ) : paginatedRecords.length > 0 ? (
                   paginatedRecords.map((item, index) => {
                     const rowNumber = (safeCurrentPage - 1) * pageSize + index + 1;
                     return (

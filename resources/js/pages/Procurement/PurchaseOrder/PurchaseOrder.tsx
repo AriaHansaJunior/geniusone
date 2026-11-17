@@ -20,6 +20,7 @@ export function PurchaseOrder({ onDetail, onCreate, onSelectPr }: PurchaseOrderP
   const columns = listColumns.po;
   const [stats, setStats] = useState<[string, string, string][]>([]);
   const [rows, setRows] = useState<TableRow[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [poFilters, setPoFilters] = useState<Record<string, any>>({
     dateRange: "all",
     supplier: "all",
@@ -30,12 +31,17 @@ export function PurchaseOrder({ onDetail, onCreate, onSelectPr }: PurchaseOrderP
 
   useEffect(() => {
     let isMounted = true;
-    fetchList("po").then((res) => {
-      if (isMounted) {
-        setStats(res.stats);
-        setRows(res.rows);
-      }
-    });
+    setIsLoading(true);
+    fetchList("po")
+      .then((res) => {
+        if (isMounted) {
+          setStats(res.stats);
+          setRows(res.rows);
+        }
+      })
+      .finally(() => {
+        if (isMounted) setIsLoading(false);
+      });
     return () => {
       isMounted = false;
     };
@@ -176,6 +182,8 @@ export function PurchaseOrder({ onDetail, onCreate, onSelectPr }: PurchaseOrderP
           rows={filtered}
           onDetail={onDetail}
           onSelectPr={(pr) => (onSelectPr ? onSelectPr(pr) : undefined)}
+          isLoading={isLoading}
+          loadingMessage="Loading Purchase Orders..."
         />
       </section>
     </>

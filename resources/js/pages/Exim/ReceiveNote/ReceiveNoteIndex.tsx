@@ -8,6 +8,7 @@ import { CustomSelect } from "../../../components/ui/CustomSelect";
 import { CustomDatePicker } from "../../../components/ui/CustomDatePicker";
 import { TableColumnSettings, type TableColumnOption } from "../../../components/ui/TableColumnSettings";
 import { ApprovalStatusBadge } from "../../../components/approval/ApprovalStatusBadge";
+import { TableLoadingRow } from "../../../components/ui/LoadingBuffer";
 import { getLocalApprovalState } from "../../../services/approvalApi";
 import { normalizeApprovalStatus } from "../../../types/approval";
 import { formatDisplayDate } from "../../../data/masterApi";
@@ -37,12 +38,14 @@ const DEFAULT_RN_COLUMNS: TableColumnOption[] = [
 
 interface ReceiveNoteIndexProps {
   records?: ReceiveNoteRecord[];
+  isLoading?: boolean;
   onAddNew: () => void;
   onViewDetail: (rnNumber: string) => void;
 }
 
 export function ReceiveNoteIndex({
   records = initialReceiveNoteRecords,
+  isLoading = false,
   onAddNew,
   onViewDetail,
 }: ReceiveNoteIndexProps) {
@@ -626,7 +629,13 @@ export function ReceiveNoteIndex({
               </tr>
             </thead>
             <tbody>
-              {paginatedRecords.length === 0 ? (
+              {isLoading && paginatedRecords.length === 0 ? (
+                <TableLoadingRow
+                  colSpan={2 + columns.filter((c) => c.visible).length}
+                  label="Loading Receive Notes..."
+                  sublabel="Fetching customs & supplier receiving documents..."
+                />
+              ) : paginatedRecords.length === 0 ? (
                 <tr>
                   <td colSpan={2 + columns.filter((c) => c.visible).length} className="rn-table-empty">
                     No Receive Note records found.

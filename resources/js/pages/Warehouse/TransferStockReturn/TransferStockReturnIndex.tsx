@@ -7,6 +7,7 @@ import { Badge } from "../../../components/ui/Badge";
 import { Icon } from "../../../components/ui/Icon";
 import { CustomDatePicker } from "../../../components/ui/CustomDatePicker";
 import { ConfirmDialog } from "../../../components/ui/ConfirmDialog";
+import { TableLoadingRow } from "../../../components/ui/LoadingBuffer";
 import { TransferStockReturnDetail } from "./TransferStockReturnDetail";
 import {
   fetchTransferStockReturnsApi,
@@ -553,16 +554,20 @@ export function TransferStockReturnIndex({
             </thead>
 
             <tbody>
-              {paginatedRecords.length === 0 ? (
+              {loading && paginatedRecords.length === 0 ? (
+                <TableLoadingRow
+                  colSpan={10}
+                  label="Loading Stock Transfer Returns..."
+                  sublabel="Fetching warehouse transfer & return documents..."
+                />
+              ) : paginatedRecords.length === 0 ? (
                 <tr>
                   <td colSpan={10}>
                     <div className="tsr-empty-box">
                       <div className="tsr-empty-circle">
                         <Icon name="box" size={20} />
                       </div>
-                      <strong className="tsr-empty-title">
-                        {loading ? "Loading Stock Transfer Returns..." : "No data available in table"}
-                      </strong>
+                      <strong className="tsr-empty-title">No data available in table</strong>
                       <span className="tsr-empty-subtitle">
                         Click &ldquo;Add New&rdquo; above to record a new stock transfer return.
                       </span>
@@ -637,21 +642,21 @@ export function TransferStockReturnIndex({
                           {(rec.status === "Draft" ||
                             rec.status === "Waiting Approve 1" ||
                             rec.status === "Waiting Approve 2") && (
-                            <button
-                              type="button"
-                              className="btn-action-approve"
-                              disabled={actionBusy}
-                              onClick={(e) => handleApproveRecord(rec, e)}
-                              aria-label="Approve Stock Transfer Return"
-                              title={
-                                rec.status === "Waiting Approve 2"
-                                  ? "Approve Stage 2"
-                                  : "Approve Stage 1"
-                              }
-                            >
-                              <Icon name="check" size={13} />
-                            </button>
-                          )}
+                              <button
+                                type="button"
+                                className="btn-action-approve"
+                                disabled={actionBusy}
+                                onClick={(e) => handleApproveRecord(rec, e)}
+                                aria-label="Approve Stock Transfer Return"
+                                title={
+                                  rec.status === "Waiting Approve 2"
+                                    ? "Approve Stage 2"
+                                    : "Approve Stage 1"
+                                }
+                              >
+                                <Icon name="check" size={13} />
+                              </button>
+                            )}
 
                           <button
                             type="button"

@@ -145,6 +145,7 @@ export function BrandForm({
                 setCode(e.target.value);
                 if (errors.code) setErrors((prev) => ({ ...prev, code: undefined }));
               }}
+              required
               autoFocus={!isEdit}
             />
             {errors.code && (
@@ -167,6 +168,7 @@ export function BrandForm({
                 setName(e.target.value);
                 if (errors.name) setErrors((prev) => ({ ...prev, name: undefined }));
               }}
+              required
             />
             {errors.name && (
               <span className="brand-form-error-msg">{errors.name}</span>

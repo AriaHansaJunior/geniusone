@@ -1105,4 +1105,21 @@
   color: #ffffff;
 }
 
+/* Global Required Asterisks & Trigger Validation Highlights */
+.required-mark,
+.required-asterisk,
+.master-required-star,
+.wh-required {
+  color: var(--red-600, #dc2626);
+  font-weight: 700;
+  margin-left: 2px;
+}
+
+.custom-select-trigger.has-error,
+.custom-datepicker-trigger.has-error {
+  border-color: var(--red-500, #ef4444);
+  background: #fff5f5;
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.14);
+}
+
 
