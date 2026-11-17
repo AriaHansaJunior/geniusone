@@ -108,9 +108,51 @@ html:not([data-ui-theme="default"]) .settings-sidebar__mobile-back {
 }
 
 /* --------------------------------------------------------------------------
+   2b. Floating Liquid Glass Page Title Card (.page-header)
+   -------------------------------------------------------------------------- */
+html:not([data-ui-theme="default"]) .page-header {
+  margin: 12px 24px 0;
+  padding: 16px 22px;
+  min-height: 70px;
+  width: auto;
+  max-width: calc(100% - 48px);
+  border-radius: 20px;
+  background: linear-gradient(
+    155deg,
+    rgba(255, 255, 255, 0.88) 0%,
+    rgba(244, 248, 255, 0.74) 55%,
+    rgba(255, 255, 255, 0.82) 100%
+  );
+  backdrop-filter: blur(26px) saturate(200%);
+  -webkit-backdrop-filter: blur(26px) saturate(200%);
+  border: 1px solid rgba(255, 255, 255, 0.94);
+  box-shadow:
+    0 14px 32px -12px rgba(15, 23, 42, 0.12),
+    0 4px 14px -4px rgba(0, 113, 227, 0.07),
+    inset 0 1.5px 1px rgba(255, 255, 255, 0.98),
+    inset 0 -1px 1px rgba(148, 163, 184, 0.12);
+}
+
+html:not([data-ui-theme="default"]) .content {
+  padding-top: 16px;
+}
+
+/* --------------------------------------------------------------------------
    3. Mobile RWD Morph (<= 767px): Bottom Floating Apple Liquid Glass Dock
    -------------------------------------------------------------------------- */
 @media (max-width: 767px) {
+  html:not([data-ui-theme="default"]) .page-header {
+    margin: 10px 12px 0;
+    padding: 12px 16px;
+    min-height: auto;
+    max-width: calc(100% - 24px);
+    border-radius: 16px;
+  }
+
+  html:not([data-ui-theme="default"]) .content {
+    padding-top: 12px;
+  }
+
   html:not([data-ui-theme="default"]) .topbar__mobile-toggle {
     display: none;
   }
@@ -425,6 +467,13 @@ html:not([data-ui-theme="default"]) .settings-sidebar__mobile-back {
 }
 
 @media (max-width: 420px) {
+  html:not([data-ui-theme="default"]) .page-header {
+    margin: 8px 8px 0;
+    padding: 10px 14px;
+    max-width: calc(100% - 16px);
+    border-radius: 14px;
+  }
+
   html:not([data-ui-theme="default"]) .sidebar,
   html:not([data-ui-theme="default"]) .sidebar.sidebar--collapsed,
   html:not([data-ui-theme="default"]) .sidebar.sidebar--mobile-open {

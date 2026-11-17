@@ -194,8 +194,9 @@ export interface AppViewRendererProps {
   handleToggleWarehouseMasterStatus: (id: string) => Promise<void> | void;
   handleNavigateWarehouseCoordinates: (warehouse: WarehouseMasterRecord) => void;
   handleNavigateWarehouseCoordinateCreate: (warehouseId: string) => void;
-  handleNavigateStockNotificationCreate: () => void;
-  handleEditStockNotification: (record: StockNotificationRecord) => void;
+  handleNavigateStockNotificationCreate: (returnTo?: "dashboard" | "master") => void;
+  handleEditStockNotification: (record: StockNotificationRecord, returnTo?: "dashboard" | "master") => void;
+  handleBackStockNotification: () => void;
   handleSaveStockNotification: (record: StockNotificationRecord, isEdit: boolean) => Promise<void> | void;
   handleDeleteStockNotification: (id: string) => Promise<void> | void;
   handleToggleStockNotificationStatus?: (id: string) => Promise<void> | void;
@@ -427,6 +428,7 @@ export function AppViewRenderer({
   handleNavigateWarehouseCoordinateCreate,
   handleNavigateStockNotificationCreate,
   handleEditStockNotification,
+  handleBackStockNotification,
   handleSaveStockNotification,
   handleDeleteStockNotification,
   handleToggleStockNotificationStatus,
@@ -636,7 +638,8 @@ export function AppViewRenderer({
       {/* Dashboard Landing Page */}
       {viewState.type === "dashboard" && (
         <Dashboard
-          onAddNewBufferRule={handleNavigateStockNotificationCreate}
+          onAddNewBufferRule={() => handleNavigateStockNotificationCreate("dashboard")}
+          onEditBufferRule={(record) => handleEditStockNotification(record, "dashboard")}
           onManageBufferRules={() =>
             handleNavigateList("stock-notification-master", "/dashboard/stock-notification-master")
           }
@@ -1012,7 +1015,8 @@ export function AppViewRenderer({
       {viewState.type === "list" && viewState.page === "stock-notification-master" && (
         <StockNotificationIndex
           records={stockNotificationRecords}
-          onAddNew={handleNavigateStockNotificationCreate}
+          onAddNew={() => handleNavigateStockNotificationCreate("master")}
+          onEdit={(record) => handleEditStockNotification(record, "master")}
           onToggleStatus={handleToggleStockNotificationStatus}
         />
       )}
@@ -1684,10 +1688,7 @@ export function AppViewRenderer({
               ? viewState.record
               : editingStockNotification
           }
-          onBack={() => {
-            setEditingStockNotification(null);
-            handleNavigateList("stock-notification-master", "/dashboard/stock-notification-master");
-          }}
+          onBack={handleBackStockNotification}
           onSave={handleSaveStockNotification}
         />
       )}

@@ -13,6 +13,7 @@ import type { StockNotificationRecord, StockNotificationSortField } from "./stoc
 interface StockNotificationIndexProps {
   records?: StockNotificationRecord[];
   onAddNew: () => void;
+  onEdit?: (record: StockNotificationRecord) => void;
   onToggleStatus?: (id: string) => Promise<void> | void;
 }
 
@@ -21,6 +22,7 @@ type SortDirection = "none" | "asc" | "desc";
 export function StockNotificationIndex({
   records = [],
   onAddNew,
+  onEdit,
   onToggleStatus,
 }: StockNotificationIndexProps) {
   const { notifySuccess, notifyError } = useNotification();
@@ -267,19 +269,23 @@ export function StockNotificationIndex({
                     {renderSortIndicator("status")}
                   </div>
                 </th>
+                <th className="text-center wh-col-actions">Action</th>
               </tr>
             </thead>
             <tbody>
               {paginatedRecords.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="wh-table-empty">
+                  <td colSpan={10} className="wh-table-empty">
                     No stock buffer rules found matching filters.
                   </td>
                 </tr>
               ) : (
                 paginatedRecords.map((item, index) => {
                   const sequentialNo = (safeCurrentPage - 1) * pageSize + index + 1;
-                  const isTriggered = item.currentStock <= item.bufferQuantity;
+                  const isTriggered =
+                    item.triggerCondition === "Stock < Buffer"
+                      ? item.currentStock < item.bufferQuantity
+                      : item.currentStock <= item.bufferQuantity;
                   const isCritical = item.currentStock <= item.bufferQuantity * 0.5;
 
                   return (
@@ -318,6 +324,17 @@ export function StockNotificationIndex({
                           onToggle={() => handleToggleStatus(item)}
                           ariaLabel={`Toggle status for ${item.itemName}`}
                         />
+                      </td>
+                      <td className="text-center">
+                        {onEdit && (
+                          <button
+                            type="button"
+                            className="wh-action-pill"
+                            onClick={() => onEdit(item)}
+                          >
+                            Edit
+                          </button>
+                        )}
                       </td>
                     </tr>
                   );

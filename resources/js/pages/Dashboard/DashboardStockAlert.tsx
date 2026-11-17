@@ -5,10 +5,19 @@ import { Badge } from "../../components/ui/Badge";
 import type { StockNotificationRecord } from "./StockNotificationMaster/stock-notification-types";
 import { fetchStockNotificationsApi } from "../../data/masterApi";
 
+export interface StockAlertSummary {
+  totalTriggered: number;
+  criticalCount: number;
+  warningCount: number;
+  firstItemName?: string;
+}
+
 interface DashboardStockAlertProps {
   onAddNewRule?: () => void;
+  onEditRule?: (record: StockNotificationRecord) => void;
   onManageRules?: () => void;
   onNavigatePrCreate?: () => void;
+  onAlertSummaryChange?: (summary: StockAlertSummary) => void;
 }
 
 function isRuleTriggered(item: StockNotificationRecord): boolean {
@@ -25,8 +34,10 @@ function isRuleCritical(item: StockNotificationRecord): boolean {
 
 export function DashboardStockAlert({
   onAddNewRule,
+  onEditRule,
   onManageRules,
   onNavigatePrCreate,
+  onAlertSummaryChange,
 }: DashboardStockAlertProps) {
   const [records, setRecords] = useState<StockNotificationRecord[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -60,8 +71,20 @@ export function DashboardStockAlert({
 
   const hasAlerts = !isLoading && triggeredItems.length > 0;
 
+  useEffect(() => {
+    if (!isLoading && onAlertSummaryChange) {
+      onAlertSummaryChange({
+        totalTriggered: triggeredItems.length,
+        criticalCount,
+        warningCount,
+        firstItemName: triggeredItems[0]?.itemName,
+      });
+    }
+  }, [isLoading, triggeredItems, criticalCount, warningCount, onAlertSummaryChange]);
+
   return (
     <div
+      id="dashboard-stock-alert-section"
       className="dashboard-stock-alert-card"
       style={{
         background: "var(--white)",
@@ -295,7 +318,7 @@ export function DashboardStockAlert({
                         <th style={{ width: "105px", textAlign: "right" }}>Buffer Threshold</th>
                         <th style={{ width: "80px", textAlign: "right" }}>Deficit</th>
                         <th style={{ width: "95px", textAlign: "center" }}>Severity</th>
-                        <th style={{ width: "95px", textAlign: "center" }}>Action</th>
+                        <th style={{ width: "145px", textAlign: "center" }}>Action</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -339,33 +362,34 @@ export function DashboardStockAlert({
                               </Badge>
                             </td>
                             <td style={{ textAlign: "center" }}>
-                              {onNavigatePrCreate ? (
-                                <button
-                                  type="button"
-                                  onClick={onNavigatePrCreate}
-                                  style={{
-                                    border: "1px solid var(--line)",
-                                    background: "var(--white)",
-                                    borderRadius: "4px",
-                                    padding: "3px 8px",
-                                    fontSize: "11.5px",
-                                    fontWeight: 600,
-                                    color: "var(--blue-600)",
-                                    cursor: "pointer",
-                                    display: "inline-flex",
-                                    alignItems: "center",
-                                    gap: "4px",
-                                    whiteSpace: "nowrap",
-                                  }}
-                                  title="Create Purchase Requisition for this item"
-                                >
-                                  <span>Reorder</span>
-                                </button>
-                              ) : (
-                                <span style={{ fontSize: "11px", color: "var(--muted)" }}>
-                                  Pending PR
-                                </span>
-                              )}
+                              <div className="dashboard-stock-action-row">
+                                {onEditRule && (
+                                  <button
+                                    type="button"
+                                    onClick={() => onEditRule(item)}
+                                    className="dashboard-stock-action-btn dashboard-stock-action-btn--adjust"
+                                    title="Adjust buffer threshold quantity for this item"
+                                  >
+                                    Adjust
+                                  </button>
+                                )}
+                                {onNavigatePrCreate ? (
+                                  <button
+                                    type="button"
+                                    onClick={onNavigatePrCreate}
+                                    className="dashboard-stock-action-btn"
+                                    title="Create Purchase Requisition for this item"
+                                  >
+                                    Reorder
+                                  </button>
+                                ) : (
+                                  !onEditRule && (
+                                    <span style={{ fontSize: "11px", color: "var(--muted)" }}>
+                                      Pending PR
+                                    </span>
+                                  )
+                                )}
+                              </div>
                             </td>
                           </tr>
                         );

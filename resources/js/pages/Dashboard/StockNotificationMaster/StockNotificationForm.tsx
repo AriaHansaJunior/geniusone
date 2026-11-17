@@ -51,6 +51,9 @@ export function StockNotificationForm({
   const [bufferQuantity, setBufferQuantity] = useState<number | "">(
     initialRecord ? initialRecord.bufferQuantity : ""
   );
+  const [triggerCondition, setTriggerCondition] = useState<"Stock <= Buffer" | "Stock < Buffer">(
+    initialRecord?.triggerCondition || "Stock <= Buffer"
+  );
   const [notificationLevel, setNotificationLevel] = useState<"Critical" | "Warning" | "Standard">(
     initialRecord?.notificationLevel || "Warning"
   );
@@ -107,7 +110,7 @@ export function StockNotificationForm({
       unit: unit.trim() || "PCE",
       currentStock: currentStock === "" ? 0 : Number(currentStock),
       bufferQuantity: numBuffer,
-      triggerCondition: "Stock <= Buffer",
+      triggerCondition,
       notificationLevel,
       status,
       notes: notes.trim(),
@@ -219,8 +222,8 @@ export function StockNotificationForm({
           </div>
         </div>
 
-        {/* Row 3: Buffer Threshold + Severity Level + Status */}
-        <div className="master-form-grid-3">
+        {/* Row 3: Buffer Threshold + Trigger Condition + Severity Level + Status */}
+        <div className="master-form-grid-4">
           <div className="master-form-group">
             <label className="master-form-label">
               Buffer Threshold Quantity <span className="required-mark">*</span>
@@ -238,9 +241,21 @@ export function StockNotificationForm({
             />
             {bufferQuantity !== "" && Number(bufferQuantity) > 0 && (
               <span className="master-form-helper-text">
-                Reminder triggers when Current Stock &le; {bufferQuantity} {unit || "units"}
+                Alert triggers when Current Stock {triggerCondition === "Stock < Buffer" ? "<" : "≤"} {bufferQuantity} {unit || "units"}
               </span>
             )}
+          </div>
+
+          <div className="master-form-group">
+            <label className="master-form-label">Trigger Condition</label>
+            <CustomSelect
+              value={triggerCondition}
+              onChange={(val) => setTriggerCondition(val as "Stock <= Buffer" | "Stock < Buffer")}
+              options={[
+                { value: "Stock <= Buffer", label: "Stock <= Buffer (At or Below)" },
+                { value: "Stock < Buffer", label: "Stock < Buffer (Strictly Below)" },
+              ]}
+            />
           </div>
 
           <div className="master-form-group">
@@ -268,6 +283,44 @@ export function StockNotificationForm({
             />
           </div>
         </div>
+
+        {/* Live Low-Stock Buffer Notification Preview */}
+        {bufferQuantity !== "" && Number(bufferQuantity) > 0 && (() => {
+          const numericStock = currentStock === "" ? 0 : Number(currentStock);
+          const numericBuffer = Number(bufferQuantity);
+          const isLowStockTriggered =
+            status === "Active" &&
+            (triggerCondition === "Stock < Buffer"
+              ? numericStock < numericBuffer
+              : numericStock <= numericBuffer);
+          const deficit = Math.max(0, numericBuffer - numericStock);
+          const unitLabel = unit || "units";
+
+          return (
+            <div
+              className={`stock-rule-preview ${
+                isLowStockTriggered ? "stock-rule-preview--alert" : "stock-rule-preview--safe"
+              }`}
+            >
+              <Icon
+                name={isLowStockTriggered ? "alertTriangle" : "checkCircle"}
+                size={16}
+              />
+              <div className="stock-rule-preview__content">
+                <span className="stock-rule-preview__title">
+                  {isLowStockTriggered
+                    ? "Low Stock Alert Will Trigger Immediately"
+                    : "Buffer Threshold Monitoring Active"}
+                </span>
+                <span className="stock-rule-preview__desc">
+                  {isLowStockTriggered
+                    ? `Current stock (${numericStock.toLocaleString("en-US")} ${unitLabel}) meets the buffer condition (${numericBuffer.toLocaleString("en-US")} ${unitLabel}; deficit: ${deficit.toLocaleString("en-US")} ${unitLabel}). This item will appear in Dashboard Stock Buffer Alerts.`
+                    : `Current stock (${numericStock.toLocaleString("en-US")} ${unitLabel}) is safely above buffer (${numericBuffer.toLocaleString("en-US")} ${unitLabel}). Dashboard will notify you automatically if stock drops ${triggerCondition === "Stock < Buffer" ? "below" : "to or below"} ${numericBuffer.toLocaleString("en-US")} ${unitLabel}.`}
+                </span>
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Row 4: Full-width Notes */}
         <div className="master-form-group">

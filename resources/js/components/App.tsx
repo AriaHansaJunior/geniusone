@@ -2180,25 +2180,44 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
   );
 
   // Stock Notification Master Handlers
-  const handleNavigateStockNotificationCreate = useCallback(() => {
-    setEditingStockNotification(null);
-    const nextState: ViewState = { type: "stock-notification-create" };
-    setViewState(nextState);
-    if (typeof window !== "undefined") {
-      window.scrollTo(0, 0);
-      window.history.pushState(nextState, "", "/dashboard/stock-notification-master/create");
-    }
-  }, []);
+  const stockNotificationReturnRef = useRef<"dashboard" | "master">("master");
 
-  const handleEditStockNotification = useCallback((record: StockNotificationRecord) => {
-    setEditingStockNotification(record);
-    const nextState: ViewState = { type: "stock-notification-edit", record };
-    setViewState(nextState);
-    if (typeof window !== "undefined") {
-      window.scrollTo(0, 0);
-      window.history.pushState(nextState, "", "/dashboard/stock-notification-master/create");
+  const handleNavigateStockNotificationCreate = useCallback(
+    (returnTo: "dashboard" | "master" = "master") => {
+      stockNotificationReturnRef.current = returnTo;
+      setEditingStockNotification(null);
+      const nextState: ViewState = { type: "stock-notification-create" };
+      setViewState(nextState);
+      if (typeof window !== "undefined") {
+        window.scrollTo(0, 0);
+        window.history.pushState(nextState, "", "/dashboard/stock-notification-master/create");
+      }
+    },
+    []
+  );
+
+  const handleEditStockNotification = useCallback(
+    (record: StockNotificationRecord, returnTo: "dashboard" | "master" = "master") => {
+      stockNotificationReturnRef.current = returnTo;
+      setEditingStockNotification(record);
+      const nextState: ViewState = { type: "stock-notification-edit", record };
+      setViewState(nextState);
+      if (typeof window !== "undefined") {
+        window.scrollTo(0, 0);
+        window.history.pushState(nextState, "", "/dashboard/stock-notification-master/create");
+      }
+    },
+    []
+  );
+
+  const handleBackStockNotification = useCallback(() => {
+    setEditingStockNotification(null);
+    if (stockNotificationReturnRef.current === "dashboard") {
+      handleNavigateList("dashboard", "/dashboard");
+    } else {
+      handleNavigateList("stock-notification-master", "/dashboard/stock-notification-master");
     }
-  }, []);
+  }, [handleNavigateList]);
 
   const handleSaveStockNotification = useCallback(async (record: StockNotificationRecord, isEdit: boolean) => {
     try {
@@ -2213,10 +2232,22 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
         }
       }
       setEditingStockNotification(null);
-      handleNavigateList("stock-notification-master", "/dashboard/stock-notification-master");
+      if (stockNotificationReturnRef.current === "dashboard") {
+        handleNavigateList("dashboard", "/dashboard");
+      } else {
+        handleNavigateList("stock-notification-master", "/dashboard/stock-notification-master");
+      }
+      const effectiveRecord = saved || record;
+      const isTriggeredNow =
+        effectiveRecord.status === "Active" &&
+        (effectiveRecord.triggerCondition === "Stock < Buffer"
+          ? effectiveRecord.currentStock < effectiveRecord.bufferQuantity
+          : effectiveRecord.currentStock <= effectiveRecord.bufferQuantity);
       notifySuccess(
         isEdit ? "Stock Notification Updated" : "Stock Notification Added",
-        "Stock notification rule saved successfully."
+        isTriggeredNow
+          ? `Rule saved. Low-stock alert is now active for ${effectiveRecord.itemName} (Stock: ${effectiveRecord.currentStock}, Buffer: ${effectiveRecord.bufferQuantity} ${effectiveRecord.unit}).`
+          : "Stock notification rule saved successfully."
       );
     } catch (err) {
       console.error("Stock Notification API sync failed:", err);
@@ -2589,6 +2620,7 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
             handleNavigateWarehouseCoordinateCreate={handleNavigateWarehouseCoordinateCreate}
             handleNavigateStockNotificationCreate={handleNavigateStockNotificationCreate}
             handleEditStockNotification={handleEditStockNotification}
+            handleBackStockNotification={handleBackStockNotification}
             handleSaveStockNotification={handleSaveStockNotification}
             handleDeleteStockNotification={handleDeleteStockNotification}
             handleToggleStockNotificationStatus={handleToggleStockNotificationStatus}

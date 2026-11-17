@@ -501,3 +501,116 @@
     padding: 10px 10px;
   }
 }
+
+/* Low-Stock Buffer Notification Banner & Stock Alert Action Controls */
+.dashboard-low-stock-notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 12px 18px;
+  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+  border: 1px solid #fcd34d;
+  border-radius: var(--radius-md);
+  box-shadow: 0 4px 14px -4px rgba(217, 119, 6, 0.14);
+}
+
+.dashboard-low-stock-notice--critical {
+  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+  border-color: #fca5a5;
+  box-shadow: 0 4px 14px -4px rgba(220, 38, 38, 0.16);
+}
+
+.dashboard-low-stock-notice__info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  flex: 1 1 280px;
+}
+
+.dashboard-low-stock-notice__icon {
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(217, 119, 6, 0.25);
+  color: #d97706;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.dashboard-low-stock-notice--critical .dashboard-low-stock-notice__icon {
+  border-color: rgba(220, 38, 38, 0.25);
+  color: #dc2626;
+}
+
+.dashboard-low-stock-notice__title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 800;
+  color: #92400e;
+}
+
+.dashboard-low-stock-notice--critical .dashboard-low-stock-notice__title {
+  color: #991b1b;
+}
+
+.dashboard-low-stock-notice__desc {
+  margin: 2px 0 0;
+  font-size: 12px;
+  font-weight: 500;
+  color: #b45309;
+}
+
+.dashboard-low-stock-notice--critical .dashboard-low-stock-notice__desc {
+  color: #b91c1c;
+}
+
+.dashboard-low-stock-notice__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+
+.dashboard-stock-action-row {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.dashboard-stock-action-btn {
+  border: 1px solid var(--line);
+  background: var(--white);
+  border-radius: var(--radius-xs);
+  padding: 4px 10px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--blue-600);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.dashboard-stock-action-btn:hover {
+  background: var(--blue-50);
+  border-color: var(--blue-600);
+}
+
+.dashboard-stock-action-btn--adjust {
+  color: #92400e;
+  border-color: #fde68a;
+  background: #fffbeb;
+}
+
+.dashboard-stock-action-btn--adjust:hover {
+  background: #fef3c7;
+  border-color: #f59e0b;
+}

@@ -246,13 +246,10 @@ export function ItemForm({ initialRecord, onBack, onSave }: ItemFormProps) {
           initialRecord?.greatestUnitCode,
           initialRecord?.greatestUnitName
         );
-        if (
-          greatUomMatch &&
-          (!smallUomMatch ||
-            Number(greatUomMatch.id) !== Number(smallUomMatch.id) ||
-            (initialRecord?.unitConversion ?? 1) > 1)
-        ) {
+        if (greatUomMatch) {
           setGreatestUnitId(Number(greatUomMatch.id));
+        } else if (smallUomMatch) {
+          setGreatestUnitId(Number(smallUomMatch.id));
         } else {
           setGreatestUnitId(undefined);
         }
@@ -389,14 +386,6 @@ export function ItemForm({ initialRecord, onBack, onSave }: ItemFormProps) {
     [lookups.uoms]
   );
 
-  const optionalUomOptions = useMemo(
-    () => [
-      { value: "", label: "— Not Set (No Separate Greatest Unit) —" },
-      ...uomOptions.filter((opt) => Number(opt.value) !== smallestUnitId),
-    ],
-    [uomOptions, smallestUnitId]
-  );
-
   const brandOptions = useMemo(
     () => [
       { value: "", label: "— None / Not Set —" },
@@ -478,10 +467,7 @@ export function ItemForm({ initialRecord, onBack, onSave }: ItemFormProps) {
     const effectiveClassId = classificationsId ?? lookups.classifications[0]?.id;
     const effectiveFacId = facilitiesId ?? lookups.facilities[0]?.id;
     const effectiveSmallUomId = smallestUnitId ?? lookups.uoms[0]?.id;
-    const effectiveGreatUomId =
-      greatestUnitId && greatestUnitId !== effectiveSmallUomId
-        ? greatestUnitId
-        : undefined;
+    const effectiveGreatUomId = greatestUnitId ?? effectiveSmallUomId;
 
     if (!effectiveClassId || !effectiveFacId || !effectiveSmallUomId) {
       setNotification({
@@ -819,9 +805,6 @@ export function ItemForm({ initialRecord, onBack, onSave }: ItemFormProps) {
                 onChange={(val) => {
                   const nextId = val ? Number(val) : undefined;
                   setSmallestUnitId(nextId);
-                  if (nextId && nextId === greatestUnitId) {
-                    setGreatestUnitId(undefined);
-                  }
                 }}
                 placeholder={loadingLookups ? "Loading units..." : "Select smallest unit..."}
                 disabled={loadingLookups}
@@ -838,9 +821,9 @@ export function ItemForm({ initialRecord, onBack, onSave }: ItemFormProps) {
                 searchable
                 value={greatestUnitId ? String(greatestUnitId) : ""}
                 onChange={(val) => setGreatestUnitId(val ? Number(val) : undefined)}
-                placeholder={loadingLookups ? "Loading units..." : "Select greatest unit (optional)..."}
+                placeholder={loadingLookups ? "Loading units..." : "Select greatest unit..."}
                 disabled={loadingLookups}
-                options={optionalUomOptions}
+                options={uomOptions}
               />
             </div>
 

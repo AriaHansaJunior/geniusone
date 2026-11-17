@@ -3,7 +3,7 @@
  * Split from masterApi.ts for modular maintainability (< 1,000 lines per module).
  */
 
-import { apiGet, apiPost, apiPut, apiPatch, apiDelete } from "./api";
+import { apiGet, apiPost, apiPut, apiPatch, apiDelete, clearApiCache } from "./api";
 import type { ReceiveNoteRecord } from "../pages/Exim/ReceiveNote/receive-note-types";
 import type { ReceiveNoteReturnRecord } from "../pages/Exim/ReceiveNoteReturn/receive-note-return-types";
 import type { DocumentHistoryRecord } from "../pages/Exim/DocumentHistory/document-history-types";
@@ -784,6 +784,7 @@ export async function saveStockNotificationApi(record: StockNotificationRecord, 
     ? await apiPut<{ data: any }>(`/api/dashboard/stock-notifications/${toNumericOrCleanId(record.id)}`, payload)
     : await apiPost<{ data: any }>("/api/dashboard/stock-notifications", payload);
   if (!res?.data) return null;
+  clearApiCache();
   const mapped = mapStockNotificationRecord(res.data, Math.max(0, (record.no || 1) - 1), record.notificationLevel);
   return {
     ...record,
@@ -797,12 +798,15 @@ export async function saveStockNotificationApi(record: StockNotificationRecord, 
 }
 
 export async function deleteStockNotificationApi(id: string): Promise<boolean> {
-  return apiDelete(`/api/dashboard/stock-notifications/${toNumericOrCleanId(id)}`);
+  const ok = await apiDelete(`/api/dashboard/stock-notifications/${toNumericOrCleanId(id)}`);
+  if (ok) clearApiCache();
+  return ok;
 }
 
 export async function toggleStockNotificationStatusApi(id: string): Promise<StockNotificationRecord | null> {
   const res = await apiPatch<{ data: any }>(`/api/dashboard/stock-notifications/${toNumericOrCleanId(id)}/toggle-status`);
   if (!res?.data) return null;
+  clearApiCache();
   return mapStockNotificationRecord(res.data, 0, "Warning");
 }
 

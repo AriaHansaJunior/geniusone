@@ -492,11 +492,11 @@ export function ItemIndex({
                 )}
 
                 {visibleMap.smallestUnit && (
-                  <th className="master-col-mw110">Smallest Unit</th>
+                  <th className="master-col-mw110">Usage Unit</th>
                 )}
 
                 {visibleMap.greatestUnit && (
-                  <th className="master-col-mw110">Greatest Unit</th>
+                  <th className="master-col-mw110">Purchase Unit</th>
                 )}
 
                 {visibleMap.facility && (

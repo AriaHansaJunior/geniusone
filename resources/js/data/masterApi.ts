@@ -947,18 +947,9 @@ function mapApiItemToRecord(r: any, idx = 0): ItemRecord {
       ? Number(r.unit_conversion)
       : 1;
 
-  const greatestDispRaw = greatestObj
+  const greatestDisp = greatestObj
     ? resolveUnitDisplay(greatestObj)
-    : { code: "", name: "" };
-  const isSameAsSmallest = Boolean(
-    greatestObj &&
-      smallestId &&
-      greatestId &&
-      greatestId === smallestId &&
-      unitConversion <= 1
-  );
-  const greatestDisp =
-    greatestObj && !isSameAsSmallest ? greatestDispRaw : { code: "", name: "" };
+    : smallestDisp;
 
   const facVal = r.facility?.name || r.facility_name || "";
   const hs = r.hs_code || r.hsCode;

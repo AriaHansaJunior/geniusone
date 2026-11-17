@@ -9,7 +9,7 @@ import { CustomSelect } from "../../components/ui/CustomSelect";
 import { apiFetch } from "../../data/api";
 import { fetchMasterCurrencies } from "../../data/masterApi";
 import { DashboardRateChart } from "./DashboardRateChart";
-import { DashboardStockAlert } from "./DashboardStockAlert";
+import { DashboardStockAlert, type StockAlertSummary } from "./DashboardStockAlert";
 import { DashboardPendingApprovals } from "./DashboardPendingApprovals";
 import { ErrorBoundary } from "../../components/ui/ErrorBoundary";
 import type {
@@ -19,9 +19,11 @@ import type {
 } from "./dashboard-rate-types";
 import type { ReceiveNoteRecord } from "../Exim/ReceiveNote/receive-note-types";
 import type { RequestMaterialRecord } from "../Warehouse/Request/RequestMaterial/request-material-types";
+import type { StockNotificationRecord } from "./StockNotificationMaster/stock-notification-types";
 
 interface DashboardProps {
   onAddNewBufferRule?: () => void;
+  onEditBufferRule?: (record: StockNotificationRecord) => void;
   onManageBufferRules?: () => void;
   onNavigatePrCreate?: () => void;
   onNavigateDetail?: (module: "pr" | "po" | "report" | "warehouse", identifier: string) => void;
@@ -63,6 +65,7 @@ const mapApiExchangeRateRecord = (r: any, idx: number): ExchangeRateRecord => {
 
 export function Dashboard({
   onAddNewBufferRule,
+  onEditBufferRule,
   onManageBufferRules,
   onNavigatePrCreate,
   onNavigateDetail,
@@ -97,6 +100,18 @@ export function Dashboard({
 
   // Table search query
   const [search, setSearch] = useState("");
+  const [stockAlertSummary, setStockAlertSummary] = useState<StockAlertSummary>({
+    totalTriggered: 0,
+    criticalCount: 0,
+    warningCount: 0,
+  });
+
+  const handleScrollToStockAlerts = useCallback(() => {
+    const el = document.getElementById("dashboard-stock-alert-section");
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, []);
 
   // Table sorting
   const [sortField, setSortField] = useState<RateSortField>("rateDate");
@@ -355,6 +370,54 @@ export function Dashboard({
 
   return (
     <div className="dashboard-view">
+      {/* Top Low-Stock Buffer Notification Banner */}
+      {stockAlertSummary.totalTriggered > 0 && (
+        <div
+          className={`dashboard-low-stock-notice ${
+            stockAlertSummary.criticalCount > 0 ? "dashboard-low-stock-notice--critical" : ""
+          }`}
+          role="status"
+        >
+          <div className="dashboard-low-stock-notice__info">
+            <span className="dashboard-low-stock-notice__icon">
+              <Icon name="alertTriangle" size={18} />
+            </span>
+            <div>
+              <p className="dashboard-low-stock-notice__title">
+                Low Stock Buffer Notification ({stockAlertSummary.totalTriggered}{" "}
+                {stockAlertSummary.totalTriggered === 1 ? "Item" : "Items"})
+              </p>
+              <p className="dashboard-low-stock-notice__desc">
+                {stockAlertSummary.criticalCount > 0
+                  ? `${stockAlertSummary.criticalCount} critical item(s) need immediate restock`
+                  : `${stockAlertSummary.firstItemName || "Inventory item"} has reached its buffer threshold`}
+                . Configure buffer quantities or review alerts below.
+              </p>
+            </div>
+          </div>
+          <div className="dashboard-low-stock-notice__actions">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleScrollToStockAlerts}
+            >
+              View Stock Alerts
+            </Button>
+            {onAddNewBufferRule && (
+              <Button
+                type="button"
+                variant="primary"
+                size="sm"
+                onClick={onAddNewBufferRule}
+              >
+                Add New Buffer
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Pending Approvals Shortcut Widget (Placed at top as requested) */}
       <DashboardPendingApprovals
         onNavigateDetail={onNavigateDetail}
@@ -369,8 +432,10 @@ export function Dashboard({
       {/* Stock Buffer Alert & Low Inventory Reminders */}
       <DashboardStockAlert
         onAddNewRule={onAddNewBufferRule}
+        onEditRule={onEditBufferRule}
         onManageRules={onManageBufferRules}
         onNavigatePrCreate={onNavigatePrCreate}
+        onAlertSummaryChange={setStockAlertSummary}
       />
 
       {/* Exchange Rates Master Card */}
