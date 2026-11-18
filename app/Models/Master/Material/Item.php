@@ -13,6 +13,7 @@ use App\Traits\LogsActivity;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Item extends Model
@@ -152,5 +153,15 @@ class Item extends Model
     public function warehouseStocks(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(WarehouseStock::class, 'items_id');
+    }
+
+    public function warehouses(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            \App\Models\Warehouse\Facility\Warehouse::class,
+            'item_warehouse',
+            'items_id',
+            'warehouses_id'
+        )->withPivot('quantity')->withTimestamps();
     }
 }

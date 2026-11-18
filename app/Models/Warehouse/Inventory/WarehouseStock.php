@@ -7,10 +7,18 @@ use App\Models\Warehouse\Facility\Warehouse;
 use App\Models\Warehouse\Facility\WarehouseCoordinate;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class WarehouseStock extends Model
 {
     protected $table = 'warehouse_stocks';
+
+    protected static function booted(): void
+    {
+        static::saved(fn (self $stock) => $stock->syncWarehouseBalance());
+        static::deleted(fn (self $stock) => $stock->syncWarehouseBalance());
+    }
 
     protected $fillable = [
         'items_id',
@@ -45,6 +53,23 @@ class WarehouseStock extends Model
     public function coordinate(): BelongsTo
     {
         return $this->belongsTo(WarehouseCoordinate::class, 'warehouse_coordinates_id');
+    }
+
+    public function syncWarehouseBalance(): void
+    {
+        if (! Schema::hasTable('item_warehouse')) {
+            return;
+        }
+
+        $quantity = static::query()
+            ->where('items_id', $this->items_id)
+            ->where('warehouses_id', $this->warehouses_id)
+            ->sum('quantity');
+
+        DB::table('item_warehouse')->updateOrInsert(
+            ['items_id' => $this->items_id, 'warehouses_id' => $this->warehouses_id],
+            ['quantity' => $quantity, 'updated_at' => now(), 'created_at' => $this->created_at ?? now()]
+        );
     }
 }
 

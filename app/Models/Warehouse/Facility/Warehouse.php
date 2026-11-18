@@ -8,6 +8,7 @@ use App\Traits\LogsActivity;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
@@ -50,5 +51,15 @@ class Warehouse extends Model
     public function coordinates(): HasMany
     {
         return $this->hasMany(WarehouseCoordinate::class, 'warehouses_id');
+    }
+
+    public function items(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            \App\Models\Master\Material\Item::class,
+            'item_warehouse',
+            'warehouses_id',
+            'items_id'
+        )->withPivot('quantity')->withTimestamps();
     }
 }

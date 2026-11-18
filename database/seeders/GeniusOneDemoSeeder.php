@@ -156,7 +156,7 @@ class GeniusOneDemoSeeder extends Seeder
         $classChem = Classification::firstOrCreate(['code' => 'CLS-CHEM'], ['name' => 'Reagent & Chemical', 'reporting_types_id' => $repType->id, 'accounts_id' => $accRaw->id]);
         $classHse = Classification::firstOrCreate(['code' => 'CLS-HSE'], ['name' => 'Safety & PPE Equipment', 'reporting_types_id' => $repType->id, 'accounts_id' => $accPart->id]);
 
-        $facSurabaya = Facility::firstOrCreate(['name' => 'Main Plant Surabaya']);
+        $facSurabaya = Facility::firstOrCreate(['name' => 'FASILITAS']);
         $originLokal = Origin::firstOrCreate(['name' => 'Lokal']);
         $originImport = Origin::firstOrCreate(['name' => 'Import']);
         $itemTypeBaku = ItemType::firstOrCreate(['name' => 'Bahan Baku']);

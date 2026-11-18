@@ -127,72 +127,162 @@ class InventoryService
         ?int $coordinateId = null,
         ?string $coordinateName = null
     ): Item {
-        $delta = strtoupper($movementType) === 'OUT' ? -$quantity : $quantity;
+        if ($quantity <= 0) {
+            throw new InvalidArgumentException('Stock movement quantity must be greater than zero.');
+        }
+
+        $type = strtoupper($movementType) === 'OUT' ? 'OUT' : 'IN';
+        $delta = $type === 'OUT' ? -$quantity : $quantity;
         $reason = $notes ?? "{$referenceType} ({$referenceNumber})";
 
-        if ($warehouseId && Schema::hasTable('warehouse_stocks')) {
-            $wsQuery = DB::table('warehouse_stocks')
-                ->where('items_id', $item->id)
-                ->where('warehouses_id', $warehouseId);
+        return DB::transaction(function () use (
+            $item,
+            $warehouseId,
+            $type,
+            $quantity,
+            $delta,
+            $referenceType,
+            $referenceNumber,
+            $userId,
+            $reason,
+            $coordinateId,
+            $coordinateName
+        ) {
+            $warehouseBalanceBefore = (float) $item->stock;
 
-            if ($coordinateId) {
-                $wsQuery->where('warehouse_coordinates_id', $coordinateId);
-            }
+            if ($warehouseId && Schema::hasTable('warehouse_stocks')) {
+                $stockQuery = DB::table('warehouse_stocks')
+                    ->where('items_id', $item->id)
+                    ->where('warehouses_id', $warehouseId)
+                    ->orderBy('id')
+                    ->lockForUpdate();
 
-            $ws = $wsQuery->first() ?? DB::table('warehouse_stocks')
-                ->where('items_id', $item->id)
-                ->where('warehouses_id', $warehouseId)
-                ->first();
-
-            if ($ws) {
-                $newQty = max(0.0, (float) $ws->quantity + $delta);
-                DB::table('warehouse_stocks')->where('id', $ws->id)->update([
-                    'quantity' => $newQty,
-                    'available_quantity' => max(0.0, $newQty - (float) $ws->allocated_quantity),
-                    'last_movement_date' => now(),
-                    'updated_at' => now(),
-                ]);
-            } elseif ($delta > 0) {
-                $resolvedCoord = null;
-                if ((! $coordinateId || ! $coordinateName) && Schema::hasTable('warehouse_coordinates')) {
-                    $coordQuery = DB::table('warehouse_coordinates')->where('warehouses_id', $warehouseId);
-                    if ($coordinateId) {
-                        $coordQuery->where('id', $coordinateId);
-                    }
-                    $resolvedCoord = $coordQuery->orderBy('id')->first(['id', 'name']);
+                if ($coordinateId) {
+                    $stockQuery->where('warehouse_coordinates_id', $coordinateId);
                 }
 
-                $finalCoordinateId = $coordinateId ?? $resolvedCoord?->id;
-                $finalCoordinateName = $coordinateName ?? $resolvedCoord?->name;
+                $stocks = $stockQuery->get();
+                $warehouseBalanceBefore = (float) $stocks->sum('quantity');
 
-                DB::table('warehouse_stocks')->insert([
+                if ($type === 'OUT') {
+                    $available = (float) $stocks->sum(
+                        static fn ($stock) => max(0.0, (float) $stock->quantity - (float) $stock->allocated_quantity)
+                    );
+                    if ($available < $quantity) {
+                        throw new InvalidArgumentException(
+                            "Insufficient stock in warehouse #{$warehouseId} for item '{$item->name}'. ".
+                            "Available: {$available}, Requested: {$quantity}."
+                        );
+                    }
+
+                    $remaining = $quantity;
+                    foreach ($stocks as $stock) {
+                        if ($remaining <= 0) {
+                            break;
+                        }
+
+                        $stockAvailable = max(
+                            0.0,
+                            (float) $stock->quantity - (float) $stock->allocated_quantity
+                        );
+                        $deduction = min($remaining, $stockAvailable);
+                        if ($deduction <= 0) {
+                            continue;
+                        }
+
+                        $newQuantity = (float) $stock->quantity - $deduction;
+                        DB::table('warehouse_stocks')->where('id', $stock->id)->update([
+                            'quantity' => $newQuantity,
+                            'available_quantity' => $newQuantity - (float) $stock->allocated_quantity,
+                            'last_movement_date' => now(),
+                            'updated_at' => now(),
+                        ]);
+                        $remaining -= $deduction;
+                    }
+                } else {
+                    $stock = $stocks->first();
+                    if ($stock) {
+                        $newQuantity = (float) $stock->quantity + $quantity;
+                        DB::table('warehouse_stocks')->where('id', $stock->id)->update([
+                            'quantity' => $newQuantity,
+                            'available_quantity' => $newQuantity - (float) $stock->allocated_quantity,
+                            'last_movement_date' => now(),
+                            'updated_at' => now(),
+                        ]);
+                    } else {
+                        $resolvedCoord = null;
+                        if ((! $coordinateId || ! $coordinateName) && Schema::hasTable('warehouse_coordinates')) {
+                            $coordinateQuery = DB::table('warehouse_coordinates')->where('warehouses_id', $warehouseId);
+                            if ($coordinateId) {
+                                $coordinateQuery->where('id', $coordinateId);
+                            }
+                            $resolvedCoord = $coordinateQuery->orderBy('id')->first(['id', 'name']);
+                        }
+
+                        DB::table('warehouse_stocks')->insert([
+                            'items_id' => $item->id,
+                            'warehouses_id' => $warehouseId,
+                            'warehouse_coordinates_id' => $coordinateId ?? $resolvedCoord?->id,
+                            'coordinate_name' => $coordinateName ?? $resolvedCoord?->name,
+                            'quantity' => $quantity,
+                            'available_quantity' => $quantity,
+                            'allocated_quantity' => 0,
+                            'location_type' => 'Warehouse',
+                            'last_movement_date' => now(),
+                            'created_at' => now(),
+                            'updated_at' => now(),
+                        ]);
+                    }
+                }
+
+                $warehouseBalanceAfter = (float) DB::table('warehouse_stocks')
+                    ->where('items_id', $item->id)
+                    ->where('warehouses_id', $warehouseId)
+                    ->sum('quantity');
+
+                if (Schema::hasTable('item_warehouse')) {
+                    DB::table('item_warehouse')->updateOrInsert(
+                        ['items_id' => $item->id, 'warehouses_id' => $warehouseId],
+                        ['quantity' => $warehouseBalanceAfter, 'updated_at' => now(), 'created_at' => now()]
+                    );
+                }
+            } else {
+                $warehouseBalanceAfter = $warehouseBalanceBefore + $delta;
+            }
+
+            $updatedItem = $this->adjustStock(
+                itemId: $item->id,
+                quantityDelta: $delta,
+                reason: $reason,
+                userId: $userId,
+                extraMetadata: [
+                    'warehouse_id' => $warehouseId,
+                    'coordinate_id' => $coordinateId,
+                    'movement_type' => $type,
+                    'reference_type' => $referenceType,
+                    'reference_number' => $referenceNumber,
+                ]
+            );
+
+            if (Schema::hasTable('inventory_movements')) {
+                DB::table('inventory_movements')->insert([
                     'items_id' => $item->id,
                     'warehouses_id' => $warehouseId,
-                    'warehouse_coordinates_id' => $finalCoordinateId,
-                    'coordinate_name' => $finalCoordinateName,
-                    'quantity' => $delta,
-                    'available_quantity' => $delta,
-                    'allocated_quantity' => 0,
-                    'location_type' => 'Warehouse',
-                    'last_movement_date' => now(),
+                    'warehouse_coordinates_id' => $coordinateId,
+                    'users_id' => $userId ?? Auth::id(),
+                    'movement_type' => $type,
+                    'quantity' => $quantity,
+                    'balance_before' => $warehouseBalanceBefore,
+                    'balance_after' => $warehouseBalanceAfter,
+                    'reference_type' => $referenceType,
+                    'reference_number' => $referenceNumber,
+                    'notes' => $reason,
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]);
             }
-        }
 
-        return $this->adjustStock(
-            itemId: $item->id,
-            quantityDelta: $delta,
-            reason: $reason,
-            userId: $userId,
-            extraMetadata: [
-                'warehouse_id' => $warehouseId,
-                'coordinate_id' => $coordinateId,
-                'movement_type' => $movementType,
-                'reference_type' => $referenceType,
-                'reference_number' => $referenceNumber,
-            ]
-        );
+            return $updatedItem;
+        });
     }
 }

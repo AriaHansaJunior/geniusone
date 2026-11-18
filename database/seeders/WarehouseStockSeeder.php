@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class WarehouseStockSeeder extends Seeder
 {
@@ -396,6 +397,19 @@ class WarehouseStockSeeder extends Seeder
                     'lot_number' => $c['lot'],
                     'location_type' => $c['location_type'],
                 ]);
+            }
+        }
+
+        if (Schema::hasTable('item_warehouse')) {
+            foreach (DB::table('warehouse_stocks')
+                ->select('items_id', 'warehouses_id')
+                ->selectRaw('SUM(quantity) as quantity')
+                ->groupBy('items_id', 'warehouses_id')
+                ->cursor() as $stock) {
+                DB::table('item_warehouse')->updateOrInsert(
+                    ['items_id' => $stock->items_id, 'warehouses_id' => $stock->warehouses_id],
+                    ['quantity' => $stock->quantity, 'updated_at' => now(), 'created_at' => now()]
+                );
             }
         }
 

@@ -165,6 +165,8 @@ Route::prefix('warehouse')->group(function () {
     Route::prefix('reports')->group(function () {
         Route::get('/stock-card', [WarehouseReportApiController::class, 'stockCard']);
         Route::get('/stock-item', [WarehouseReportApiController::class, 'stockItem']);
+        Route::get('/stock-item/{itemId}/movements', [WarehouseReportApiController::class, 'stockItemMovements'])
+            ->whereNumber('itemId');
         Route::get('/receive-material', [WarehouseReportApiController::class, 'receiveMaterialReport']);
         Route::get('/stock-transfer', [WarehouseReportApiController::class, 'stockTransferReport']);
         Route::get('/stock-mutation', [WarehouseReportApiController::class, 'stockMutationReport']);

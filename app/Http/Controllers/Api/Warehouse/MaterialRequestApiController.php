@@ -392,16 +392,22 @@ class MaterialRequestApiController extends Controller
             ], 422);
         }
 
-        DB::transaction(function () use ($r, $actorId, $request) {
-            $previousStatus = $r->status;
-            $tier = (int) $request->input('tier', 0);
+        $approvalResult = DB::transaction(function () use ($r, $actorId, $request) {
+            $r = RequestMaterial::query()->lockForUpdate()->findOrFail($r->id);
+            if (in_array($r->status, ['Approved', 'Approved 2'], true)) {
+                return false;
+            }
 
-            if (in_array($r->status, ['Draft', 'Waiting for Approve 1'], true) && $tier !== 2) {
+            $previousStatus = $r->status;
+            $requestedTier = (int) $request->input('tier', 1);
+            if (in_array($r->status, ['Draft', 'Waiting for Approve 1'], true) && $requestedTier === 1) {
                 $newStatus = 'Waiting for Approve 2';
                 $approvedTier = 1;
-            } else {
+            } elseif ($r->status === 'Waiting for Approve 2' && $requestedTier === 2) {
                 $newStatus = 'Approved';
                 $approvedTier = 2;
+            } else {
+                return null;
             }
 
             $r->update([
@@ -443,7 +449,22 @@ class MaterialRequestApiController extends Controller
                     }
                 }
             }
+
+            return true;
         });
+
+        if ($approvalResult === false) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Material request is already fully Approved.',
+            ], 422);
+        }
+        if ($approvalResult === null) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'The requested approval tier does not match the material request status.',
+            ], 422);
+        }
 
         $fresh = $this->findRecord((string) $r->id);
 

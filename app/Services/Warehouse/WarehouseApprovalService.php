@@ -116,14 +116,23 @@ class WarehouseApprovalService
         }
 
         return DB::transaction(function () use ($bpbId, $userId, $tier, $note) {
-            $bpb = BpbReceiveMaterial::findOrFail($bpbId);
+            $bpb = BpbReceiveMaterial::query()->lockForUpdate()->findOrFail($bpbId);
+            $currentStatus = $bpb->status;
+
+            if ($tier === 1 && in_array($currentStatus, ['Waiting for Approve 2', 'Approved'], true)) {
+                throw new InvalidArgumentException('BPB has already passed Tier 1 approval.');
+            }
+            if ($tier === 2 && $currentStatus !== 'Waiting for Approve 2') {
+                throw new InvalidArgumentException('BPB Tier 2 approval requires Tier 1 approval first.');
+            }
+
             $newStatus = ($tier === 1) ? 'Approved 1' : 'Approved 2';
 
             $existing = ApprovalBpb::where('bpb_receive_material_id', $bpb->id)
                 ->where('approval_ke', (string) $tier)
                 ->first();
 
-            if ($existing && $existing->status === 1) {
+            if ($existing && (int) $existing->status === 1) {
                 throw new InvalidArgumentException("BPB has already been approved at Tier {$tier}.");
             }
 

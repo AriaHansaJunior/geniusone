@@ -12,22 +12,18 @@ import { apiFetch } from "../../../../data/api";
 import {
   stockItemClassificationsList,
   stockItemFacilitiesList,
-  stockItemCoordinatesList,
   initialWarehouseStockRecords,
 } from "./stock-item-data";
 import { StockItemDetailModal } from "./StockItemDetailModal";
 import type {
   WarehouseStockRecord,
-  LocationFilter,
   StockStatusFilter,
 } from "./stock-item-types";
 
 export function StockItemIndex() {
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [classification, setClassification] = useState("All Classifications");
-  const [location, setLocation] = useState<LocationFilter>("All");
   const [stockStatus, setStockStatus] = useState<StockStatusFilter>("All");
-  const [coordinate, setCoordinate] = useState("All Coordinates");
   const [facility, setFacility] = useState("All Facilities");
   const [search, setSearch] = useState("");
 
@@ -69,43 +65,75 @@ export function StockItemIndex() {
     if (search.trim()) params.set("search", search.trim());
 
     apiFetch(`/api/warehouse/reports/stock-item?${params.toString()}`)
-      .then((res) => (res.ok ? res.json() : null))
+      .then((res) => {
+        if (!res.ok) {
+          throw new Error("Unable to load warehouse stock items.");
+        }
+        return res.json();
+      })
       .then((json) => {
         if (!isMounted) return;
-        if (json?.status === "success" && Array.isArray(json.data) && json.data.length > 0) {
-          const mapped: WarehouseStockRecord[] = json.data.map((it: any, idx: number) => {
-            const stockQty = Number(it.quantity ?? it.current_stock) || 0;
-            return {
-              id: String(it.id || idx + 1),
-              number: idx + 1,
-              materialCode: it.materialCode || it.item_code || "",
-              externalCode: it.externalCode || it.external_code || "—",
-              materialItem: it.materialItem || it.item_name || "",
-              classification: it.classification || it.category || "General",
-              coordinate: it.coordinate || "A-01-01",
-              warehouseName: it.warehouseName || it.warehouse || "Main Warehouse",
-              facility: it.facility || "FASILITAS",
-              locationType: (it.locationType as any) || "Warehouse",
-              stockStatus: stockQty > 0 ? "Available" : "Not Available",
-              quantity: stockQty,
-              unit: it.unit || "PCS",
-              pendingQty: 0,
-              availableQty: stockQty,
-              date: it.date || "2026-10-20",
-              lotNumber: it.lotNumber || "LOT-2026-A",
-              zone: "Zone A - General Storage",
-              rack: "Rack 01",
-              bin: "Bin 01",
-              allocatedQty: 0,
-              lastMovementDate: it.date || "2026-10-20",
-              remark: it.status || "Verified in stock",
-            };
-          });
-          setLiveRecords(mapped);
+        if (json?.status !== "success" || !Array.isArray(json.data)) {
+          throw new Error(json?.message || "Unexpected warehouse stock response.");
         }
+        const mapped: WarehouseStockRecord[] = json.data.map((it: any, idx: number) => {
+          const balances = (it.warehouseBalances || []).map((balance: any) => ({
+            warehouseId: balance.warehouseId == null ? null : Number(balance.warehouseId),
+            warehouseName: balance.warehouseName || "—",
+            quantity: Number(balance.quantity) || 0,
+            availableQuantity: Number(balance.availableQuantity ?? balance.quantity) || 0,
+            allocatedQuantity: Number(balance.allocatedQuantity ?? balance.pendingQty) || 0,
+            coordinate: balance.coordinate || "—",
+            locationType: (balance.locationType === "Production Area" ? "Production Area" : "Warehouse") as "Warehouse" | "Production Area",
+            lastMovementDate: balance.lastMovementDate || "—",
+            lotNumber: balance.lotNumber || "—",
+          }));
+
+          const totalStock =
+            typeof it.quantity === "number"
+              ? it.quantity
+              : typeof it.current_stock === "number"
+              ? it.current_stock
+              : balances.reduce((sum: number, b: any) => sum + b.quantity, 0);
+
+          const rawFac = String(it.facility || "");
+          const normalizedFacility = /non/i.test(rawFac) ? "NON FASILITAS" : "FASILITAS";
+
+          return {
+            id: String(it.id || it.item_id || idx),
+            itemId: Number(it.item_id || it.id),
+            warehouseId: balances[0]?.warehouseId ?? null,
+            number: idx + 1,
+            materialCode: it.materialCode || it.item_code || "",
+            externalCode: it.externalCode || it.external_code || "—",
+            materialItem: it.materialItem || it.item_name || "",
+            classification: it.classification || it.category || "—",
+            coordinate: balances.map((b: any) => b.coordinate).filter((c: string) => c && c !== "—").join(", ") || "—",
+            warehouseName: balances.map((b: any) => b.warehouseName).filter(Boolean).join(", ") || "—",
+            warehouseBalances: balances,
+            facility: normalizedFacility,
+            locationType: (balances[0]?.locationType ?? "Warehouse") as "Warehouse" | "Production Area",
+            stockStatus: (totalStock > 0 ? "Available" : "Not Available") as StockStatusFilter,
+            quantity: totalStock,
+            unit: it.unit || "—",
+            pendingQty: Number(it.pendingQty) || balances.reduce((sum: number, b: any) => sum + b.allocatedQuantity, 0),
+            availableQty: Number(it.availableQty) || balances.reduce((sum: number, b: any) => sum + b.availableQuantity, 0),
+            date: balances[0]?.lastMovementDate || "—",
+            lotNumber: balances[0]?.lotNumber || "—",
+            allocatedQty: Number(it.pendingQty) || balances.reduce((sum: number, b: any) => sum + b.allocatedQuantity, 0),
+            lastMovementDate: balances[0]?.lastMovementDate || "—",
+            remark: it.status || "",
+          };
+        });
+        setLiveRecords(mapped);
       })
       .catch((err) => {
-        console.warn("[GeniusOne Stock Item] Network error, using baseline records:", err);
+        if (isMounted) {
+          setNotification({
+            type: "error",
+            message: err instanceof Error ? err.message : "Failed to load warehouse stock items.",
+          });
+        }
       })
       .finally(() => {
         if (isMounted) setIsLoading(false);
@@ -126,53 +154,45 @@ export function StockItemIndex() {
       ) {
         return false;
       }
-      // Location (Warehouse / Production Area / All)
-      if (location !== "All" && rec.locationType !== location) {
-        return false;
-      }
       // Stock Status (Available / Not Available / All)
       if (stockStatus !== "All" && rec.stockStatus !== stockStatus) {
         return false;
       }
-      // Coordinate
-      if (
-        coordinate !== "All Coordinates" &&
-        rec.coordinate !== coordinate
-      ) {
-        return false;
+      // Facility (strictly FASILITAS vs NON FASILITAS)
+      if (facility !== "All Facilities") {
+        const isFilterNon = /non/i.test(facility);
+        const isItemNon = /non/i.test(rec.facility);
+        if (isFilterNon !== isItemNon) {
+          return false;
+        }
       }
-      // Facility
-      if (facility !== "All Facilities" && rec.facility !== facility) {
-        return false;
-      }
-      // Search query (code, external, item name)
+      // Search query (code, external, item name, warehouse name)
       if (search.trim()) {
         const query = search.toLowerCase().trim();
         const matchesCode = rec.materialCode.toLowerCase().includes(query);
         const matchesExt = rec.externalCode.toLowerCase().includes(query);
         const matchesName = rec.materialItem.toLowerCase().includes(query);
-        if (!matchesCode && !matchesExt && !matchesName) {
+        const matchesWh = rec.warehouseName.toLowerCase().includes(query);
+        if (!matchesCode && !matchesExt && !matchesName && !matchesWh) {
           return false;
         }
       }
       return true;
     });
-  }, [liveRecords, classification, location, stockStatus, coordinate, facility, search]);
+  }, [liveRecords, classification, stockStatus, facility, search]);
 
   const dynamicClassifications = useMemo(() => {
     const vals = liveRecords.map((r) => r.classification).filter((v) => v && v !== "—" && v !== "-");
     return Array.from(new Set([...stockItemClassificationsList, ...vals]));
   }, [liveRecords]);
 
-  const dynamicCoordinates = useMemo(() => {
-    const vals = liveRecords.map((r) => r.coordinate).filter((v) => v && v !== "—" && v !== "-");
-    return Array.from(new Set([...stockItemCoordinatesList, ...vals]));
-  }, [liveRecords]);
-
   const dynamicFacilities = useMemo(() => {
-    const vals = liveRecords.map((r) => r.facility).filter((v) => v && v !== "—" && v !== "-");
-    return Array.from(new Set([...stockItemFacilitiesList, ...vals]));
-  }, [liveRecords]);
+    return [
+      { value: "All Facilities", label: "Facility: All" },
+      { value: "FASILITAS", label: "FASILITAS" },
+      { value: "NON FASILITAS", label: "NON FASILITAS" },
+    ];
+  }, []);
 
   // Pagination calculation
   const totalRecords = filteredRecords.length;
@@ -203,32 +223,37 @@ export function StockItemIndex() {
         "Material Item",
         "Classification",
         "Facility",
-        "Coordinate",
-        "Location Type",
-        "Warehouse Name",
+        "Warehouse Stock Breakdown",
         "Quantity",
         "Unit",
         "Stock Status",
       ];
 
-      const rowsData = filteredRecords.map((r, idx) => [
-        idx + 1,
-        r.materialCode,
-        r.externalCode,
-        r.materialItem,
-        r.classification,
-        r.facility,
-        r.coordinate,
-        r.locationType,
-        r.warehouseName,
-        r.quantity,
-        r.unit,
-        r.stockStatus,
-      ]);
+      const rowsData = filteredRecords.map((r, idx) => {
+        const whBreakdown =
+          r.warehouseBalances && r.warehouseBalances.length > 0
+            ? r.warehouseBalances
+                .map((b) => `${b.warehouseName}: ${b.quantity} ${r.unit}`)
+                .join("; ")
+            : r.warehouseName;
+
+        return [
+          idx + 1,
+          r.materialCode,
+          r.externalCode,
+          r.materialItem,
+          r.classification,
+          /non/i.test(r.facility) ? "NON FASILITAS" : "FASILITAS",
+          whBreakdown,
+          r.quantity,
+          r.unit,
+          r.stockStatus,
+        ];
+      });
 
       const worksheet = XLSX.utils.aoa_to_sheet([
         [`WAREHOUSE STOCK REPORT - ${date}`],
-        [`Location: ${location} | Stock Status: ${stockStatus} | Facility: ${facility}`],
+        [`Stock Status: ${stockStatus} | Facility: ${facility}`],
         [],
         headers,
         ...rowsData,
@@ -344,20 +369,6 @@ export function StockItemIndex() {
             />
           </div>
 
-          {/* Coordinate */}
-          <div className="master-form-group">
-            <label className="master-form-label">Coordinate</label>
-            <CustomSelect
-              searchable
-              value={coordinate}
-              onChange={(val) => {
-                setCoordinate(val);
-                setCurrentPage(1);
-              }}
-              options={dynamicCoordinates}
-            />
-          </div>
-
           {/* Facility */}
           <div className="master-form-group">
             <label className="master-form-label">Facility</label>
@@ -373,7 +384,7 @@ export function StockItemIndex() {
           </div>
         </div>
 
-        {/* Radio Groups for Location and Stock */}
+        {/* Stock Filter */}
         <div
           style={{
             display: "flex",
@@ -385,42 +396,6 @@ export function StockItemIndex() {
             alignItems: "center",
           }}
         >
-          {/* Location Radio Group */}
-          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-            <span style={{ fontSize: "11.5px", fontWeight: 700, color: "var(--ink-soft)", textTransform: "uppercase", letterSpacing: "0.3px" }}>
-              Location:
-            </span>
-            <div style={{ display: "flex", gap: "14px", alignItems: "center" }}>
-              {(["Warehouse", "Production Area", "All"] as LocationFilter[]).map((loc) => (
-                <label
-                  key={loc}
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: "6px",
-                    fontSize: "12.5px",
-                    fontWeight: 600,
-                    cursor: "pointer",
-                    color: location === loc ? "var(--blue-700)" : "var(--ink-soft)",
-                  }}
-                >
-                  <input
-                    type="radio"
-                    name="location-filter"
-                    value={loc}
-                    checked={location === loc}
-                    onChange={() => {
-                      setLocation(loc);
-                      setCurrentPage(1);
-                    }}
-                    style={{ accentColor: "var(--blue-600)", cursor: "pointer" }}
-                  />
-                  <span>{loc}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-
           {/* Stock Radio Group */}
           <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
             <span style={{ fontSize: "11.5px", fontWeight: 700, color: "var(--ink-soft)", textTransform: "uppercase", letterSpacing: "0.3px" }}>
@@ -509,11 +484,11 @@ export function StockItemIndex() {
                   <th style={{ width: "55px", textAlign: "center" }}>Number</th>
                   <th style={{ minWidth: "140px" }}>Material Code</th>
                   <th style={{ minWidth: "120px" }}>External Code</th>
-                  <th style={{ minWidth: "240px" }}>Material Item</th>
+                  <th style={{ minWidth: "220px" }}>Material Item</th>
                   <th style={{ minWidth: "160px" }}>Classification</th>
                   <th style={{ minWidth: "120px" }}>Facility</th>
-                  <th style={{ minWidth: "120px" }}>Coordinate</th>
-                  <th style={{ minWidth: "120px", textAlign: "right" }}>Quantity</th>
+                  <th style={{ minWidth: "220px" }}>Warehouse Stock</th>
+                  <th style={{ minWidth: "120px", textAlign: "right" }}>Total Stock</th>
                 </tr>
               </thead>
               <tbody>
@@ -527,6 +502,15 @@ export function StockItemIndex() {
                   paginatedRecords.map((item, index) => {
                     const rowNumber =
                       (safeCurrentPage - 1) * pageSize + index + 1;
+                    const isNonFacility = /non/i.test(item.facility);
+                    const balancesCount = item.warehouseBalances?.length ?? 0;
+                    const warehouseLabel =
+                      balancesCount > 1
+                        ? `${balancesCount} Warehouses`
+                        : balancesCount === 1
+                        ? item.warehouseBalances?.[0]?.warehouseName || item.warehouseName
+                        : item.warehouseName || "—";
+
                     return (
                       <tr
                         key={item.id}
@@ -548,10 +532,34 @@ export function StockItemIndex() {
                         </td>
                         <td>{item.classification}</td>
                         <td>
-                          <Badge tone="purple">{item.facility}</Badge>
+                          <Badge tone={isNonFacility ? "gray" : "purple"}>
+                            {isNonFacility ? "NON FASILITAS" : "FASILITAS"}
+                          </Badge>
                         </td>
                         <td>
-                          <strong style={{ color: "var(--blue-700)" }}>{item.coordinate}</strong>
+                          <div
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "space-between",
+                              gap: "8px",
+                            }}
+                          >
+                            <span style={{ fontSize: "12px", color: "var(--ink-soft)", fontWeight: 500 }}>
+                              {warehouseLabel}
+                            </span>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={(e) => {
+                                e?.stopPropagation();
+                                handleShowDetailSafe(item);
+                              }}
+                              title={`View stock breakdown for ${item.materialItem}`}
+                            >
+                              View Stock
+                            </Button>
+                          </div>
                         </td>
                         <td style={{ textAlign: "right", fontVariantNumeric: "tabular-nums" }}>
                           <strong

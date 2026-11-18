@@ -817,30 +817,44 @@ export async function toggleStockNotificationStatusApi(id: string): Promise<Stoc
 export async function fetchStockItemsReportApi(params?: Record<string, any>): Promise<WarehouseStockRecord[]> {
   const res = await apiGet<{ data: any[] }>("/api/warehouse/reports/stock-item", params);
   if (!Array.isArray(res?.data)) return [];
-  return res.data.map((r: any, idx: number) => ({
-    id: String(r.id || idx + 1),
-    number: Number(r.number || idx + 1),
-    materialCode: r.materialCode || r.item_code || "-",
-    externalCode: r.externalCode || r.external_code || "-",
-    materialItem: r.materialItem || r.item_name || "-",
-    classification: r.classification || "-",
-    facility: r.facility || "FASILITAS",
-    coordinate: r.coordinate || "-",
-    locationType: (r.locationType === "Production Area" ? "Production Area" : "Warehouse") as WarehouseStockRecord["locationType"],
-    warehouseName: r.warehouseName || r.warehouse || "-",
-    quantity: Number(r.quantity ?? 0),
-    unit: r.unit || "-",
-    stockStatus: (Number(r.quantity ?? 0) > 0 ? "Available" : "Not Available") as WarehouseStockRecord["stockStatus"],
-    date: r.date || "-",
-    lotNumber: r.lotNumber || r.lot_number || "-",
-    zone: r.zone || "-",
-    rack: r.rack || "-",
-    bin: r.bin || "-",
-    allocatedQty: Number(r.allocatedQty ?? 0),
-    availableQty: Number(r.availableQty ?? r.quantity ?? 0),
-    lastMovementDate: r.lastMovementDate || r.date || "-",
-    remark: r.remark || "-",
-  }));
+  return res.data.flatMap((r: any, idx: number) => {
+    const balances = Array.isArray(r.warehouseBalances) && r.warehouseBalances.length > 0
+      ? r.warehouseBalances
+      : [r];
+
+    return balances.map((balance: any, balanceIdx: number) => {
+      const quantity = Number(balance.quantity ?? r.quantity ?? 0);
+      const warehouseId = balance.warehouseId ?? r.warehouse_id ?? null;
+
+      return {
+        id: `${r.item_id ?? r.id ?? idx + 1}:${warehouseId ?? "legacy"}:${balanceIdx}`,
+        itemId: Number(r.item_id ?? r.itemId ?? 0),
+        warehouseId: warehouseId == null ? null : Number(warehouseId),
+        number: idx + 1,
+        materialCode: r.materialCode || r.item_code || "-",
+        externalCode: r.externalCode || r.external_code || "-",
+        materialItem: r.materialItem || r.item_name || "-",
+        classification: r.classification || "-",
+        facility: r.facility || "FASILITAS",
+        coordinate: balance.coordinate || r.coordinate || "-",
+        locationType: (balance.locationType === "Production Area" || r.locationType === "Production Area" ? "Production Area" : "Warehouse") as WarehouseStockRecord["locationType"],
+        warehouseName: balance.warehouseName || r.warehouseName || r.warehouse || "-",
+        quantity,
+        unit: r.unit || "-",
+        stockStatus: (quantity > 0 ? "Available" : "Not Available") as WarehouseStockRecord["stockStatus"],
+        date: balance.lastMovementDate || r.date || "-",
+        lotNumber: balance.lotNumber || r.lotNumber || r.lot_number || "-",
+        zone: r.zone || "-",
+        rack: r.rack || "-",
+        bin: r.bin || "-",
+        allocatedQty: Number(balance.allocatedQuantity ?? r.allocatedQty ?? 0),
+        pendingQty: Number(balance.allocatedQuantity ?? r.pendingQty ?? 0),
+        availableQty: Number(balance.availableQuantity ?? r.availableQty ?? quantity),
+        lastMovementDate: balance.lastMovementDate || r.lastMovementDate || r.date || "-",
+        remark: r.remark || "-",
+      };
+    });
+  });
 }
 
 export async function fetchStockCardReportApi(params?: Record<string, any>): Promise<{

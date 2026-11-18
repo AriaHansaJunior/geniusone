@@ -130,6 +130,11 @@ class DocumentApprovalWorkflowService
 
         return DB::transaction(function () use ($module, $normKey, $id, $user, $tier, $note) {
             $doc = $this->resolveDocument($module, $id);
+            $doc = $doc->newQuery()
+                ->whereKey($doc->getKey())
+                ->lockForUpdate()
+                ->firstOrFail();
+
             if ($doc instanceof BpbReceiveMaterial) {
                 $normKey = 'BPB';
             } elseif ($doc instanceof ReceiveNote) {

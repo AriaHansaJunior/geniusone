@@ -378,31 +378,18 @@ class WarehouseReportApiController extends Controller
     {
         $search = $request->query('search');
         $classification = $request->query('classification');
-        $coordinate = $request->query('coordinate');
         $facility = $request->query('facility');
-        $location = $request->query('location');
         $stockStatus = $request->query('stock');
         $warehouseId = $request->query('warehouseId');
 
-        $bufferSubquery = DB::table('stock_notifications')
-            ->whereNull('deleted_at')
-            ->where('status', 1)
-            ->groupBy('items_id')
-            ->selectRaw('items_id, MAX(buffer_quantity) as min_buffer');
-
-        $query = DB::table('warehouse_stocks as ws')
-            ->join('items as i', 'ws.items_id', '=', 'i.id')
-            ->leftJoin('warehouses as w', 'ws.warehouses_id', '=', 'w.id')
-            ->leftJoin('warehouse_coordinates as wc', 'ws.warehouse_coordinates_id', '=', 'wc.id')
+        $query = DB::table('item_warehouse as iw')
+            ->join('items as i', 'iw.items_id', '=', 'i.id')
+            ->join('warehouses as w', 'iw.warehouses_id', '=', 'w.id')
             ->leftJoin('categories as cat', 'i.categories_id', '=', 'cat.id')
             ->leftJoin('classifications as cls', 'i.classifications_id', '=', 'cls.id')
             ->leftJoin('facilities as fac', 'i.facilities_id', '=', 'fac.id')
             ->leftJoin('units_of_measurements as u', 'i.units_of_measurements_id', '=', 'u.id')
-            ->leftJoinSub($bufferSubquery, 'sn_agg', function ($join) {
-                $join->on('sn_agg.items_id', '=', 'i.id');
-            })
             ->select([
-                'ws.id as stock_id',
                 'i.id as item_id',
                 'i.code as materialCode',
                 'i.external_code as externalCode',
@@ -410,20 +397,21 @@ class WarehouseReportApiController extends Controller
                 DB::raw('COALESCE(cls.name, cat.name) as classification'),
                 'cat.name as category_name',
                 'fac.name as facility',
-                'ws.warehouse_coordinates_id',
-                DB::raw('COALESCE(wc.name, ws.coordinate_name) as coordinate'),
+                'iw.warehouses_id as warehouse_id',
                 'w.name as warehouseName',
-                'w.id as warehouse_id',
-                'ws.quantity',
-                'ws.available_quantity as availableQty',
-                'ws.allocated_quantity as pendingQty',
-                'ws.lot_number as lotNumber',
-                'ws.location_type as locationType',
-                'ws.last_movement_date',
                 'u.code as unit_code',
                 'u.name as unit_name',
-                DB::raw('COALESCE(sn_agg.min_buffer, 0) as minimum_stock'),
-            ]);
+                'iw.quantity',
+                'iw.quantity as availableQty',
+                DB::raw('0 as pendingQty'),
+                DB::raw("'—' as coordinate"),
+                DB::raw("'Warehouse' as locationType"),
+                DB::raw('NULL as lotNumber'),
+                'iw.updated_at as last_movement_date',
+                DB::raw('0 as minimum_stock'),
+            ])
+            ->whereNull('i.deleted_at')
+            ->whereNull('w.deleted_at');
 
         if (! empty($search)) {
             $query->where(function ($q) use ($search) {
@@ -439,31 +427,25 @@ class WarehouseReportApiController extends Controller
             });
         }
 
-        if (! empty($coordinate) && $coordinate !== 'All Coordinates') {
-            $query->where(function ($q) use ($coordinate) {
-                $q->where('wc.name', $coordinate)->orWhere('ws.coordinate_name', $coordinate);
-            });
-        }
-
         if (! empty($facility) && $facility !== 'All Facilities') {
-            $query->where('fac.name', $facility);
-        }
-
-        if (! empty($location) && $location !== 'All') {
-            $query->where('ws.location_type', $location);
+            if (stripos($facility, 'non') !== false) {
+                $query->where('fac.name', 'like', '%non%');
+            } else {
+                $query->where('fac.name', 'not like', '%non%');
+            }
         }
 
         if (! empty($stockStatus) && $stockStatus !== 'All') {
             if ($stockStatus === 'Available') {
-                $query->where('ws.quantity', '>', 0);
+                $query->where('iw.quantity', '>', 0);
             } elseif ($stockStatus === 'Not Available') {
-                $query->where('ws.quantity', '<=', 0);
+                $query->where('iw.quantity', '<=', 0);
             }
         }
 
         if (! empty($warehouseId) && $warehouseId !== 'all' && $warehouseId !== 'All Warehouse') {
             if (is_numeric($warehouseId)) {
-                $query->where('ws.warehouses_id', (int) $warehouseId);
+                $query->where('iw.warehouses_id', (int) $warehouseId);
             } else {
                 $query->where('w.name', $warehouseId);
             }
@@ -471,105 +453,51 @@ class WarehouseReportApiController extends Controller
 
         $stockRows = $query->orderBy('i.code')->orderBy('w.name')->get();
 
-        // Include stocked master items that do not yet have explicit warehouse_stocks rows
-        if (empty($warehouseId) || $warehouseId === 'all' || $warehouseId === 'All Warehouse') {
-            $existingItemIds = $stockRows->pluck('item_id')->unique()->all();
-            $fallbackQuery = DB::table('items as i')
-                ->leftJoin('categories as cat', 'i.categories_id', '=', 'cat.id')
-                ->leftJoin('classifications as cls', 'i.classifications_id', '=', 'cls.id')
-                ->leftJoin('facilities as fac', 'i.facilities_id', '=', 'fac.id')
-                ->leftJoin('units_of_measurements as u', 'i.units_of_measurements_id', '=', 'u.id')
-                ->leftJoinSub($bufferSubquery, 'sn_agg', function ($join) {
-                    $join->on('sn_agg.items_id', '=', 'i.id');
-                })
-                ->whereNull('i.deleted_at')
-                ->where('i.stock', '>', 0);
-
-            if (! empty($existingItemIds)) {
-                $fallbackQuery->whereNotIn('i.id', $existingItemIds);
-            }
-            if (! empty($search)) {
-                $fallbackQuery->where(function ($q) use ($search) {
-                    $q->where('i.name', 'like', "%{$search}%")
-                        ->orWhere('i.code', 'like', "%{$search}%")
-                        ->orWhere('i.external_code', 'like', "%{$search}%");
-                });
-            }
-            if (! empty($classification) && $classification !== 'All Classifications') {
-                $fallbackQuery->where(function ($q) use ($classification) {
-                    $q->where('cls.name', $classification)->orWhere('cat.name', $classification);
-                });
-            }
-            if (! empty($facility) && $facility !== 'All Facilities') {
-                $fallbackQuery->where('fac.name', $facility);
-            }
-            if (empty($location) || $location === 'All' || $location === 'Warehouse') {
-                if (empty($coordinate) || $coordinate === 'All Coordinates') {
-                    if ($stockStatus !== 'Not Available') {
-                        $fallbackItems = $fallbackQuery->select([
-                            DB::raw('NULL as stock_id'),
-                            'i.id as item_id',
-                            'i.code as materialCode',
-                            'i.external_code as externalCode',
-                            'i.name as materialItem',
-                            DB::raw('COALESCE(cls.name, cat.name) as classification'),
-                            'cat.name as category_name',
-                            'fac.name as facility',
-                            DB::raw('NULL as warehouse_coordinates_id'),
-                            DB::raw("'—' as coordinate"),
-                            DB::raw("'Opening / Main Warehouse' as warehouseName"),
-                            DB::raw('NULL as warehouse_id'),
-                            'i.stock as quantity',
-                            'i.stock as availableQty',
-                            DB::raw('0 as pendingQty'),
-                            DB::raw("'—' as lotNumber"),
-                            DB::raw("'Warehouse' as locationType"),
-                            'i.updated_at as last_movement_date',
-                            'u.code as unit_code',
-                            'u.name as unit_name',
-                            DB::raw('COALESCE(sn_agg.min_buffer, 0) as minimum_stock'),
-                        ])->orderBy('i.code')->get();
-
-                        $stockRows = $stockRows->concat($fallbackItems)->sortBy('materialCode')->values();
-                    }
-                }
-            }
-        }
-
-        $records = $stockRows->values()->map(function ($it, $idx) {
-            $stock = (float) $it->quantity;
-            $minStock = (float) ($it->minimum_stock ?? 0);
+        $records = $stockRows->groupBy('item_id')->map(function ($rows) {
+            $item = $rows->first();
+            $warehouseBalances = $rows->map(function ($row) {
+                return [
+                    'warehouseId' => $row->warehouse_id ? (int) $row->warehouse_id : null,
+                    'warehouseName' => $row->warehouseName ?: '—',
+                    'quantity' => (float) $row->quantity,
+                    'availableQuantity' => (float) ($row->availableQty ?? $row->quantity),
+                    'allocatedQuantity' => (float) ($row->pendingQty ?? 0),
+                    'coordinate' => $row->coordinate ?: '—',
+                    'locationType' => $row->locationType ?: 'Warehouse',
+                    'lastMovementDate' => $row->last_movement_date
+                        ? substr((string) $row->last_movement_date, 0, 10)
+                        : '—',
+                    'lotNumber' => $row->lotNumber ?: '—',
+                ];
+            })->values();
+            $stock = (float) $warehouseBalances->sum('quantity');
+            $available = (float) $warehouseBalances->sum('availableQuantity');
+            $allocated = (float) $warehouseBalances->sum('allocatedQuantity');
+            $minStock = (float) ($item->minimum_stock ?? 0);
             $status = $stock <= 0
                 ? 'Out of Stock'
                 : ($minStock > 0 && $stock <= $minStock ? 'Low Stock' : 'In Stock');
             $stockStatusLabel = $stock > 0 ? 'Available' : 'Not Available';
-            $unit = $it->unit_code ?: ($it->unit_name ?: '—');
+            $unit = $item->unit_code ?: ($item->unit_name ?: '—');
 
             return [
-                'id' => (string) ($it->stock_id ?? $idx + 1),
-                'item_id' => $it->item_id,
-                'no' => $idx + 1,
-                'number' => $idx + 1,
-                'item_code' => $it->materialCode,
-                'materialCode' => $it->materialCode,
-                'item_name' => $it->materialItem,
-                'materialItem' => $it->materialItem,
-                'external_code' => $it->externalCode ?: '—',
-                'externalCode' => $it->externalCode ?: '—',
-                'category' => $it->category_name ?: ($it->classification ?: '—'),
-                'classification' => $it->classification ?: '—',
-                'facility' => $it->facility ?: '—',
-                'warehouse_coordinates_id' => $it->warehouse_coordinates_id,
-                'coordinate' => $it->coordinate ?: '—',
-                'locationType' => $it->locationType ?: 'Warehouse',
+                'id' => (string) $item->item_id,
+                'item_id' => (int) $item->item_id,
+                'item_code' => $item->materialCode,
+                'materialCode' => $item->materialCode,
+                'item_name' => $item->materialItem,
+                'materialItem' => $item->materialItem,
+                'external_code' => $item->externalCode ?: '—',
+                'externalCode' => $item->externalCode ?: '—',
+                'category' => $item->category_name ?: ($item->classification ?: '—'),
+                'classification' => $item->classification ?: '—',
+                'facility' => (stripos((string) ($item->facility ?? ''), 'non') !== false) ? 'NON FASILITAS' : 'FASILITAS',
                 'unit' => $unit,
-                'warehouse' => $it->warehouseName ?: '—',
-                'warehouseName' => $it->warehouseName ?: '—',
-                'warehouse_id' => $it->warehouse_id,
+                'warehouseBalances' => $warehouseBalances,
                 'current_stock' => $stock,
                 'quantity' => $stock,
-                'availableQty' => (float) ($it->availableQty ?? $stock),
-                'pendingQty' => (float) ($it->pendingQty ?? 0.0),
+                'availableQty' => $available,
+                'pendingQty' => $allocated,
                 'minimum_stock' => $minStock,
                 'status' => $status,
                 'stockStatus' => $stockStatusLabel,
@@ -578,10 +506,8 @@ class WarehouseReportApiController extends Controller
                     'Low Stock' => 'warning',
                     default => 'danger',
                 },
-                'date' => $it->last_movement_date ? substr((string) $it->last_movement_date, 0, 10) : '—',
-                'lotNumber' => $it->lotNumber ?: '—',
             ];
-        });
+        })->values();
 
         return response()->json([
             'status' => 'success',
@@ -589,6 +515,42 @@ class WarehouseReportApiController extends Controller
             'meta' => [
                 'total' => $records->count(),
             ],
+        ]);
+    }
+
+    public function stockItemMovements(Request $request, int $itemId): JsonResponse
+    {
+        $query = DB::table('inventory_movements as im')
+            ->leftJoin('warehouses as w', 'im.warehouses_id', '=', 'w.id')
+            ->leftJoin('users as u', 'im.users_id', '=', 'u.id')
+            ->where('im.items_id', $itemId)
+            ->select([
+                'im.id',
+                'im.movement_type as movementType',
+                'im.quantity',
+                'im.balance_before as balanceBefore',
+                'im.balance_after as balanceAfter',
+                'im.reference_type as referenceType',
+                'im.reference_number as referenceNumber',
+                'im.notes',
+                'im.created_at as date',
+                'w.name as warehouseName',
+                'u.name as userName',
+            ]);
+
+        if ($request->filled('warehouseId') && is_numeric($request->query('warehouseId'))) {
+            $query->where('im.warehouses_id', (int) $request->query('warehouseId'));
+        }
+
+        $movements = $query->orderByDesc('im.created_at')
+            ->orderByDesc('im.id')
+            ->limit(100)
+            ->get();
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $movements,
+            'meta' => ['total' => $movements->count()],
         ]);
     }
 
