@@ -174,6 +174,7 @@ import {
   saveDestinationLocationApi,
   deleteDestinationLocationApi,
   toggleDestinationLocationStatusApi,
+  deleteReferenceMasterApi,
 } from "../data/masterApi";
 import { clearApiCache, createReceiveNote } from "../data/api";
 
@@ -2468,6 +2469,26 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
     [notifySuccess, notifyError]
   );
 
+  const handleDeleteReferenceMaster = useCallback(
+    async (key: ReferenceMasterPageKey, id: string) => {
+      try {
+        await deleteReferenceMasterApi(key, id);
+        setReferenceRecordsMap((prev) => ({
+          ...prev,
+          [key]: (prev[key] || []).filter((r) => r.id !== id),
+        }));
+        const label = REFERENCE_MASTER_CONFIGS[key]?.singularLabel || "Reference";
+        notifySuccess(`${label} Deleted`, `${label} deleted successfully.`);
+      } catch (err) {
+        console.error("Reference Master delete failed:", err);
+        const label = REFERENCE_MASTER_CONFIGS[key]?.singularLabel || "Reference";
+        notifyError(`Delete ${label} Failed`, err);
+        throw err;
+      }
+    },
+    [notifySuccess, notifyError]
+  );
+
   // Navigate to Full-Screen Settings workspace tab
   const handleNavigateSettings = useCallback(
     (tab: SettingsTab = "edit-profile") => {
@@ -2665,6 +2686,7 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
             handleSaveDestinationLocation={handleSaveDestinationLocation}
             handleDeleteDestinationLocation={handleDeleteDestinationLocation}
             handleToggleDestinationLocationStatus={handleToggleDestinationLocationStatus}
+            handleDeleteReferenceMaster={handleDeleteReferenceMaster}
             handleToggleSupplierHide={handleToggleSupplierHide}
             handleTogglePaymentTermHide={handleTogglePaymentTermHide}
             handleTogglePurchaseCategoryHide={handleTogglePurchaseCategoryHide}

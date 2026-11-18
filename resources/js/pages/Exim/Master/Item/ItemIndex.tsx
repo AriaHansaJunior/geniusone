@@ -6,6 +6,9 @@ import { Pagination } from "../../../../components/ui/Pagination";
 import { CustomSelect } from "../../../../components/ui/CustomSelect";
 import { StatusToggle } from "../../../../components/ui/StatusToggle";
 import { TableLoadingRow } from "../../../../components/ui/LoadingBuffer";
+import { ConfirmDialog } from "../../../../components/ui/ConfirmDialog";
+import { MasterDeleteButton } from "../../../../components/ui/MasterDeleteButton";
+import { useMasterDelete } from "../../../../hooks/useMasterDelete";
 import { useAuthPermission } from "../../../../context/AuthPermissionContext";
 import { ColumnSettingsPanel } from "./ColumnSettingsPanel";
 import {
@@ -26,6 +29,7 @@ interface ItemIndexProps {
   onAddNew: () => void;
   onGenerateQr: () => void;
   onToggleStatus?: (id: string) => void;
+  onDelete?: (id: string) => Promise<void> | void;
 }
 
 type SortDirection = "none" | "asc" | "desc";
@@ -78,9 +82,12 @@ export function ItemIndex({
   onAddNew,
   onGenerateQr,
   onToggleStatus,
+  onDelete,
 }: ItemIndexProps) {
   const { can, currentUser } = useAuthPermission();
   const canCreateMasterItem = can("master_item", "create");
+  const { deleteTarget, isDeleting, requestDelete, cancelDelete, confirmDelete } =
+    useMasterDelete<ItemRecord>((r) => r.id, onDelete);
 
   const [localRecords, setLocalRecords] = useState<ItemRecord[]>(records);
   const [columns, setColumns] = useState<ItemColumnConfig[]>(defaultItemColumns);
@@ -258,9 +265,8 @@ export function ItemIndex({
     const isActive = sortField === field && sortDirection !== "none";
     return (
       <span
-        className={`master-sort-indicator ${
-          isActive ? "master-sort-indicator--active" : ""
-        }`}
+        className={`master-sort-indicator ${isActive ? "master-sort-indicator--active" : ""
+          }`}
       >
         {isActive ? (
           sortDirection === "asc" ? (
@@ -585,12 +591,13 @@ export function ItemIndex({
                     {renderSortIndicator("updatedAt")}
                   </th>
                 )}
+                <th className="master-col-actions text-center">Action</th>
               </tr>
             </thead>
             <tbody>
               {isLoading && paginatedRecords.length === 0 ? (
                 <TableLoadingRow
-                  colSpan={columns.filter((c) => c.visible).length + 2}
+                  colSpan={columns.filter((c) => c.visible).length + 3}
                   label="Loading Master Items..."
                   sublabel="Fetching material catalog and UOM specifications..."
                 />
@@ -715,6 +722,13 @@ export function ItemIndex({
                           {item.updatedAt}
                         </td>
                       )}
+
+                      <td className="master-cell-center">
+                        <MasterDeleteButton
+                          label={item.itemName}
+                          onClick={() => requestDelete(item)}
+                        />
+                      </td>
                     </tr>
                   );
                 })
@@ -722,7 +736,7 @@ export function ItemIndex({
                 <tr>
                   <td
                     colSpan={
-                      columns.filter((c) => c.visible).length + 2
+                      columns.filter((c) => c.visible).length + 3
                     }
                     className="empty-table-cell"
                   >
@@ -753,7 +767,17 @@ export function ItemIndex({
           }}
         />
       </div>
-    </div>
+
+      <ConfirmDialog
+        isOpen={Boolean(deleteTarget)}
+        entityType="master item"
+        entityName={deleteTarget?.itemName}
+        entityCode={deleteTarget?.itemCode}
+        isLoading={isDeleting}
+        onConfirm={confirmDelete}
+        onCancel={cancelDelete}
+      />
+    </div >
   );
 }
 

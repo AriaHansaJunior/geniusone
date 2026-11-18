@@ -5,6 +5,9 @@ import { Pagination } from "../../../../components/ui/Pagination";
 import { Icon } from "../../../../components/ui/Icon";
 import { StatusToggle } from "../../../../components/ui/StatusToggle";
 import { TableLoadingRow } from "../../../../components/ui/LoadingBuffer";
+import { ConfirmDialog } from "../../../../components/ui/ConfirmDialog";
+import { MasterDeleteButton } from "../../../../components/ui/MasterDeleteButton";
+import { useMasterDelete } from "../../../../hooks/useMasterDelete";
 import {
   type JobNumberRecord,
   type JobNumberSortField,
@@ -16,6 +19,7 @@ interface JobNumberIndexProps {
   isLoading?: boolean;
   onAddNew?: () => void;
   onToggleStatus?: (id: string) => Promise<void> | void;
+  onDelete?: (id: string) => Promise<void> | void;
 }
 
 export function JobNumberIndex({
@@ -23,7 +27,10 @@ export function JobNumberIndex({
   isLoading = false,
   onAddNew,
   onToggleStatus,
+  onDelete,
 }: JobNumberIndexProps) {
+  const { deleteTarget, isDeleting, requestDelete, cancelDelete, confirmDelete } =
+    useMasterDelete<JobNumberRecord>((r) => r.id, onDelete);
   const [localRecords, setLocalRecords] = useState<JobNumberRecord[]>(records);
   const [search, setSearch] = useState("");
   const [pageSize, setPageSize] = useState<number>(25);
@@ -63,14 +70,14 @@ export function JobNumberIndex({
         sortField === "jobNumber"
           ? a.jobNumber.toLowerCase()
           : sortField === "jobName"
-          ? a.jobName.toLowerCase()
-          : a.department.toLowerCase();
+            ? a.jobName.toLowerCase()
+            : a.department.toLowerCase();
       const bVal =
         sortField === "jobNumber"
           ? b.jobNumber.toLowerCase()
           : sortField === "jobName"
-          ? b.jobName.toLowerCase()
-          : b.department.toLowerCase();
+            ? b.jobName.toLowerCase()
+            : b.department.toLowerCase();
 
       if (aVal < bVal) return sortDirection === "asc" ? -1 : 1;
       if (aVal > bVal) return sortDirection === "asc" ? 1 : -1;
@@ -265,11 +272,12 @@ export function JobNumberIndex({
                     <span>Status</span>
                     {renderSortIndicator("status")}
                   </th>
+                  <th className="master-col-actions text-center">Action</th>
                 </tr>
               </thead>
               <tbody>
                 {isLoading && paginatedRecords.length === 0 ? (
-                  <TableLoadingRow colSpan={5} label="Loading Job Numbers..." />
+                  <TableLoadingRow colSpan={6} label="Loading Job Numbers..." />
                 ) : paginatedRecords.length > 0 ? (
                   paginatedRecords.map((item, index) => {
                     const rowNumber = (safeCurrentPage - 1) * pageSize + index + 1;
@@ -290,22 +298,28 @@ export function JobNumberIndex({
                             ariaLabel={`Toggle status for ${item.jobNumber}`}
                           />
                         </td>
+                        <td className="master-cell-center">
+                          <MasterDeleteButton
+                            label={item.jobNumber}
+                            onClick={() => requestDelete(item)}
+                          />
+                        </td>
                       </tr>
                     );
                   })
                 ) : (
                   <tr>
-                    <td colSpan={5} className="empty-table-cell">
-                      <div className="empty master-empty-box">
-                        <div className="empty__icon master-empty-icon">
-                          <Icon name="search" size={24} />
+                      <td colSpan={6} className="empty-table-cell">
+                        <div className="empty master-empty-box">
+                          <div className="empty__icon master-empty-icon">
+                            <Icon name="search" size={24} />
+                          </div>
+                          <strong>No job numbers found</strong>
+                          <span className="master-empty-subtitle">
+                            Try adjusting your search query.
+                          </span>
                         </div>
-                        <strong>No job numbers found</strong>
-                        <span className="master-empty-subtitle">
-                          Try adjusting your search query.
-                        </span>
-                      </div>
-                    </td>
+                      </td>
                   </tr>
                 )}
               </tbody>
@@ -325,6 +339,16 @@ export function JobNumberIndex({
           />
         </div>
       </div>
+
+      <ConfirmDialog
+        isOpen={Boolean(deleteTarget)}
+        entityType="job number"
+        entityName={deleteTarget?.jobName}
+        entityCode={deleteTarget?.jobNumber}
+        isLoading={isDeleting}
+        onConfirm={confirmDelete}
+        onCancel={cancelDelete}
+      />
     </div>
   );
 }

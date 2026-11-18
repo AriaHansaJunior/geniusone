@@ -5,6 +5,9 @@ import { Pagination } from "../../../components/ui/Pagination";
 import { Icon } from "../../../components/ui/Icon";
 import { StatusToggle } from "../../../components/ui/StatusToggle";
 import { TableLoadingRow } from "../../../components/ui/LoadingBuffer";
+import { ConfirmDialog } from "../../../components/ui/ConfirmDialog";
+import { MasterDeleteButton } from "../../../components/ui/MasterDeleteButton";
+import { useMasterDelete } from "../../../hooks/useMasterDelete";
 import { useNotification } from "../../../context/NotificationContext";
 import type {
   ReferenceMasterConfig,
@@ -16,6 +19,7 @@ interface ReferenceMasterIndexProps {
   records: ReferenceMasterRecord[];
   isLoading?: boolean;
   onAddNew: () => void;
+  onDelete?: (id: string) => Promise<void> | void;
 }
 
 type SortField = "code" | "name" | "status";
@@ -26,8 +30,11 @@ export function ReferenceMasterIndex({
   records = [],
   isLoading = false,
   onAddNew,
+  onDelete,
 }: ReferenceMasterIndexProps) {
   const { notifySuccess, notifyError, notifyWarning } = useNotification();
+  const { deleteTarget, isDeleting, requestDelete, cancelDelete, confirmDelete } =
+    useMasterDelete<ReferenceMasterRecord>((r) => r.id, onDelete);
 
   const [search, setSearch] = useState("");
   const [pageSize, setPageSize] = useState<number>(25);
@@ -90,9 +97,8 @@ export function ReferenceMasterIndex({
     const isActive = sortField === field && sortDirection !== "none";
     return (
       <span
-        className={`master-sort-indicator ${
-          isActive ? "master-sort-indicator--active" : ""
-        }`}
+        className={`master-sort-indicator ${isActive ? "master-sort-indicator--active" : ""
+          }`}
       >
         {isActive ? (
           sortDirection === "asc" ? (
@@ -152,7 +158,8 @@ export function ReferenceMasterIndex({
     }
   };
 
-  const columnCount = 2 + (config.hasCode ? 1 : 0) + (config.hasStatus ? 1 : 0);
+  const columnCount =
+    2 + (config.hasCode ? 1 : 0) + (config.hasStatus ? 1 : 0) + (onDelete ? 1 : 0);
 
   return (
     <div className="master-page-shell">
@@ -215,6 +222,7 @@ export function ReferenceMasterIndex({
                       {renderSortIndicator("status")}
                     </th>
                   )}
+                  {onDelete && <th className="master-col-actions text-center">Action</th>}
                 </tr>
               </thead>
               <tbody>
@@ -241,14 +249,21 @@ export function ReferenceMasterIndex({
                               onToggle={() =>
                                 notifyError(
                                   "Status Toggle Unavailable",
-                                  `Cannot change status for ${config.singularLabel} "${item.name}": ${
-                                    config.hasStatusColumn === false
-                                      ? `table \`${config.dbTable}\` has no status column and `
-                                      : `in table \`${config.dbTable}\`: `
+                                  `Cannot change status for ${config.singularLabel} "${item.name}": ${config.hasStatusColumn === false
+                                    ? `table \`${config.dbTable}\` has no status column and `
+                                    : `in table \`${config.dbTable}\`: `
                                   }backend endpoint ${config.expectedWriteEndpoint.replace(/^POST\s+/i, "PATCH ")}/{id}/toggle-status is not yet registered in routes/api.php.`
                                 )
                               }
                               ariaLabel={`Toggle status for ${item.name}`}
+                            />
+                          </td>
+                        )}
+                        {onDelete && (
+                          <td className="master-cell-center">
+                            <MasterDeleteButton
+                              label={item.name}
+                              onClick={() => requestDelete(item)}
                             />
                           </td>
                         )}
@@ -286,6 +301,16 @@ export function ReferenceMasterIndex({
           />
         </div>
       </div>
+
+      <ConfirmDialog
+        isOpen={Boolean(deleteTarget)}
+        entityType={config.singularLabel.toLowerCase()}
+        entityName={deleteTarget?.name}
+        entityCode={deleteTarget?.code}
+        isLoading={isDeleting}
+        onConfirm={confirmDelete}
+        onCancel={cancelDelete}
+      />
     </div>
   );
 }

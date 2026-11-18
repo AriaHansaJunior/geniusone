@@ -195,6 +195,7 @@ export interface AppViewRendererProps {
   handleNavigateAdjustmentStockImport: () => void;
   handleNavigateAdjustmentStockDetail: (code: string) => void;
   handleNavigateReferenceCreate: (page: ReferenceMasterPageKey) => void;
+  handleDeleteReferenceMaster: (key: ReferenceMasterPageKey, id: string) => Promise<void>;
   handleNavigateMasterWarehouseCreate: () => void;
   handleNavigateWarehouseMasterEdit: (warehouse: WarehouseMasterRecord) => void;
   handleDeleteWarehouseMaster: (id: string) => Promise<void>;
@@ -430,6 +431,7 @@ export function AppViewRenderer({
   handleNavigateAdjustmentStockImport,
   handleNavigateAdjustmentStockDetail,
   handleNavigateReferenceCreate,
+  handleDeleteReferenceMaster,
   handleNavigateMasterWarehouseCreate,
   handleNavigateWarehouseMasterEdit,
   handleDeleteWarehouseMaster,
@@ -754,6 +756,7 @@ export function AppViewRenderer({
           isLoading={masterFetchStates["suppliers"] !== "done"}
           onToggleHide={handleToggleSupplierHide}
           onAddNew={() => handleNavigateCreate("supplier")}
+          onDelete={handleDeleteSupplier}
         />
       )}
 
@@ -764,6 +767,7 @@ export function AppViewRenderer({
           isLoading={masterFetchStates["payment-terms"] !== "done"}
           onToggleHide={handleTogglePaymentTermHide}
           onAddNew={() => handleNavigateCreate("payment-term")}
+          onDelete={handleDeletePaymentTerm}
         />
       )}
 
@@ -774,6 +778,7 @@ export function AppViewRenderer({
           isLoading={masterFetchStates["purchase-categories"] !== "done"}
           onToggleHide={handleTogglePurchaseCategoryHide}
           onAddNew={() => handleNavigateCreate("purchase-category")}
+          onDelete={handleDeletePurchaseCategory}
         />
       )}
 
@@ -784,6 +789,7 @@ export function AppViewRenderer({
           isLoading={masterFetchStates["delivery-terms"] !== "done"}
           onToggleHide={handleToggleDeliveryTermHide}
           onAddNew={() => handleNavigateCreate("delivery-terms")}
+          onDelete={handleDeleteDeliveryTerm}
         />
       )}
 
@@ -794,6 +800,7 @@ export function AppViewRenderer({
           isLoading={masterFetchStates["additional-costs"] !== "done"}
           onToggleHide={handleToggleAdditionalCostHide}
           onAddNew={() => handleNavigateCreate("additional-costs")}
+          onDelete={handleDeleteAdditionalCost}
         />
       )}
 
@@ -804,6 +811,7 @@ export function AppViewRenderer({
           isLoading={masterFetchStates["pph"] !== "done"}
           onToggleHide={handleTogglePphHide}
           onAddNew={() => handleNavigateCreate("pph")}
+          onDelete={handleDeletePph}
         />
       )}
 
@@ -814,6 +822,7 @@ export function AppViewRenderer({
           isLoading={masterFetchStates["units"] !== "done"}
           onAddNew={() => handleNavigateCreate("unit")}
           onToggleStatus={handleToggleUnitStatus}
+          onDelete={handleDeleteUnit}
         />
       )}
 
@@ -824,6 +833,7 @@ export function AppViewRenderer({
           isLoading={masterFetchStates["unit-references"] !== "done"}
           onAddNew={handleNavigateUnitReferenceCreate}
           onToggleStatus={handleToggleUnitReferenceStatus}
+          onDelete={handleDeleteUnitReference}
         />
       )}
 
@@ -834,6 +844,7 @@ export function AppViewRenderer({
           isLoading={masterFetchStates["classifications"] !== "done"}
           onAddNew={() => handleNavigateCreate("classification")}
           onToggleStatus={handleToggleClassificationStatus}
+          onDelete={handleDeleteClassification}
         />
       )}
 
@@ -844,6 +855,7 @@ export function AppViewRenderer({
           isLoading={masterFetchStates["departments"] !== "done"}
           onAddNew={() => handleNavigateCreate("department")}
           onToggleStatus={handleToggleDepartmentStatus}
+          onDelete={handleDeleteDepartment}
         />
       )}
 
@@ -854,6 +866,7 @@ export function AppViewRenderer({
           isLoading={masterFetchStates["brands"] !== "done"}
           onAddNew={() => handleNavigateCreate("brand")}
           onToggleStatus={handleToggleBrandStatus}
+          onDelete={handleDeleteBrand}
         />
       )}
 
@@ -864,6 +877,7 @@ export function AppViewRenderer({
           isLoading={masterFetchStates["facilities"] !== "done"}
           onAddNew={() => handleNavigateCreate("facility")}
           onToggleStatus={handleToggleFacilityStatus}
+          onDelete={handleDeleteFacility}
         />
       )}
 
@@ -873,6 +887,7 @@ export function AppViewRenderer({
           records={hsRecords}
           isLoading={masterFetchStates["hs-codes"] !== "done"}
           onAddNew={() => handleNavigateCreate("hs")}
+          onDelete={handleDeleteHs}
         />
       )}
 
@@ -883,6 +898,7 @@ export function AppViewRenderer({
           isLoading={masterFetchStates["categories"] !== "done"}
           onAddNew={() => handleNavigateCreate("category")}
           onToggleStatus={handleToggleCategoryStatus}
+          onDelete={handleDeleteCategory}
         />
       )}
 
@@ -894,6 +910,7 @@ export function AppViewRenderer({
           onAddNew={() => handleNavigateCreate("style")}
           onImportExcel={handleNavigateStyleImport}
           onToggleStatus={handleToggleStyleStatus}
+          onDelete={handleDeleteStyle}
         />
       )}
 
@@ -904,6 +921,7 @@ export function AppViewRenderer({
           isLoading={masterFetchStates["colours"] !== "done"}
           onAddNew={() => handleNavigateCreate("colour")}
           onToggleStatus={handleToggleColorStatus}
+          onDelete={handleDeleteColor}
         />
       )}
 
@@ -915,6 +933,7 @@ export function AppViewRenderer({
           onAddNew={() => handleNavigateCreate("item")}
           onGenerateQr={handleNavigateGenerateQr}
           onToggleStatus={handleToggleItemStatus}
+          onDelete={handleDeleteItem}
         />
       )}
 
@@ -955,6 +974,7 @@ export function AppViewRenderer({
           onAddNew={handleNavigateMasterWarehouseCreate}
           onToggleStatus={handleToggleWarehouseMasterStatus}
           onViewCoordinates={handleNavigateWarehouseCoordinates}
+          onDelete={handleDeleteWarehouseMaster}
         />
       )}
 
@@ -965,6 +985,7 @@ export function AppViewRenderer({
           isLoading={masterFetchStates["countries"] !== "done"}
           onAddNew={handleNavigateCountryCreate}
           onToggleStatus={handleToggleCountryStatus}
+          onDelete={handleDeleteCountry}
         />
       )}
 
@@ -975,6 +996,7 @@ export function AppViewRenderer({
           isLoading={masterFetchStates["accounts"] !== "done"}
           onAddNew={handleNavigateAccountCreate}
           onToggleStatus={handleToggleAccountStatus}
+          onDelete={handleDeleteAccount}
         />
       )}
 
@@ -985,6 +1007,7 @@ export function AppViewRenderer({
           isLoading={masterFetchStates["job-numbers"] !== "done"}
           onAddNew={handleNavigateJobNumberCreate}
           onToggleStatus={handleToggleJobNumberStatus}
+          onDelete={handleDeleteJobNumber}
         />
       )}
 
@@ -995,6 +1018,7 @@ export function AppViewRenderer({
           isLoading={masterFetchStates["rafaksi-types"] !== "done"}
           onAddNew={handleNavigateRafaksiTypeCreate}
           onToggleStatus={handleToggleRafaksiTypeStatus}
+          onDelete={handleDeleteRafaksiType}
         />
       )}
 
@@ -1005,6 +1029,7 @@ export function AppViewRenderer({
           isLoading={masterFetchStates["currencies"] !== "done"}
           onAddNew={handleNavigateCurrencyCreate}
           onToggleStatus={handleToggleCurrencyStatus}
+          onDelete={handleDeleteCurrency}
         />
       )}
 
@@ -1056,6 +1081,7 @@ export function AppViewRenderer({
           onAddNew={() => handleNavigateStockNotificationCreate("master")}
           onEdit={(record) => handleEditStockNotification(record, "master")}
           onToggleStatus={handleToggleStockNotificationStatus}
+          onDelete={handleDeleteStockNotification}
         />
       )}
 
@@ -1066,6 +1092,7 @@ export function AppViewRenderer({
           isLoading={masterFetchStates["wh-type-of-requests"] !== "done"}
           onAddNew={handleNavigateTypeOfRequestCreate}
           onToggleStatus={handleToggleTypeOfRequestStatus}
+          onDelete={handleDeleteTypeOfRequest}
         />
       )}
 
@@ -1076,6 +1103,7 @@ export function AppViewRenderer({
           isLoading={masterFetchStates["wh-destination-locations"] !== "done"}
           onAddNew={handleNavigateDestinationLocationCreate}
           onToggleStatus={handleToggleDestinationLocationStatus}
+          onDelete={handleDeleteDestinationLocation}
         />
       )}
 
@@ -1108,6 +1136,7 @@ export function AppViewRenderer({
               records={referenceRecordsMap[refKey] || []}
               isLoading={masterFetchStates[`ref-${refKey}`] !== "done"}
               onAddNew={() => handleNavigateReferenceCreate(refKey)}
+              onDelete={(id) => handleDeleteReferenceMaster(refKey, id)}
             />
           );
         })()}
@@ -1318,6 +1347,11 @@ export function AppViewRenderer({
             onToggleCoordinateStatus={(coordId) =>
               activeWarehouse
                 ? handleToggleWarehouseCoordinateStatus?.(activeWarehouse.id, coordId)
+                : undefined
+            }
+            onDeleteCoordinate={(coordId) =>
+              activeWarehouse
+                ? handleDeleteWarehouseCoordinate(activeWarehouse.id, coordId)
                 : undefined
             }
           />

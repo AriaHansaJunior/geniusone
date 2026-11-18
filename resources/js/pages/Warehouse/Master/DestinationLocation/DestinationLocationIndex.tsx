@@ -7,6 +7,9 @@ import { Badge } from "../../../../components/ui/Badge";
 import { Icon } from "../../../../components/ui/Icon";
 import { StatusToggle } from "../../../../components/ui/StatusToggle";
 import { TableLoadingRow } from "../../../../components/ui/LoadingBuffer";
+import { ConfirmDialog } from "../../../../components/ui/ConfirmDialog";
+import { MasterDeleteButton } from "../../../../components/ui/MasterDeleteButton";
+import { useMasterDelete } from "../../../../hooks/useMasterDelete";
 import { toggleDestinationLocationStatusApi } from "../../../../data/masterApi";
 import { useNotification } from "../../../../context/NotificationContext";
 import { initialDestinationLocationRecords } from "./destination-location-data";
@@ -17,6 +20,7 @@ interface DestinationLocationIndexProps {
   isLoading?: boolean;
   onAddNew: () => void;
   onToggleStatus?: (id: string) => Promise<void> | void;
+  onDelete?: (id: string) => Promise<void> | void;
 }
 
 type SortDirection = "none" | "asc" | "desc";
@@ -26,7 +30,10 @@ export function DestinationLocationIndex({
   isLoading = false,
   onAddNew,
   onToggleStatus,
+  onDelete,
 }: DestinationLocationIndexProps) {
+  const { deleteTarget, isDeleting, requestDelete, cancelDelete, confirmDelete } =
+    useMasterDelete<DestinationLocationRecord>((r) => r.id, onDelete);
   const [localRecords, setLocalRecords] = useState<DestinationLocationRecord[]>(records);
   const [search, setSearch] = useState("");
   const [pageSize, setPageSize] = useState<number>(10);
@@ -270,16 +277,17 @@ export function DestinationLocationIndex({
                     {renderSortIndicator("status")}
                   </div>
                 </th>
+                <th className="master-col-actions text-center">Action</th>
               </tr>
             </thead>
             <tbody>
               {isLoading && paginatedRecords.length === 0 ? (
-                <TableLoadingRow colSpan={7} label="Loading Destination Locations..." />
+                <TableLoadingRow colSpan={8} label="Loading Destination Locations..." />
               ) : paginatedRecords.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="wh-table-empty">
-                    No destination location records found matching filters.
-                  </td>
+                    <td colSpan={8} className="wh-table-empty">
+                      No destination location records found matching filters.
+                    </td>
                 </tr>
               ) : (
                 paginatedRecords.map((item, index) => {
@@ -312,6 +320,12 @@ export function DestinationLocationIndex({
                           ariaLabel={`Toggle status for ${item.name}`}
                         />
                       </td>
+                      <td className="text-center">
+                        <MasterDeleteButton
+                          label={item.name}
+                          onClick={() => requestDelete(item)}
+                        />
+                      </td>
                     </tr>
                   );
                 })
@@ -333,6 +347,16 @@ export function DestinationLocationIndex({
           }}
         />
       </div>
+
+      <ConfirmDialog
+        isOpen={Boolean(deleteTarget)}
+        entityType="destination location"
+        entityName={deleteTarget?.name}
+        entityCode={deleteTarget?.code}
+        isLoading={isDeleting}
+        onConfirm={confirmDelete}
+        onCancel={cancelDelete}
+      />
     </div>
   );
 }

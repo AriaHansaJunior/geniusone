@@ -5,6 +5,9 @@ import { Icon } from "../../../../components/ui/Icon";
 import { Pagination } from "../../../../components/ui/Pagination";
 import { StatusToggle } from "../../../../components/ui/StatusToggle";
 import { TableLoadingRow } from "../../../../components/ui/LoadingBuffer";
+import { ConfirmDialog } from "../../../../components/ui/ConfirmDialog";
+import { MasterDeleteButton } from "../../../../components/ui/MasterDeleteButton";
+import { useMasterDelete } from "../../../../hooks/useMasterDelete";
 import { initialDepartmentRecords } from "./department-data";
 import type {
   DepartmentRecord,
@@ -17,6 +20,7 @@ interface DepartmentIndexProps {
   isLoading?: boolean;
   onAddNew: () => void;
   onToggleStatus?: (id: string) => void;
+  onDelete?: (id: string) => Promise<void> | void;
 }
 
 export function DepartmentIndex({
@@ -24,7 +28,10 @@ export function DepartmentIndex({
   isLoading = false,
   onAddNew,
   onToggleStatus,
+  onDelete,
 }: DepartmentIndexProps) {
+  const { deleteTarget, isDeleting, requestDelete, cancelDelete, confirmDelete } =
+    useMasterDelete<DepartmentRecord>((r) => r.id, onDelete);
   const [localRecords, setLocalRecords] = useState<DepartmentRecord[]>(records);
   const [search, setSearch] = useState("");
   const [pageSize, setPageSize] = useState<number>(25);
@@ -261,11 +268,12 @@ export function DepartmentIndex({
                     <span>Status</span>
                     {renderSortIndicator("status")}
                   </th>
+                  <th className="master-col-actions text-center">Action</th>
                 </tr>
               </thead>
               <tbody>
                 {isLoading && paginatedRecords.length === 0 ? (
-                  <TableLoadingRow colSpan={4} label="Loading Departments & Sections..." />
+                  <TableLoadingRow colSpan={5} label="Loading Departments & Sections..." />
                 ) : paginatedRecords.length > 0 ? (
                   paginatedRecords.map((item, index) => {
                     const rowNumber =
@@ -295,20 +303,28 @@ export function DepartmentIndex({
                             ariaLabel={`Toggle status for ${item.sectionName}`}
                           />
                         </td>
+
+                        {/* 5. Action */}
+                        <td className="master-cell-center">
+                          <MasterDeleteButton
+                            label={item.sectionName}
+                            onClick={() => requestDelete(item)}
+                          />
+                        </td>
                       </tr>
                     );
                   })
                 ) : (
                   <tr>
-                    <td colSpan={4} className="empty-table-cell">
-                      <div className="empty">
-                        <div className="empty__icon">
-                          <Icon name="search" />
+                      <td colSpan={5} className="empty-table-cell">
+                        <div className="empty">
+                          <div className="empty__icon">
+                            <Icon name="search" />
+                          </div>
+                          <strong>No departments found</strong>
+                          <span>Try adjusting your search query.</span>
                         </div>
-                        <strong>No departments found</strong>
-                        <span>Try adjusting your search query.</span>
-                      </div>
-                    </td>
+                      </td>
                   </tr>
                 )}
               </tbody>
@@ -329,6 +345,15 @@ export function DepartmentIndex({
           />
         </div>
       </div>
+
+      <ConfirmDialog
+        isOpen={Boolean(deleteTarget)}
+        entityType="department"
+        entityName={deleteTarget?.sectionName}
+        isLoading={isDeleting}
+        onConfirm={confirmDelete}
+        onCancel={cancelDelete}
+      />
     </div>
   );
 }

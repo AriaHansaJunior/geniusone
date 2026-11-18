@@ -7,6 +7,9 @@ import { Badge } from "../../../components/ui/Badge";
 import { Icon } from "../../../components/ui/Icon";
 import { StatusToggle } from "../../../components/ui/StatusToggle";
 import { TableLoadingRow } from "../../../components/ui/LoadingBuffer";
+import { ConfirmDialog } from "../../../components/ui/ConfirmDialog";
+import { MasterDeleteButton } from "../../../components/ui/MasterDeleteButton";
+import { useMasterDelete } from "../../../hooks/useMasterDelete";
 import { toggleStockNotificationStatusApi } from "../../../data/masterApi";
 import { useNotification } from "../../../context/NotificationContext";
 import type { StockNotificationRecord, StockNotificationSortField } from "./stock-notification-types";
@@ -17,6 +20,7 @@ interface StockNotificationIndexProps {
   onAddNew: () => void;
   onEdit?: (record: StockNotificationRecord) => void;
   onToggleStatus?: (id: string) => Promise<void> | void;
+  onDelete?: (id: string) => Promise<void> | void;
 }
 
 type SortDirection = "none" | "asc" | "desc";
@@ -27,8 +31,11 @@ export function StockNotificationIndex({
   onAddNew,
   onEdit,
   onToggleStatus,
+  onDelete,
 }: StockNotificationIndexProps) {
   const { notifySuccess, notifyError } = useNotification();
+  const { deleteTarget, isDeleting, requestDelete, cancelDelete, confirmDelete } =
+    useMasterDelete<StockNotificationRecord>((r) => r.id, onDelete);
   const [localRecords, setLocalRecords] = useState<StockNotificationRecord[]>(records);
   const [search, setSearch] = useState("");
   const [pageSize, setPageSize] = useState<number>(10);
@@ -331,15 +338,23 @@ export function StockNotificationIndex({
                         />
                       </td>
                       <td className="text-center">
-                        {onEdit && (
-                          <button
-                            type="button"
-                            className="wh-action-pill"
-                            onClick={() => onEdit(item)}
-                          >
-                            Edit
-                          </button>
-                        )}
+                        <div className="master-action-group">
+                          {onEdit && (
+                            <button
+                              type="button"
+                              className="wh-action-pill"
+                              onClick={() => onEdit(item)}
+                            >
+                              Edit
+                            </button>
+                          )}
+                          {onDelete && (
+                            <MasterDeleteButton
+                              label={item.itemName}
+                              onClick={() => requestDelete(item)}
+                            />
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );
@@ -362,6 +377,16 @@ export function StockNotificationIndex({
           }}
         />
       </div>
+
+      <ConfirmDialog
+        isOpen={Boolean(deleteTarget)}
+        entityType="stock notification rule"
+        entityName={deleteTarget?.itemName}
+        entityCode={deleteTarget?.itemCode}
+        isLoading={isDeleting}
+        onConfirm={confirmDelete}
+        onCancel={cancelDelete}
+      />
     </div>
   );
 }

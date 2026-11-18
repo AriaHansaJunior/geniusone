@@ -7,6 +7,9 @@ import { Badge } from "../../../../components/ui/Badge";
 import { Icon } from "../../../../components/ui/Icon";
 import { StatusToggle } from "../../../../components/ui/StatusToggle";
 import { TableLoadingRow } from "../../../../components/ui/LoadingBuffer";
+import { ConfirmDialog } from "../../../../components/ui/ConfirmDialog";
+import { MasterDeleteButton } from "../../../../components/ui/MasterDeleteButton";
+import { useMasterDelete } from "../../../../hooks/useMasterDelete";
 import { toggleWarehouseTypeOfRequestStatusApi } from "../../../../data/masterApi";
 import { useNotification } from "../../../../context/NotificationContext";
 import { initialTypeOfRequestRecords } from "./type-of-request-data";
@@ -17,6 +20,7 @@ interface TypeOfRequestIndexProps {
   isLoading?: boolean;
   onAddNew: () => void;
   onToggleStatus?: (id: string) => Promise<void> | void;
+  onDelete?: (id: string) => Promise<void> | void;
 }
 
 type SortDirection = "none" | "asc" | "desc";
@@ -26,7 +30,10 @@ export function TypeOfRequestIndex({
   isLoading = false,
   onAddNew,
   onToggleStatus,
+  onDelete,
 }: TypeOfRequestIndexProps) {
+  const { deleteTarget, isDeleting, requestDelete, cancelDelete, confirmDelete } =
+    useMasterDelete<TypeOfRequestRecord>((r) => r.id, onDelete);
   const [localRecords, setLocalRecords] = useState<TypeOfRequestRecord[]>(records);
   const [search, setSearch] = useState("");
   const [pageSize, setPageSize] = useState<number>(10);
@@ -235,16 +242,17 @@ export function TypeOfRequestIndex({
                     {renderSortIndicator("status")}
                   </div>
                 </th>
+                <th className="master-col-actions text-center">Action</th>
               </tr>
             </thead>
             <tbody>
               {isLoading && paginatedRecords.length === 0 ? (
-                <TableLoadingRow colSpan={6} label="Loading Request Types..." />
+                <TableLoadingRow colSpan={7} label="Loading Request Types..." />
               ) : paginatedRecords.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="wh-table-empty">
-                    No request type records found matching filters.
-                  </td>
+                    <td colSpan={7} className="wh-table-empty">
+                      No request type records found matching filters.
+                    </td>
                 </tr>
               ) : (
                 paginatedRecords.map((item, index) => {
@@ -276,6 +284,12 @@ export function TypeOfRequestIndex({
                           ariaLabel={`Toggle status for ${item.name}`}
                         />
                       </td>
+                      <td className="text-center">
+                        <MasterDeleteButton
+                          label={item.name}
+                          onClick={() => requestDelete(item)}
+                        />
+                      </td>
                     </tr>
                   );
                 })
@@ -297,6 +311,15 @@ export function TypeOfRequestIndex({
           }}
         />
       </div>
+
+      <ConfirmDialog
+        isOpen={Boolean(deleteTarget)}
+        entityType="request type"
+        entityName={deleteTarget?.name}
+        isLoading={isDeleting}
+        onConfirm={confirmDelete}
+        onCancel={cancelDelete}
+      />
     </div>
   );
 }

@@ -5,6 +5,9 @@ import { Pagination } from "../../../../components/ui/Pagination";
 import { Icon } from "../../../../components/ui/Icon";
 import { StatusToggle } from "../../../../components/ui/StatusToggle";
 import { TableLoadingRow } from "../../../../components/ui/LoadingBuffer";
+import { ConfirmDialog } from "../../../../components/ui/ConfirmDialog";
+import { MasterDeleteButton } from "../../../../components/ui/MasterDeleteButton";
+import { useMasterDelete } from "../../../../hooks/useMasterDelete";
 import { type PurchaseCategoryRecord } from "./purchase-category-types";
 
 interface PurchaseCategoryIndexProps {
@@ -12,6 +15,7 @@ interface PurchaseCategoryIndexProps {
   isLoading?: boolean;
   onAddNew: () => void;
   onToggleHide?: (id: string) => void;
+  onDelete?: (id: string) => Promise<void> | void;
 }
 
 type SortField = "categoryCode" | "categoryName";
@@ -22,7 +26,10 @@ export function PurchaseCategoryIndex({
   isLoading = false,
   onAddNew,
   onToggleHide,
+  onDelete,
 }: PurchaseCategoryIndexProps) {
+  const { deleteTarget, isDeleting, requestDelete, cancelDelete, confirmDelete } =
+    useMasterDelete<PurchaseCategoryRecord>((r) => r.id, onDelete);
   const [localRecords, setLocalRecords] = useState<PurchaseCategoryRecord[]>(records);
 
   useEffect(() => {
@@ -156,11 +163,12 @@ export function PurchaseCategoryIndex({
                   <th className="master-col-status">
                     <span>Status</span>
                   </th>
+                  <th className="master-col-actions text-center">Action</th>
                 </tr>
               </thead>
               <tbody>
                 {isLoading && paginatedRecords.length === 0 ? (
-                  <TableLoadingRow colSpan={4} label="Loading Purchase Categories..." />
+                  <TableLoadingRow colSpan={5} label="Loading Purchase Categories..." />
                 ) : paginatedRecords.length > 0 ? (
                   paginatedRecords.map((item, index) => {
                     const rowNumber = (safeCurrentPage - 1) * pageSize + index + 1;
@@ -176,22 +184,28 @@ export function PurchaseCategoryIndex({
                             ariaLabel={`Toggle status for ${item.categoryName}`}
                           />
                         </td>
+                        <td className="master-cell-center">
+                          <MasterDeleteButton
+                            label={item.categoryName}
+                            onClick={() => requestDelete(item)}
+                          />
+                        </td>
                       </tr>
                     );
                   })
                 ) : (
                   <tr>
-                    <td colSpan={4} className="empty-table-cell">
-                      <div className="empty master-empty-box">
-                        <div className="empty__icon master-empty-icon">
-                          <Icon name="search" size={24} />
+                      <td colSpan={5} className="empty-table-cell">
+                        <div className="empty master-empty-box">
+                          <div className="empty__icon master-empty-icon">
+                            <Icon name="search" size={24} />
+                          </div>
+                          <strong>No purchase categories found</strong>
+                          <span className="master-empty-subtitle">
+                            Try adjusting your search query.
+                          </span>
                         </div>
-                        <strong>No purchase categories found</strong>
-                        <span className="master-empty-subtitle">
-                          Try adjusting your search query.
-                        </span>
-                      </div>
-                    </td>
+                      </td>
                   </tr>
                 )}
               </tbody>
@@ -210,6 +224,16 @@ export function PurchaseCategoryIndex({
           />
         </div>
       </div>
+
+      <ConfirmDialog
+        isOpen={Boolean(deleteTarget)}
+        entityType="purchase category"
+        entityName={deleteTarget?.categoryName}
+        entityCode={deleteTarget?.categoryCode}
+        isLoading={isDeleting}
+        onConfirm={confirmDelete}
+        onCancel={cancelDelete}
+      />
     </div>
   );
 }

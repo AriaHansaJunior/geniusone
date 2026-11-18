@@ -6,6 +6,7 @@ use App\Http\Middleware\EnsureUserIsActive;
 use App\Http\Middleware\EnsureUserPermission;
 use App\Http\Middleware\EnsureUserRole;
 use App\Http\Middleware\ResolveUiTheme;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -39,4 +40,22 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
         );
+
+        $exceptions->render(function (QueryException $e, Request $request) {
+            if (! ($request->is('api/*') || $request->expectsJson())) {
+                return null;
+            }
+
+            $sqlState = (string) ($e->errorInfo[0] ?? $e->getCode());
+            $driverCode = (int) ($e->errorInfo[1] ?? 0);
+            $isFkConstraint = $sqlState === '23000' || $driverCode === 1451 || $driverCode === 19;
+
+            if ($isFkConstraint && $request->isMethod('DELETE')) {
+                return response()->json([
+                    'message' => 'This record cannot be deleted because it is still referenced by existing transactions or related records.',
+                ], 422);
+            }
+
+            return null;
+        });
     })->create();

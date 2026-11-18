@@ -3,7 +3,7 @@
  * 100% Database-Backed via Laravel API Endpoints (Zero Hardcoded Fallbacks)
  */
 
-import { apiGet, apiPost, apiPut, apiPatch, apiDelete } from "./api";
+import { apiGet, apiPost, apiPut, apiPatch, apiDelete, clearApiCache } from "./api";
 import type { SupplierRecord, SupplierFormData } from "../pages/Procurement/PurchaseMaster/Supplier/supplier-types";
 import type { PaymentTermRecord } from "../pages/Procurement/PurchaseMaster/PaymentTerm/payment-term-types";
 import type { PurchaseCategoryRecord } from "../pages/Procurement/PurchaseMaster/PurchaseCategory/purchase-category-types";
@@ -939,8 +939,8 @@ function mapApiItemToRecord(r: any, idx = 0): ItemRecord {
   const smallestId = r.smallest_unit_id
     ? Number(r.smallest_unit_id)
     : r.units_of_measurements_id
-    ? Number(r.units_of_measurements_id)
-    : undefined;
+      ? Number(r.units_of_measurements_id)
+      : undefined;
   const greatestId = r.greatest_unit_id ? Number(r.greatest_unit_id) : undefined;
   const unitConversion =
     r.unit_conversion !== undefined && r.unit_conversion !== null
@@ -1075,11 +1075,11 @@ export async function fetchMasterWarehouses(): Promise<WarehouseMasterRecord[] |
     const rawType = r.type?.name || r.warehouse_type?.name || r.type_name || "Raw Material";
     const coords: WarehouseCoordinateRecord[] = Array.isArray(r.coordinates)
       ? r.coordinates.map((c: any) => ({
-          id: String(c.id),
-          warehouseId: String(r.id),
-          name: c.name || c.code || "",
-          status: isTruthyStatus(c.status ?? 1),
-        }))
+        id: String(c.id),
+        warehouseId: String(r.id),
+        name: c.name || c.code || "",
+        status: isTruthyStatus(c.status ?? 1),
+      }))
       : [];
 
     return {
@@ -1600,6 +1600,12 @@ export async function fetchSpecificationsMasterApi(): Promise<ReferenceMasterRec
 export async function fetchWarehouseTypesListApi(): Promise<ReferenceMasterRecord[]> {
   const res = await apiGet<{ data: any[] }>("/api/warehouse/master/warehouse-types");
   return mapReferenceRows(Array.isArray(res?.data) ? res.data : [], true);
+}
+
+export async function deleteReferenceMasterApi(key: string, id: string): Promise<boolean> {
+  const ok = await apiDelete(`/api/master/reference/${encodeURIComponent(key)}/${toNumericOrCleanId(id)}`);
+  if (ok) clearApiCache();
+  return ok;
 }
 
 // Re-export Operations, Warehouse, Dashboard, Reports & Admin APIs

@@ -5,6 +5,9 @@ import { Pagination } from "../../../../components/ui/Pagination";
 import { Icon } from "../../../../components/ui/Icon";
 import { StatusToggle } from "../../../../components/ui/StatusToggle";
 import { TableLoadingRow } from "../../../../components/ui/LoadingBuffer";
+import { ConfirmDialog } from "../../../../components/ui/ConfirmDialog";
+import { MasterDeleteButton } from "../../../../components/ui/MasterDeleteButton";
+import { useMasterDelete } from "../../../../hooks/useMasterDelete";
 import {
   type CountryRecord,
   type CountrySortField,
@@ -16,6 +19,7 @@ interface CountryIndexProps {
   isLoading?: boolean;
   onAddNew?: () => void;
   onToggleStatus?: (id: string) => Promise<void> | void;
+  onDelete?: (id: string) => Promise<void> | void;
 }
 
 export function CountryIndex({
@@ -23,7 +27,10 @@ export function CountryIndex({
   isLoading = false,
   onAddNew,
   onToggleStatus,
+  onDelete,
 }: CountryIndexProps) {
+  const { deleteTarget, isDeleting, requestDelete, cancelDelete, confirmDelete } =
+    useMasterDelete<CountryRecord>((r) => r.id, onDelete);
   const [localRecords, setLocalRecords] = useState<CountryRecord[]>(records);
   const [search, setSearch] = useState("");
   const [pageSize, setPageSize] = useState<number>(25);
@@ -235,11 +242,12 @@ export function CountryIndex({
                     <span>Status</span>
                     {renderSortIndicator("status")}
                   </th>
+                  <th className="master-col-actions text-center">Action</th>
                 </tr>
               </thead>
               <tbody>
                 {isLoading && paginatedRecords.length === 0 ? (
-                  <TableLoadingRow colSpan={4} label="Loading Countries..." />
+                  <TableLoadingRow colSpan={5} label="Loading Countries..." />
                 ) : paginatedRecords.length > 0 ? (
                   paginatedRecords.map((item, index) => {
                     const rowNumber = (safeCurrentPage - 1) * pageSize + index + 1;
@@ -255,22 +263,28 @@ export function CountryIndex({
                             ariaLabel={`Toggle status for ${item.name}`}
                           />
                         </td>
+                        <td className="master-cell-center">
+                          <MasterDeleteButton
+                            label={item.name}
+                            onClick={() => requestDelete(item)}
+                          />
+                        </td>
                       </tr>
                     );
                   })
                 ) : (
                   <tr>
-                    <td colSpan={4} className="empty-table-cell">
-                      <div className="empty master-empty-box">
-                        <div className="empty__icon master-empty-icon">
-                          <Icon name="search" size={24} />
+                      <td colSpan={5} className="empty-table-cell">
+                        <div className="empty master-empty-box">
+                          <div className="empty__icon master-empty-icon">
+                            <Icon name="search" size={24} />
+                          </div>
+                          <strong>No countries found</strong>
+                          <span className="master-empty-subtitle">
+                            Try adjusting your search query.
+                          </span>
                         </div>
-                        <strong>No countries found</strong>
-                        <span className="master-empty-subtitle">
-                          Try adjusting your search query.
-                        </span>
-                      </div>
-                    </td>
+                      </td>
                   </tr>
                 )}
               </tbody>
@@ -290,6 +304,16 @@ export function CountryIndex({
           />
         </div>
       </div>
+
+      <ConfirmDialog
+        isOpen={Boolean(deleteTarget)}
+        entityType="country"
+        entityName={deleteTarget?.name}
+        entityCode={deleteTarget?.code}
+        isLoading={isDeleting}
+        onConfirm={confirmDelete}
+        onCancel={cancelDelete}
+      />
     </div>
   );
 }

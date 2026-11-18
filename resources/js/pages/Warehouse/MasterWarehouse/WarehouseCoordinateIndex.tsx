@@ -5,6 +5,9 @@ import { Icon } from "../../../components/ui/Icon";
 import { Pagination } from "../../../components/ui/Pagination";
 import { StatusToggle } from "../../../components/ui/StatusToggle";
 import { TableLoadingRow } from "../../../components/ui/LoadingBuffer";
+import { ConfirmDialog } from "../../../components/ui/ConfirmDialog";
+import { MasterDeleteButton } from "../../../components/ui/MasterDeleteButton";
+import { useMasterDelete } from "../../../hooks/useMasterDelete";
 import type {
   WarehouseCoordinateRecord,
   WarehouseCoordinateSortField,
@@ -18,6 +21,7 @@ interface WarehouseCoordinateIndexProps {
   onAddNew: () => void;
   onBack: () => void;
   onToggleCoordinateStatus?: (coordinateId: string) => Promise<void> | void;
+  onDeleteCoordinate?: (coordinateId: string) => Promise<void> | void;
 }
 
 export function WarehouseCoordinateIndex({
@@ -26,7 +30,10 @@ export function WarehouseCoordinateIndex({
   onAddNew,
   onBack,
   onToggleCoordinateStatus,
+  onDeleteCoordinate,
 }: WarehouseCoordinateIndexProps) {
+  const { deleteTarget, isDeleting, requestDelete, cancelDelete, confirmDelete } =
+    useMasterDelete<WarehouseCoordinateRecord>((r) => r.id, onDeleteCoordinate);
   const [search, setSearch] = useState("");
   const [pageSize, setPageSize] = useState<number>(10); // Screenshot 2 shows 10 by default
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -160,16 +167,17 @@ export function WarehouseCoordinateIndex({
                   </div>
                 </th>
                 <th className="master-col-status text-center">Status</th>
+                <th className="master-col-actions text-center">Action</th>
               </tr>
             </thead>
             <tbody>
               {isLoading && paginatedCoordinates.length === 0 ? (
-                <TableLoadingRow colSpan={3} label="Loading Warehouse Coordinates..." />
+                <TableLoadingRow colSpan={4} label="Loading Warehouse Coordinates..." />
               ) : paginatedCoordinates.length === 0 ? (
                 <tr>
-                  <td colSpan={3} className="wh-table-empty">
-                    No coordinate records found for this warehouse.
-                  </td>
+                    <td colSpan={4} className="wh-table-empty">
+                      No coordinate records found for this warehouse.
+                    </td>
                 </tr>
               ) : (
                 paginatedCoordinates.map((coord, idx) => {
@@ -187,6 +195,12 @@ export function WarehouseCoordinateIndex({
                           active={coord.status !== false}
                           onToggle={() => onToggleCoordinateStatus?.(coord.id)}
                           ariaLabel={`Toggle status for coordinate ${coord.name}`}
+                        />
+                      </td>
+                      <td className="master-cell-center">
+                        <MasterDeleteButton
+                          label={coord.name}
+                          onClick={() => requestDelete(coord)}
                         />
                       </td>
                     </tr>
@@ -210,6 +224,15 @@ export function WarehouseCoordinateIndex({
           }}
         />
       </div>
+
+      <ConfirmDialog
+        isOpen={Boolean(deleteTarget)}
+        entityType="warehouse coordinate"
+        entityName={deleteTarget?.name}
+        isLoading={isDeleting}
+        onConfirm={confirmDelete}
+        onCancel={cancelDelete}
+      />
     </div>
   );
 }

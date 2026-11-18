@@ -5,6 +5,9 @@ import { Pagination } from "../../../../components/ui/Pagination";
 import { Icon } from "../../../../components/ui/Icon";
 import { StatusToggle } from "../../../../components/ui/StatusToggle";
 import { TableLoadingRow } from "../../../../components/ui/LoadingBuffer";
+import { ConfirmDialog } from "../../../../components/ui/ConfirmDialog";
+import { MasterDeleteButton } from "../../../../components/ui/MasterDeleteButton";
+import { useMasterDelete } from "../../../../hooks/useMasterDelete";
 import { useNotification } from "../../../../context/NotificationContext";
 import {
   type CurrencyRecord,
@@ -17,6 +20,7 @@ interface CurrencyIndexProps {
   isLoading?: boolean;
   onAddNew?: () => void;
   onToggleStatus?: (id: string) => Promise<void> | void;
+  onDelete?: (id: string) => Promise<void> | void;
 }
 
 export function CurrencyIndex({
@@ -24,8 +28,11 @@ export function CurrencyIndex({
   isLoading = false,
   onAddNew,
   onToggleStatus,
+  onDelete,
 }: CurrencyIndexProps) {
   const { notifySuccess, notifyError, notifyWarning } = useNotification();
+  const { deleteTarget, isDeleting, requestDelete, cancelDelete, confirmDelete } =
+    useMasterDelete<CurrencyRecord>((r) => r.id, onDelete);
 
   const [localRecords, setLocalRecords] = useState<CurrencyRecord[]>(records);
   const [search, setSearch] = useState("");
@@ -128,9 +135,8 @@ export function CurrencyIndex({
     const isActive = sortField === field && sortDirection !== "none";
     return (
       <span
-        className={`master-sort-indicator ${
-          isActive ? "master-sort-indicator--active" : ""
-        }`}
+        className={`master-sort-indicator ${isActive ? "master-sort-indicator--active" : ""
+          }`}
       >
         {isActive ? (
           sortDirection === "asc" ? (
@@ -194,11 +200,12 @@ export function CurrencyIndex({
                     <span>Status</span>
                     {renderSortIndicator("status")}
                   </th>
+                  <th className="master-col-actions text-center">Action</th>
                 </tr>
               </thead>
               <tbody>
                 {isLoading && paginatedRecords.length === 0 ? (
-                  <TableLoadingRow colSpan={3} label="Loading Currencies..." />
+                  <TableLoadingRow colSpan={4} label="Loading Currencies..." />
                 ) : paginatedRecords.length > 0 ? (
                   paginatedRecords.map((item, index) => {
                     const rowNumber = (safeCurrentPage - 1) * pageSize + index + 1;
@@ -213,22 +220,28 @@ export function CurrencyIndex({
                             ariaLabel={`Toggle status for ${item.currencyCode}`}
                           />
                         </td>
+                        <td className="master-cell-center">
+                          <MasterDeleteButton
+                            label={item.currencyCode}
+                            onClick={() => requestDelete(item)}
+                          />
+                        </td>
                       </tr>
                     );
                   })
                 ) : (
                   <tr>
-                    <td colSpan={3} className="empty-table-cell">
-                      <div className="empty master-empty-box">
-                        <div className="empty__icon master-empty-icon">
-                          <Icon name="search" size={24} />
+                      <td colSpan={4} className="empty-table-cell">
+                        <div className="empty master-empty-box">
+                          <div className="empty__icon master-empty-icon">
+                            <Icon name="search" size={24} />
+                          </div>
+                          <strong>No currencies found</strong>
+                          <span className="master-empty-subtitle">
+                            Try adjusting your search query.
+                          </span>
                         </div>
-                        <strong>No currencies found</strong>
-                        <span className="master-empty-subtitle">
-                          Try adjusting your search query.
-                        </span>
-                      </div>
-                    </td>
+                      </td>
                   </tr>
                 )}
               </tbody>
@@ -247,6 +260,15 @@ export function CurrencyIndex({
           />
         </div>
       </div>
+
+      <ConfirmDialog
+        isOpen={Boolean(deleteTarget)}
+        entityType="currency"
+        entityName={deleteTarget?.currencyCode}
+        isLoading={isDeleting}
+        onConfirm={confirmDelete}
+        onCancel={cancelDelete}
+      />
     </div>
   );
 }

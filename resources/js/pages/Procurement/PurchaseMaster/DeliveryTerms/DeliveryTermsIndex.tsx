@@ -5,6 +5,9 @@ import { Pagination } from "../../../../components/ui/Pagination";
 import { Icon } from "../../../../components/ui/Icon";
 import { StatusToggle } from "../../../../components/ui/StatusToggle";
 import { TableLoadingRow } from "../../../../components/ui/LoadingBuffer";
+import { ConfirmDialog } from "../../../../components/ui/ConfirmDialog";
+import { MasterDeleteButton } from "../../../../components/ui/MasterDeleteButton";
+import { useMasterDelete } from "../../../../hooks/useMasterDelete";
 import { type DeliveryTermRecord } from "./delivery-terms-types";
 
 interface DeliveryTermsIndexProps {
@@ -12,6 +15,7 @@ interface DeliveryTermsIndexProps {
   isLoading?: boolean;
   onAddNew: () => void;
   onToggleHide?: (id: string) => void;
+  onDelete?: (id: string) => Promise<void> | void;
 }
 
 type SortDirection = "none" | "asc" | "desc";
@@ -21,7 +25,10 @@ export function DeliveryTermsIndex({
   isLoading = false,
   onAddNew,
   onToggleHide,
+  onDelete,
 }: DeliveryTermsIndexProps) {
+  const { deleteTarget, isDeleting, requestDelete, cancelDelete, confirmDelete } =
+    useMasterDelete<DeliveryTermRecord>((r) => r.id, onDelete);
   const [localRecords, setLocalRecords] = useState<DeliveryTermRecord[]>(records);
 
   useEffect(() => {
@@ -113,9 +120,8 @@ export function DeliveryTermsIndex({
                   >
                     <span>Delivery Term</span>
                     <span
-                      className={`master-sort-indicator ${
-                        sortDirection !== "none" ? "master-sort-indicator--active" : ""
-                      }`}
+                      className={`master-sort-indicator ${sortDirection !== "none" ? "master-sort-indicator--active" : ""
+                        }`}
                     >
                       {sortDirection === "asc" ? (
                         <Icon name="arrowUp" size={12} />
@@ -129,11 +135,12 @@ export function DeliveryTermsIndex({
                   <th className="master-col-status">
                     <span>Status</span>
                   </th>
+                  <th className="master-col-actions text-center">Action</th>
                 </tr>
               </thead>
               <tbody>
                 {isLoading && paginatedRecords.length === 0 ? (
-                  <TableLoadingRow colSpan={3} label="Loading Delivery Terms..." />
+                  <TableLoadingRow colSpan={4} label="Loading Delivery Terms..." />
                 ) : paginatedRecords.length > 0 ? (
                   paginatedRecords.map((item, index) => {
                     const rowNumber = (safeCurrentPage - 1) * pageSize + index + 1;
@@ -148,22 +155,28 @@ export function DeliveryTermsIndex({
                             ariaLabel={`Toggle status for ${item.name}`}
                           />
                         </td>
+                        <td className="master-cell-center">
+                          <MasterDeleteButton
+                            label={item.name}
+                            onClick={() => requestDelete(item)}
+                          />
+                        </td>
                       </tr>
                     );
                   })
                 ) : (
                   <tr>
-                    <td colSpan={3} className="empty-table-cell">
-                      <div className="empty master-empty-box">
-                        <div className="empty__icon master-empty-icon">
-                          <Icon name="search" size={24} />
+                      <td colSpan={4} className="empty-table-cell">
+                        <div className="empty master-empty-box">
+                          <div className="empty__icon master-empty-icon">
+                            <Icon name="search" size={24} />
+                          </div>
+                          <strong>No delivery terms found</strong>
+                          <span className="master-empty-subtitle">
+                            Try adjusting your search query.
+                          </span>
                         </div>
-                        <strong>No delivery terms found</strong>
-                        <span className="master-empty-subtitle">
-                          Try adjusting your search query.
-                        </span>
-                      </div>
-                    </td>
+                      </td>
                   </tr>
                 )}
               </tbody>
@@ -182,6 +195,15 @@ export function DeliveryTermsIndex({
           />
         </div>
       </div>
+
+      <ConfirmDialog
+        isOpen={Boolean(deleteTarget)}
+        entityType="delivery term"
+        entityName={deleteTarget?.name}
+        isLoading={isDeleting}
+        onConfirm={confirmDelete}
+        onCancel={cancelDelete}
+      />
     </div>
   );
 }

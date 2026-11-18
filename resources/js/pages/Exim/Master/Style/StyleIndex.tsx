@@ -5,6 +5,9 @@ import { Icon } from "../../../../components/ui/Icon";
 import { Pagination } from "../../../../components/ui/Pagination";
 import { StatusToggle } from "../../../../components/ui/StatusToggle";
 import { TableLoadingRow } from "../../../../components/ui/LoadingBuffer";
+import { ConfirmDialog } from "../../../../components/ui/ConfirmDialog";
+import { MasterDeleteButton } from "../../../../components/ui/MasterDeleteButton";
+import { useMasterDelete } from "../../../../hooks/useMasterDelete";
 import { initialStyleRecords } from "./style-data";
 import type {
   StyleRecord,
@@ -18,6 +21,7 @@ interface StyleIndexProps {
   onAddNew: () => void;
   onImportExcel: () => void;
   onToggleStatus?: (id: string) => void;
+  onDelete?: (id: string) => Promise<void> | void;
 }
 
 export function StyleIndex({
@@ -26,7 +30,10 @@ export function StyleIndex({
   onAddNew,
   onImportExcel,
   onToggleStatus,
+  onDelete,
 }: StyleIndexProps) {
+  const { deleteTarget, isDeleting, requestDelete, cancelDelete, confirmDelete } =
+    useMasterDelete<StyleRecord>((r) => r.id, onDelete);
   const [localRecords, setLocalRecords] = useState<StyleRecord[]>(records);
   const [search, setSearch] = useState("");
   const [pageSize, setPageSize] = useState<number>(25);
@@ -110,9 +117,8 @@ export function StyleIndex({
     const isActive = sortField === field && sortDirection !== "none";
     return (
       <span
-        className={`master-sort-indicator ${
-          isActive ? "master-sort-indicator--active" : ""
-        }`}
+        className={`master-sort-indicator ${isActive ? "master-sort-indicator--active" : ""
+          }`}
       >
         {isActive ? (
           sortDirection === "asc" ? (
@@ -295,11 +301,12 @@ export function StyleIndex({
                     <span>Status</span>
                     {renderSortIndicator("status")}
                   </th>
+                  <th className="master-col-actions text-center">Action</th>
                 </tr>
               </thead>
               <tbody>
                 {isLoading && paginatedRecords.length === 0 ? (
-                  <TableLoadingRow colSpan={5} label="Loading Styles / Models..." />
+                  <TableLoadingRow colSpan={6} label="Loading Styles / Models..." />
                 ) : paginatedRecords.length > 0 ? (
                   paginatedRecords.map((item, index) => {
                     const rowNumber =
@@ -330,20 +337,28 @@ export function StyleIndex({
                             ariaLabel={`Toggle status for ${item.name}`}
                           />
                         </td>
+
+                        {/* 6. Action */}
+                        <td className="master-cell-center">
+                          <MasterDeleteButton
+                            label={item.name}
+                            onClick={() => requestDelete(item)}
+                          />
+                        </td>
                       </tr>
                     );
                   })
                 ) : (
                   <tr>
-                    <td colSpan={5} className="empty-table-cell">
-                      <div className="empty">
-                        <div className="empty__icon">
-                          <Icon name="search" />
+                      <td colSpan={6} className="empty-table-cell">
+                        <div className="empty">
+                          <div className="empty__icon">
+                            <Icon name="search" />
+                          </div>
+                          <strong>No specifications/models found</strong>
+                          <span>Try adjusting your search query.</span>
                         </div>
-                        <strong>No specifications/models found</strong>
-                        <span>Try adjusting your search query.</span>
-                      </div>
-                    </td>
+                      </td>
                   </tr>
                 )}
               </tbody>
@@ -364,6 +379,16 @@ export function StyleIndex({
           />
         </div>
       </div>
+
+      <ConfirmDialog
+        isOpen={Boolean(deleteTarget)}
+        entityType="style"
+        entityName={deleteTarget?.name}
+        entityCode={deleteTarget?.code}
+        isLoading={isDeleting}
+        onConfirm={confirmDelete}
+        onCancel={cancelDelete}
+      />
     </div>
   );
 }

@@ -5,6 +5,9 @@ import { Icon } from "../../../../components/ui/Icon";
 import { Pagination } from "../../../../components/ui/Pagination";
 import { StatusToggle } from "../../../../components/ui/StatusToggle";
 import { TableLoadingRow } from "../../../../components/ui/LoadingBuffer";
+import { ConfirmDialog } from "../../../../components/ui/ConfirmDialog";
+import { MasterDeleteButton } from "../../../../components/ui/MasterDeleteButton";
+import { useMasterDelete } from "../../../../hooks/useMasterDelete";
 import { initialClassificationRecords } from "./classification-data";
 import type {
   ClassificationRecord,
@@ -17,6 +20,7 @@ interface ClassificationIndexProps {
   isLoading?: boolean;
   onAddNew: () => void;
   onToggleStatus?: (id: string) => void;
+  onDelete?: (id: string) => Promise<void> | void;
 }
 
 export function ClassificationIndex({
@@ -24,7 +28,10 @@ export function ClassificationIndex({
   isLoading = false,
   onAddNew,
   onToggleStatus,
+  onDelete,
 }: ClassificationIndexProps) {
+  const { deleteTarget, isDeleting, requestDelete, cancelDelete, confirmDelete } =
+    useMasterDelete<ClassificationRecord>((r) => r.id, onDelete);
   const [localRecords, setLocalRecords] = useState<ClassificationRecord[]>(records);
   const [search, setSearch] = useState("");
   const [pageSize, setPageSize] = useState<number>(25);
@@ -179,9 +186,8 @@ export function ClassificationIndex({
     const isActive = sortField === field && sortDirection !== "none";
     return (
       <span
-        className={`master-sort-indicator ${
-          isActive ? "master-sort-indicator--active" : ""
-        }`}
+        className={`master-sort-indicator ${isActive ? "master-sort-indicator--active" : ""
+          }`}
       >
         {isActive ? (
           sortDirection === "asc" ? (
@@ -295,11 +301,12 @@ export function ClassificationIndex({
                     <span>Status</span>
                     {renderSortIndicator("status")}
                   </th>
+                  <th className="master-col-actions text-center">Action</th>
                 </tr>
               </thead>
               <tbody>
                 {isLoading && paginatedRecords.length === 0 ? (
-                  <TableLoadingRow colSpan={6} label="Loading Classifications..." />
+                  <TableLoadingRow colSpan={7} label="Loading Classifications..." />
                 ) : paginatedRecords.length > 0 ? (
                   paginatedRecords.map((item, index) => {
                     const rowNumber =
@@ -339,20 +346,28 @@ export function ClassificationIndex({
                             ariaLabel={`Toggle status for ${item.name}`}
                           />
                         </td>
+
+                        {/* 7. Action */}
+                        <td className="master-cell-center">
+                          <MasterDeleteButton
+                            label={item.name}
+                            onClick={() => requestDelete(item)}
+                          />
+                        </td>
                       </tr>
                     );
                   })
                 ) : (
                   <tr>
-                    <td colSpan={6} className="empty-table-cell">
-                      <div className="empty">
-                        <div className="empty__icon">
-                          <Icon name="search" />
+                      <td colSpan={7} className="empty-table-cell">
+                        <div className="empty">
+                          <div className="empty__icon">
+                            <Icon name="search" />
+                          </div>
+                          <strong>No classifications found</strong>
+                          <span>Try adjusting your search query.</span>
                         </div>
-                        <strong>No classifications found</strong>
-                        <span>Try adjusting your search query.</span>
-                      </div>
-                    </td>
+                      </td>
                   </tr>
                 )}
               </tbody>
@@ -373,6 +388,16 @@ export function ClassificationIndex({
           />
         </div>
       </div>
+
+      <ConfirmDialog
+        isOpen={Boolean(deleteTarget)}
+        entityType="classification"
+        entityName={deleteTarget?.name}
+        entityCode={deleteTarget?.code}
+        isLoading={isDeleting}
+        onConfirm={confirmDelete}
+        onCancel={cancelDelete}
+      />
     </div>
   );
 }

@@ -5,6 +5,9 @@ import { Icon } from "../../../../components/ui/Icon";
 import { Pagination } from "../../../../components/ui/Pagination";
 import { StatusToggle } from "../../../../components/ui/StatusToggle";
 import { TableLoadingRow } from "../../../../components/ui/LoadingBuffer";
+import { ConfirmDialog } from "../../../../components/ui/ConfirmDialog";
+import { MasterDeleteButton } from "../../../../components/ui/MasterDeleteButton";
+import { useMasterDelete } from "../../../../hooks/useMasterDelete";
 import { initialBrandRecords } from "./brand-data";
 import type {
   BrandRecord,
@@ -17,6 +20,7 @@ interface BrandIndexProps {
   isLoading?: boolean;
   onAddNew: () => void;
   onToggleStatus?: (id: string) => void;
+  onDelete?: (id: string) => Promise<void> | void;
 }
 
 export function BrandIndex({
@@ -24,7 +28,10 @@ export function BrandIndex({
   isLoading = false,
   onAddNew,
   onToggleStatus,
+  onDelete,
 }: BrandIndexProps) {
+  const { deleteTarget, isDeleting, requestDelete, cancelDelete, confirmDelete } =
+    useMasterDelete<BrandRecord>((r) => r.id, onDelete);
   const [localRecords, setLocalRecords] = useState<BrandRecord[]>(records);
   const [search, setSearch] = useState("");
   const [pageSize, setPageSize] = useState<number>(25);
@@ -165,9 +172,8 @@ export function BrandIndex({
     const isActive = sortField === field && sortDirection !== "none";
     return (
       <span
-        className={`master-sort-indicator ${
-          isActive ? "master-sort-indicator--active" : ""
-        }`}
+        className={`master-sort-indicator ${isActive ? "master-sort-indicator--active" : ""
+          }`}
       >
         {isActive ? (
           sortDirection === "asc" ? (
@@ -274,11 +280,12 @@ export function BrandIndex({
                     <span>Status</span>
                     {renderSortIndicator("status")}
                   </th>
+                  <th className="master-col-actions text-center">Action</th>
                 </tr>
               </thead>
               <tbody>
                 {isLoading && paginatedRecords.length === 0 ? (
-                  <TableLoadingRow colSpan={5} label="Loading Brands..." />
+                  <TableLoadingRow colSpan={6} label="Loading Brands..." />
                 ) : paginatedRecords.length > 0 ? (
                   paginatedRecords.map((item, index) => {
                     const rowNumber =
@@ -313,20 +320,28 @@ export function BrandIndex({
                             ariaLabel={`Toggle status for ${item.name}`}
                           />
                         </td>
+
+                        {/* 6. Action */}
+                        <td className="master-cell-center">
+                          <MasterDeleteButton
+                            label={item.name}
+                            onClick={() => requestDelete(item)}
+                          />
+                        </td>
                       </tr>
                     );
                   })
                 ) : (
                   <tr>
-                    <td colSpan={5} className="empty-table-cell">
-                      <div className="empty">
-                        <div className="empty__icon">
-                          <Icon name="search" />
+                      <td colSpan={6} className="empty-table-cell">
+                        <div className="empty">
+                          <div className="empty__icon">
+                            <Icon name="search" />
+                          </div>
+                          <strong>No brands found</strong>
+                          <span>Try adjusting your search query.</span>
                         </div>
-                        <strong>No brands found</strong>
-                        <span>Try adjusting your search query.</span>
-                      </div>
-                    </td>
+                      </td>
                   </tr>
                 )}
               </tbody>
@@ -347,6 +362,16 @@ export function BrandIndex({
           />
         </div>
       </div>
+
+      <ConfirmDialog
+        isOpen={Boolean(deleteTarget)}
+        entityType="brand"
+        entityName={deleteTarget?.name}
+        entityCode={deleteTarget?.code}
+        isLoading={isDeleting}
+        onConfirm={confirmDelete}
+        onCancel={cancelDelete}
+      />
     </div>
   );
 }

@@ -5,6 +5,9 @@ import { Pagination } from "../../../../components/ui/Pagination";
 import { Icon } from "../../../../components/ui/Icon";
 import { StatusToggle } from "../../../../components/ui/StatusToggle";
 import { TableLoadingRow } from "../../../../components/ui/LoadingBuffer";
+import { ConfirmDialog } from "../../../../components/ui/ConfirmDialog";
+import { MasterDeleteButton } from "../../../../components/ui/MasterDeleteButton";
+import { useMasterDelete } from "../../../../hooks/useMasterDelete";
 import { type PphRecord } from "./pph-types";
 
 interface PphIndexProps {
@@ -12,6 +15,7 @@ interface PphIndexProps {
   isLoading?: boolean;
   onAddNew: () => void;
   onToggleHide?: (id: string) => void;
+  onDelete?: (id: string) => Promise<void> | void;
 }
 
 type SortField = "name" | "rate" | "deduction";
@@ -22,7 +26,10 @@ export function PphIndex({
   isLoading = false,
   onAddNew,
   onToggleHide,
+  onDelete,
 }: PphIndexProps) {
+  const { deleteTarget, isDeleting, requestDelete, cancelDelete, confirmDelete } =
+    useMasterDelete<PphRecord>((r) => r.id, onDelete);
   const [localRecords, setLocalRecords] = useState<PphRecord[]>(records);
 
   useEffect(() => {
@@ -102,9 +109,8 @@ export function PphIndex({
     const isActive = sortField === field;
     return (
       <span
-        className={`master-sort-indicator ${
-          isActive ? "master-sort-indicator--active" : ""
-        }`}
+        className={`master-sort-indicator ${isActive ? "master-sort-indicator--active" : ""
+          }`}
       >
         {isActive ? (
           sortDirection === "asc" ? (
@@ -171,11 +177,12 @@ export function PphIndex({
                   <th className="master-col-status">
                     <span>Status</span>
                   </th>
+                  <th className="master-col-actions text-center">Action</th>
                 </tr>
               </thead>
               <tbody>
                 {isLoading && paginatedRecords.length === 0 ? (
-                  <TableLoadingRow colSpan={5} label="Loading PPH Rates..." />
+                  <TableLoadingRow colSpan={6} label="Loading PPH Rates..." />
                 ) : paginatedRecords.length > 0 ? (
                   paginatedRecords.map((item, index) => {
                     const rowNumber = (safeCurrentPage - 1) * pageSize + index + 1;
@@ -192,22 +199,28 @@ export function PphIndex({
                             ariaLabel={`Toggle status for ${item.name}`}
                           />
                         </td>
+                        <td className="master-cell-center">
+                          <MasterDeleteButton
+                            label={item.name}
+                            onClick={() => requestDelete(item)}
+                          />
+                        </td>
                       </tr>
                     );
                   })
                 ) : (
                   <tr>
-                    <td colSpan={5} className="empty-table-cell">
-                      <div className="empty master-empty-box">
-                        <div className="empty__icon master-empty-icon">
-                          <Icon name="search" size={24} />
+                      <td colSpan={6} className="empty-table-cell">
+                        <div className="empty master-empty-box">
+                          <div className="empty__icon master-empty-icon">
+                            <Icon name="search" size={24} />
+                          </div>
+                          <strong>No PPH records found</strong>
+                          <span className="master-empty-subtitle">
+                            Try adjusting your search query.
+                          </span>
                         </div>
-                        <strong>No PPH records found</strong>
-                        <span className="master-empty-subtitle">
-                          Try adjusting your search query.
-                        </span>
-                      </div>
-                    </td>
+                      </td>
                   </tr>
                 )}
               </tbody>
@@ -226,6 +239,15 @@ export function PphIndex({
           />
         </div>
       </div>
+
+      <ConfirmDialog
+        isOpen={Boolean(deleteTarget)}
+        entityType="PPH tax rate"
+        entityName={deleteTarget?.name}
+        isLoading={isDeleting}
+        onConfirm={confirmDelete}
+        onCancel={cancelDelete}
+      />
     </div>
   );
 }

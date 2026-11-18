@@ -5,6 +5,9 @@ import { Icon } from "../../../../components/ui/Icon";
 import { Pagination } from "../../../../components/ui/Pagination";
 import { StatusToggle } from "../../../../components/ui/StatusToggle";
 import { TableLoadingRow } from "../../../../components/ui/LoadingBuffer";
+import { ConfirmDialog } from "../../../../components/ui/ConfirmDialog";
+import { MasterDeleteButton } from "../../../../components/ui/MasterDeleteButton";
+import { useMasterDelete } from "../../../../hooks/useMasterDelete";
 import { initialFacilityRecords } from "./facility-data";
 import type {
   FacilityRecord,
@@ -17,6 +20,7 @@ interface FacilityIndexProps {
   isLoading?: boolean;
   onAddNew: () => void;
   onToggleStatus?: (id: string) => void;
+  onDelete?: (id: string) => Promise<void> | void;
 }
 
 export function FacilityIndex({
@@ -24,7 +28,10 @@ export function FacilityIndex({
   isLoading = false,
   onAddNew,
   onToggleStatus,
+  onDelete,
 }: FacilityIndexProps) {
+  const { deleteTarget, isDeleting, requestDelete, cancelDelete, confirmDelete } =
+    useMasterDelete<FacilityRecord>((r) => r.id, onDelete);
   const [localRecords, setLocalRecords] = useState<FacilityRecord[]>(records);
   const [search, setSearch] = useState("");
   const [pageSize, setPageSize] = useState<number>(25);
@@ -160,9 +167,8 @@ export function FacilityIndex({
     const isActive = sortField === field && sortDirection !== "none";
     return (
       <span
-        className={`master-sort-indicator ${
-          isActive ? "master-sort-indicator--active" : ""
-        }`}
+        className={`master-sort-indicator ${isActive ? "master-sort-indicator--active" : ""
+          }`}
       >
         {isActive ? (
           sortDirection === "asc" ? (
@@ -263,11 +269,12 @@ export function FacilityIndex({
                     <span>Status</span>
                     {renderSortIndicator("status")}
                   </th>
+                  <th className="master-col-actions text-center">Action</th>
                 </tr>
               </thead>
               <tbody>
                 {isLoading && paginatedRecords.length === 0 ? (
-                  <TableLoadingRow colSpan={4} label="Loading Facilities..." />
+                  <TableLoadingRow colSpan={5} label="Loading Facilities..." />
                 ) : paginatedRecords.length > 0 ? (
                   paginatedRecords.map((item, index) => {
                     const rowNumber =
@@ -297,20 +304,28 @@ export function FacilityIndex({
                             ariaLabel={`Toggle status for ${item.name}`}
                           />
                         </td>
+
+                        {/* 5. Action */}
+                        <td className="master-cell-center">
+                          <MasterDeleteButton
+                            label={item.name}
+                            onClick={() => requestDelete(item)}
+                          />
+                        </td>
                       </tr>
                     );
                   })
                 ) : (
                   <tr>
-                    <td colSpan={4} className="empty-table-cell">
-                      <div className="empty">
-                        <div className="empty__icon">
-                          <Icon name="search" />
+                      <td colSpan={5} className="empty-table-cell">
+                        <div className="empty">
+                          <div className="empty__icon">
+                            <Icon name="search" />
+                          </div>
+                          <strong>No facilities found</strong>
+                          <span>Try adjusting your search query.</span>
                         </div>
-                        <strong>No facilities found</strong>
-                        <span>Try adjusting your search query.</span>
-                      </div>
-                    </td>
+                      </td>
                   </tr>
                 )}
               </tbody>
@@ -331,6 +346,15 @@ export function FacilityIndex({
           />
         </div>
       </div>
+
+      <ConfirmDialog
+        isOpen={Boolean(deleteTarget)}
+        entityType="facility"
+        entityName={deleteTarget?.name}
+        isLoading={isDeleting}
+        onConfirm={confirmDelete}
+        onCancel={cancelDelete}
+      />
     </div>
   );
 }

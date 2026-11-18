@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\Admin\UserManagementApiController;
 use App\Http\Controllers\Api\Auth\AuthApiController;
 use App\Http\Controllers\Api\Auth\UserProfileApiController;
 use App\Http\Controllers\Api\Common\ExchangeRateApiController;
+use App\Http\Controllers\Api\Common\ReferenceMasterApiController;
 use App\Http\Controllers\Api\Common\SystemContextApiController;
 use App\Http\Controllers\Api\Dashboard\StockNotificationApiController;
 use App\Http\Controllers\Api\Exim\Master\AccountApiController;
@@ -327,6 +328,7 @@ Route::prefix('system')->group(function () {
 });
 
 Route::get('/master/lookups', [SystemContextApiController::class, 'lookups']);
+Route::delete('/master/reference/{key}/{id}', [ReferenceMasterApiController::class, 'destroy']);
 
 // =========================================================================
 // 7. BACKWARD-COMPATIBILITY ALIASES (Direct Routes for Existing Frontend)

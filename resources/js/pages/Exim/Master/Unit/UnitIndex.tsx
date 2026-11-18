@@ -5,6 +5,9 @@ import { Pagination } from "../../../../components/ui/Pagination";
 import { Icon } from "../../../../components/ui/Icon";
 import { StatusToggle } from "../../../../components/ui/StatusToggle";
 import { TableLoadingRow } from "../../../../components/ui/LoadingBuffer";
+import { ConfirmDialog } from "../../../../components/ui/ConfirmDialog";
+import { MasterDeleteButton } from "../../../../components/ui/MasterDeleteButton";
+import { useMasterDelete } from "../../../../hooks/useMasterDelete";
 import { initialUnitRecords } from "./unit-data";
 import type { UnitRecord } from "./unit-types";
 
@@ -13,6 +16,7 @@ interface UnitIndexProps {
   isLoading?: boolean;
   onAddNew: () => void;
   onToggleStatus?: (id: string) => void;
+  onDelete?: (id: string) => Promise<void> | void;
 }
 
 type SortDirection = "none" | "asc" | "desc";
@@ -22,7 +26,10 @@ export function UnitIndex({
   isLoading = false,
   onAddNew,
   onToggleStatus,
+  onDelete,
 }: UnitIndexProps) {
+  const { deleteTarget, isDeleting, requestDelete, cancelDelete, confirmDelete } =
+    useMasterDelete<UnitRecord>((r) => r.id, onDelete);
   const [localRecords, setLocalRecords] = useState<UnitRecord[]>(records);
   const [search, setSearch] = useState("");
   const [pageSize, setPageSize] = useState<number>(25);
@@ -107,9 +114,8 @@ export function UnitIndex({
                   >
                     <span>Unit</span>
                     <span
-                      className={`master-sort-indicator ${
-                        sortDirection !== "none" ? "master-sort-indicator--active" : ""
-                      }`}
+                      className={`master-sort-indicator ${sortDirection !== "none" ? "master-sort-indicator--active" : ""
+                        }`}
                     >
                       {sortDirection === "asc" ? (
                         <Icon name="arrowUp" size={12} />
@@ -123,11 +129,12 @@ export function UnitIndex({
                   <th className="master-col-status">
                     <span>Status</span>
                   </th>
+                  <th className="master-col-actions text-center">Action</th>
                 </tr>
               </thead>
               <tbody>
                 {isLoading && paginatedRecords.length === 0 ? (
-                  <TableLoadingRow colSpan={3} label="Loading Units..." />
+                  <TableLoadingRow colSpan={4} label="Loading Units..." />
                 ) : paginatedRecords.length > 0 ? (
                   paginatedRecords.map((item, index) => {
                     const rowNumber = (safeCurrentPage - 1) * pageSize + index + 1;
@@ -142,22 +149,28 @@ export function UnitIndex({
                             ariaLabel={`Toggle status for ${item.name}`}
                           />
                         </td>
+                        <td className="master-cell-center">
+                          <MasterDeleteButton
+                            label={item.name}
+                            onClick={() => requestDelete(item)}
+                          />
+                        </td>
                       </tr>
                     );
                   })
                 ) : (
                   <tr>
-                    <td colSpan={3} className="empty-table-cell">
-                      <div className="empty master-empty-box">
-                        <div className="empty__icon master-empty-icon">
-                          <Icon name="search" size={24} />
+                      <td colSpan={4} className="empty-table-cell">
+                        <div className="empty master-empty-box">
+                          <div className="empty__icon master-empty-icon">
+                            <Icon name="search" size={24} />
+                          </div>
+                          <strong>No units found</strong>
+                          <span className="master-empty-subtitle">
+                            Try adjusting your search query.
+                          </span>
                         </div>
-                        <strong>No units found</strong>
-                        <span className="master-empty-subtitle">
-                          Try adjusting your search query.
-                        </span>
-                      </div>
-                    </td>
+                      </td>
                   </tr>
                 )}
               </tbody>
@@ -177,6 +190,15 @@ export function UnitIndex({
           />
         </div>
       </div>
+
+      <ConfirmDialog
+        isOpen={Boolean(deleteTarget)}
+        entityType="unit"
+        entityName={deleteTarget?.name}
+        isLoading={isDeleting}
+        onConfirm={confirmDelete}
+        onCancel={cancelDelete}
+      />
     </div>
   );
 }

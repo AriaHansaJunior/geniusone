@@ -6,6 +6,9 @@ import { Icon } from "../../../components/ui/Icon";
 import { Pagination } from "../../../components/ui/Pagination";
 import { StatusToggle } from "../../../components/ui/StatusToggle";
 import { TableLoadingRow } from "../../../components/ui/LoadingBuffer";
+import { ConfirmDialog } from "../../../components/ui/ConfirmDialog";
+import { MasterDeleteButton } from "../../../components/ui/MasterDeleteButton";
+import { useMasterDelete } from "../../../hooks/useMasterDelete";
 import { useNotification } from "../../../context/NotificationContext";
 import { initialWarehouseMasterRecords } from "./warehouse-master-data";
 import type {
@@ -20,6 +23,7 @@ interface MasterWarehouseIndexProps {
   onAddNew: () => void;
   onToggleStatus?: (id: string) => Promise<void> | void;
   onViewCoordinates: (warehouse: WarehouseMasterRecord) => void;
+  onDelete?: (id: string) => Promise<void> | void;
 }
 
 export function MasterWarehouseIndex({
@@ -28,8 +32,11 @@ export function MasterWarehouseIndex({
   onAddNew,
   onToggleStatus,
   onViewCoordinates,
+  onDelete,
 }: MasterWarehouseIndexProps) {
   const { notifySuccess, notifyError, notifyWarning } = useNotification();
+  const { deleteTarget, isDeleting, requestDelete, cancelDelete, confirmDelete } =
+    useMasterDelete<WarehouseMasterRecord>((r) => r.id, onDelete);
 
   const [localRecords, setLocalRecords] = useState<WarehouseMasterRecord[]>(records);
   const [search, setSearch] = useState("");
@@ -224,24 +231,25 @@ export function MasterWarehouseIndex({
                     <span>Status</span>
                     {renderSortIndicator("status")}
                   </th>
+                  <th className="master-col-actions text-center">Action</th>
                 </tr>
               </thead>
               <tbody>
                 {isLoading && paginatedRecords.length === 0 ? (
-                  <TableLoadingRow colSpan={5} label="Loading Warehouses..." />
+                  <TableLoadingRow colSpan={6} label="Loading Warehouses..." />
                 ) : paginatedRecords.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="empty-table-cell">
-                      <div className="empty master-empty-box">
-                        <div className="empty__icon master-empty-icon">
-                          <Icon name="search" size={24} />
+                      <td colSpan={6} className="empty-table-cell">
+                        <div className="empty master-empty-box">
+                          <div className="empty__icon master-empty-icon">
+                            <Icon name="search" size={24} />
+                          </div>
+                          <strong>No warehouse records found</strong>
+                          <span className="master-empty-subtitle">
+                            Try adjusting your search filter.
+                          </span>
                         </div>
-                        <strong>No warehouse records found</strong>
-                        <span className="master-empty-subtitle">
-                          Try adjusting your search filter.
-                        </span>
-                      </div>
-                    </td>
+                      </td>
                   </tr>
                 ) : (
                   paginatedRecords.map((wh, idx) => {
@@ -269,6 +277,12 @@ export function MasterWarehouseIndex({
                             ariaLabel={`Toggle status for ${wh.name}`}
                           />
                         </td>
+                        <td className="master-cell-center">
+                          <MasterDeleteButton
+                            label={wh.name}
+                            onClick={() => requestDelete(wh)}
+                          />
+                        </td>
                       </tr>
                     );
                   })
@@ -290,6 +304,16 @@ export function MasterWarehouseIndex({
           />
         </div>
       </div>
+
+      <ConfirmDialog
+        isOpen={Boolean(deleteTarget)}
+        entityType="warehouse"
+        entityName={deleteTarget?.name}
+        entityCode={deleteTarget?.code}
+        isLoading={isDeleting}
+        onConfirm={confirmDelete}
+        onCancel={cancelDelete}
+      />
     </div>
   );
 }

@@ -5,6 +5,9 @@ import { Pagination } from "../../../../components/ui/Pagination";
 import { Icon } from "../../../../components/ui/Icon";
 import { StatusToggle } from "../../../../components/ui/StatusToggle";
 import { TableLoadingRow } from "../../../../components/ui/LoadingBuffer";
+import { ConfirmDialog } from "../../../../components/ui/ConfirmDialog";
+import { MasterDeleteButton } from "../../../../components/ui/MasterDeleteButton";
+import { useMasterDelete } from "../../../../hooks/useMasterDelete";
 import {
   type AccountRecord,
   type AccountSortField,
@@ -16,6 +19,7 @@ interface AccountIndexProps {
   isLoading?: boolean;
   onAddNew?: () => void;
   onToggleStatus?: (id: string) => Promise<void> | void;
+  onDelete?: (id: string) => Promise<void> | void;
 }
 
 export function AccountIndex({
@@ -23,7 +27,10 @@ export function AccountIndex({
   isLoading = false,
   onAddNew,
   onToggleStatus,
+  onDelete,
 }: AccountIndexProps) {
+  const { deleteTarget, isDeleting, requestDelete, cancelDelete, confirmDelete } =
+    useMasterDelete<AccountRecord>((r) => r.id, onDelete);
   const [localRecords, setLocalRecords] = useState<AccountRecord[]>(records);
   const [search, setSearch] = useState("");
   const [pageSize, setPageSize] = useState<number>(25);
@@ -63,14 +70,14 @@ export function AccountIndex({
         sortField === "accountCode"
           ? a.accountCode.toLowerCase()
           : sortField === "accountName"
-          ? a.accountName.toLowerCase()
-          : a.category.toLowerCase();
+            ? a.accountName.toLowerCase()
+            : a.category.toLowerCase();
       const bVal =
         sortField === "accountCode"
           ? b.accountCode.toLowerCase()
           : sortField === "accountName"
-          ? b.accountName.toLowerCase()
-          : b.category.toLowerCase();
+            ? b.accountName.toLowerCase()
+            : b.category.toLowerCase();
 
       if (aVal < bVal) return sortDirection === "asc" ? -1 : 1;
       if (aVal > bVal) return sortDirection === "asc" ? 1 : -1;
@@ -265,11 +272,12 @@ export function AccountIndex({
                     <span>Status</span>
                     {renderSortIndicator("status")}
                   </th>
+                  <th className="master-col-actions text-center">Action</th>
                 </tr>
               </thead>
               <tbody>
                 {isLoading && paginatedRecords.length === 0 ? (
-                  <TableLoadingRow colSpan={5} label="Loading Accounts..." />
+                  <TableLoadingRow colSpan={6} label="Loading Accounts..." />
                 ) : paginatedRecords.length > 0 ? (
                   paginatedRecords.map((item, index) => {
                     const rowNumber = (safeCurrentPage - 1) * pageSize + index + 1;
@@ -286,22 +294,28 @@ export function AccountIndex({
                             ariaLabel={`Toggle status for ${item.accountCode}`}
                           />
                         </td>
+                        <td className="master-cell-center">
+                          <MasterDeleteButton
+                            label={item.accountName}
+                            onClick={() => requestDelete(item)}
+                          />
+                        </td>
                       </tr>
                     );
                   })
                 ) : (
                   <tr>
-                    <td colSpan={5} className="empty-table-cell">
-                      <div className="empty master-empty-box">
-                        <div className="empty__icon master-empty-icon">
-                          <Icon name="search" size={24} />
+                      <td colSpan={6} className="empty-table-cell">
+                        <div className="empty master-empty-box">
+                          <div className="empty__icon master-empty-icon">
+                            <Icon name="search" size={24} />
+                          </div>
+                          <strong>No accounts found</strong>
+                          <span className="master-empty-subtitle">
+                            Try adjusting your search query.
+                          </span>
                         </div>
-                        <strong>No accounts found</strong>
-                        <span className="master-empty-subtitle">
-                          Try adjusting your search query.
-                        </span>
-                      </div>
-                    </td>
+                      </td>
                   </tr>
                 )}
               </tbody>
@@ -321,6 +335,16 @@ export function AccountIndex({
           />
         </div>
       </div>
+
+      <ConfirmDialog
+        isOpen={Boolean(deleteTarget)}
+        entityType="account"
+        entityName={deleteTarget?.accountName}
+        entityCode={deleteTarget?.accountCode}
+        isLoading={isDeleting}
+        onConfirm={confirmDelete}
+        onCancel={cancelDelete}
+      />
     </div>
   );
 }

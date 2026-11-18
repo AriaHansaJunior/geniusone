@@ -5,6 +5,9 @@ import { SearchField } from "../../../../components/ui/SearchField";
 import { Pagination } from "../../../../components/ui/Pagination";
 import { StatusToggle } from "../../../../components/ui/StatusToggle";
 import { TableLoadingRow } from "../../../../components/ui/LoadingBuffer";
+import { ConfirmDialog } from "../../../../components/ui/ConfirmDialog";
+import { MasterDeleteButton } from "../../../../components/ui/MasterDeleteButton";
+import { useMasterDelete } from "../../../../hooks/useMasterDelete";
 import { useNotification } from "../../../../context/NotificationContext";
 import { type SupplierRecord } from "./supplier-types";
 
@@ -13,6 +16,7 @@ interface SupplierIndexProps {
   isLoading?: boolean;
   onAddNew: () => void;
   onToggleHide?: (id: string) => void;
+  onDelete?: (id: string) => Promise<void> | void;
 }
 
 type SortField =
@@ -33,8 +37,11 @@ export function SupplierIndex({
   isLoading = false,
   onAddNew,
   onToggleHide,
+  onDelete,
 }: SupplierIndexProps) {
   const { notifySuccess, notifyError, notifyWarning } = useNotification();
+  const { deleteTarget, isDeleting, requestDelete, cancelDelete, confirmDelete } =
+    useMasterDelete<SupplierRecord>((r) => r.id, onDelete);
 
   const [localRecords, setLocalRecords] = useState<SupplierRecord[]>(records);
 
@@ -288,11 +295,12 @@ export function SupplierIndex({
                     <span>Status</span>
                     {renderSortIndicator("status")}
                   </th>
+                  <th className="master-col-actions text-center">Action</th>
                 </tr>
               </thead>
               <tbody>
                 {isLoading && paginatedRecords.length === 0 ? (
-                  <TableLoadingRow colSpan={9} label="Loading Suppliers..." sublabel="Fetching vendor directory & compliance details..." />
+                  <TableLoadingRow colSpan={10} label="Loading Suppliers..." sublabel="Fetching vendor directory & compliance details..." />
                 ) : paginatedRecords.length > 0 ? (
                   paginatedRecords.map((item, index) => {
                     const rowNumber = (safeCurrentPage - 1) * pageSize + index + 1;
@@ -322,22 +330,28 @@ export function SupplierIndex({
                             ariaLabel={`Toggle status for ${item.supplierName}`}
                           />
                         </td>
+                        <td className="master-cell-center">
+                          <MasterDeleteButton
+                            label={item.supplierName}
+                            onClick={() => requestDelete(item)}
+                          />
+                        </td>
                       </tr>
                     );
                   })
                 ) : (
                   <tr>
-                    <td colSpan={9} className="empty-table-cell">
-                      <div className="empty master-empty-box">
-                        <div className="empty__icon master-empty-icon">
-                          <Icon name="search" size={24} />
+                      <td colSpan={10} className="empty-table-cell">
+                        <div className="empty master-empty-box">
+                          <div className="empty__icon master-empty-icon">
+                            <Icon name="search" size={24} />
+                          </div>
+                          <strong>No suppliers found</strong>
+                          <span className="master-empty-subtitle">
+                            Try adjusting your search criteria.
+                          </span>
                         </div>
-                        <strong>No suppliers found</strong>
-                        <span className="master-empty-subtitle">
-                          Try adjusting your search criteria.
-                        </span>
-                      </div>
-                    </td>
+                      </td>
                   </tr>
                 )}
               </tbody>
@@ -355,6 +369,16 @@ export function SupplierIndex({
           />
         </div>
       </div>
+
+      <ConfirmDialog
+        isOpen={Boolean(deleteTarget)}
+        entityType="supplier"
+        entityName={deleteTarget?.supplierName}
+        entityCode={deleteTarget?.supplierCode}
+        isLoading={isDeleting}
+        onConfirm={confirmDelete}
+        onCancel={cancelDelete}
+      />
     </div>
   );
 }
