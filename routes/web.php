@@ -346,7 +346,11 @@ Route::get('/warehouse/master/destination-location/add', fn () => view('app', ['
 Route::get('/warehouse/adjustment/adjustment-production', fn () => view('app', ['page' => 'wh-adj-prod']));
 Route::get('/warehouse/adjustment/adjustment-stock-bc', fn () => view('app', ['page' => 'wh-adj-bc']));
 Route::get('/warehouse/adjustment/opname-material', fn () => view('app', ['page' => 'wh-opname-material']));
-Route::get('/warehouse/adjustment/adjustment-stock', fn () => view('app', ['page' => 'wh-adj-stock']));
+Route::get('/warehouse/adjustment/adjustment-stock', fn () => view('app', ['page' => 'wh-adj-stock']))->name('warehouse.adjustment.stock');
+Route::get('/warehouse/adjustment/adjustment-stock/create', fn () => view('app', ['page' => 'wh-adj-stock-create']))->name('warehouse.adjustment.stock.create');
+Route::get('/warehouse/adjustment/adjustment-stock/add', fn () => view('app', ['page' => 'wh-adj-stock-create']));
+Route::get('/warehouse/adjustment/adjustment-stock/import', fn () => view('app', ['page' => 'wh-adj-stock-import']))->name('warehouse.adjustment.stock.import');
+Route::get('/warehouse/adjustment/adjustment-stock/detail/{code}', fn ($code) => view('app', ['page' => 'wh-adj-stock-detail', 'code' => $code]))->where('code', '.*')->name('warehouse.adjustment.stock.detail');
 
 // Warehouse Incoming Routes
 Route::get('/warehouse/incoming/transfer-stock-return', fn () => view('app', ['page' => 'transfer-stock-return']))->name('warehouse.transfer-stock-return');

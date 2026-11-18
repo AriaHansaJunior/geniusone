@@ -326,4 +326,145 @@ class WarehouseStockFlowTest extends TestCase
         $this->assertTrue($movements->contains(fn ($m) => $m['doc_number'] === $rmNumber && (float) $m['qty_out'] === 25.0));
         $this->assertTrue($movements->contains(fn ($m) => $m['doc_number'] === $tsrNumber && (float) $m['qty_in'] === 10.0));
     }
+
+    public function test_stock_adjustment_manual_and_excel_inject_update_stock_item_and_stock_card(): void
+    {
+        // 1. Download template endpoint returns 200 CSV
+        $this->get('/api/warehouse/adjustment-stock/template')
+            ->assertOk()
+            ->assertHeader('Content-Type', 'text/csv; charset=UTF-8');
+
+        // 2. Manual IN adjustment into Warehouse B (previously 0 for itemA) + SET adjustment on itemB in Warehouse A
+        $manualRes = $this->postJson('/api/warehouse/adjustment-stock', [
+            'warehouses_id' => $this->warehouseB->id,
+            'adjustment_date' => now()->toDateString(),
+            'reference_code' => 'INIT-WH-B',
+            'note' => 'Initial injection into Warehouse B',
+            'items' => [
+                [
+                    'items_id' => $this->itemA->id,
+                    'warehouses_id' => $this->warehouseB->id,
+                    'adjustment_type' => 'IN',
+                    'quantity' => 40,
+                    'lot_number' => 'LOT-B-01',
+                    'coordinate_name' => 'B-01',
+                    'remark' => 'Opening balance WH-B',
+                ],
+                [
+                    'items_id' => $this->itemB->id,
+                    'warehouses_id' => $this->warehouseA->id,
+                    'adjustment_type' => 'SET',
+                    'quantity' => 35,
+                    'remark' => 'Set exact stock to 35',
+                ],
+            ],
+        ])->assertCreated();
+
+        $adjNumber1 = $manualRes->json('data.adjustmentNumber');
+        $manualRes->assertJsonPath('data.sourceType', 'MANUAL');
+
+        $this->assertSame(
+            40.0,
+            (float) DB::table('item_warehouse')
+                ->where('items_id', $this->itemA->id)
+                ->where('warehouses_id', $this->warehouseB->id)
+                ->value('quantity')
+        );
+        $this->assertSame(
+            35.0,
+            (float) DB::table('item_warehouse')
+                ->where('items_id', $this->itemB->id)
+                ->where('warehouses_id', $this->warehouseA->id)
+                ->value('quantity')
+        );
+
+        // 3. Excel Inject Import (parsed rows payload simulating Excel sheet)
+        // First verify atomic rollback if one row has unknown item
+        $this->postJson('/api/warehouse/adjustment-stock/import', [
+            'default_warehouse_id' => $this->warehouseB->id,
+            'adjustment_date' => now()->toDateString(),
+            'rows' => [
+                ['Item Code' => 'RM-FLOW-001', 'Warehouse' => 'Gudang Kosong', 'Type' => 'IN', 'Quantity' => 10],
+                ['Item Code' => 'UNKNOWN-999', 'Warehouse' => 'Gudang Kosong', 'Type' => 'IN', 'Quantity' => 5],
+            ],
+        ])->assertUnprocessable();
+        // Balance must remain unchanged (40) after failed batch validation
+        $this->assertSame(
+            40.0,
+            (float) DB::table('item_warehouse')
+                ->where('items_id', $this->itemA->id)
+                ->where('warehouses_id', $this->warehouseB->id)
+                ->value('quantity')
+        );
+
+        // Valid Excel Import batch: IN 15 for itemA in WH-B, OUT 5 for itemB in WH-A
+        $importRes = $this->postJson('/api/warehouse/adjustment-stock/import', [
+            'default_warehouse_id' => $this->warehouseB->id,
+            'adjustment_date' => now()->toDateString(),
+            'reference_code' => 'XLSX-BATCH-01',
+            'note' => 'Bulk inject from Excel',
+            'rows' => [
+                [
+                    'Item Code' => $this->itemA->code,
+                    'Warehouse' => $this->warehouseB->name,
+                    'Type' => 'IN',
+                    'Quantity' => 15,
+                    'Lot Number' => 'LOT-IMP-01',
+                    'Coordinate' => 'B-02',
+                    'Remark' => 'Inject Excel +15',
+                ],
+                [
+                    'Item Code' => $this->itemB->code,
+                    'Warehouse' => $this->warehouseA->name,
+                    'Type' => 'OUT',
+                    'Quantity' => 5,
+                    'Remark' => 'Excel write-off -5',
+                ],
+            ],
+        ])->assertCreated();
+
+        $adjNumber2 = $importRes->json('data.adjustmentNumber');
+        $importRes->assertJsonPath('data.sourceType', 'EXCEL_IMPORT')
+            ->assertJsonPath('data.itemCount', 2);
+
+        $this->assertSame(
+            55.0,
+            (float) DB::table('item_warehouse')
+                ->where('items_id', $this->itemA->id)
+                ->where('warehouses_id', $this->warehouseB->id)
+                ->value('quantity')
+        );
+        $this->assertSame(
+            30.0,
+            (float) DB::table('item_warehouse')
+                ->where('items_id', $this->itemB->id)
+                ->where('warehouses_id', $this->warehouseA->id)
+                ->value('quantity')
+        );
+
+        // Index & Detail endpoints return posted adjustments
+        $this->getJson('/api/warehouse/adjustment-stock?sourceType=EXCEL_IMPORT')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.adjustmentNumber', $adjNumber2);
+
+        $this->getJson('/api/warehouse/adjustment-stock/' . $adjNumber1)
+            ->assertOk()
+            ->assertJsonPath('data.itemCount', 2);
+
+        // Stock Card for itemA in Warehouse B shows both IN movements (40 + 15 = 55)
+        $stockCard = $this->getJson(
+            '/api/warehouse/reports/stock-card?itemCode=' . $this->itemA->code
+            . '&warehouseId=' . $this->warehouseB->id
+            . '&startDate=' . now()->startOfYear()->toDateString()
+            . '&endDate=' . now()->toDateString()
+        )->assertOk();
+
+        $stockCard->assertJsonPath('data.summary.total_in', 55)
+            ->assertJsonPath('data.summary.ending_balance', 55);
+
+        $movements = collect($stockCard->json('data.movements'));
+        $this->assertTrue($movements->contains(fn ($m) => $m['doc_number'] === $adjNumber1 && (float) $m['qty_in'] === 40.0));
+        $this->assertTrue($movements->contains(fn ($m) => $m['doc_number'] === $adjNumber2 && (float) $m['qty_in'] === 15.0));
+    }
 }

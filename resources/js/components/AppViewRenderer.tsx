@@ -90,6 +90,10 @@ import {
   TransferStockReturnIndex,
   TransferStockReturnForm,
   TransferStockReturnDetail,
+  AdjustmentStockIndex,
+  AdjustmentStockForm,
+  AdjustmentStockImport,
+  AdjustmentStockDetail,
   UserPermissionAdmin,
   AuditLogAdmin,
   ReferenceMasterIndex,
@@ -187,6 +191,9 @@ export interface AppViewRendererProps {
   handleNavigateTransferStockReturnCreate: () => void;
   handleNavigateTransferStockReturnEdit: (recordOrCode: TransferStockReturnRecord | string) => void;
   handleNavigateTransferStockReturnDetail: (code: string) => void;
+  handleNavigateAdjustmentStockCreate: () => void;
+  handleNavigateAdjustmentStockImport: () => void;
+  handleNavigateAdjustmentStockDetail: (code: string) => void;
   handleNavigateReferenceCreate: (page: ReferenceMasterPageKey) => void;
   handleNavigateMasterWarehouseCreate: () => void;
   handleNavigateWarehouseMasterEdit: (warehouse: WarehouseMasterRecord) => void;
@@ -419,6 +426,9 @@ export function AppViewRenderer({
   handleNavigateTransferStockReturnCreate,
   handleNavigateTransferStockReturnEdit,
   handleNavigateTransferStockReturnDetail,
+  handleNavigateAdjustmentStockCreate,
+  handleNavigateAdjustmentStockImport,
+  handleNavigateAdjustmentStockDetail,
   handleNavigateReferenceCreate,
   handleNavigateMasterWarehouseCreate,
   handleNavigateWarehouseMasterEdit,
@@ -1078,6 +1088,15 @@ export function AppViewRenderer({
         />
       )}
 
+      {/* Warehouse Adjustment: Adjustment Stock */}
+      {viewState.type === "list" && viewState.page === "wh-adj-stock" && (
+        <AdjustmentStockIndex
+          onAddNew={handleNavigateAdjustmentStockCreate}
+          onImportExcel={handleNavigateAdjustmentStockImport}
+          onOpenDetail={handleNavigateAdjustmentStockDetail}
+        />
+      )}
+
       {/* Read-Backed Reference Master Listings */}
       {viewState.type === "list" &&
         viewState.page in REFERENCE_MASTER_CONFIGS && (() => {
@@ -1135,6 +1154,7 @@ export function AppViewRenderer({
         viewState.page !== "stock-notification-master" &&
         viewState.page !== "wh-type-of-request" &&
         viewState.page !== "wh-destination-location" &&
+        viewState.page !== "wh-adj-stock" &&
         viewState.page !== "country" &&
         viewState.page !== "account" &&
         viewState.page !== "job-number" &&
@@ -1876,6 +1896,40 @@ export function AppViewRenderer({
               "transfer-stock-return",
               "/warehouse/incoming/transfer-stock-return"
             )
+          }
+        />
+      )}
+
+      {/* Dedicated Warehouse Adjustment: Adjustment Stock Manual Form */}
+      {viewState.type === "wh-adj-stock-create" && (
+        <AdjustmentStockForm
+          onBack={() =>
+            handleNavigateList("wh-adj-stock", "/warehouse/adjustment/adjustment-stock")
+          }
+          onSaved={() =>
+            handleNavigateList("wh-adj-stock", "/warehouse/adjustment/adjustment-stock")
+          }
+        />
+      )}
+
+      {/* Dedicated Warehouse Adjustment: Adjustment Stock Excel Inject / Import */}
+      {viewState.type === "wh-adj-stock-import" && (
+        <AdjustmentStockImport
+          onBack={() =>
+            handleNavigateList("wh-adj-stock", "/warehouse/adjustment/adjustment-stock")
+          }
+          onImported={() =>
+            handleNavigateList("wh-adj-stock", "/warehouse/adjustment/adjustment-stock")
+          }
+        />
+      )}
+
+      {/* Dedicated Warehouse Adjustment: Adjustment Stock Detail */}
+      {viewState.type === "wh-adj-stock-detail" && (
+        <AdjustmentStockDetail
+          code={viewState.code}
+          onBack={() =>
+            handleNavigateList("wh-adj-stock", "/warehouse/adjustment/adjustment-stock")
           }
         />
       )}

@@ -1028,6 +1028,34 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
     }
   }, []);
 
+  const handleNavigateAdjustmentStockCreate = useCallback(() => {
+    const nextState: ViewState = { type: "wh-adj-stock-create" };
+    setViewState(nextState);
+    if (typeof window !== "undefined") {
+      window.scrollTo(0, 0);
+      window.history.pushState(nextState, "", "/warehouse/adjustment/adjustment-stock/create");
+    }
+  }, []);
+
+  const handleNavigateAdjustmentStockImport = useCallback(() => {
+    const nextState: ViewState = { type: "wh-adj-stock-import" };
+    setViewState(nextState);
+    if (typeof window !== "undefined") {
+      window.scrollTo(0, 0);
+      window.history.pushState(nextState, "", "/warehouse/adjustment/adjustment-stock/import");
+    }
+  }, []);
+
+  const handleNavigateAdjustmentStockDetail = useCallback((code: string) => {
+    const slug = docToSlug(code);
+    const nextState: ViewState = { type: "wh-adj-stock-detail", code: slug };
+    setViewState(nextState);
+    if (typeof window !== "undefined") {
+      window.scrollTo(0, 0);
+      window.history.pushState(nextState, "", `/warehouse/adjustment/adjustment-stock/detail/${slug}`);
+    }
+  }, []);
+
   const handleSaveRequestMaterial = useCallback(async (newRecord: RequestMaterialRecord) => {
     try {
       await saveRequestMaterialApi(newRecord);
@@ -2612,6 +2640,9 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
             handleNavigateTransferStockReturnCreate={handleNavigateTransferStockReturnCreate}
             handleNavigateTransferStockReturnEdit={handleNavigateTransferStockReturnEdit}
             handleNavigateTransferStockReturnDetail={handleNavigateTransferStockReturnDetail}
+            handleNavigateAdjustmentStockCreate={handleNavigateAdjustmentStockCreate}
+            handleNavigateAdjustmentStockImport={handleNavigateAdjustmentStockImport}
+            handleNavigateAdjustmentStockDetail={handleNavigateAdjustmentStockDetail}
             handleNavigateMasterWarehouseCreate={handleNavigateMasterWarehouseCreate}
             handleNavigateWarehouseMasterEdit={handleNavigateWarehouseMasterEdit}
             handleDeleteWarehouseMaster={handleDeleteWarehouseMaster}

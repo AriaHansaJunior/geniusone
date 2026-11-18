@@ -142,14 +142,11 @@ export const navigationConfig: NavSection[] = [
       {
         id: "warehouse-adjustment",
         label: "Adjustment",
-        isPlaceholder: true,
-        disabled: true,
-        badge: "Pending",
         items: [
-          { id: "wh-adj-prod", label: "Adjustment Production", path: "/warehouse/adjustment/adjustment-production", isPlaceholder: true },
-          { id: "wh-adj-bc", label: "Adjustment Stock BC", path: "/warehouse/adjustment/adjustment-stock-bc", isPlaceholder: true },
-          { id: "wh-opname-material", label: "Opname Material", path: "/warehouse/adjustment/opname-material", isPlaceholder: true },
-          { id: "wh-adj-stock", label: "Adjustment Stock", path: "/warehouse/adjustment/adjustment-stock", isPlaceholder: true },
+          { id: "wh-adj-prod", label: "Adjustment Production", path: "/warehouse/adjustment/adjustment-production", isPlaceholder: true, badge: "Pending" },
+          { id: "wh-adj-bc", label: "Adjustment Stock BC", path: "/warehouse/adjustment/adjustment-stock-bc", isPlaceholder: true, badge: "Pending" },
+          { id: "wh-opname-material", label: "Opname Material", path: "/warehouse/adjustment/opname-material", isPlaceholder: true, badge: "Pending" },
+          { id: "wh-adj-stock", label: "Adjustment Stock", path: "/warehouse/adjustment/adjustment-stock" },
         ],
       },
       {

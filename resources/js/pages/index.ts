@@ -104,5 +104,9 @@ export { TransferStockReturnIndex } from "./Warehouse/TransferStockReturn/Transf
 export { TransferStockReturnDetail } from "./Warehouse/TransferStockReturn/TransferStockReturnDetail";
 export { TransferStockReturnDetailModal } from "./Warehouse/TransferStockReturn/TransferStockReturnDetailModal";
 export { TransferStockReturnForm } from "./Warehouse/TransferStockReturn/TransferStockReturnForm";
+export { AdjustmentStockIndex } from "./Warehouse/Adjustment/AdjustmentStock/AdjustmentStockIndex";
+export { AdjustmentStockForm } from "./Warehouse/Adjustment/AdjustmentStock/AdjustmentStockForm";
+export { AdjustmentStockImport } from "./Warehouse/Adjustment/AdjustmentStock/AdjustmentStockImport";
+export { AdjustmentStockDetail } from "./Warehouse/Adjustment/AdjustmentStock/AdjustmentStockDetail";
 export { UserPermissionAdmin } from "./Admin/UserPermissionAdmin";
 export { AuditLogAdmin } from "./Admin/AuditLogAdmin";

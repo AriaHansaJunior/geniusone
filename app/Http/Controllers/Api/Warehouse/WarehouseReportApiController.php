@@ -182,6 +182,10 @@ class WarehouseReportApiController extends Controller
         // 5. Fetch additional recorded inventory_movements not directly covered by BPB / RM / TSR documents
         $extraMovementsQuery = DB::table('inventory_movements as im')
             ->leftJoin('warehouses as w', 'im.warehouses_id', '=', 'w.id')
+            ->leftJoin('stock_adjustments as sa', function ($join) {
+                $join->on('im.reference_number', '=', 'sa.adjustment_number')
+                    ->where('im.reference_type', '=', 'STOCK_ADJUSTMENT');
+            })
             ->where('im.items_id', $item->id)
             ->whereNotIn('im.reference_type', [
                 'BPB',
@@ -207,7 +211,7 @@ class WarehouseReportApiController extends Controller
             'im.reference_type',
             'im.reference_number',
             'im.notes',
-            'im.created_at as movement_date',
+            DB::raw('COALESCE(sa.adjustment_date, im.created_at) as movement_date'),
             'w.name as warehouse_name',
             'w.id as warehouse_id',
         ])->get();

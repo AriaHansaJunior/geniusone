@@ -753,6 +753,34 @@ export function resolveViewStateFromPath(pathname: string, defaultPage: PageKey 
     cleanPath === "/stock-notification-master" ||
     cleanPath === "/stock-notification"
   ) return { type: "list", page: "stock-notification-master" };
+  if (
+    cleanPath === "/warehouse/adjustment/adjustment-stock/create" ||
+    cleanPath === "/warehouse/adjustment/adjustment-stock/add"
+  ) {
+    return { type: "wh-adj-stock-create" };
+  }
+  if (cleanPath === "/warehouse/adjustment/adjustment-stock/import") {
+    return { type: "wh-adj-stock-import" };
+  }
+  const adjStockDetailMatch = cleanPath.match(
+    /^\/warehouse\/adjustment\/adjustment-stock\/details?\/(.+)$/
+  );
+  if (adjStockDetailMatch) {
+    return { type: "wh-adj-stock-detail", code: decodeURIComponent(adjStockDetailMatch[1]) };
+  }
+  if (cleanPath === "/warehouse/adjustment/adjustment-stock") {
+    return { type: "list", page: "wh-adj-stock" };
+  }
+  if (cleanPath === "/warehouse/adjustment/adjustment-production") {
+    return { type: "list", page: "wh-adj-prod" };
+  }
+  if (cleanPath === "/warehouse/adjustment/adjustment-stock-bc") {
+    return { type: "list", page: "wh-adj-bc" };
+  }
+  if (cleanPath === "/warehouse/adjustment/opname-material") {
+    return { type: "list", page: "wh-opname-material" };
+  }
+
   if (cleanPath === "/warehouse/report/stock-card") return { type: "list", page: "wh-rep-stock-card" };
   if (cleanPath === "/warehouse/report/stock-item") return { type: "list", page: "wh-rep-stock-item" };
   if (cleanPath === "/warehouse/request/request-material") return { type: "list", page: "wh-req-material" };
@@ -837,6 +865,9 @@ export function resolveInitialViewState(initialPage = "dashboard", initialCode =
   if (initialPage === "stock-notification-create") return { type: "stock-notification-create" };
   if (initialPage === "wh-type-of-request-create") return { type: "wh-type-of-request-create" };
   if (initialPage === "wh-destination-location-create") return { type: "wh-destination-location-create" };
+  if (initialPage === "wh-adj-stock-create") return { type: "wh-adj-stock-create" };
+  if (initialPage === "wh-adj-stock-import") return { type: "wh-adj-stock-import" };
+  if (initialPage === "wh-adj-stock-detail") return { type: "wh-adj-stock-detail", code: initialCode || "" };
   if (initialPage in pageMeta) return { type: "list", page: initialPage as PageKey };
   return { type: "dashboard" };
 }
@@ -887,6 +918,13 @@ export function resolveActiveSidebarPage(viewState: ViewState): PageKey | null {
   if (viewState.type === "stock-notification-create" || viewState.type === "stock-notification-edit") return "stock-notification-master";
   if (viewState.type === "wh-type-of-request-create" || viewState.type === "wh-type-of-request-edit") return "wh-type-of-request";
   if (viewState.type === "wh-destination-location-create" || viewState.type === "wh-destination-location-edit") return "wh-destination-location";
+  if (
+    viewState.type === "wh-adj-stock-create" ||
+    viewState.type === "wh-adj-stock-import" ||
+    viewState.type === "wh-adj-stock-detail"
+  ) {
+    return "wh-adj-stock";
+  }
   return null;
 }
 

@@ -224,6 +224,9 @@ export type ViewState =
   | { type: "wh-type-of-request-edit"; record?: any }
   | { type: "wh-destination-location-create" }
   | { type: "wh-destination-location-edit"; record?: any }
+  | { type: "wh-adj-stock-create" }
+  | { type: "wh-adj-stock-import" }
+  | { type: "wh-adj-stock-detail"; code: string }
   | { type: "edit-profile" }
   | { type: "settings"; tab: SettingsTab }
   | { type: "login" }

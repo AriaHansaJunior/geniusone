@@ -12,6 +12,7 @@ import type { RequestMaterialRecord, ApprovalStatus } from "../pages/Warehouse/R
 import type { StockNotificationRecord } from "../pages/Dashboard/StockNotificationMaster/stock-notification-types";
 import type { ExchangeRateRecord, RateType, RateAvailability } from "../pages/Dashboard/dashboard-rate-types";
 import type { TransferStockReturnRecord, TransferStockReturnStatus } from "../pages/Warehouse/TransferStockReturn/transfer-stock-return-types";
+import type { StockAdjustmentRecord } from "../pages/Warehouse/Adjustment/AdjustmentStock/adjustment-stock-types";
 import type { WarehouseStockRecord } from "../pages/Warehouse/Report/StockItem/stock-item-types";
 import type { StockCardRecord } from "../pages/Warehouse/Report/StockCard/stock-card-types";
 import type { PoReportRecord } from "../pages/Procurement/Reports/po-report-types";
@@ -625,6 +626,86 @@ export async function rejectTransferStockReturnApi(id: string | number, reason: 
 
 export async function deleteTransferStockReturnApi(id: string | number): Promise<boolean> {
   return apiDelete(`/api/warehouse/transfer-stock-returns/${toNumericOrCleanId(id)}`);
+}
+
+// =========================================================================
+// 6B. WAREHOUSE ADJUSTMENT STOCK (MANUAL & EXCEL INJECT)
+// =========================================================================
+
+function mapStockAdjustmentRecord(r: any): StockAdjustmentRecord {
+  return {
+    id: String(r.adjustmentNumber || r.id || ""),
+    rawId: Number(r.rawId ?? r.id ?? 0),
+    adjustmentNumber: r.adjustmentNumber || r.adjustment_number || "",
+    warehouseId: r.warehouseId ?? r.warehouses_id ?? null,
+    warehouseName: r.warehouseName || "—",
+    adjustmentDate: r.adjustmentDate || r.adjustment_date || "",
+    sourceType: (r.sourceType === "EXCEL_IMPORT" ? "EXCEL_IMPORT" : "MANUAL"),
+    referenceCode: r.referenceCode || r.reference_code || "",
+    note: r.note || "",
+    status: r.status || "Posted",
+    itemCount: Number(r.itemCount ?? (Array.isArray(r.items) ? r.items.length : 0)),
+    totalIn: Number(r.totalIn ?? 0),
+    totalOut: Number(r.totalOut ?? 0),
+    createdBy: r.createdBy || "—",
+    createdAt: formatDisplayDate(r.createdAt),
+    items: Array.isArray(r.items)
+      ? r.items.map((it: any, idx: number) => ({
+          id: String(it.id || idx + 1),
+          no: Number(it.no || idx + 1),
+          items_id: Number(it.items_id),
+          itemCode: it.itemCode || "",
+          itemName: it.itemName || "",
+          unit: it.unit || "PCE",
+          warehouseId: Number(it.warehouseId || it.warehouses_id || 0),
+          warehouseName: it.warehouseName || "—",
+          adjustmentType: (["IN", "OUT", "SET"].includes(String(it.adjustmentType).toUpperCase())
+            ? String(it.adjustmentType).toUpperCase()
+            : "IN") as "IN" | "OUT" | "SET",
+          quantity: Number(it.quantity ?? 0),
+          balanceBefore: Number(it.balanceBefore ?? 0),
+          balanceAfter: Number(it.balanceAfter ?? 0),
+          coordinateName: it.coordinateName || "",
+          lotNumber: it.lotNumber || "",
+          remark: it.remark || "",
+        }))
+      : [],
+  };
+}
+
+export async function fetchStockAdjustmentsApi(params?: Record<string, any>): Promise<StockAdjustmentRecord[]> {
+  const res = await apiGet<{ data: any[] }>("/api/warehouse/adjustment-stock", params);
+  if (!Array.isArray(res?.data)) return [];
+  return res.data.map(mapStockAdjustmentRecord);
+}
+
+export async function fetchStockAdjustmentDetailApi(code: string): Promise<StockAdjustmentRecord | null> {
+  const clean = encodeURIComponent(code.trim());
+  const res = await apiGet<{ data: any }>(`/api/warehouse/adjustment-stock/${clean}`);
+  return res?.data ? mapStockAdjustmentRecord(res.data) : null;
+}
+
+export async function createStockAdjustmentApi(payload: Record<string, any>): Promise<StockAdjustmentRecord | null> {
+  const res = await apiPost<{ data: any }>("/api/warehouse/adjustment-stock", payload);
+  clearApiCache();
+  return res?.data ? mapStockAdjustmentRecord(res.data) : null;
+}
+
+export async function importStockAdjustmentsApi(payload: Record<string, any>): Promise<{
+  status: string;
+  message: string;
+  data: StockAdjustmentRecord | null;
+}> {
+  const res = await apiPost<{ status: string; message: string; data: any }>(
+    "/api/warehouse/adjustment-stock/import",
+    payload
+  );
+  clearApiCache();
+  return {
+    status: res?.status || "success",
+    message: res?.message || "Imported stock adjustment rows successfully.",
+    data: res?.data ? mapStockAdjustmentRecord(res.data) : null,
+  };
 }
 
 // =========================================================================

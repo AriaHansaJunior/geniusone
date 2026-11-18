@@ -156,4 +156,29 @@ class DocumentNumberGenerator
 
         return $candidate;
     }
+
+    /**
+     * Generate Stock Adjustment Number:
+     * Format: {SEQ}/ADJ-IMLI/{ROMAN_MONTH}/{YEAR}
+     */
+    public static function generateStockAdjustmentNumber(?Carbon $date = null): string
+    {
+        $date = $date ?? Carbon::now();
+        $year = $date->year;
+        $month = $date->month;
+        $roman = self::getRomanMonth($month);
+
+        $count = DB::table('stock_adjustments')
+            ->whereYear('created_at', $year)
+            ->whereMonth('created_at', $month)
+            ->count();
+
+        do {
+            $count++;
+            $sequence = str_pad($count, 4, '0', STR_PAD_LEFT);
+            $candidate = "{$sequence}/ADJ-IMLI/{$roman}/{$year}";
+        } while (DB::table('stock_adjustments')->where('adjustment_number', $candidate)->exists());
+
+        return $candidate;
+    }
 }

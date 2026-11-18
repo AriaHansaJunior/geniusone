@@ -46,6 +46,7 @@ use App\Http\Controllers\Api\Warehouse\Master\TypeOfRequestApiController;
 use App\Http\Controllers\Api\Warehouse\Master\WarehouseMasterApiController;
 use App\Http\Controllers\Api\Warehouse\MaterialRequestApiController;
 use App\Http\Controllers\Api\Warehouse\ReceiveNoteApiController;
+use App\Http\Controllers\Api\Warehouse\StockAdjustmentApiController;
 use App\Http\Controllers\Api\Warehouse\TransferStockReturnApiController;
 use App\Http\Controllers\Api\Warehouse\WarehouseApiController;
 use App\Http\Controllers\Api\Warehouse\WarehouseReportApiController;
@@ -187,6 +188,15 @@ Route::prefix('warehouse')->group(function () {
         Route::apiResource('transfer-stock-returns', TransferStockReturnApiController::class)->except(['index', 'show']);
     });
     Route::get('transfer-stock-returns/{code}', [TransferStockReturnApiController::class, 'show'])->where('code', '.*');
+
+    // Adjustment Stock (Manual & Excel Inject)
+    Route::get('adjustment-stock', [StockAdjustmentApiController::class, 'index']);
+    Route::get('adjustment-stock/template', [StockAdjustmentApiController::class, 'template']);
+    Route::middleware(['auth', 'active'])->group(function () {
+        Route::post('adjustment-stock', [StockAdjustmentApiController::class, 'store']);
+        Route::post('adjustment-stock/import', [StockAdjustmentApiController::class, 'import']);
+    });
+    Route::get('adjustment-stock/{code}', [StockAdjustmentApiController::class, 'show'])->where('code', '.*');
 
     // Warehouse Master, Coordinates, Types of Request, Destination Locations
     Route::prefix('master')->group(function () {
