@@ -70,6 +70,16 @@ class WarehouseStock extends Model
             ['items_id' => $this->items_id, 'warehouses_id' => $this->warehouses_id],
             ['quantity' => $quantity, 'updated_at' => now(), 'created_at' => $this->created_at ?? now()]
         );
+
+        if (Schema::hasTable('items')) {
+            $totalStock = (float) DB::table('item_warehouse')
+                ->where('items_id', $this->items_id)
+                ->sum('quantity');
+
+            DB::table('items')
+                ->where('id', $this->items_id)
+                ->update(['stock' => $totalStock, 'updated_at' => now()]);
+        }
     }
 }
 

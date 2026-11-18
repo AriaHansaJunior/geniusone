@@ -52,15 +52,18 @@ export function StockCardIndex() {
             code: it.code || "",
             name: it.name || "",
             unit: it.unit?.name || it.unit_of_measurement?.name || "PCE",
-            defaultWarehouse: it.facility?.name || "-",
+            defaultWarehouse: "All Warehouse",
           }));
           const validItems = mappedItems.filter((m) => Boolean(m.code));
           setItemsList(validItems);
           if (validItems.length > 0) {
-            setSelectedItemCode((prev) => prev || validItems[0].code);
+            const firstItem = validItems[0];
+            setSelectedItemCode((prev) => prev || firstItem.code);
+            setSelectedUnit((prev) => (prev === "All Units" ? firstItem.unit || "PCE" : prev));
             setAppliedFilters((prev) => ({
               ...prev,
-              itemCode: prev.itemCode || validItems[0].code,
+              itemCode: prev.itemCode || firstItem.code,
+              unit: prev.unit === "All Units" ? firstItem.unit || "PCE" : prev.unit,
             }));
           }
         }
@@ -120,6 +123,7 @@ export function StockCardIndex() {
   };
 
   const [liveRecords, setLiveRecords] = useState<StockCardRecord[]>(initialStockCardRecords);
+  const [backendEndingBalance, setBackendEndingBalance] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [refreshTick, setRefreshTick] = useState(0);
 
@@ -130,6 +134,9 @@ export function StockCardIndex() {
   }, []);
 
   React.useEffect(() => {
+    if (!appliedFilters.itemCode) {
+      return;
+    }
     let isMounted = true;
     setIsLoading(true);
 
@@ -148,6 +155,8 @@ export function StockCardIndex() {
         if (!isMounted) return;
         if (json?.status === "success" && Array.isArray(json.data?.movements)) {
           const item = json.data.item;
+          const summaryEnd = json.data?.summary?.ending_balance ?? item?.current_stock;
+          setBackendEndingBalance(summaryEnd !== undefined && summaryEnd !== null ? Number(summaryEnd) : null);
           const mapped: StockCardRecord[] = json.data.movements.map((m: any, idx: number) => ({
             id: String(m.id || idx + 1),
             no: idx + 1,
@@ -180,64 +189,64 @@ export function StockCardIndex() {
     return () => {
       isMounted = false;
     };
-}, [appliedFilters, refreshTick]);
+  }, [appliedFilters, refreshTick]);
 
-// Filter records based on applied filters
-const filteredRecords = useMemo(() => {
-  return liveRecords.filter((rec) => {
-    // Item code match
-    if (appliedFilters.itemCode && rec.itemCode && rec.itemCode !== appliedFilters.itemCode) {
-      return false;
-    }
-    // Date range match
-    const recDate = (rec.date || "").replace(/\s+/g, "-");
-    const sDate = (appliedFilters.startDate || "").replace(/\s+/g, "-");
-    const eDate = (appliedFilters.endDate || "").replace(/\s+/g, "-");
-
-    if (sDate && recDate && recDate < sDate) {
-      return false;
-    }
-    if (eDate && recDate && recDate > eDate) {
-      return false;
-    }
-    // Warehouse match
-    if (appliedFilters.warehouse && appliedFilters.warehouse !== "All Warehouse") {
-      const normFilter = appliedFilters.warehouse.toLowerCase().trim();
-      const normRec = (rec.warehouse || "").toLowerCase().trim();
-      if (normFilter !== normRec && !normRec.includes(normFilter) && !normFilter.includes(normRec)) {
+  // Filter records based on applied filters
+  const filteredRecords = useMemo(() => {
+    return liveRecords.filter((rec) => {
+      // Item code match
+      if (appliedFilters.itemCode && rec.itemCode && rec.itemCode !== appliedFilters.itemCode) {
         return false;
       }
-    }
-    // Unit match
-    if (
-      appliedFilters.unit !== "All Units" &&
-      rec.unitCode &&
-      rec.unitCode.toLowerCase() !== appliedFilters.unit.toLowerCase()
-    ) {
-      return false;
-    }
-    return true;
-  });
-}, [appliedFilters, liveRecords]);
+      // Date range match (compare YYYY-MM-DD prefix while preserving HH:mm:ss display)
+      const recDateYmd = (rec.date || "").trim().slice(0, 10);
+      const sDate = (appliedFilters.startDate || "").trim().slice(0, 10);
+      const eDate = (appliedFilters.endDate || "").trim().slice(0, 10);
 
-// Totals for In, Out, and running Stock
-const totals = useMemo(() => {
-  let totalIn = 0;
-  let totalOut = 0;
-  filteredRecords.forEach((r) => {
-    if (typeof r.in === "number") totalIn += r.in;
-    if (typeof r.out === "number") totalOut += r.out;
-  });
-  const lastBalance =
-    filteredRecords.length > 0
-      ? filteredRecords[filteredRecords.length - 1].stock
-      : 0;
+        if (sDate && recDateYmd && recDateYmd < sDate) {
+          return false;
+        }
+          if (eDate && recDateYmd && recDateYmd > eDate) {
+            return false;
+          }
+          // Warehouse match
+          if (appliedFilters.warehouse && appliedFilters.warehouse !== "All Warehouse") {
+            const normFilter = appliedFilters.warehouse.toLowerCase().trim();
+            const normRec = (rec.warehouse || "").toLowerCase().trim();
+            if (normFilter !== normRec && !normRec.includes(normFilter) && !normFilter.includes(normRec)) {
+              return false;
+            }
+          }
+          // Unit match
+          if (
+            appliedFilters.unit !== "All Units" &&
+            rec.unitCode &&
+            rec.unitCode.toLowerCase() !== appliedFilters.unit.toLowerCase()
+          ) {
+            return false;
+          }
+          return true;
+        });
+  }, [appliedFilters, liveRecords]);
+
+  // Totals for In, Out, and running Stock
+  const totals = useMemo(() => {
+    let totalIn = 0;
+    let totalOut = 0;
+    filteredRecords.forEach((r) => {
+      if (typeof r.in === "number") totalIn += r.in;
+      if (typeof r.out === "number") totalOut += r.out;
+    });
+    const lastBalance =
+      filteredRecords.length > 0
+        ? filteredRecords[filteredRecords.length - 1].stock
+      : (backendEndingBalance ?? 0);
   return {
     totalIn,
     totalOut,
     lastBalance,
   };
-}, [filteredRecords]);
+}, [filteredRecords, backendEndingBalance]);
 
 // Pagination calculation
 const totalRecords = filteredRecords.length;
@@ -355,10 +364,10 @@ return (
                 ? "#fffbeb"
                 : "#f0fdf4",
           border: `1px solid ${notification.type === "error"
-              ? "#fecaca"
-              : notification.type === "warning"
-                ? "#fde68a"
-                : "#bbf7d0"
+            ? "#fecaca"
+            : notification.type === "warning"
+              ? "#fde68a"
+              : "#bbf7d0"
             }`,
           borderRadius: "var(--radius-sm)",
           color:
@@ -438,8 +447,7 @@ return (
               setSelectedItemCode(newCode);
               const found = itemsList.find((i) => i.code === newCode);
               if (found) {
-                setSelectedUnit(found.unit);
-                setSelectedWarehouse(found.defaultWarehouse);
+                setSelectedUnit(found.unit || "PCE");
               }
             }}
             options={itemsList.map((item) => ({
@@ -449,14 +457,19 @@ return (
           />
         </div>
 
-        {/* Unit Selector */}
+        {/* Unit Selector (Fixed by Selected Item) */}
         <div className="master-form-group">
           <label className="master-form-label">Unit</label>
           <CustomSelect
             searchable
+            disabled={Boolean(selectedItemCode)}
             value={selectedUnit}
             onChange={(val) => setSelectedUnit(val)}
-            options={stockCardUnitsList}
+            options={
+              selectedUnit && !stockCardUnitsList.includes(selectedUnit)
+                ? [selectedUnit, ...stockCardUnitsList]
+                : stockCardUnitsList
+            }
           />
         </div>
 
@@ -576,7 +589,7 @@ return (
             <thead>
               <tr>
                 <th style={{ width: "50px", textAlign: "center" }}>No.</th>
-                <th style={{ minWidth: "95px" }}>Date</th>
+                <th style={{ minWidth: "155px" }}>Date & Time</th>
                 <th style={{ minWidth: "160px" }}>Ref</th>
                 <th style={{ minWidth: "200px" }}>Description</th>
                 <th style={{ minWidth: "80px", textAlign: "right" }}>In</th>
@@ -605,7 +618,9 @@ return (
                       <td style={{ textAlign: "center", color: "var(--muted)", fontWeight: 600 }}>
                         {rowNumber}
                       </td>
-                      <td>{item.date ? item.date.replace(/-/g, " ") : "—"}</td>
+                      <td style={{ whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums" }}>
+                        {item.date || "—"}
+                      </td>
                       <td style={{ fontWeight: 600, fontFamily: "ui-monospace, monospace", fontSize: "12px" }}>
                         {item.ref}
                       </td>

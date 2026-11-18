@@ -647,6 +647,16 @@ class MaterialRequestApiController extends Controller
 
     private function getItemStockTotals(): array
     {
+        $pivotTotals = DB::table('item_warehouse')
+            ->select('items_id', DB::raw('SUM(quantity) as total_qty'))
+            ->groupBy('items_id')
+            ->pluck('total_qty', 'items_id')
+            ->toArray();
+
+        if (! empty($pivotTotals)) {
+            return $pivotTotals;
+        }
+
         return DB::table('warehouse_stocks')
             ->select('items_id', DB::raw('SUM(quantity) as total_qty'))
             ->groupBy('items_id')

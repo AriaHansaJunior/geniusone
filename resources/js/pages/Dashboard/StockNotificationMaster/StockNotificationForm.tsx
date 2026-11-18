@@ -43,10 +43,14 @@ export function StockNotificationForm({
       .finally(() => {
         if (isMounted) setLoadingLookups(false);
       });
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+      const isCatalogMatched = Boolean(
+        itemCode && predefinedItems.some((p) => p.code.toLowerCase() === itemCode.toLowerCase())
+      );
+
+      return () => {
+        isMounted = false;
+      };
+    }, []);
 
   const [itemCode, setItemCode] = useState(initialRecord?.itemCode || "");
   const [itemName, setItemName] = useState(initialRecord?.itemName || "");
@@ -130,6 +134,10 @@ export function StockNotificationForm({
     onSave(record, isEdit);
   };
 
+  const isCatalogMatched = Boolean(
+    itemCode && predefinedItems.some((p) => p.code.toLowerCase() === itemCode.toLowerCase())
+  );
+
   return (
     <div className="master-form-page">
       {/* Header */}
@@ -182,6 +190,8 @@ export function StockNotificationForm({
               placeholder="e.g. 80.100.001.001"
               value={itemCode}
               onChange={(e) => setItemCode(e.target.value)}
+              readOnly={isCatalogMatched}
+              disabled={isCatalogMatched}
               required
             />
           </div>
@@ -196,6 +206,8 @@ export function StockNotificationForm({
               placeholder="Enter item name"
               value={itemName}
               onChange={(e) => setItemName(e.target.value)}
+              readOnly={isCatalogMatched}
+              disabled={isCatalogMatched}
               required
             />
           </div>
@@ -211,6 +223,8 @@ export function StockNotificationForm({
               placeholder="e.g. IT EQUIPMENT"
               value={category}
               onChange={(e) => setCategory(e.target.value)}
+              readOnly={isCatalogMatched}
+              disabled={isCatalogMatched}
             />
           </div>
           <div className="master-form-group">
@@ -221,6 +235,8 @@ export function StockNotificationForm({
               placeholder="e.g. PCE"
               value={unit}
               onChange={(e) => setUnit(e.target.value)}
+              readOnly={isCatalogMatched}
+              disabled={isCatalogMatched}
             />
           </div>
           <div className="master-form-group">
@@ -230,6 +246,8 @@ export function StockNotificationForm({
               className="master-form-input"
               placeholder="0"
               value={currentStock}
+              readOnly={isCatalogMatched}
+              disabled={isCatalogMatched}
               onChange={(e) => {
                 const val = e.target.value;
                 setCurrentStock(val === "" ? "" : Number(val));
@@ -312,6 +330,10 @@ export function StockNotificationForm({
               : numericStock <= numericBuffer);
           const deficit = Math.max(0, numericBuffer - numericStock);
           const unitLabel = unit || "units";
+
+          const isCatalogMatched = Boolean(
+            itemCode && predefinedItems.some((p) => p.code.toLowerCase() === itemCode.toLowerCase())
+          );
 
           return (
             <div

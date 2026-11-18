@@ -12,20 +12,63 @@ use Illuminate\Support\Facades\DB;
 
 class WarehouseReportApiController extends Controller
 {
-    private function normalizeDateYmd(?string $raw): string
-    {
-        $trimmed = trim((string) $raw);
-        if ($trimmed === '') {
-            return date('Y-m-d');
+    private function resolveMovementTimestamp(
+        array &$timeQueues,
+        string $refType,
+        string $refNumber,
+        ?int $warehouseId,
+        ?string $docDate,
+        ?string $docUpdatedAt = null,
+        bool $preferDocDateOnly = false
+    ): string {
+        $keyWithWh = strtoupper($refType) . '|' . $refNumber . '|' . ($warehouseId ?? '');
+        $keyNoWh = strtoupper($refType) . '|' . $refNumber . '|';
+
+        $imTime = null;
+        if (! empty($timeQueues[$keyWithWh])) {
+            $imTime = array_shift($timeQueues[$keyWithWh]);
+        } elseif (! empty($timeQueues[$keyNoWh])) {
+            $imTime = array_shift($timeQueues[$keyNoWh]);
         }
-        if (preg_match('/^\d{4}-\d{2}-\d{2}/', $trimmed, $m)) {
-            return $m[0];
+
+        if ($imTime) {
+            try {
+                $parsedIm = Carbon::parse($imTime);
+                if ($preferDocDateOnly && $docDate && preg_match('/^\d{4}-\d{2}-\d{2}/', trim($docDate), $m)) {
+                    return $m[0] . ' ' . $parsedIm->format('H:i:s');
+                }
+                return $parsedIm->format('Y-m-d H:i:s');
+            } catch (\Throwable) {
+                // fallback below
+            }
         }
-        try {
-            return Carbon::parse($trimmed)->format('Y-m-d');
-        } catch (\Throwable) {
-            return substr($trimmed, 0, 10) ?: date('Y-m-d');
+
+        $trimmedDoc = trim((string) $docDate);
+        if ($trimmedDoc !== '') {
+            try {
+                $parsedDoc = Carbon::parse($trimmedDoc);
+                if ($parsedDoc->format('H:i:s') !== '00:00:00') {
+                    return $parsedDoc->format('Y-m-d H:i:s');
+                }
+                if ($docUpdatedAt) {
+                    $parsedUpd = Carbon::parse($docUpdatedAt);
+                    return $parsedDoc->format('Y-m-d') . ' ' . $parsedUpd->format('H:i:s');
+                }
+                return $parsedDoc->format('Y-m-d H:i:s');
+            } catch (\Throwable) {
+                // ignore
+            }
         }
+
+        if ($docUpdatedAt) {
+            try {
+                return Carbon::parse($docUpdatedAt)->format('Y-m-d H:i:s');
+            } catch (\Throwable) {
+                // ignore
+            }
+        }
+
+        return now()->format('Y-m-d H:i:s');
     }
 
     /**
@@ -103,6 +146,7 @@ class WarehouseReportApiController extends Controller
             'bpb.bpb_number',
             'bpb.source_type',
             DB::raw('COALESCE(bpb.receive_date, rn.arrival_date, bpb.created_at) as movement_date'),
+            'bpb.updated_at as doc_updated_at',
             'rn.rn_number',
             'po.po_number',
             'porn.quantity',
@@ -141,6 +185,7 @@ class WarehouseReportApiController extends Controller
             'rm.request_number',
             'rm.job_number as rm_job_number',
             DB::raw('COALESCE(rm.request_date, rm.created_at) as movement_date'),
+            'rm.updated_at as doc_updated_at',
             'rmi.request as qty_out',
             'w.name as warehouse_name',
             'w.id as warehouse_id',
@@ -171,6 +216,7 @@ class WarehouseReportApiController extends Controller
             'r.return_number',
             'r.job_number as return_job_number',
             DB::raw('COALESCE(r.return_date, r.created_at) as movement_date'),
+            'r.updated_at as doc_updated_at',
             'ri.quantity as qty_in',
             'ri.remark as item_remark',
             'r.note as return_note',
@@ -218,23 +264,42 @@ class WarehouseReportApiController extends Controller
 
         $itemUnit = $item->unit?->code ?? $item->unit?->nama ?? $item->unit?->name ?? '—';
 
+        $movementTimeQueues = [];
+        foreach (DB::table('inventory_movements')
+            ->where('items_id', $item->id)
+            ->orderBy('created_at')
+            ->orderBy('id')
+            ->get(['reference_type', 'reference_number', 'warehouses_id', 'created_at']) as $imRow) {
+            $k = strtoupper((string) $imRow->reference_type) . '|' . (string) $imRow->reference_number . '|' . (string) ($imRow->warehouses_id ?? '');
+            $movementTimeQueues[$k][] = (string) $imRow->created_at;
+        }
+
         // 6. Standardize all movements
         $rawMovements = [];
 
         foreach ($allInbounds as $in) {
             $qtyIn = max(0.0, (float) $in->quantity - (float) $in->rafaksi);
-            $rawDate = $this->normalizeDateYmd((string) $in->movement_date);
+            $docNumber = $in->bpb_number ?: ($in->rn_number ?: '-');
+            $exactTs = $this->resolveMovementTimestamp(
+                $movementTimeQueues,
+                'BPB',
+                (string) $docNumber,
+                $in->warehouse_id ? (int) $in->warehouse_id : null,
+                (string) $in->movement_date,
+                $in->doc_updated_at ?? null
+            );
             $whName = $in->warehouse_name ?: '—';
 
             $jobNum = $in->job_code ?: ($in->job_name ?: '—');
 
             $rawMovements[] = [
                 'type' => 'IN',
-                'date' => $rawDate,
-                'full_date' => (string) $in->movement_date,
+                'date' => $exactTs,
+                'date_ymd' => substr($exactTs, 0, 10),
+                'full_date' => $exactTs,
                 'sort_id' => (int) $in->bpb_id,
                 'doc_type' => 'Receive Material (BPB)',
-                'doc_number' => $in->bpb_number ?: ($in->rn_number ?: '-'),
+                'doc_number' => $docNumber,
                 'reference_no' => $in->bpb_number ?: ($in->rn_number ?: ($in->po_number ?: '-')),
                 'history_doc_in' => $in->rn_number ?: ($in->po_number ? 'Direct PO: '.$in->po_number : '-'),
                 'doc_out_ref' => '—',
@@ -251,17 +316,24 @@ class WarehouseReportApiController extends Controller
 
         foreach ($allOutbounds as $out) {
             $qtyOut = (float) $out->qty_out;
-            $rawDate = $this->normalizeDateYmd((string) $out->movement_date);
             $whName = $out->warehouse_name ?: '—';
-
             $docRef = $out->request_number ?: '—';
+            $exactTs = $this->resolveMovementTimestamp(
+                $movementTimeQueues,
+                'RM',
+                (string) $docRef,
+                $out->warehouse_id ? (int) $out->warehouse_id : null,
+                (string) $out->movement_date,
+                $out->doc_updated_at ?? null
+            );
             $desc = $out->rm_note ?: ($out->destination_name ?: ($out->department_name ?: '—'));
             $jobNum = $out->rm_job_number ?: ($out->department_name ?: '—');
 
             $rawMovements[] = [
                 'type' => 'OUT',
-                'date' => $rawDate,
-                'full_date' => (string) $out->movement_date,
+                'date' => $exactTs,
+                'date_ymd' => substr($exactTs, 0, 10),
+                'full_date' => $exactTs,
                 'sort_id' => (int) $out->rm_id,
                 'doc_type' => 'Request Material (RM)',
                 'doc_number' => $docRef,
@@ -281,13 +353,21 @@ class WarehouseReportApiController extends Controller
 
         foreach ($allReturns as $ret) {
             $qtyIn = (float) $ret->qty_in;
-            $rawDate = $this->normalizeDateYmd((string) $ret->movement_date);
+            $exactTs = $this->resolveMovementTimestamp(
+                $movementTimeQueues,
+                'TRANSFER_STOCK_RETURN',
+                (string) $ret->return_number,
+                $ret->warehouse_id ? (int) $ret->warehouse_id : null,
+                (string) $ret->movement_date,
+                $ret->doc_updated_at ?? null
+            );
             $whName = $ret->warehouse_name ?: '—';
 
             $rawMovements[] = [
                 'type' => 'IN',
-                'date' => $rawDate,
-                'full_date' => (string) $ret->movement_date,
+                'date' => $exactTs,
+                'date_ymd' => substr($exactTs, 0, 10),
+                'full_date' => $exactTs,
                 'sort_id' => (int) $ret->return_id,
                 'doc_type' => 'Transfer Stock Return',
                 'doc_number' => $ret->return_number,
@@ -311,13 +391,23 @@ class WarehouseReportApiController extends Controller
             if ($qty <= 0) {
                 continue;
             }
-            $rawDate = $this->normalizeDateYmd((string) $extra->movement_date);
             $refNumber = $extra->reference_number ?: ($extra->reference_type ?: 'ADJUSTMENT');
+            $refTypeStr = strtoupper((string) ($extra->reference_type ?: 'STOCK_ADJUSTMENT'));
+            $exactTs = $this->resolveMovementTimestamp(
+                $movementTimeQueues,
+                $refTypeStr,
+                (string) $refNumber,
+                $extra->warehouse_id ? (int) $extra->warehouse_id : null,
+                (string) $extra->movement_date,
+                null,
+                $refTypeStr === 'STOCK_ADJUSTMENT'
+            );
 
             $rawMovements[] = [
                 'type' => $isOut ? 'OUT' : 'IN',
-                'date' => $rawDate,
-                'full_date' => (string) $extra->movement_date,
+                'date' => $exactTs,
+                'date_ymd' => substr($exactTs, 0, 10),
+                'full_date' => $exactTs,
                 'sort_id' => (int) $extra->id,
                 'doc_type' => (string) ($extra->reference_type ?: 'Stock Adjustment'),
                 'doc_number' => $refNumber,
@@ -335,15 +425,11 @@ class WarehouseReportApiController extends Controller
             ];
         }
 
-        // 7. Sort chronologically
+        // 7. Sort chronologically by full timestamp (YYYY-MM-DD HH:mm:ss)
         usort($rawMovements, function ($a, $b) {
             $cmp = strcmp($a['date'], $b['date']);
             if ($cmp !== 0) {
                 return $cmp;
-            }
-            $cmpDate = strcmp($a['full_date'], $b['full_date']);
-            if ($cmpDate !== 0) {
-                return $cmpDate;
             }
             if ($a['type'] !== $b['type']) {
                 return $a['type'] === 'IN' ? -1 : 1;
@@ -382,10 +468,10 @@ class WarehouseReportApiController extends Controller
         foreach ($rawMovements as $m) {
             $allInSum += $m['qty_in'];
             $allOutSum += $m['qty_out'];
-            if ($m['date'] < $startDate) {
+            if ($m['date_ymd'] < $startDate) {
                 $priorInSum += $m['qty_in'];
                 $priorOutSum += $m['qty_out'];
-            } elseif ($m['date'] <= $endDate) {
+            } elseif ($m['date_ymd'] <= $endDate) {
                 $periodInSum += $m['qty_in'];
                 $periodOutSum += $m['qty_out'];
             }
@@ -398,10 +484,10 @@ class WarehouseReportApiController extends Controller
         $movements = [];
 
         foreach ($rawMovements as $m) {
-            if ($m['date'] < $startDate) {
+            if ($m['date_ymd'] < $startDate) {
                 continue;
             }
-            if ($m['date'] > $endDate) {
+            if ($m['date_ymd'] > $endDate) {
                 break;
             }
 

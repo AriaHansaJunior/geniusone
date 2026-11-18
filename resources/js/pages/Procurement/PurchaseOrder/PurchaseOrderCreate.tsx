@@ -1536,6 +1536,7 @@ return (
             <CustomSelect
               id="poFacilityStatus"
               value={statusFacility}
+              disabled={items.length > 0}
               onChange={(val) => handleFacilityStatusChange(val as "Facility" | "Non Facility")}
               options={[
                 { value: "Facility", label: "Fasilitas" },

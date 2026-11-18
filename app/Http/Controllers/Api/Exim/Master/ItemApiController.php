@@ -5,12 +5,19 @@ namespace App\Http\Controllers\Api\Exim\Master;
 use App\Http\Controllers\Controller;
 use App\Models\Master\Material\Item;
 use App\Models\Master\Material\ItemType;
+use App\Models\Warehouse\Facility\Warehouse;
 use App\Services\AuditLogger;
+use App\Services\Inventory\InventoryService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class ItemApiController extends Controller
 {
+    public function __construct(
+        protected InventoryService $inventoryService
+    ) {}
     /**
      * Authorize user action on master item based on role and permissions (BE-03).
      */
@@ -121,6 +128,21 @@ class ItemApiController extends Controller
         $perPage = (int) $request->query('per_page', 10);
         $records = $query->latest('id')->paginate($perPage);
 
+        $itemIds = collect($records->items())->pluck('id')->all();
+        $warehouseTotals = (! empty($itemIds) && Schema::hasTable('item_warehouse'))
+            ? DB::table('item_warehouse')
+                ->whereIn('items_id', $itemIds)
+                ->groupBy('items_id')
+                ->selectRaw('items_id, SUM(quantity) as total_qty')
+                ->pluck('total_qty', 'items_id')
+            : collect();
+
+        foreach ($records->items() as $item) {
+            if ($warehouseTotals->has($item->id)) {
+                $item->stock = (float) $warehouseTotals->get($item->id);
+            }
+        }
+
         return response()->json([
             'data' => $records->items(),
             'meta' => [
@@ -139,7 +161,9 @@ class ItemApiController extends Controller
     {
         $this->authorizeItemAction($request, 'create');
 
-        $validated = $request->validate($this->itemValidationRules());
+        $validated = $request->validate(array_merge($this->itemValidationRules(), [
+            'warehouses_id' => 'nullable|integer|exists:warehouses,id',
+        ]));
 
         if (empty($validated['code'])) {
             $nextId = (Item::max('id') ?? 0) + 1;
@@ -158,7 +182,26 @@ class ItemApiController extends Controller
         $validated['created_by'] = $actorId;
         $validated['updated_by'] = $actorId;
 
+        $initialStock = (float) ($validated['stock'] ?? 0);
+        $warehouseId = $validated['warehouses_id'] ?? Warehouse::query()->orderBy('id')->value('id');
+        unset($validated['warehouses_id']);
+        $validated['stock'] = 0;
+
         $item = Item::create($validated);
+
+        if ($initialStock > 0 && $warehouseId) {
+            $this->inventoryService->recordStockMovement(
+                item: $item,
+                warehouseId: (int) $warehouseId,
+                movementType: 'IN',
+                quantity: $initialStock,
+                referenceType: 'INITIAL_STOCK',
+                referenceNumber: $item->code,
+                userId: $actorId,
+                notes: "Initial stock created with Master Item {$item->code}"
+            );
+            $item->refresh();
+        }
 
         return response()->json([
             'message' => 'Item created successfully',
@@ -169,6 +212,13 @@ class ItemApiController extends Controller
     public function show(int $id): JsonResponse
     {
         $item = Item::with($this->itemRelations())->findOrFail($id);
+
+        if (Schema::hasTable('item_warehouse')) {
+            $hasPivot = DB::table('item_warehouse')->where('items_id', $item->id)->exists();
+            if ($hasPivot) {
+                $item->stock = (float) DB::table('item_warehouse')->where('items_id', $item->id)->sum('quantity');
+            }
+        }
 
         return response()->json(['data' => $item]);
     }
@@ -183,8 +233,15 @@ class ItemApiController extends Controller
 
         $actorId = $this->requireActorId($request);
         $validated['updated_by'] = $actorId;
+        // Prevent raw form edits from desynchronizing stock from warehouse_stocks / item_warehouse
+        unset($validated['stock']);
 
         $item->update($validated);
+
+        if (Schema::hasTable('item_warehouse') && DB::table('item_warehouse')->where('items_id', $item->id)->exists()) {
+            $item->stock = (float) DB::table('item_warehouse')->where('items_id', $item->id)->sum('quantity');
+            $item->save();
+        }
 
         return response()->json([
             'message' => 'Item updated successfully',

@@ -467,4 +467,67 @@ class WarehouseStockFlowTest extends TestCase
         $this->assertTrue($movements->contains(fn ($m) => $m['doc_number'] === $adjNumber1 && (float) $m['qty_in'] === 40.0));
         $this->assertTrue($movements->contains(fn ($m) => $m['doc_number'] === $adjNumber2 && (float) $m['qty_in'] === 15.0));
     }
+
+    public function test_stock_card_preserves_exact_movement_time_and_master_item_syncs_stock(): void
+    {
+        // Create Master Item with initial stock -> integrates into warehouse_stocks, item_warehouse, inventory_movements & stock card
+        $classificationId = Classification::query()->value('id');
+        $facilityId = Facility::query()->value('id');
+        $uomId = UnitOfMeasurement::query()->value('id');
+        $itemTypeId = ItemType::query()->value('id');
+
+        $createItemRes = $this->postJson('/api/exim/master/items', [
+            'name' => 'Integrated Sync Item',
+            'code' => 'INT-SYNC-001',
+            'classifications_id' => $classificationId,
+            'facilities_id' => $facilityId,
+            'units_of_measurements_id' => $uomId,
+            'item_types_id' => $itemTypeId,
+            'warehouses_id' => $this->warehouseA->id,
+            'stock' => 25,
+            'status' => 1,
+        ])->assertCreated();
+
+        $newItemId = $createItemRes->json('data.id');
+        $this->assertSame(
+            25.0,
+            (float) DB::table('item_warehouse')
+                ->where('items_id', $newItemId)
+                ->where('warehouses_id', $this->warehouseA->id)
+                ->value('quantity')
+        );
+
+        // Record OUT then IN with distinct hours on the same date to verify chronological time ordering in Stock Card
+        $adjOut = $this->postJson('/api/warehouse/adjustment-stock', [
+            'warehouses_id' => $this->warehouseA->id,
+            'adjustment_date' => now()->toDateString(),
+            'items' => [
+                ['items_id' => $newItemId, 'adjustment_type' => 'OUT', 'quantity' => 5],
+            ],
+        ])->assertCreated()->json('data.adjustmentNumber');
+
+        // Backdate the initial and adjustment inventory_movements timestamps intentionally to test chronological sorting by HH:mm:ss
+        DB::table('inventory_movements')
+            ->where('items_id', $newItemId)
+            ->where('reference_type', 'INITIAL_STOCK')
+            ->update(['created_at' => now()->format('Y-m-d') . ' 08:15:10']);
+
+        DB::table('inventory_movements')
+            ->where('items_id', $newItemId)
+            ->where('reference_number', $adjOut)
+            ->update(['created_at' => now()->format('Y-m-d') . ' 14:42:33']);
+
+        $stockCard = $this->getJson(
+            '/api/warehouse/reports/stock-card?itemCode=INT-SYNC-001'
+            . '&warehouseId=' . $this->warehouseA->id
+            . '&startDate=' . now()->startOfYear()->toDateString()
+            . '&endDate=' . now()->toDateString()
+        )->assertOk();
+
+        $stockCard->assertJsonPath('data.summary.ending_balance', 20)
+            ->assertJsonPath('data.movements.0.date', now()->format('Y-m-d') . ' 08:15:10')
+            ->assertJsonPath('data.movements.1.date', now()->format('Y-m-d') . ' 14:42:33')
+            ->assertJsonPath('data.movements.0.balance', 25)
+            ->assertJsonPath('data.movements.1.balance', 20);
+    }
 }

@@ -478,18 +478,21 @@ export function ReceiveNoteForm({ onBack, onSave, existingReceiveNotes = [] }: R
                 searchable
                 required
                 invalid={Boolean(formErrors.typeOfDocument)}
+                disabled={items.some((it) => it.poNumber && it.poNumber !== "—") && !statusDn}
                 value={typeOfDocument}
                 onChange={(val) => {
-                  setTypeOfDocument(val);
-                  if (formErrors.typeOfDocument) {
-                    setFormErrors((prev) => ({ ...prev, typeOfDocument: "" }));
-                  }
+                  handleDocTypeChange(val);
                 }}
                 placeholder="Select Data ..."
                 options={[
                   { value: "", label: "Select Data ..." },
                   ...docTypesList
                     .filter((d) => d !== "All Type of Documents")
+                    .filter((dt) => {
+                      const hasPo = items.some((it) => it.poNumber && it.poNumber !== "—");
+                      if (!hasPo) return true;
+                      return statusDn ? dt !== "Non-Fasilitas" : dt === "Non-Fasilitas";
+                    })
                     .map((dt) => ({ value: dt, label: dt })),
                 ]}
               />
@@ -684,6 +687,7 @@ export function ReceiveNoteForm({ onBack, onSave, existingReceiveNotes = [] }: R
               <input
                 type="checkbox"
                 checked={statusDn}
+                disabled={items.some((it) => it.poNumber && it.poNumber !== "—")}
                 onChange={(e) => setStatusDn(e.target.checked)}
               />
               <span>Status DN: Facility User</span>

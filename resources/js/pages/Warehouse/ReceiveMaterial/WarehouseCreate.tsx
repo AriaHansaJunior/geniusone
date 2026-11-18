@@ -1014,6 +1014,7 @@ export function WarehouseCreate({
               <CustomSelect
                 id="bpbSourceType"
                 required
+                disabled={items.length > 0 || Boolean(rnNumber || poNumberHeader)}
                 value={sourceType}
                 onChange={(val) => {
                   const next = (val === "PO" ? "PO" : "RN") as BpbSourceType;

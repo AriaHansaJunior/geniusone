@@ -36,7 +36,7 @@ class StockNotificationApiController extends Controller
             }
         }
 
-        $stockByItem = DB::table('warehouse_stocks')
+        $stockByItem = DB::table('item_warehouse')
             ->select('items_id', DB::raw('SUM(quantity) as total_qty'))
             ->groupBy('items_id')
             ->pluck('total_qty', 'items_id');

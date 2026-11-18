@@ -162,6 +162,31 @@ class InventoryService
                 }
 
                 $stocks = $stockQuery->get();
+
+                // Bootstrap warehouse_stocks from item_warehouse pivot if only pivot existed beforehand
+                if ($stocks->isEmpty() && Schema::hasTable('item_warehouse')) {
+                    $pivotQty = DB::table('item_warehouse')
+                        ->where('items_id', $item->id)
+                        ->where('warehouses_id', $warehouseId)
+                        ->value('quantity');
+                    if ($pivotQty !== null && (float) $pivotQty > 0) {
+                        DB::table('warehouse_stocks')->insert([
+                            'items_id' => $item->id,
+                            'warehouses_id' => $warehouseId,
+                            'warehouse_coordinates_id' => $coordinateId,
+                            'coordinate_name' => $coordinateName,
+                            'quantity' => (float) $pivotQty,
+                            'available_quantity' => (float) $pivotQty,
+                            'allocated_quantity' => 0,
+                            'location_type' => 'Warehouse',
+                            'last_movement_date' => now(),
+                            'created_at' => now(),
+                            'updated_at' => now(),
+                        ]);
+                        $stocks = $stockQuery->get();
+                    }
+                }
+
                 $warehouseBalanceBefore = (float) $stocks->sum('quantity');
 
                 if ($type === 'OUT') {
@@ -250,19 +275,51 @@ class InventoryService
                 $warehouseBalanceAfter = $warehouseBalanceBefore + $delta;
             }
 
-            $updatedItem = $this->adjustStock(
-                itemId: $item->id,
-                quantityDelta: $delta,
-                reason: $reason,
-                userId: $userId,
-                extraMetadata: [
-                    'warehouse_id' => $warehouseId,
-                    'coordinate_id' => $coordinateId,
-                    'movement_type' => $type,
-                    'reference_type' => $referenceType,
-                    'reference_number' => $referenceNumber,
-                ]
-            );
+            if ($warehouseId && Schema::hasTable('item_warehouse')) {
+                $lockedItem = Item::lockForUpdate()->findOrFail($item->id);
+                $previousGlobalStock = (float) $lockedItem->stock;
+                $syncedGlobalStock = (float) DB::table('item_warehouse')
+                    ->where('items_id', $item->id)
+                    ->sum('quantity');
+
+                $lockedItem->update(array_filter([
+                    'stock' => $syncedGlobalStock,
+                    'updated_by' => $userId ?? Auth::id(),
+                ], static fn ($value) => $value !== null));
+
+                AuditLogger::logAction(
+                    action: 'STOCK_ADJUSTMENT',
+                    modelName: 'Item',
+                    modelId: $lockedItem->id,
+                    before: ['stock' => $previousGlobalStock, 'warehouse_balance' => $warehouseBalanceBefore],
+                    after: ['stock' => $syncedGlobalStock, 'warehouse_balance' => $warehouseBalanceAfter, 'delta' => $delta, 'reason' => $reason],
+                    userId: $userId ?? Auth::id(),
+                    notes: "Stock synced for item {$lockedItem->code}: {$reason}",
+                    extra: [
+                        'warehouse_id' => $warehouseId,
+                        'coordinate_id' => $coordinateId,
+                        'movement_type' => $type,
+                        'reference_type' => $referenceType,
+                        'reference_number' => $referenceNumber,
+                    ]
+                );
+
+                $updatedItem = $lockedItem->fresh();
+            } else {
+                $updatedItem = $this->adjustStock(
+                    itemId: $item->id,
+                    quantityDelta: $delta,
+                    reason: $reason,
+                    userId: $userId,
+                    extraMetadata: [
+                        'warehouse_id' => $warehouseId,
+                        'coordinate_id' => $coordinateId,
+                        'movement_type' => $type,
+                        'reference_type' => $referenceType,
+                        'reference_number' => $referenceNumber,
+                    ]
+                );
+            }
 
             if (Schema::hasTable('inventory_movements')) {
                 DB::table('inventory_movements')->insert([
