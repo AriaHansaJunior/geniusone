@@ -13,6 +13,9 @@ use App\Models\Master\Organization\ReportingType;
 use App\Models\System\Auth\User;
 use App\Models\Warehouse\Facility\Warehouse;
 use App\Models\Warehouse\Facility\WarehouseType;
+use App\Models\Warehouse\RequestMaterial\RequestMaterial;
+use App\Models\Warehouse\RequestMaterial\RequestMaterialItem;
+use App\Models\Warehouse\RequestMaterial\TypeOfRequest;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
@@ -341,7 +344,25 @@ class RouteConsistencyTest extends TestCase
             'status' => 1,
         ]);
 
+        $tsrDept = Department::firstOrCreate(['name' => 'TSR Cutting Dept'], ['status' => 1]);
+        $tsrReqType = TypeOfRequest::firstOrCreate(['name' => 'Production Issue'], ['status' => 1]);
+        $sourceRm = RequestMaterial::create([
+            'request_number' => 'REQ-WH-TSR-TEST-01',
+            'departments_id' => $tsrDept->id,
+            'warehouses_id' => $wh->id,
+            'type_of_request_id' => $tsrReqType->id,
+            'creator' => $user->id,
+            'request_date' => '2026-11-15',
+            'status' => 'Approved',
+        ]);
+        RequestMaterialItem::create([
+            'request_material_id' => $sourceRm->id,
+            'items_id' => $item->id,
+            'request' => 15,
+        ]);
+
         $tsrStoreRes = $this->actingAs($user, 'web')->postJson('/api/warehouse/transfer-stock-returns', [
+            'request_material_id' => $sourceRm->id,
             'warehouses_id' => $wh->id,
             'production_code' => 'PRD-TEST-01',
             'job_number' => 'JOB-TSR-01',

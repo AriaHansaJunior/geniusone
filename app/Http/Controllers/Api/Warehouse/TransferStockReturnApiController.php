@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\Warehouse;
 
 use App\Http\Controllers\Controller;
 use App\Models\Master\Material\Item;
+use App\Models\System\Auth\User;
 use App\Models\System\Governance\ApprovalHistory;
 use App\Models\Warehouse\Inventory\TransferStockReturn;
 use App\Models\Warehouse\Inventory\TransferStockReturnItem;
@@ -15,6 +16,7 @@ use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class TransferStockReturnApiController extends Controller
 {
@@ -79,7 +81,7 @@ class TransferStockReturnApiController extends Controller
 
         $validated = $request->validate([
             'warehouses_id' => 'required|integer|exists:warehouses,id',
-            'request_material_id' => 'nullable|integer|exists:request_material,id',
+            'request_material_id' => 'required|integer|exists:request_material,id',
             'production_code' => 'nullable|string|max:100',
             'job_number_id' => 'nullable|integer|exists:job_number,id',
             'job_number' => 'nullable|string|max:100',
@@ -95,24 +97,23 @@ class TransferStockReturnApiController extends Controller
             'items.*.remark' => 'nullable|string|max:255',
         ]);
 
-        $record = DB::transaction(function () use ($validated, $actorId) {
+        $rm = RequestMaterial::with(['items.item', 'destinationLocation'])->findOrFail($validated['request_material_id']);
+        $this->validateReturnAgainstRequestMaterial($rm, $validated['items']);
+
+        $record = DB::transaction(function () use ($validated, $actorId, $rm) {
             $returnDate = ! empty($validated['return_date'])
                 ? Carbon::parse($validated['return_date'])
                 : now();
 
             $returnNumber = DocumentNumberGenerator::generateTransferReturnNumber($returnDate);
 
-            $rm = ! empty($validated['request_material_id'])
-                ? RequestMaterial::find($validated['request_material_id'])
-                : null;
-
             $tsr = TransferStockReturn::create([
                 'return_number' => $returnNumber,
-                'production_code' => $validated['production_code'] ?? $rm?->request_number,
-                'request_material_id' => $validated['request_material_id'] ?? null,
+                'production_code' => $validated['production_code'] ?? $rm->request_number,
+                'request_material_id' => $rm->id,
                 'warehouses_id' => (int) $validated['warehouses_id'],
-                'job_number_id' => $validated['job_number_id'] ?? $rm?->job_number_id,
-                'job_number' => $validated['job_number'] ?? $rm?->job_number,
+                'job_number_id' => $validated['job_number_id'] ?? $rm->job_number_id,
+                'job_number' => $validated['job_number'] ?? $rm->job_number,
                 'return_date' => $returnDate->format('Y-m-d'),
                 'note' => $validated['note'] ?? null,
                 'status' => $validated['status'] ?? 'Waiting for Approve 1',
@@ -127,7 +128,7 @@ class TransferStockReturnApiController extends Controller
                     'items_id' => (int) $itemData['items_id'],
                     'quantity' => (float) $itemData['quantity'],
                     'unit' => $itemData['unit'] ?? $item?->unit?->name ?? 'PCE',
-                    'source_location' => $itemData['source_location'] ?? ($rm?->destinationLocation?->name ?? 'Production Floor'),
+                    'source_location' => $itemData['source_location'] ?? ($rm->destinationLocation?->name ?? 'Production Floor'),
                     'destination_location' => $itemData['destination_location'] ?? $tsr->warehouse?->name,
                     'remark' => $itemData['remark'] ?? null,
                 ]);
@@ -199,10 +200,27 @@ class TransferStockReturnApiController extends Controller
             'items.*.remark' => 'nullable|string|max:255',
         ]);
 
-        DB::transaction(function () use ($tsr, $validated, $actorId) {
+        $targetRmId = array_key_exists('request_material_id', $validated)
+            ? $validated['request_material_id']
+            : $tsr->request_material_id;
+
+        if (! $targetRmId) {
+            throw ValidationException::withMessages([
+                'request_material_id' => ['Transfer Stock Return must reference an Approved Request Material.'],
+            ]);
+        }
+
+        $rm = RequestMaterial::with(['items.item'])->findOrFail($targetRmId);
+        $itemsToCheck = $validated['items'] ?? $tsr->items()->get()->map(fn ($line) => [
+            'items_id' => $line->items_id,
+            'quantity' => $line->quantity,
+        ])->all();
+        $this->validateReturnAgainstRequestMaterial($rm, $itemsToCheck, $tsr->id);
+
+        DB::transaction(function () use ($tsr, $validated, $actorId, $targetRmId) {
             $tsr->update([
                 'warehouses_id' => $validated['warehouses_id'] ?? $tsr->warehouses_id,
-                'request_material_id' => array_key_exists('request_material_id', $validated) ? $validated['request_material_id'] : $tsr->request_material_id,
+                'request_material_id' => $targetRmId,
                 'production_code' => array_key_exists('production_code', $validated) ? $validated['production_code'] : $tsr->production_code,
                 'job_number_id' => array_key_exists('job_number_id', $validated) ? $validated['job_number_id'] : $tsr->job_number_id,
                 'job_number' => array_key_exists('job_number', $validated) ? $validated['job_number'] : $tsr->job_number,
@@ -273,44 +291,111 @@ class TransferStockReturnApiController extends Controller
     public function approve(Request $request, int $id): JsonResponse
     {
         $actorId = $this->requireActorId($request);
+        $user = User::findOrFail($actorId);
         $tsr = TransferStockReturn::with(['items.item', 'warehouse'])->findOrFail($id);
 
-        $tier = (int) $request->input('tier', 0);
-        $note = $request->input('note');
-
-        if ($tsr->status === 'Approved') {
+        if (in_array($tsr->status, ['Approved', 'Approved 2'], true)) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Transfer Stock Return is already Approved.',
             ], 422);
         }
 
-        DB::transaction(function () use ($tsr, $actorId, $tier, $note) {
-            $previousStatus = $tsr->status;
+        if ($tsr->status === 'Rejected') {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Rejected Transfer Stock Return cannot be approved directly.',
+            ], 422);
+        }
 
-            if ($previousStatus === 'Waiting for Approve 1' && $tier === 1) {
-                $newStatus = 'Waiting for Approve 2';
-            } else {
-                $newStatus = 'Approved';
+        $previousStatus = $tsr->status ?: 'Waiting for Approve 1';
+        $requestedTier = (int) $request->input('tier', 0);
+        $note = $request->input('note');
+
+        if (in_array($previousStatus, ['Draft', 'Waiting for Approve 1'], true)) {
+            if ($requestedTier === 2) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Stage 2 approval can only be performed after Stage 1 approval is completed.',
+                ], 422);
+            }
+            $approvedTier = 1;
+            $newStatus = 'Waiting for Approve 2';
+        } elseif (in_array($previousStatus, ['Waiting for Approve 2', 'Approved 1'], true)) {
+            if ($requestedTier === 1) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Stage 1 approval has already been completed.',
+                ], 422);
+            }
+            $approvedTier = 2;
+            $newStatus = 'Approved';
+        } else {
+            return response()->json([
+                'status' => 'error',
+                'message' => "Transfer Stock Return status '{$previousStatus}' is not valid for approval.",
+            ], 422);
+        }
+
+        $permKey = "tsr.approve_{$approvedTier}";
+        $hasPerm = $user->isSuperAdmin()
+            || $user->isAdmin()
+            || $user->hasPermission($permKey)
+            || $user->hasPermission('tsr.approve')
+            || $user->hasPermission('tsr.*')
+            || ($approvedTier === 1 && $user->hasRole(['approver_tier1', 'approver', 'manager']))
+            || ($approvedTier === 2 && $user->hasRole(['approver_tier2', 'approver', 'director']));
+
+        if (! $hasPerm) {
+            return response()->json([
+                'status' => 'error',
+                'message' => "User does not have permission '{$permKey}' to approve Transfer Stock Return Stage {$approvedTier}.",
+            ], 403);
+        }
+
+        DB::transaction(function () use ($tsr, $actorId, $approvedTier, $newStatus, $note) {
+            $lockedTsr = TransferStockReturn::with(['items.item', 'warehouse'])->lockForUpdate()->findOrFail($tsr->id);
+            $lockedPrevious = $lockedTsr->status ?: 'Waiting for Approve 1';
+
+            if (! $lockedTsr->request_material_id) {
+                throw ValidationException::withMessages([
+                    'request_material_id' => ['Transfer Stock Return must reference an Approved Request Material before approval.'],
+                ]);
             }
 
-            $tsr->update([
+            $rm = RequestMaterial::with(['items.item'])->find($lockedTsr->request_material_id);
+            if (! $rm) {
+                throw ValidationException::withMessages([
+                    'request_material_id' => ['Referenced Request Material could not be found.'],
+                ]);
+            }
+
+            $this->validateReturnAgainstRequestMaterial(
+                $rm,
+                $lockedTsr->items->map(fn ($line) => [
+                    'items_id' => $line->items_id,
+                    'quantity' => $line->quantity,
+                ])->all(),
+                $lockedTsr->id
+            );
+
+            $lockedTsr->update([
                 'status' => $newStatus,
                 'updated_by' => $actorId,
             ]);
 
             if ($newStatus === 'Approved') {
-                foreach ($tsr->items as $line) {
+                foreach ($lockedTsr->items as $line) {
                     if ($line->item) {
                         $this->inventoryService->recordStockMovement(
                             item: $line->item,
-                            warehouseId: $tsr->warehouses_id,
+                            warehouseId: $lockedTsr->warehouses_id,
                             movementType: 'IN',
                             quantity: (float) $line->quantity,
                             referenceType: 'TRANSFER_STOCK_RETURN',
-                            referenceNumber: $tsr->return_number,
+                            referenceNumber: $lockedTsr->return_number,
                             userId: $actorId,
-                            notes: "Transfer Stock Return Receipt ({$tsr->return_number})"
+                            notes: "Transfer Stock Return Receipt ({$lockedTsr->return_number})"
                         );
                     }
                 }
@@ -318,16 +403,18 @@ class TransferStockReturnApiController extends Controller
 
             ApprovalHistory::create([
                 'document_type' => 'TRANSFER_STOCK_RETURN',
-                'document_id' => $tsr->id,
-                'document_number' => $tsr->return_number,
-                'action' => $newStatus === 'Approved' ? 'APPROVE_2' : 'APPROVE_1',
-                'tier' => $newStatus === 'Approved' ? 2 : 1,
+                'document_id' => $lockedTsr->id,
+                'document_number' => $lockedTsr->return_number,
+                'action' => $approvedTier === 2 ? 'APPROVE_2' : 'APPROVE_1',
+                'tier' => $approvedTier,
                 'user_id' => $actorId,
                 'note' => $note,
-                'from_status' => $previousStatus,
+                'from_status' => $lockedPrevious,
                 'to_status' => $newStatus,
             ]);
         });
+
+        $tsr->refresh();
 
         return response()->json([
             'status' => 'success',
@@ -382,7 +469,7 @@ class TransferStockReturnApiController extends Controller
     public function availableSourceItems(Request $request): JsonResponse
     {
         $rmList = RequestMaterial::with(['items.item.unit', 'warehouse', 'destinationLocation', 'department', 'jobNumberModel'])
-            ->where('status', 'Approved')
+            ->whereIn('status', ['Approved', 'Approved 2'])
             ->orderByDesc('id')
             ->get();
 
@@ -432,6 +519,75 @@ class TransferStockReturnApiController extends Controller
             'status' => 'success',
             'data' => $sources,
         ]);
+    }
+
+    /**
+     * Enforce that every returned item originates from an Approved Request Material
+     * and does not exceed its remaining returnable quantity.
+     */
+    private function validateReturnAgainstRequestMaterial(RequestMaterial $rm, array $submittedItems, ?int $excludeTsrId = null): void
+    {
+        if (! in_array($rm->status, ['Approved', 'Approved 2'], true)) {
+            throw ValidationException::withMessages([
+                'request_material_id' => ["Request Material '{$rm->request_number}' must be fully Approved before items can be returned."],
+            ]);
+        }
+
+        $issuedByItem = [];
+        foreach ($rm->items as $rmLine) {
+            $issuedQty = (float) ($rmLine->request ?? 0);
+            if ($issuedQty > 0) {
+                $issuedByItem[$rmLine->items_id] = ($issuedByItem[$rmLine->items_id] ?? 0.0) + $issuedQty;
+            }
+        }
+
+        if (empty($issuedByItem)) {
+            throw ValidationException::withMessages([
+                'request_material_id' => ["Request Material '{$rm->request_number}' has no issued items eligible for return."],
+            ]);
+        }
+
+        $alreadyReturnedByItem = DB::table('transfer_stock_return_items as tsri')
+            ->join('transfer_stock_returns as tsr', 'tsri.transfer_stock_return_id', '=', 'tsr.id')
+            ->where('tsr.request_material_id', $rm->id)
+            ->where('tsr.status', '!=', 'Rejected')
+            ->when($excludeTsrId !== null, fn ($q) => $q->where('tsr.id', '!=', $excludeTsrId))
+            ->groupBy('tsri.items_id')
+            ->select('tsri.items_id', DB::raw('SUM(tsri.quantity) as total_ret'))
+            ->pluck('total_ret', 'items_id');
+
+        $requestedByItem = [];
+        foreach ($submittedItems as $line) {
+            $itemId = (int) ($line['items_id'] ?? 0);
+            $qty = (float) ($line['quantity'] ?? 0);
+            $requestedByItem[$itemId] = ($requestedByItem[$itemId] ?? 0.0) + $qty;
+        }
+
+        foreach ($requestedByItem as $itemId => $returnQty) {
+            if (! array_key_exists($itemId, $issuedByItem)) {
+                $itemModel = Item::find($itemId);
+                $label = $itemModel ? trim("{$itemModel->code} - {$itemModel->name}") : "Item #{$itemId}";
+                throw ValidationException::withMessages([
+                    'items' => ["Item '{$label}' does not belong to Approved Request Material '{$rm->request_number}' and cannot be returned."],
+                ]);
+            }
+
+            $issuedQty = $issuedByItem[$itemId];
+            $returnedBefore = (float) ($alreadyReturnedByItem[$itemId] ?? 0.0);
+            $remaining = max(0.0, $issuedQty - $returnedBefore);
+
+            if ($returnQty - 1e-6 > $remaining) {
+                $itemModel = Item::find($itemId);
+                $label = $itemModel ? trim("{$itemModel->code} - {$itemModel->name}") : "Item #{$itemId}";
+                throw ValidationException::withMessages([
+                    'items' => [
+                        "Return quantity for '{$label}' (" . number_format($returnQty, 2, '.', '')
+                        . ") exceeds remaining returnable quantity (" . number_format($remaining, 2, '.', '')
+                        . ") from '{$rm->request_number}'.",
+                    ],
+                ]);
+            }
+        }
     }
 
     private function findByCodeOrId(string $code): TransferStockReturn

@@ -1,11 +1,23 @@
-import React, { useState } from "react";
+import React, { useCallback, useRef, useState } from "react";
 import { Icon } from "../../components/ui/Icon";
 import { Button } from "../../components/ui/Button";
+import { LoginParticleField } from "../../components/auth/LoginParticleField";
 import { useAuthPermission } from "../../context/AuthPermissionContext";
 
 interface LoginProps {
   onNavigateHome?: () => void;
   onLoginSuccess?: () => void;
+}
+
+const LOGIN_IMMERSIVE_STORAGE_KEY = "geniusone_login_immersive";
+
+function readInitialImmersivePreference(): boolean {
+  if (typeof window === "undefined") return true;
+  try {
+    return localStorage.getItem(LOGIN_IMMERSIVE_STORAGE_KEY) !== "false";
+  } catch {
+    return true;
+  }
 }
 
 export function Login({ onNavigateHome, onLoginSuccess }: LoginProps) {
@@ -15,6 +27,50 @@ export function Login({ onNavigateHome, onLoginSuccess }: LoginProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [immersiveEnabled, setImmersiveEnabled] = useState<boolean>(readInitialImmersivePreference);
+  const [isFocusedInside, setIsFocusedInside] = useState(false);
+  const [isMaterialized, setIsMaterialized] = useState<boolean>(() => !readInitialImmersivePreference());
+  const [wakeSignal, setWakeSignal] = useState(0);
+
+  const pageRef = useRef<HTMLDivElement | null>(null);
+  const headerRef = useRef<HTMLElement | null>(null);
+  const footerRef = useRef<HTMLElement | null>(null);
+  const cardRef = useRef<HTMLDivElement | null>(null);
+
+  const isCardLockedActive =
+    isFocusedInside ||
+    Boolean(username.trim()) ||
+    Boolean(password.trim()) ||
+    Boolean(statusMessage) ||
+    isLoading;
+
+  const handleClarityChange = useCallback((clarity: number) => {
+    if (pageRef.current) {
+      pageRef.current.style.setProperty("--login-clarity", clarity.toFixed(3));
+    }
+  }, []);
+
+  const handleToggleImmersive = useCallback(() => {
+    setImmersiveEnabled((prev) => {
+      const next = !prev;
+      if (typeof window !== "undefined") {
+        try {
+          localStorage.setItem(LOGIN_IMMERSIVE_STORAGE_KEY, String(next));
+        } catch {
+          // ignore storage write failures
+        }
+      }
+      if (!next) {
+        setIsMaterialized(true);
+        if (pageRef.current) {
+          pageRef.current.style.setProperty("--login-clarity", "1");
+        }
+      } else {
+        setIsMaterialized(false);
+      }
+      return next;
+    });
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -62,9 +118,51 @@ export function Login({ onNavigateHome, onLoginSuccess }: LoginProps) {
   };
 
   return (
-    <div className="login-page">
+    <div
+      ref={pageRef}
+      className={`login-page ${
+        !immersiveEnabled
+          ? "login-page--static"
+          : isMaterialized || isCardLockedActive
+            ? "login-page--particle-show login-page--materialized"
+            : "login-page--particle-show login-page--standby"
+      }`}
+      onPointerDown={() => {
+        if (immersiveEnabled) setWakeSignal((s) => s + 1);
+      }}
+    >
+      {immersiveEnabled && (
+        <LoginParticleField
+          containerRef={pageRef}
+          cardRef={cardRef}
+          headerRef={headerRef}
+          footerRef={footerRef}
+          lockedActive={isCardLockedActive}
+          wakeSignal={wakeSignal}
+          onClarityChange={handleClarityChange}
+          onMaterializedChange={setIsMaterialized}
+        />
+      )}
+
+      {/* Persistent Switch to Toggle Immersive Particle Mode */}
+      <button
+        type="button"
+        role="switch"
+        aria-checked={immersiveEnabled}
+        className={`login-immersive-switch ${
+          immersiveEnabled ? "login-immersive-switch--on" : "login-immersive-switch--off"
+        }`}
+        onClick={handleToggleImmersive}
+        title={immersiveEnabled ? "Turn off Immersive Particle Mode" : "Turn on Immersive Particle Mode"}
+      >
+        <span className="login-immersive-switch__label">Immersive Mode</span>
+        <span className="login-immersive-switch__track" aria-hidden="true">
+          <span className="login-immersive-switch__thumb" />
+        </span>
+      </button>
+
       {/* Top Header with GeniusOne Enterprise Brand */}
-      <header className="login-header">
+      <header ref={headerRef} className="login-header">
         <div className="login-header__brand">
           <div className="brand__mark">
             <span />
@@ -83,8 +181,21 @@ export function Login({ onNavigateHome, onLoginSuccess }: LoginProps) {
       </header>
 
       {/* Main Container */}
-      <main className="login-main">
-        <div className="login-card">
+      <main className="login-main login-main--particle-stage">
+        <div
+          ref={cardRef}
+          className={`login-card ${
+            !immersiveEnabled || isMaterialized || isCardLockedActive
+              ? "login-card--materialized"
+              : "login-card--standby"
+          }`}
+          onFocusCapture={() => setIsFocusedInside(true)}
+          onBlurCapture={(e) => {
+            if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
+              setIsFocusedInside(false);
+            }
+          }}
+        >
           <div className="login-card__accent" />
 
           <div className="login-card__content">
@@ -190,7 +301,7 @@ export function Login({ onNavigateHome, onLoginSuccess }: LoginProps) {
       </main>
 
       {/* Login Footer */}
-      <footer className="login-footer">
+      <footer ref={footerRef} className="login-footer">
         <div className="login-footer__left">
           <span>&copy; 2026 PT GENIUS ONE. All rights reserved.</span>
           <span>Enterprise Operations & Procurement Management</span>

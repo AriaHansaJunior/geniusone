@@ -179,9 +179,42 @@ class WarehouseReportApiController extends Controller
             'w.id as warehouse_id',
         ])->get();
 
+        // 5. Fetch additional recorded inventory_movements not directly covered by BPB / RM / TSR documents
+        $extraMovementsQuery = DB::table('inventory_movements as im')
+            ->leftJoin('warehouses as w', 'im.warehouses_id', '=', 'w.id')
+            ->where('im.items_id', $item->id)
+            ->whereNotIn('im.reference_type', [
+                'BPB',
+                'BPB_REVERSAL',
+                'RM',
+                'RM_REVERSAL',
+                'TRANSFER_STOCK_RETURN',
+                'TSR_REVERSAL',
+            ]);
+
+        if (! empty($warehouseId) && $warehouseId !== 'all' && $warehouseId !== 'All Warehouse') {
+            if (is_numeric($warehouseId)) {
+                $extraMovementsQuery->where('im.warehouses_id', (int) $warehouseId);
+            } else {
+                $extraMovementsQuery->where('w.name', $warehouseId);
+            }
+        }
+
+        $extraMovements = $extraMovementsQuery->select([
+            'im.id',
+            'im.movement_type',
+            'im.quantity',
+            'im.reference_type',
+            'im.reference_number',
+            'im.notes',
+            'im.created_at as movement_date',
+            'w.name as warehouse_name',
+            'w.id as warehouse_id',
+        ])->get();
+
         $itemUnit = $item->unit?->code ?? $item->unit?->nama ?? $item->unit?->name ?? '—';
 
-        // 5. Standardize all movements
+        // 6. Standardize all movements
         $rawMovements = [];
 
         foreach ($allInbounds as $in) {
@@ -268,7 +301,37 @@ class WarehouseReportApiController extends Controller
             ];
         }
 
-        // 6. Sort chronologically
+        foreach ($extraMovements as $extra) {
+            $isOut = strtoupper((string) $extra->movement_type) === 'OUT';
+            $qty = abs((float) $extra->quantity);
+            if ($qty <= 0) {
+                continue;
+            }
+            $rawDate = $this->normalizeDateYmd((string) $extra->movement_date);
+            $refNumber = $extra->reference_number ?: ($extra->reference_type ?: 'ADJUSTMENT');
+
+            $rawMovements[] = [
+                'type' => $isOut ? 'OUT' : 'IN',
+                'date' => $rawDate,
+                'full_date' => (string) $extra->movement_date,
+                'sort_id' => (int) $extra->id,
+                'doc_type' => (string) ($extra->reference_type ?: 'Stock Adjustment'),
+                'doc_number' => $refNumber,
+                'reference_no' => $refNumber,
+                'history_doc_in' => $isOut ? '—' : $refNumber,
+                'doc_out_ref' => $isOut ? $refNumber : '—',
+                'warehouse' => $extra->warehouse_name ?: '—',
+                'warehouse_id' => $extra->warehouse_id,
+                'unit' => $itemUnit,
+                'qty_in' => $isOut ? 0.0 : $qty,
+                'qty_out' => $isOut ? $qty : 0.0,
+                'job_number' => '—',
+                'no_lot' => '—',
+                'notes' => $extra->notes ?: '—',
+            ];
+        }
+
+        // 7. Sort chronologically
         usort($rawMovements, function ($a, $b) {
             $cmp = strcmp($a['date'], $b['date']);
             if ($cmp !== 0) {
@@ -285,14 +348,25 @@ class WarehouseReportApiController extends Controller
             return $a['sort_id'] <=> $b['sort_id'];
         });
 
-        // 7. Calculate opening balance and running ledger strictly from DB stock & movements
-        $currentStock = ! empty($warehouseId) && $warehouseId !== 'all' && $warehouseId !== 'All Warehouse'
-            ? (float) DB::table('warehouse_stocks as ws')
-                ->leftJoin('warehouses as w', 'ws.warehouses_id', '=', 'w.id')
-                ->where('ws.items_id', $item->id)
-                ->when(is_numeric($warehouseId), fn ($q) => $q->where('ws.warehouses_id', (int) $warehouseId), fn ($q) => $q->where('w.name', $warehouseId))
-                ->sum('ws.quantity')
-            : (float) $item->stock;
+        // 8. Calculate opening balance and running ledger strictly from DB stock & movements
+        if (! empty($warehouseId) && $warehouseId !== 'all' && $warehouseId !== 'All Warehouse') {
+            $whPivot = DB::table('item_warehouse as iw')
+                ->leftJoin('warehouses as w', 'iw.warehouses_id', '=', 'w.id')
+                ->where('iw.items_id', $item->id)
+                ->when(is_numeric($warehouseId), fn ($q) => $q->where('iw.warehouses_id', (int) $warehouseId), fn ($q) => $q->where('w.name', $warehouseId));
+            $currentStock = $whPivot->exists()
+                ? (float) $whPivot->sum('iw.quantity')
+                : (float) DB::table('warehouse_stocks as ws')
+                    ->leftJoin('warehouses as w', 'ws.warehouses_id', '=', 'w.id')
+                    ->where('ws.items_id', $item->id)
+                    ->when(is_numeric($warehouseId), fn ($q) => $q->where('ws.warehouses_id', (int) $warehouseId), fn ($q) => $q->where('w.name', $warehouseId))
+                    ->sum('ws.quantity');
+        } else {
+            $hasPivotRows = DB::table('item_warehouse')->where('items_id', $item->id)->exists();
+            $currentStock = $hasPivotRows
+                ? (float) DB::table('item_warehouse')->where('items_id', $item->id)->sum('quantity')
+                : (float) $item->stock;
+        }
 
         $allInSum = 0.0;
         $allOutSum = 0.0;

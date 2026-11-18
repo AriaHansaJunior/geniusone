@@ -18,6 +18,7 @@ use App\Models\Warehouse\GateReceiving\ReceiveNoteReturn;
 use App\Models\Warehouse\InboundStorage\ApprovalBpb;
 use App\Models\Warehouse\InboundStorage\BpbReceiveMaterial;
 use App\Models\Warehouse\InboundStorage\PoRnToBpb;
+use App\Models\Warehouse\Inventory\TransferStockReturn;
 use App\Models\Warehouse\RequestMaterial\ApprovalRm;
 use App\Models\Warehouse\RequestMaterial\RequestMaterial;
 use App\Services\AuditLogger;
@@ -64,6 +65,7 @@ class DocumentApprovalWorkflowService
                 'rn', 'receive-note', 'receive_note' => ReceiveNote::find((int) $id) ?? BpbReceiveMaterial::findOrFail((int) $id),
                 'bpb', 'bpb-receive-material', 'bpb_receive_material', 'warehouse' => BpbReceiveMaterial::find((int) $id) ?? ReceiveNote::findOrFail((int) $id),
                 'rm', 'request-material', 'request_material', 'request-materials', 'request_materials' => RequestMaterial::findOrFail((int) $id),
+                'tsr', 'transfer-stock-return', 'transfer_stock_return', 'transfer-stock-returns', 'transfer_stock_returns' => TransferStockReturn::findOrFail((int) $id),
                 'return', 'returns', 'receive-note-return', 'receive_note_return' => ReceiveNoteReturn::findOrFail((int) $id),
                 default => throw new InvalidArgumentException("Unknown document module '{$module}'. Only operational transactions support approval."),
             };
@@ -79,13 +81,14 @@ class DocumentApprovalWorkflowService
             'bpb', 'bpb-receive-material', 'bpb_receive_material', 'warehouse' => BpbReceiveMaterial::whereRaw("REPLACE(REPLACE(bpb_number, '/', ''), '-', '') = ?", [$clean])->first()
                 ?? ReceiveNote::whereRaw("REPLACE(REPLACE(rn_number, '/', ''), '-', '') = ?", [$clean])->firstOrFail(),
             'rm', 'request-material', 'request_material', 'request-materials', 'request_materials' => RequestMaterial::whereRaw("REPLACE(REPLACE(request_number, '/', ''), '-', '') = ?", [$clean])->firstOrFail(),
+            'tsr', 'transfer-stock-return', 'transfer_stock_return', 'transfer-stock-returns', 'transfer_stock_returns' => TransferStockReturn::whereRaw("REPLACE(REPLACE(return_number, '/', ''), '-', '') = ?", [$clean])->firstOrFail(),
             'return', 'returns', 'receive-note-return', 'receive_note_return' => ReceiveNoteReturn::whereRaw("REPLACE(REPLACE(rn_number, '/', ''), '-', '') = ?", [$clean])->firstOrFail(),
             default => throw new InvalidArgumentException("Unknown document module '{$module}'. Only operational transactions support approval."),
         };
     }
 
     /**
-     * Normalize module key to uppercase standard code ('PR', 'PO', 'RN', 'BPB', 'RM', 'RETURN').
+     * Normalize module key to uppercase standard code ('PR', 'PO', 'RN', 'BPB', 'RM', 'TSR', 'RETURN').
      */
     public function normalizeModuleKey(string $module): string
     {
@@ -97,6 +100,7 @@ class DocumentApprovalWorkflowService
             'rn', 'receive-note', 'receive_note' => 'RN',
             'bpb', 'bpb-receive-material', 'bpb_receive_material', 'warehouse' => 'BPB',
             'rm', 'request-material', 'request_material', 'request-materials', 'request_materials' => 'RM',
+            'tsr', 'transfer-stock-return', 'transfer_stock_return', 'transfer-stock-returns', 'transfer_stock_returns' => 'TSR',
             'return', 'returns', 'receive-note-return', 'receive_note_return' => 'RETURN',
             default => strtoupper($module),
         };
@@ -172,6 +176,11 @@ class DocumentApprovalWorkflowService
             // 4. BE-05: Deduct Inventory on RM Stage 2 Approval
             if ($normKey === 'RM' && $tier === 2) {
                 $this->deductRmStockFromInventory($doc, $user->id);
+            }
+
+            // 5. BE-05: Receive Returned Inventory on TSR Stage 2 Approval
+            if ($normKey === 'TSR' && $tier === 2 && $doc instanceof TransferStockReturn) {
+                $this->postTsrStockToInventory($doc, $user->id);
             }
 
             // 5. Auto-record approved Receive Note into EXIM Document History
@@ -262,6 +271,11 @@ class DocumentApprovalWorkflowService
                     $this->rollbackRmStockToInventory($doc, $user->id);
                 }
 
+                // Revert inventory if TSR was Approved
+                if ($normKey === 'TSR' && $this->isApprovedStatus($currentStatus) && $doc instanceof TransferStockReturn) {
+                    $this->rollbackTsrStockFromInventory($doc, $user->id);
+                }
+
                 $this->resetModuleApprovalRecord($normKey, $doc->id, 1);
                 $this->resetModuleApprovalRecord($normKey, $doc->id, 2);
             } else {
@@ -280,6 +294,11 @@ class DocumentApprovalWorkflowService
                 // Revert inventory if RM was Approved
                 if ($normKey === 'RM') {
                     $this->rollbackRmStockToInventory($doc, $user->id);
+                }
+
+                // Revert inventory if TSR was Approved
+                if ($normKey === 'TSR' && $doc instanceof TransferStockReturn) {
+                    $this->rollbackTsrStockFromInventory($doc, $user->id);
                 }
 
                 $this->resetModuleApprovalRecord($normKey, $doc->id, 2);
@@ -561,7 +580,7 @@ class DocumentApprovalWorkflowService
 
     public function getDocumentNumber(Model $doc): string
     {
-        return $doc->pr_number ?? $doc->po_number ?? $doc->rn_number ?? $doc->bpb_number ?? $doc->request_number ?? (string) $doc->id;
+        return $doc->pr_number ?? $doc->po_number ?? $doc->rn_number ?? $doc->bpb_number ?? $doc->request_number ?? $doc->return_number ?? (string) $doc->id;
     }
 
     protected function updateModuleApprovalRecord(string $module, int $docId, int $userId, int $tier, int $status, ?string $note): void
@@ -643,6 +662,15 @@ class DocumentApprovalWorkflowService
                 if ($hasBpb) {
                     throw new InvalidArgumentException("Cannot UnApprove Receive Note '{$doc->rn_number}': It has already been allocated in BPB (Warehouse Inbound). Cancel the BPB first.");
                 }
+            }
+        }
+
+        if ($module === 'RM') {
+            $hasTsr = TransferStockReturn::where('request_material_id', $doc->id)
+                ->where('status', '!=', self::STATUS_REJECTED)
+                ->exists();
+            if ($hasTsr) {
+                throw new InvalidArgumentException("Cannot UnApprove RM '{$doc->request_number}': It has linked Transfer Stock Return document(s). Reject or delete those returns first.");
             }
         }
     }
@@ -771,6 +799,42 @@ class DocumentApprovalWorkflowService
     protected function deductRmStockFromInventory(RequestMaterial $rm, int $userId): void
     {
         $items = $rm->items()->with('item')->get();
+        $warehouseId = $rm->warehouses_id ?: \App\Models\Warehouse\Facility\Warehouse::query()->value('id');
+        $warehouseName = $rm->warehouse?->name ?? ($warehouseId ? "Warehouse #{$warehouseId}" : 'Selected Warehouse');
+
+        $totalsByItem = [];
+        foreach ($items as $rmItem) {
+            $qty = (float) ($rmItem->request ?? $rmItem->request_qty ?? $rmItem->quantity ?? 0);
+            if ($qty > 0) {
+                $totalsByItem[$rmItem->items_id] = ($totalsByItem[$rmItem->items_id] ?? 0.0) + $qty;
+            }
+        }
+
+        if ($warehouseId && ! empty($totalsByItem)) {
+            foreach ($totalsByItem as $itemId => $needed) {
+                $wsRow = DB::table('warehouse_stocks')
+                    ->where('items_id', $itemId)
+                    ->where('warehouses_id', $warehouseId)
+                    ->selectRaw('COUNT(*) as cnt, COALESCE(SUM(quantity - COALESCE(allocated_quantity, 0)), 0) as available')
+                    ->first();
+
+                $available = ($wsRow && (int) $wsRow->cnt > 0)
+                    ? max(0.0, (float) $wsRow->available)
+                    : max(0.0, (float) (DB::table('item_warehouse')->where('items_id', $itemId)->where('warehouses_id', $warehouseId)->value('quantity') ?? 0));
+
+                if ($available + 1e-6 < $needed) {
+                    $itemModel = Item::find($itemId);
+                    $label = $itemModel ? trim("{$itemModel->code} - {$itemModel->name}") : "Item #{$itemId}";
+                    throw new InvalidArgumentException(
+                        "Insufficient stock for '{$label}' in {$warehouseName}: available "
+                        . number_format($available, 2, '.', '')
+                        . ', requested '
+                        . number_format($needed, 2, '.', '')
+                        . '.'
+                    );
+                }
+            }
+        }
 
         foreach ($items as $rmItem) {
             $qty = (float) ($rmItem->request ?? $rmItem->request_qty ?? $rmItem->quantity ?? 0);
@@ -780,7 +844,6 @@ class DocumentApprovalWorkflowService
 
             $targetItem = $rmItem->item ?? Item::find($rmItem->items_id);
             if ($targetItem) {
-                $warehouseId = $rm->warehouses_id ?: Warehouse::query()->value('id');
                 $this->inventoryService->recordStockMovement(
                     item: $targetItem,
                     warehouseId: $warehouseId,
@@ -790,6 +853,64 @@ class DocumentApprovalWorkflowService
                     referenceNumber: $rm->request_number,
                     userId: $userId,
                     notes: "Material Issued via RM Approval: {$rm->request_number}"
+                );
+            }
+        }
+    }
+
+    /**
+     * BE-05: Receive returned material stock on Transfer Stock Return Stage 2 Approval.
+     */
+    protected function postTsrStockToInventory(TransferStockReturn $tsr, int $userId): void
+    {
+        $tsr->loadMissing(['items.item', 'warehouse']);
+        $warehouseId = $tsr->warehouses_id ?: \App\Models\Warehouse\Facility\Warehouse::query()->value('id');
+
+        foreach ($tsr->items as $line) {
+            $qty = (float) ($line->quantity ?? 0);
+            if ($qty <= 0) {
+                continue;
+            }
+            $targetItem = $line->item ?? Item::find($line->items_id);
+            if ($targetItem) {
+                $this->inventoryService->recordStockMovement(
+                    item: $targetItem,
+                    warehouseId: $warehouseId,
+                    movementType: 'IN',
+                    quantity: $qty,
+                    referenceType: 'TRANSFER_STOCK_RETURN',
+                    referenceNumber: $tsr->return_number,
+                    userId: $userId,
+                    notes: "Transfer Stock Return Receipt ({$tsr->return_number})"
+                );
+            }
+        }
+    }
+
+    /**
+     * BE-05: Rollback Transfer Stock Return physical stock if unapproved.
+     */
+    protected function rollbackTsrStockFromInventory(TransferStockReturn $tsr, int $userId): void
+    {
+        $tsr->loadMissing(['items.item', 'warehouse']);
+        $warehouseId = $tsr->warehouses_id ?: \App\Models\Warehouse\Facility\Warehouse::query()->value('id');
+
+        foreach ($tsr->items as $line) {
+            $qty = (float) ($line->quantity ?? 0);
+            if ($qty <= 0) {
+                continue;
+            }
+            $targetItem = $line->item ?? Item::find($line->items_id);
+            if ($targetItem) {
+                $this->inventoryService->recordStockMovement(
+                    item: $targetItem,
+                    warehouseId: $warehouseId,
+                    movementType: 'OUT',
+                    quantity: $qty,
+                    referenceType: 'TSR_REVERSAL',
+                    referenceNumber: $tsr->return_number,
+                    userId: $userId,
+                    notes: "Stock Reversal due to TSR Unapproval: {$tsr->return_number}"
                 );
             }
         }

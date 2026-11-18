@@ -18,6 +18,7 @@ use App\Services\Inventory\InventoryService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class MaterialRequestApiController extends Controller
 {
@@ -130,21 +131,23 @@ class MaterialRequestApiController extends Controller
         $whId = $validated['warehouses_id'] ?? $validated['warehouse_id'] ?? null;
         $wh = $whId
             ? Warehouse::find($whId)
-            : (! empty($validated['warehouse']) ? Warehouse::where('name', $validated['warehouse'])->first() : Warehouse::first());
+            : (! empty($validated['warehouse']) ? Warehouse::where('name', $validated['warehouse'])->first() : null);
 
         $jobNumberInput = $validated['jobNumber'] ?? $validated['job_number'] ?? null;
         $jobModel = ! empty($validated['job_number_id'])
             ? JobNumber::find($validated['job_number_id'])
             : (! empty($jobNumberInput) ? JobNumber::where('name', $jobNumberInput)->first() : null);
 
-        if (! $dept || ! $type) {
+        if (! $dept || ! $type || ! $wh) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Department and Type of Request must reference valid master records.',
+                'message' => 'Department, Type of Request, and Warehouse must reference valid master records.',
             ], 422);
         }
 
-        $record = DB::transaction(function () use ($request, $validated, $actorId, $dept, $type, $dest, $wh, $jobModel, $jobNumberInput) {
+        $resolvedItems = $this->validateRequestedWarehouseStock($wh, $request->input('items', []));
+
+        $record = DB::transaction(function () use ($validated, $actorId, $dept, $type, $dest, $wh, $jobModel, $jobNumberInput, $resolvedItems) {
             $seq = RequestMaterial::withTrashed()->count() + 1;
             do {
                 $requestCode = 'REQ-WH-' . date('Y') . '-' . str_pad((string) $seq, 3, '0', STR_PAD_LEFT);
@@ -157,7 +160,7 @@ class MaterialRequestApiController extends Controller
             $reqMaterial = RequestMaterial::create([
                 'request_number' => $requestCode,
                 'departments_id' => $dept->id,
-                'warehouses_id' => $wh?->id,
+                'warehouses_id' => $wh->id,
                 'type_of_request_id' => $type->id,
                 'destination_location_id' => $dest?->id,
                 'job_number_id' => $jobModel?->id,
@@ -174,26 +177,15 @@ class MaterialRequestApiController extends Controller
                 'status' => $initialStatus,
             ]);
 
-            foreach ($request->input('items', []) as $it) {
-                $itemId = $it['items_id'] ?? $it['itemId'] ?? null;
-                $itemCode = $it['itemCode'] ?? $it['item_code'] ?? '';
-
-                $item = $itemId
-                    ? Item::find($itemId)
-                    : (! empty($itemCode) ? Item::where('code', $itemCode)->first() : null);
-
-                if (! $item) {
-                    throw new \InvalidArgumentException("Invalid or unknown item specified ('{$itemCode}').");
-                }
-
+            foreach ($resolvedItems as $entry) {
                 RequestMaterialItem::updateOrCreate(
                     [
-                        'items_id' => $item->id,
+                        'items_id' => $entry['item']->id,
                         'request_material_id' => $reqMaterial->id,
                     ],
                     [
-                        'request' => (float) ($it['requestQty'] ?? $it['request_qty'] ?? $it['quantity'] ?? 1),
-                        'remark' => $it['remark'] ?? '',
+                        'request' => $entry['quantity'],
+                        'remark' => $entry['remark'],
                     ]
                 );
             }
@@ -263,7 +255,22 @@ class MaterialRequestApiController extends Controller
             return response()->json(['status' => 'error', 'message' => 'Approved material requests cannot be modified.'], 422);
         }
 
-        DB::transaction(function () use ($request, $r, $actorId) {
+        $wh = $request->filled('warehouses_id')
+            ? Warehouse::find($request->input('warehouses_id'))
+            : ($request->filled('warehouse')
+                ? Warehouse::where('name', $request->input('warehouse'))->first()
+                : ($r->warehouses_id ? Warehouse::find($r->warehouses_id) : null));
+
+        if (! $wh) {
+            return response()->json(['status' => 'error', 'message' => 'Warehouse must reference a valid master record.'], 422);
+        }
+
+        $resolvedItems = null;
+        if ($request->has('items') && is_array($request->input('items'))) {
+            $resolvedItems = $this->validateRequestedWarehouseStock($wh, $request->input('items'));
+        }
+
+        DB::transaction(function () use ($request, $r, $actorId, $wh, $resolvedItems) {
             $dept = $request->filled('departments_id')
                 ? Department::find($request->input('departments_id'))
                 : ($request->filled('department') ? Department::where('name', $request->input('department'))->first() : null);
@@ -276,10 +283,6 @@ class MaterialRequestApiController extends Controller
                 ? DestinationLocation::find($request->input('destination_location_id'))
                 : ($request->filled('destinationLocation') ? DestinationLocation::where('name', $request->input('destinationLocation'))->first() : null);
 
-            $wh = $request->filled('warehouses_id')
-                ? Warehouse::find($request->input('warehouses_id'))
-                : ($request->filled('warehouse') ? Warehouse::where('name', $request->input('warehouse'))->first() : null);
-
             $jobStr = $request->input('jobNumber', $request->input('job_number'));
             $jobModel = $request->filled('job_number_id')
                 ? JobNumber::find($request->input('job_number_id'))
@@ -287,7 +290,7 @@ class MaterialRequestApiController extends Controller
 
             $r->update([
                 'departments_id' => $dept?->id ?? $r->departments_id,
-                'warehouses_id' => $wh?->id ?? $r->warehouses_id,
+                'warehouses_id' => $wh->id,
                 'type_of_request_id' => $type?->id ?? $r->type_of_request_id,
                 'destination_location_id' => $dest?->id ?? $r->destination_location_id,
                 'job_number_id' => $jobModel?->id ?? $r->job_number_id,
@@ -301,22 +304,14 @@ class MaterialRequestApiController extends Controller
                 'updated_by' => $actorId,
             ]);
 
-            if ($request->has('items') && is_array($request->input('items'))) {
+            if ($resolvedItems !== null) {
                 RequestMaterialItem::where('request_material_id', $r->id)->delete();
-                foreach ($request->input('items') as $it) {
-                    $itemId = $it['items_id'] ?? $it['itemId'] ?? null;
-                    $itemCode = $it['itemCode'] ?? $it['item_code'] ?? '';
-                    $item = $itemId
-                        ? Item::find($itemId)
-                        : (! empty($itemCode) ? Item::where('code', $itemCode)->first() : null);
-                    if (! $item) {
-                        throw new \InvalidArgumentException("Invalid or unknown item specified ('{$itemCode}').");
-                    }
+                foreach ($resolvedItems as $entry) {
                     RequestMaterialItem::create([
                         'request_material_id' => $r->id,
-                        'items_id' => $item->id,
-                        'request' => (float) ($it['requestQty'] ?? $it['request_qty'] ?? $it['quantity'] ?? 1),
-                        'remark' => $it['remark'] ?? '',
+                        'items_id' => $entry['item']->id,
+                        'request' => $entry['quantity'],
+                        'remark' => $entry['remark'],
                     ]);
                 }
             }
@@ -433,6 +428,15 @@ class MaterialRequestApiController extends Controller
             ]);
 
             if ($newStatus === 'Approved') {
+                $r->loadMissing(['items.item', 'warehouse']);
+                if ($r->warehouse) {
+                    $checkPayload = $r->items->map(fn ($rmItem) => [
+                        'items_id' => $rmItem->items_id,
+                        'requestQty' => (float) ($rmItem->request ?? 0),
+                    ])->all();
+                    $this->validateRequestedWarehouseStock($r->warehouse, $checkPayload);
+                }
+
                 foreach ($r->items as $rmItem) {
                     $qty = (float) ($rmItem->request ?? 0);
                     if ($qty > 0 && ($targetItem = $rmItem->item ?? Item::find($rmItem->items_id))) {
@@ -533,6 +537,112 @@ class MaterialRequestApiController extends Controller
             ->where('request_number', $id)
             ->orWhere('id', is_numeric($id) ? (int) $id : 0)
             ->first();
+    }
+
+    /**
+     * Resolve submitted items and validate available stock in the target warehouse.
+     *
+     * @return array<int, array{item: Item, quantity: float, remark: string}>
+     */
+    private function validateRequestedWarehouseStock(Warehouse $wh, array $rawItems): array
+    {
+        $resolved = [];
+        $totalsByItemId = [];
+
+        foreach ($rawItems as $idx => $it) {
+            $itemId = $it['items_id'] ?? $it['itemId'] ?? null;
+            $itemCode = trim((string) ($it['itemCode'] ?? $it['item_code'] ?? ''));
+
+            $item = $itemId
+                ? Item::find($itemId)
+                : ($itemCode !== '' ? Item::where('code', $itemCode)->first() : null);
+
+            if (! $item) {
+                throw ValidationException::withMessages([
+                    'items' => ["Row " . ($idx + 1) . ": Invalid or unknown item specified ('{$itemCode}')."],
+                ]);
+            }
+
+            $qty = (float) ($it['requestQty'] ?? $it['request_qty'] ?? $it['quantity'] ?? 0);
+            if ($qty <= 0) {
+                throw ValidationException::withMessages([
+                    'items' => ["{$item->code} - {$item->name}: Request quantity must be greater than 0."],
+                ]);
+            }
+
+            $resolved[] = [
+                'item' => $item,
+                'quantity' => $qty,
+                'remark' => (string) ($it['remark'] ?? ''),
+            ];
+            $totalsByItemId[$item->id] = ($totalsByItemId[$item->id] ?? 0.0) + $qty;
+        }
+
+        if (empty($resolved)) {
+            throw ValidationException::withMessages([
+                'items' => ['At least one material item is required.'],
+            ]);
+        }
+
+        foreach ($totalsByItemId as $itemId => $requestedQty) {
+            $available = $this->getWarehouseAvailableStock((int) $itemId, (int) $wh->id);
+            if ($available + 1e-6 < $requestedQty) {
+                $item = Item::find($itemId);
+                $label = $item ? trim("{$item->code} - {$item->name}") : "Item #{$itemId}";
+                $altText = $this->describeOtherWarehouseStock((int) $itemId, (int) $wh->id);
+                $message = "Insufficient stock for '{$label}' in warehouse '{$wh->name}': available "
+                    . number_format($available, 2, '.', '')
+                    . ', requested '
+                    . number_format($requestedQty, 2, '.', '')
+                    . ($altText !== '' ? ". Stock available in: {$altText}." : '.');
+
+                throw ValidationException::withMessages([
+                    'items' => [$message],
+                ]);
+            }
+        }
+
+        return $resolved;
+    }
+
+    private function getWarehouseAvailableStock(int $itemId, int $warehouseId): float
+    {
+        $wsRow = DB::table('warehouse_stocks')
+            ->where('items_id', $itemId)
+            ->where('warehouses_id', $warehouseId)
+            ->selectRaw('COUNT(*) as cnt, COALESCE(SUM(quantity - COALESCE(allocated_quantity, 0)), 0) as available')
+            ->first();
+
+        if ($wsRow && (int) $wsRow->cnt > 0) {
+            return max(0.0, (float) $wsRow->available);
+        }
+
+        $pivotQty = DB::table('item_warehouse')
+            ->where('items_id', $itemId)
+            ->where('warehouses_id', $warehouseId)
+            ->value('quantity');
+
+        return $pivotQty !== null ? max(0.0, (float) $pivotQty) : 0.0;
+    }
+
+    private function describeOtherWarehouseStock(int $itemId, int $excludeWarehouseId): string
+    {
+        $others = DB::table('warehouse_stocks as ws')
+            ->join('warehouses as w', 'ws.warehouses_id', '=', 'w.id')
+            ->where('ws.items_id', $itemId)
+            ->where('ws.warehouses_id', '!=', $excludeWarehouseId)
+            ->groupBy('ws.warehouses_id', 'w.name')
+            ->havingRaw('SUM(ws.quantity - COALESCE(ws.allocated_quantity, 0)) > 0')
+            ->selectRaw('w.name, SUM(ws.quantity - COALESCE(ws.allocated_quantity, 0)) as available')
+            ->get();
+
+        if ($others->isEmpty()) {
+            return '';
+        }
+
+        return $others
+            ->map(fn ($row) => "{$row->name} (" . number_format((float) $row->available, 2, '.', '') . ')')
+            ->implode(', ');
     }
 
     private function getItemStockTotals(): array

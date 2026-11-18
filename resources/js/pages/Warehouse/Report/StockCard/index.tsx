@@ -65,7 +65,7 @@ export function StockCardIndex() {
           }
         }
       })
-      .catch(() => {});
+      .catch(() => { });
 
     apiFetch("/api/warehouse/master/warehouses?per_page=500")
       .then((res) => (res.ok ? res.json() : null))
@@ -75,7 +75,7 @@ export function StockCardIndex() {
           setWarehousesList(Array.from(new Set(["All Warehouse", ...names])));
         }
       })
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   // Selected item object for info header
@@ -121,6 +121,13 @@ export function StockCardIndex() {
 
   const [liveRecords, setLiveRecords] = useState<StockCardRecord[]>(initialStockCardRecords);
   const [isLoading, setIsLoading] = useState(false);
+  const [refreshTick, setRefreshTick] = useState(0);
+
+  React.useEffect(() => {
+    const handleRefresh = () => setRefreshTick((prev) => prev + 1);
+    window.addEventListener("geniusone_approval_changed", handleRefresh);
+    return () => window.removeEventListener("geniusone_approval_changed", handleRefresh);
+  }, []);
 
   React.useEffect(() => {
     let isMounted = true;
@@ -150,7 +157,7 @@ export function StockCardIndex() {
             warehouse: m.warehouse || appliedFilters.warehouse,
             date: m.date || appliedFilters.startDate,
             ref: m.reference_no || "-",
-            description: m.notes || m.doc_type || "Stock movement",
+            description: m.notes && m.notes !== "—" ? `${m.doc_type} · ${m.notes}` : m.doc_type || "Stock movement",
             in: m.qty_in > 0 ? Number(m.qty_in) : null,
             out: m.qty_out > 0 ? Number(m.qty_out) : null,
             stock: Number(m.balance) || 0,
@@ -173,516 +180,515 @@ export function StockCardIndex() {
     return () => {
       isMounted = false;
     };
-  }, [appliedFilters]);
+}, [appliedFilters, refreshTick]);
 
-  // Filter records based on applied filters
-  const filteredRecords = useMemo(() => {
-    return liveRecords.filter((rec) => {
-      // Item code match
-      if (appliedFilters.itemCode && rec.itemCode && rec.itemCode !== appliedFilters.itemCode) {
-        return false;
-      }
-      // Date range match
-      const recDate = (rec.date || "").replace(/\s+/g, "-");
-      const sDate = (appliedFilters.startDate || "").replace(/\s+/g, "-");
-      const eDate = (appliedFilters.endDate || "").replace(/\s+/g, "-");
-
-      if (sDate && recDate && recDate < sDate) {
-        return false;
-      }
-      if (eDate && recDate && recDate > eDate) {
-        return false;
-      }
-      // Warehouse match
-      if (appliedFilters.warehouse && appliedFilters.warehouse !== "All Warehouse") {
-        const normFilter = appliedFilters.warehouse.toLowerCase().trim();
-        const normRec = (rec.warehouse || "").toLowerCase().trim();
-        if (normFilter !== normRec && !normRec.includes(normFilter) && !normFilter.includes(normRec)) {
-          return false;
-        }
-      }
-      // Unit match
-      if (
-        appliedFilters.unit !== "All Units" &&
-        rec.unitCode &&
-        rec.unitCode.toLowerCase() !== appliedFilters.unit.toLowerCase()
-      ) {
-        return false;
-      }
-      return true;
-    });
-  }, [appliedFilters, liveRecords]);
-
-  // Totals for In, Out, and running Stock
-  const totals = useMemo(() => {
-    let totalIn = 0;
-    let totalOut = 0;
-    filteredRecords.forEach((r) => {
-      if (typeof r.in === "number") totalIn += r.in;
-      if (typeof r.out === "number") totalOut += r.out;
-    });
-    const lastBalance =
-      filteredRecords.length > 0
-        ? filteredRecords[filteredRecords.length - 1].stock
-        : 0;
-    return {
-      totalIn,
-      totalOut,
-      lastBalance,
-    };
-  }, [filteredRecords]);
-
-  // Pagination calculation
-  const totalRecords = filteredRecords.length;
-  const totalPages = Math.max(1, Math.ceil(totalRecords / pageSize));
-  const safeCurrentPage = Math.min(Math.max(1, currentPage), totalPages);
-
-  const paginatedRecords = useMemo(() => {
-    const startIdx = (safeCurrentPage - 1) * pageSize;
-    return filteredRecords.slice(startIdx, startIdx + pageSize);
-  }, [filteredRecords, safeCurrentPage, pageSize]);
-
-  // Print report
-  const handlePrint = () => {
-    try {
-      window.print();
-    } catch (err: any) {
-      setNotification({
-        type: "error",
-        message: err?.message || "Failed to trigger print dialog.",
-      });
+// Filter records based on applied filters
+const filteredRecords = useMemo(() => {
+  return liveRecords.filter((rec) => {
+    // Item code match
+    if (appliedFilters.itemCode && rec.itemCode && rec.itemCode !== appliedFilters.itemCode) {
+      return false;
     }
-  };
+    // Date range match
+    const recDate = (rec.date || "").replace(/\s+/g, "-");
+    const sDate = (appliedFilters.startDate || "").replace(/\s+/g, "-");
+    const eDate = (appliedFilters.endDate || "").replace(/\s+/g, "-");
 
-  // Export to Excel (.xlsx) using SheetJS
-  const handleExportExcel = () => {
-    try {
-      if (filteredRecords.length === 0) {
-        setNotification({
-          type: "warning",
-          message: "No stock card transaction records found matching the active filters to export.",
-        });
-        return;
-      }
-      setNotification(null);
-
-      const headers = [
-        "No.",
-        "Date",
-        "Ref",
-        "Description",
-        "In",
-        "Out",
-        "Stock",
-        "Warehouse",
-        "History Doc In",
-        "Doc Out Ref",
-        "No Lot",
-        "Job Number",
-      ];
-
-      const rowsData = filteredRecords.map((r, idx) => [
-        idx + 1,
-        r.date,
-        r.ref,
-        r.description,
-        r.in !== null ? r.in : 0,
-        r.out !== null ? r.out : 0,
-        r.stock,
-        r.warehouse,
-        r.historyDocIn,
-        r.docOutRef,
-        r.noLot,
-        r.jobNumber,
-      ]);
-
-      // Add summary total row
-      rowsData.push([
-        "",
-        "TOTAL",
-        "",
-        "",
-        totals.totalIn,
-        totals.totalOut,
-        totals.lastBalance,
-        "",
-        "",
-        "",
-        "",
-        "",
-      ]);
-
-      const worksheet = XLSX.utils.aoa_to_sheet([
-        [`STOCK CARD REPORT - ${currentItemInfo.name} (${currentItemInfo.code})`],
-        [`Date Range: ${appliedFilters.startDate} to ${appliedFilters.endDate} | Warehouse: ${appliedFilters.warehouse}`],
-        [],
-        headers,
-        ...rowsData,
-      ]);
-
-      const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, "Stock Card");
-      XLSX.writeFile(
-        workbook,
-        `Stock_Card_${appliedFilters.itemCode}_${appliedFilters.startDate}_${appliedFilters.endDate}.xlsx`
-      );
-    } catch (err: any) {
-      setNotification({
-        type: "error",
-        message: err?.message || "Failed to generate Excel export file.",
-      });
+    if (sDate && recDate && recDate < sDate) {
+      return false;
     }
-  };
+    if (eDate && recDate && recDate > eDate) {
+      return false;
+    }
+    // Warehouse match
+    if (appliedFilters.warehouse && appliedFilters.warehouse !== "All Warehouse") {
+      const normFilter = appliedFilters.warehouse.toLowerCase().trim();
+      const normRec = (rec.warehouse || "").toLowerCase().trim();
+      if (normFilter !== normRec && !normRec.includes(normFilter) && !normFilter.includes(normRec)) {
+        return false;
+      }
+    }
+    // Unit match
+    if (
+      appliedFilters.unit !== "All Units" &&
+      rec.unitCode &&
+      rec.unitCode.toLowerCase() !== appliedFilters.unit.toLowerCase()
+    ) {
+      return false;
+    }
+    return true;
+  });
+}, [appliedFilters, liveRecords]);
 
-  return (
-    <div className="stock-card-page transaction-create-page">
-      {/* GeniusOne Notification Banner */}
-      {notification && (
-        <div
-          style={{
-            padding: "10px 16px",
-            background:
-              notification.type === "error"
-                ? "#fef2f2"
-                : notification.type === "warning"
+// Totals for In, Out, and running Stock
+const totals = useMemo(() => {
+  let totalIn = 0;
+  let totalOut = 0;
+  filteredRecords.forEach((r) => {
+    if (typeof r.in === "number") totalIn += r.in;
+    if (typeof r.out === "number") totalOut += r.out;
+  });
+  const lastBalance =
+    filteredRecords.length > 0
+      ? filteredRecords[filteredRecords.length - 1].stock
+      : 0;
+  return {
+    totalIn,
+    totalOut,
+    lastBalance,
+  };
+}, [filteredRecords]);
+
+// Pagination calculation
+const totalRecords = filteredRecords.length;
+const totalPages = Math.max(1, Math.ceil(totalRecords / pageSize));
+const safeCurrentPage = Math.min(Math.max(1, currentPage), totalPages);
+
+const paginatedRecords = useMemo(() => {
+  const startIdx = (safeCurrentPage - 1) * pageSize;
+  return filteredRecords.slice(startIdx, startIdx + pageSize);
+}, [filteredRecords, safeCurrentPage, pageSize]);
+
+// Print report
+const handlePrint = () => {
+  try {
+    window.print();
+  } catch (err: any) {
+    setNotification({
+      type: "error",
+      message: err?.message || "Failed to trigger print dialog.",
+    });
+  }
+};
+
+// Export to Excel (.xlsx) using SheetJS
+const handleExportExcel = () => {
+  try {
+    if (filteredRecords.length === 0) {
+      setNotification({
+        type: "warning",
+        message: "No stock card transaction records found matching the active filters to export.",
+      });
+      return;
+    }
+    setNotification(null);
+
+    const headers = [
+      "No.",
+      "Date",
+      "Ref",
+      "Description",
+      "In",
+      "Out",
+      "Stock",
+      "Warehouse",
+      "History Doc In",
+      "Doc Out Ref",
+      "No Lot",
+      "Job Number",
+    ];
+
+    const rowsData = filteredRecords.map((r, idx) => [
+      idx + 1,
+      r.date,
+      r.ref,
+      r.description,
+      r.in !== null ? r.in : 0,
+      r.out !== null ? r.out : 0,
+      r.stock,
+      r.warehouse,
+      r.historyDocIn,
+      r.docOutRef,
+      r.noLot,
+      r.jobNumber,
+    ]);
+
+    // Add summary total row
+    rowsData.push([
+      "",
+      "TOTAL",
+      "",
+      "",
+      totals.totalIn,
+      totals.totalOut,
+      totals.lastBalance,
+      "",
+      "",
+      "",
+      "",
+      "",
+    ]);
+
+    const worksheet = XLSX.utils.aoa_to_sheet([
+      [`STOCK CARD REPORT - ${currentItemInfo.name} (${currentItemInfo.code})`],
+      [`Date Range: ${appliedFilters.startDate} to ${appliedFilters.endDate} | Warehouse: ${appliedFilters.warehouse}`],
+      [],
+      headers,
+      ...rowsData,
+    ]);
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Stock Card");
+    XLSX.writeFile(
+      workbook,
+      `Stock_Card_${appliedFilters.itemCode}_${appliedFilters.startDate}_${appliedFilters.endDate}.xlsx`
+    );
+  } catch (err: any) {
+    setNotification({
+      type: "error",
+      message: err?.message || "Failed to generate Excel export file.",
+    });
+  }
+};
+
+return (
+  <div className="stock-card-page transaction-create-page">
+    {/* GeniusOne Notification Banner */}
+    {notification && (
+      <div
+        style={{
+          padding: "10px 16px",
+          background:
+            notification.type === "error"
+              ? "#fef2f2"
+              : notification.type === "warning"
                 ? "#fffbeb"
                 : "#f0fdf4",
-            border: `1px solid ${
-              notification.type === "error"
-                ? "#fecaca"
-                : notification.type === "warning"
+          border: `1px solid ${notification.type === "error"
+              ? "#fecaca"
+              : notification.type === "warning"
                 ? "#fde68a"
                 : "#bbf7d0"
             }`,
-            borderRadius: "var(--radius-sm)",
-            color:
-              notification.type === "error"
-                ? "#b91c1c"
-                : notification.type === "warning"
+          borderRadius: "var(--radius-sm)",
+          color:
+            notification.type === "error"
+              ? "#b91c1c"
+              : notification.type === "warning"
                 ? "#92400e"
                 : "#15803d",
-            fontSize: "12.5px",
-            fontWeight: 600,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            marginBottom: "12px",
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <Icon
-              name={notification.type === "success" ? "check" : "alertTriangle"}
-              size={15}
-            />
-            <span>{notification.message}</span>
-          </div>
-          <button
-            type="button"
-            onClick={() => setNotification(null)}
-            style={{
-              border: 0,
-              background: "transparent",
-              cursor: "pointer",
-              fontWeight: 700,
-              fontSize: "16px",
-              color: "inherit",
-            }}
-            title="Dismiss"
-          >
-            ×
-          </button>
-        </div>
-      )}
-
-      {/* Filter & Action Panel */}
-      <form onSubmit={handleApplyReport} className="tx-panel" style={{ padding: "16px 20px" }}>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-            gap: "14px",
-            alignItems: "flex-end",
-          }}
-        >
-          {/* Start Date */}
-          <div className="master-form-group">
-            <label className="master-form-label">Start Date</label>
-            <CustomDatePicker
-              value={startDate}
-              onChange={(val) => setStartDate(val)}
-            />
-          </div>
-
-          {/* End Date */}
-          <div className="master-form-group">
-            <label className="master-form-label">End Date</label>
-            <CustomDatePicker
-              value={endDate}
-              onChange={(val) => setEndDate(val)}
-            />
-          </div>
-
-          {/* Item Selector */}
-          <div className="master-form-group" style={{ gridColumn: "span 2" }}>
-            <label className="master-form-label">Item</label>
-            <CustomSelect
-              searchable
-              value={selectedItemCode}
-              onChange={(newCode) => {
-                setSelectedItemCode(newCode);
-                const found = itemsList.find((i) => i.code === newCode);
-                if (found) {
-                  setSelectedUnit(found.unit);
-                  setSelectedWarehouse(found.defaultWarehouse);
-                }
-              }}
-              options={itemsList.map((item) => ({
-                value: item.code,
-                label: `${item.code} — ${item.name}`,
-              }))}
-            />
-          </div>
-
-          {/* Unit Selector */}
-          <div className="master-form-group">
-            <label className="master-form-label">Unit</label>
-            <CustomSelect
-              searchable
-              value={selectedUnit}
-              onChange={(val) => setSelectedUnit(val)}
-              options={stockCardUnitsList}
-            />
-          </div>
-
-          {/* Warehouse Selector */}
-          <div className="master-form-group">
-            <label className="master-form-label">Warehouse</label>
-            <CustomSelect
-              searchable
-              value={selectedWarehouse}
-              onChange={(val) => setSelectedWarehouse(val)}
-              options={warehousesList}
-            />
-          </div>
-        </div>
-
-        {/* Action Button Row */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "flex-end",
-            gap: "10px",
-            marginTop: "16px",
-            paddingTop: "14px",
-            borderTop: "1px solid var(--line)",
-          }}
-        >
-          <Button
-            type="submit"
-            variant="primary"
-            icon="filter"
-          >
-            Report
-          </Button>
-          <Button
-            type="button"
-            variant="secondary"
-            icon="print"
-            onClick={handlePrint}
-          >
-            Print
-          </Button>
-          <Button
-            type="button"
-            variant="excel"
-            onClick={handleExportExcel}
-          >
-            Export to Excel
-          </Button>
-        </div>
-      </form>
-
-      {/* Selected Item Reference Information Banner */}
-      <div
-        className="tx-panel"
-        style={{
-          padding: "14px 20px",
-          background: "#f8fbff",
-          borderColor: "#bfdbfe",
+          fontSize: "12.5px",
+          fontWeight: 600,
           display: "flex",
-          flexWrap: "wrap",
-          justifyContent: "space-between",
           alignItems: "center",
-          gap: "12px",
+          justifyContent: "space-between",
+          marginBottom: "12px",
         }}
       >
-        <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
-          <span style={{ fontSize: "11px", fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.4px" }}>
-            SELECTED ITEM INFORMATION
-          </span>
-          <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
-            <span style={{ fontSize: "15px", fontWeight: 800, color: "var(--ink)" }}>
-              {currentItemInfo.name}
-            </span>
-            <span className="code-pill">{currentItemInfo.code}</span>
-          </div>
+        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <Icon
+            name={notification.type === "success" ? "check" : "alertTriangle"}
+            size={15}
+          />
+          <span>{notification.message}</span>
         </div>
-
-        <div style={{ display: "flex", gap: "24px", alignItems: "center" }}>
-          <div>
-            <span style={{ fontSize: "10px", fontWeight: 700, color: "var(--muted)", display: "block" }}>
-              UNIT CODE
-            </span>
-            <strong style={{ fontSize: "13px", color: "var(--blue-700)" }}>
-              {currentItemInfo.unit}
-            </strong>
-          </div>
-          <div>
-            <span style={{ fontSize: "10px", fontWeight: 700, color: "var(--muted)", display: "block" }}>
-              WAREHOUSE
-            </span>
-            <strong style={{ fontSize: "13px", color: "var(--ink-soft)" }}>
-              {appliedFilters.warehouse === "All Warehouse" ? currentItemInfo.defaultWarehouse : appliedFilters.warehouse}
-            </strong>
-          </div>
-          <div>
-            <span style={{ fontSize: "10px", fontWeight: 700, color: "var(--muted)", display: "block" }}>
-              CURRENT STOCK
-            </span>
-            <strong style={{ fontSize: "14px", color: "var(--green-700, #15803d)" }}>
-              {totals.lastBalance.toFixed(2)} {currentItemInfo.unit}
-            </strong>
-          </div>
-        </div>
+        <button
+          type="button"
+          onClick={() => setNotification(null)}
+          style={{
+            border: 0,
+            background: "transparent",
+            cursor: "pointer",
+            fontWeight: 700,
+            fontSize: "16px",
+            color: "inherit",
+          }}
+          title="Dismiss"
+        >
+          ×
+        </button>
       </div>
+    )}
 
-      {/* Report Table Panel */}
-      <div className="panel" style={{ padding: "0" }}>
-        <div className="table-frame">
-          {isLoading && liveRecords.length > 0 && (
-            <div className="table-frame__buffer-bar">
-              <LoadingBuffer variant="inline" label="Updating Stock Card movements..." />
-            </div>
-          )}
-          <div className="table-scroll">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th style={{ width: "50px", textAlign: "center" }}>No.</th>
-                  <th style={{ minWidth: "95px" }}>Date</th>
-                  <th style={{ minWidth: "160px" }}>Ref</th>
-                  <th style={{ minWidth: "200px" }}>Description</th>
-                  <th style={{ minWidth: "80px", textAlign: "right" }}>In</th>
-                  <th style={{ minWidth: "80px", textAlign: "right" }}>Out</th>
-                  <th style={{ minWidth: "85px", textAlign: "right" }}>Stock</th>
-                  <th style={{ minWidth: "130px" }}>Warehouse</th>
-                  <th style={{ minWidth: "130px" }}>History Doc In</th>
-                  <th style={{ minWidth: "130px" }}>Doc Out Ref</th>
-                  <th style={{ minWidth: "120px" }}>No Lot</th>
-                  <th style={{ minWidth: "120px" }}>Job Number</th>
-                </tr>
-              </thead>
-              <tbody>
-                {isLoading && liveRecords.length === 0 ? (
-                  <TableLoadingRow
-                    colSpan={12}
-                    label="Loading Stock Card Ledger..."
-                    sublabel="Calculating inbound, outbound, and running balances..."
-                  />
-                ) : paginatedRecords.length > 0 ? (
-                  paginatedRecords.map((item, index) => {
-                    const rowNumber =
-                      (safeCurrentPage - 1) * pageSize + index + 1;
-                    return (
-                      <tr key={item.id}>
-                        <td style={{ textAlign: "center", color: "var(--muted)", fontWeight: 600 }}>
-                          {rowNumber}
-                        </td>
-                        <td>{item.date ? item.date.replace(/-/g, " ") : "—"}</td>
-                        <td style={{ fontWeight: 600, fontFamily: "ui-monospace, monospace", fontSize: "12px" }}>
-                          {item.ref}
-                        </td>
-                        <td style={{ fontWeight: 500 }}>{item.description}</td>
-                        <td style={{ textAlign: "right", fontVariantNumeric: "tabular-nums", color: item.in ? "var(--green-600)" : "var(--muted)" }}>
-                          {item.in !== null ? item.in.toFixed(2) : "—"}
-                        </td>
-                        <td style={{ textAlign: "right", fontVariantNumeric: "tabular-nums", color: item.out ? "var(--red-600)" : "var(--muted)" }}>
-                          {item.out !== null ? item.out.toFixed(2) : "—"}
-                        </td>
-                        <td style={{ textAlign: "right", fontVariantNumeric: "tabular-nums", fontWeight: 700, color: "var(--ink)" }}>
-                          {item.stock.toFixed(2)}
-                        </td>
-                        <td>{item.warehouse}</td>
-                        <td style={{ color: item.historyDocIn !== "—" ? "var(--blue-700)" : "var(--muted)" }}>
-                          {item.historyDocIn}
-                        </td>
-                        <td style={{ color: item.docOutRef !== "—" ? "var(--orange-700)" : "var(--muted)" }}>
-                          {item.docOutRef}
-                        </td>
-                        <td>{item.noLot}</td>
-                        <td>
-                          <span style={{ fontSize: "11px", fontWeight: 600 }}>{item.jobNumber}</span>
-                        </td>
-                      </tr>
-                    );
-                  })
-                ) : (
-                  <tr>
-                    <td colSpan={12} style={{ textAlign: "center", padding: "40px 16px" }}>
-                      <div className="empty">
-                        <div className="empty__icon">
-                          <Icon name="search" />
-                        </div>
-                        <strong>No transactions found</strong>
-                        <span>Try adjusting the date range or selected filters.</span>
-                      </div>
-                    </td>
-                  </tr>
-                )}
-              </tbody>
+    {/* Filter & Action Panel */}
+    <form onSubmit={handleApplyReport} className="tx-panel" style={{ padding: "16px 20px" }}>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+          gap: "14px",
+          alignItems: "flex-end",
+        }}
+      >
+        {/* Start Date */}
+        <div className="master-form-group">
+          <label className="master-form-label">Start Date</label>
+          <CustomDatePicker
+            value={startDate}
+            onChange={(val) => setStartDate(val)}
+          />
+        </div>
 
-              {/* Total Row at bottom */}
-              {paginatedRecords.length > 0 && (
-                <tfoot>
-                  <tr style={{ background: "#f8fafc", fontWeight: 800, borderTop: "2px solid var(--line)" }}>
-                    <td colSpan={4} style={{ textAlign: "right", paddingRight: "16px", textTransform: "uppercase", fontSize: "11px", letterSpacing: "0.5px" }}>
-                      TOTAL
-                    </td>
-                    <td style={{ textAlign: "right", color: "var(--green-600)", fontVariantNumeric: "tabular-nums", fontWeight: 800 }}>
-                      {totals.totalIn.toFixed(2)}
-                    </td>
-                    <td style={{ textAlign: "right", color: "var(--red-600)", fontVariantNumeric: "tabular-nums", fontWeight: 800 }}>
-                      {totals.totalOut.toFixed(2)}
-                    </td>
-                    <td style={{ textAlign: "right", color: "var(--ink)", fontVariantNumeric: "tabular-nums", fontWeight: 900 }}>
-                      {totals.lastBalance.toFixed(2)}
-                    </td>
-                    <td colSpan={5} style={{ color: "var(--muted)", fontSize: "11px" }}>
-                      Balance calculated for current filtered view
-                    </td>
-                  </tr>
-                </tfoot>
-              )}
-            </table>
-          </div>
+        {/* End Date */}
+        <div className="master-form-group">
+          <label className="master-form-label">End Date</label>
+          <CustomDatePicker
+            value={endDate}
+            onChange={(val) => setEndDate(val)}
+          />
+        </div>
 
-          {/* Unified Pagination */}
-          <Pagination
-            totalRecords={totalRecords}
-            currentPage={safeCurrentPage}
-            pageSize={pageSize}
-            showPageSize={true}
-            onPageChange={setCurrentPage}
-            onPageSizeChange={(newSize) => {
-              setPageSize(newSize);
-              setCurrentPage(1);
+        {/* Item Selector */}
+        <div className="master-form-group" style={{ gridColumn: "span 2" }}>
+          <label className="master-form-label">Item</label>
+          <CustomSelect
+            searchable
+            value={selectedItemCode}
+            onChange={(newCode) => {
+              setSelectedItemCode(newCode);
+              const found = itemsList.find((i) => i.code === newCode);
+              if (found) {
+                setSelectedUnit(found.unit);
+                setSelectedWarehouse(found.defaultWarehouse);
+              }
             }}
+            options={itemsList.map((item) => ({
+              value: item.code,
+              label: `${item.code} — ${item.name}`,
+            }))}
+          />
+        </div>
+
+        {/* Unit Selector */}
+        <div className="master-form-group">
+          <label className="master-form-label">Unit</label>
+          <CustomSelect
+            searchable
+            value={selectedUnit}
+            onChange={(val) => setSelectedUnit(val)}
+            options={stockCardUnitsList}
+          />
+        </div>
+
+        {/* Warehouse Selector */}
+        <div className="master-form-group">
+          <label className="master-form-label">Warehouse</label>
+          <CustomSelect
+            searchable
+            value={selectedWarehouse}
+            onChange={(val) => setSelectedWarehouse(val)}
+            options={warehousesList}
           />
         </div>
       </div>
+
+      {/* Action Button Row */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "flex-end",
+          gap: "10px",
+          marginTop: "16px",
+          paddingTop: "14px",
+          borderTop: "1px solid var(--line)",
+        }}
+      >
+        <Button
+          type="submit"
+          variant="primary"
+          icon="filter"
+        >
+          Report
+        </Button>
+        <Button
+          type="button"
+          variant="secondary"
+          icon="print"
+          onClick={handlePrint}
+        >
+          Print
+        </Button>
+        <Button
+          type="button"
+          variant="excel"
+          onClick={handleExportExcel}
+        >
+          Export to Excel
+        </Button>
+      </div>
+    </form>
+
+    {/* Selected Item Reference Information Banner */}
+    <div
+      className="tx-panel"
+      style={{
+        padding: "14px 20px",
+        background: "#f8fbff",
+        borderColor: "#bfdbfe",
+        display: "flex",
+        flexWrap: "wrap",
+        justifyContent: "space-between",
+        alignItems: "center",
+        gap: "12px",
+      }}
+    >
+      <div style={{ display: "flex", flexDirection: "column", gap: "3px" }}>
+        <span style={{ fontSize: "11px", fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.4px" }}>
+          SELECTED ITEM INFORMATION
+        </span>
+        <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+          <span style={{ fontSize: "15px", fontWeight: 800, color: "var(--ink)" }}>
+            {currentItemInfo.name}
+          </span>
+          <span className="code-pill">{currentItemInfo.code}</span>
+        </div>
+      </div>
+
+      <div style={{ display: "flex", gap: "24px", alignItems: "center" }}>
+        <div>
+          <span style={{ fontSize: "10px", fontWeight: 700, color: "var(--muted)", display: "block" }}>
+            UNIT CODE
+          </span>
+          <strong style={{ fontSize: "13px", color: "var(--blue-700)" }}>
+            {currentItemInfo.unit}
+          </strong>
+        </div>
+        <div>
+          <span style={{ fontSize: "10px", fontWeight: 700, color: "var(--muted)", display: "block" }}>
+            WAREHOUSE
+          </span>
+          <strong style={{ fontSize: "13px", color: "var(--ink-soft)" }}>
+            {appliedFilters.warehouse === "All Warehouse" ? currentItemInfo.defaultWarehouse : appliedFilters.warehouse}
+          </strong>
+        </div>
+        <div>
+          <span style={{ fontSize: "10px", fontWeight: 700, color: "var(--muted)", display: "block" }}>
+            CURRENT STOCK
+          </span>
+          <strong style={{ fontSize: "14px", color: "var(--green-700, #15803d)" }}>
+            {totals.lastBalance.toFixed(2)} {currentItemInfo.unit}
+          </strong>
+        </div>
+      </div>
     </div>
-  );
+
+    {/* Report Table Panel */}
+    <div className="panel" style={{ padding: "0" }}>
+      <div className="table-frame">
+        {isLoading && liveRecords.length > 0 && (
+          <div className="table-frame__buffer-bar">
+            <LoadingBuffer variant="inline" label="Updating Stock Card movements..." />
+          </div>
+        )}
+        <div className="table-scroll">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th style={{ width: "50px", textAlign: "center" }}>No.</th>
+                <th style={{ minWidth: "95px" }}>Date</th>
+                <th style={{ minWidth: "160px" }}>Ref</th>
+                <th style={{ minWidth: "200px" }}>Description</th>
+                <th style={{ minWidth: "80px", textAlign: "right" }}>In</th>
+                <th style={{ minWidth: "80px", textAlign: "right" }}>Out</th>
+                <th style={{ minWidth: "85px", textAlign: "right" }}>Stock</th>
+                <th style={{ minWidth: "130px" }}>Warehouse</th>
+                <th style={{ minWidth: "130px" }}>History Doc In</th>
+                <th style={{ minWidth: "130px" }}>Doc Out Ref</th>
+                <th style={{ minWidth: "120px" }}>No Lot</th>
+                <th style={{ minWidth: "120px" }}>Job Number</th>
+              </tr>
+            </thead>
+            <tbody>
+              {isLoading && liveRecords.length === 0 ? (
+                <TableLoadingRow
+                  colSpan={12}
+                  label="Loading Stock Card Ledger..."
+                  sublabel="Calculating inbound, outbound, and running balances..."
+                />
+              ) : paginatedRecords.length > 0 ? (
+                paginatedRecords.map((item, index) => {
+                  const rowNumber =
+                    (safeCurrentPage - 1) * pageSize + index + 1;
+                  return (
+                    <tr key={item.id}>
+                      <td style={{ textAlign: "center", color: "var(--muted)", fontWeight: 600 }}>
+                        {rowNumber}
+                      </td>
+                      <td>{item.date ? item.date.replace(/-/g, " ") : "—"}</td>
+                      <td style={{ fontWeight: 600, fontFamily: "ui-monospace, monospace", fontSize: "12px" }}>
+                        {item.ref}
+                      </td>
+                      <td style={{ fontWeight: 500 }}>{item.description}</td>
+                      <td style={{ textAlign: "right", fontVariantNumeric: "tabular-nums", color: item.in ? "var(--green-600)" : "var(--muted)" }}>
+                        {item.in !== null ? item.in.toFixed(2) : "—"}
+                      </td>
+                      <td style={{ textAlign: "right", fontVariantNumeric: "tabular-nums", color: item.out ? "var(--red-600)" : "var(--muted)" }}>
+                        {item.out !== null ? item.out.toFixed(2) : "—"}
+                      </td>
+                      <td style={{ textAlign: "right", fontVariantNumeric: "tabular-nums", fontWeight: 700, color: "var(--ink)" }}>
+                        {item.stock.toFixed(2)}
+                      </td>
+                      <td>{item.warehouse}</td>
+                      <td style={{ color: item.historyDocIn !== "—" ? "var(--blue-700)" : "var(--muted)" }}>
+                        {item.historyDocIn}
+                      </td>
+                      <td style={{ color: item.docOutRef !== "—" ? "var(--orange-700)" : "var(--muted)" }}>
+                        {item.docOutRef}
+                      </td>
+                      <td>{item.noLot}</td>
+                      <td>
+                        <span style={{ fontSize: "11px", fontWeight: 600 }}>{item.jobNumber}</span>
+                      </td>
+                    </tr>
+                  );
+                })
+              ) : (
+                <tr>
+                  <td colSpan={12} style={{ textAlign: "center", padding: "40px 16px" }}>
+                    <div className="empty">
+                      <div className="empty__icon">
+                        <Icon name="search" />
+                      </div>
+                      <strong>No transactions found</strong>
+                      <span>Try adjusting the date range or selected filters.</span>
+                    </div>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+
+            {/* Total Row at bottom */}
+            {paginatedRecords.length > 0 && (
+              <tfoot>
+                <tr style={{ background: "#f8fafc", fontWeight: 800, borderTop: "2px solid var(--line)" }}>
+                  <td colSpan={4} style={{ textAlign: "right", paddingRight: "16px", textTransform: "uppercase", fontSize: "11px", letterSpacing: "0.5px" }}>
+                    TOTAL
+                  </td>
+                  <td style={{ textAlign: "right", color: "var(--green-600)", fontVariantNumeric: "tabular-nums", fontWeight: 800 }}>
+                    {totals.totalIn.toFixed(2)}
+                  </td>
+                  <td style={{ textAlign: "right", color: "var(--red-600)", fontVariantNumeric: "tabular-nums", fontWeight: 800 }}>
+                    {totals.totalOut.toFixed(2)}
+                  </td>
+                  <td style={{ textAlign: "right", color: "var(--ink)", fontVariantNumeric: "tabular-nums", fontWeight: 900 }}>
+                    {totals.lastBalance.toFixed(2)}
+                  </td>
+                  <td colSpan={5} style={{ color: "var(--muted)", fontSize: "11px" }}>
+                    Balance calculated for current filtered view
+                  </td>
+                </tr>
+              </tfoot>
+            )}
+          </table>
+        </div>
+
+        {/* Unified Pagination */}
+        <Pagination
+          totalRecords={totalRecords}
+          currentPage={safeCurrentPage}
+          pageSize={pageSize}
+          showPageSize={true}
+          onPageChange={setCurrentPage}
+          onPageSizeChange={(newSize) => {
+            setPageSize(newSize);
+            setCurrentPage(1);
+          }}
+        />
+      </div>
+    </div>
+  </div>
+);
 }
 
 export default StockCardIndex;

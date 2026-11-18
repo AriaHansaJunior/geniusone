@@ -327,6 +327,21 @@
   color: var(--ink-soft);
 }
 
+.tsr-source-hint {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 4px;
+}
+
+.tsr-qty-meta {
+  display: block;
+  margin-top: 3px;
+  font-size: 10.5px;
+  color: var(--muted);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
 .tsr-items-panel {
   background: var(--white);
   border: 1px solid var(--line);
