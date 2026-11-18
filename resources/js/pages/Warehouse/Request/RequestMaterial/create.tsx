@@ -232,20 +232,6 @@ export function RequestMaterialCreate({
         return;
       }
 
-      const newRows: RequestMaterialItemRow[] = selected.map((s, idx) => ({
-        id: `row-${Date.now()}-${idx}`,
-        items_id: s.id && /^\d+$/.test(String(s.id)) ? Number(s.id) : undefined,
-        itemCode: s.itemCode || "",
-        externalCode: s.kodeEksternal || "—",
-        itemName: s.itemName || "",
-        unit: s.smallestUnitCode || s.smallestUnitName || "PCE",
-        jobNumber: jobNumberHeader.trim() || "",
-        size: s.specification && s.specification !== "-" ? s.specification : "Standard",
-        stockQty: typeof s.stock === "number" ? s.stock : 0.0,
-        pendingQty: 0.0,
-        requestQty: 1.0,
-        remark: "",
-      }));
       const newRows: RequestMaterialItemRow[] = selected.map((s, idx) => {
         const numericId = s.id && /^\d+$/.test(String(s.id)) ? Number(s.id) : undefined;
         return {
@@ -1170,7 +1156,6 @@ export function RequestMaterialCreate({
                                               picked.specification && picked.specification !== "-"
                                                 ? picked.specification
                                                 : r.size || "Standard",
-                                            stockQty: typeof picked.stock === "number" ? picked.stock : 0.0,
                                             stockQty: resolveWarehouseItemStock(
                                               Number(picked.id),
                                               picked.stock
