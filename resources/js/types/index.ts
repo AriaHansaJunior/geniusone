@@ -38,6 +38,7 @@ export type IconName =
   | "list"
   | "lock"
   | "logOut"
+  | "moon"
   | "more"
   | "navigation"
   | "plus"
@@ -47,6 +48,7 @@ export type IconName =
   | "settings"
   | "shield"
   | "star"
+  | "sun"
   | "trash"
   | "upload"
   | "user";
@@ -230,6 +232,7 @@ export type ViewState =
   | { type: "edit-profile" }
   | { type: "settings"; tab: SettingsTab }
   | { type: "login" }
+  | { type: "login-particle-studio" }
   | { type: "not-found"; path?: string };
 
 export type Column = {

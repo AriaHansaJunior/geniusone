@@ -12,7 +12,10 @@ export function resolveViewStateFromPath(pathname: string, defaultPage: PageKey 
         ? rawPath.slice("/default".length)
         : rawPath;
 
-  // Authentication routes
+  // Authentication & standalone visual studio routes
+  if (cleanPath === "/login/particle-studio") {
+    return { type: "login-particle-studio" };
+  }
   if (cleanPath === "/login") {
     return { type: "login" };
   }
@@ -812,6 +815,7 @@ export function resolveInitialViewState(initialPage = "dashboard", initialCode =
   if (initialPage === "settings-user-permissions") return { type: "settings", tab: "user-permissions" };
   if (initialPage === "settings-audit-logs") return { type: "settings", tab: "audit-logs" };
   if (initialPage === "transfer-stock-return") return { type: "list", page: "transfer-stock-return" };
+  if (initialPage === "login-particle-studio") return { type: "login-particle-studio" };
   if (initialPage === "login") return { type: "login" };
   if (initialPage === "edit-profile" || initialPage === "profile.edit") return { type: "edit-profile" };
   if (initialPage === "warehouse-create") return { type: "warehouse-create" };

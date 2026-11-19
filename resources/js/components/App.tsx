@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { AppLayout } from "./layout/AppLayout";
-import { Login } from "../pages";
+import { Login, LoginParticleStudioPage } from "../pages";
 import { AppViewRenderer } from "./AppViewRenderer";
 import { Button } from "./ui/Button";
 import { useAdditionalMasterHandlers } from "../hooks/useAdditionalMasterHandlers";
@@ -2582,12 +2582,43 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
     return () => window.removeEventListener("popstate", handlePopState);
   }, [syncThemeFromPath]);
 
+  // Secret RGB Particle Studio page (accessible from /login via 5-click switch)
+  if (viewState.type === "login-particle-studio") {
+    return (
+      <LoginParticleStudioPage
+        onBackToLogin={() => {
+          const target = isAuthenticated ? "/dashboard" : "/login";
+          if (typeof window !== "undefined") {
+            window.scrollTo(0, 0);
+            window.history.pushState(
+              isAuthenticated ? { type: "dashboard" } : { type: "login" },
+              "",
+              target
+            );
+          }
+          setViewState(isAuthenticated ? { type: "dashboard" } : { type: "login" });
+        }}
+      />
+    );
+  }
+
   // Standalone Login page view
   if (viewState.type === "login" || (authReady && !isAuthenticated)) {
     return (
       <Login
         onNavigateHome={handleLoginSuccess}
         onLoginSuccess={handleLoginSuccess}
+        onOpenParticleStudio={() => {
+          if (typeof window !== "undefined") {
+            window.scrollTo(0, 0);
+            window.history.pushState(
+              { type: "login-particle-studio" },
+              "",
+              "/login/particle-studio"
+            );
+          }
+          setViewState({ type: "login-particle-studio" });
+        }}
       />
     );
   }

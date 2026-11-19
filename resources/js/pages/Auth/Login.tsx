@@ -1,12 +1,29 @@
-import React, { useCallback, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Icon } from "../../components/ui/Icon";
 import { Button } from "../../components/ui/Button";
 import { LoginParticleField } from "../../components/auth/LoginParticleField";
+import {
+  applyLoginDarknessVars,
+  loadLoginManualDark,
+  loadParticleSettings,
+  saveLoginManualDark,
+  type LoginParticleSettings,
+  type LoginThemeMode,
+} from "../../components/auth/loginParticleConfig";
+import {
+  loadCachedPerfAssessment,
+  readPerfQueryOverride,
+  runQuickParticleStressTest,
+  savePerfAssessment,
+  type ParticlePerfAssessment,
+  type ParticlePerformanceTier,
+} from "../../components/auth/loginParticlePerf";
 import { useAuthPermission } from "../../context/AuthPermissionContext";
 
 interface LoginProps {
   onNavigateHome?: () => void;
   onLoginSuccess?: () => void;
+  onOpenParticleStudio?: () => void;
 }
 
 const LOGIN_IMMERSIVE_STORAGE_KEY = "geniusone_login_immersive";
@@ -20,7 +37,24 @@ function readInitialImmersivePreference(): boolean {
   }
 }
 
-export function Login({ onNavigateHome, onLoginSuccess }: LoginProps) {
+function readInitialPerfState(): ParticlePerfAssessment | null {
+  const { tier, forceRetest } = readPerfQueryOverride();
+  if (tier) {
+    return {
+      tier,
+      source: "query",
+      scoreMs: tier === "high" ? 4.2 : tier === "balanced" ? 12.4 : tier === "lite" ? 21.0 : 34.0,
+      reason: `Simulated via ?perf=${tier}`,
+      hardwareCores: typeof navigator !== "undefined" ? navigator.hardwareConcurrency || 4 : 4,
+      deviceMemoryGb: null,
+      checkedAt: Date.now(),
+    };
+  }
+  if (forceRetest) return null;
+  return loadCachedPerfAssessment();
+}
+
+export function Login({ onNavigateHome, onLoginSuccess, onOpenParticleStudio }: LoginProps) {
   const { loginUser } = useAuthPermission();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -28,14 +62,33 @@ export function Login({ onNavigateHome, onLoginSuccess }: LoginProps) {
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [immersiveEnabled, setImmersiveEnabled] = useState<boolean>(readInitialImmersivePreference);
+  const [perfAssessment, setPerfAssessment] = useState<ParticlePerfAssessment | null>(readInitialPerfState);
+  const [hasExplicitPerfOverride] = useState<boolean>(() => readPerfQueryOverride().tier !== null);
+  const [manualDark, setManualDark] = useState<boolean>(loadLoginManualDark);
+  const [isDarkUi, setIsDarkUi] = useState<boolean>(() => {
+    if (loadLoginManualDark()) return true;
+    const initialPerf = readInitialPerfState();
+    const initialImmersive = readInitialImmersivePreference() && initialPerf?.tier !== "locked";
+    return initialImmersive;
+  });
+  const [particleSettings] = useState<LoginParticleSettings>(loadParticleSettings);
   const [isFocusedInside, setIsFocusedInside] = useState(false);
-  const [isMaterialized, setIsMaterialized] = useState<boolean>(() => !readInitialImmersivePreference());
+  const [isMaterialized, setIsMaterialized] = useState<boolean>(() => {
+    const initialPerf = readInitialPerfState();
+    return !readInitialImmersivePreference() || initialPerf?.tier === "locked";
+  });
   const [wakeSignal, setWakeSignal] = useState(0);
 
   const pageRef = useRef<HTMLDivElement | null>(null);
   const headerRef = useRef<HTMLElement | null>(null);
   const footerRef = useRef<HTMLElement | null>(null);
   const cardRef = useRef<HTMLDivElement | null>(null);
+  const secretClickTimesRef = useRef<number[]>([]);
+
+  const performanceTier: ParticlePerformanceTier = perfAssessment?.tier ?? "high";
+  const isImmersiveLocked = performanceTier === "locked";
+  const immersiveActive = immersiveEnabled && !isImmersiveLocked;
+  const themeMode: LoginThemeMode = manualDark ? "dark" : "auto";
 
   const isCardLockedActive =
     isFocusedInside ||
@@ -44,13 +97,115 @@ export function Login({ onNavigateHome, onLoginSuccess }: LoginProps) {
     Boolean(statusMessage) ||
     isLoading;
 
+  useEffect(() => {
+    if (!pageRef.current) return;
+    if (!immersiveActive) {
+      setIsDarkUi(manualDark);
+      applyLoginDarknessVars(pageRef.current, manualDark ? 0.85 : 0);
+    } else if (manualDark) {
+      setIsDarkUi(true);
+      applyLoginDarknessVars(pageRef.current, 0.85);
+    } else if (!isCardLockedActive) {
+      setIsDarkUi(true);
+      applyLoginDarknessVars(pageRef.current, 0.78);
+    }
+  }, [immersiveActive, manualDark]);
+
+  useEffect(() => {
+    const { tier: queryTier, forceRetest } = readPerfQueryOverride();
+    if (queryTier) return;
+    if (!forceRetest && perfAssessment) return;
+
+    let cancelled = false;
+    const rafId = window.requestAnimationFrame(() => {
+      if (cancelled) return;
+      const result = runQuickParticleStressTest({ ignoreCache: forceRetest });
+      if (cancelled) return;
+      setPerfAssessment(result);
+      if (result.tier === "locked") {
+        setIsMaterialized(true);
+        if (pageRef.current) {
+          pageRef.current.style.setProperty("--login-clarity", "1");
+        }
+      }
+    });
+
+    return () => {
+      cancelled = true;
+      window.cancelAnimationFrame(rafId);
+    };
+  }, [perfAssessment]);
+
   const handleClarityChange = useCallback((clarity: number) => {
     if (pageRef.current) {
       pageRef.current.style.setProperty("--login-clarity", clarity.toFixed(3));
     }
   }, []);
 
+  const handleDarknessChange = useCallback((darkness: number, controlsOpacity: number) => {
+    applyLoginDarknessVars(pageRef.current, darkness, controlsOpacity);
+  }, []);
+
+  const handleTierAutoChange = useCallback(
+    (nextTier: ParticlePerformanceTier, reason: string, avgFrameMs: number) => {
+      setPerfAssessment((prev) => {
+        const next: ParticlePerfAssessment = {
+          tier: nextTier,
+          source: "watchdog",
+          scoreMs: avgFrameMs,
+          reason,
+          hardwareCores: prev?.hardwareCores ?? (typeof navigator !== "undefined" ? navigator.hardwareConcurrency || 4 : 4),
+          deviceMemoryGb: prev?.deviceMemoryGb ?? null,
+          checkedAt: Date.now(),
+        };
+        savePerfAssessment(next);
+        return next;
+      });
+      if (nextTier === "locked") {
+        setIsMaterialized(true);
+        if (pageRef.current) {
+          pageRef.current.style.setProperty("--login-clarity", "1");
+        }
+      }
+    },
+    []
+  );
+
+  const handleToggleDarkMode = useCallback(() => {
+    setManualDark((prev) => {
+      const next = !prev;
+      saveLoginManualDark(next);
+      return next;
+    });
+  }, []);
+
   const handleToggleImmersive = useCallback(() => {
+    const now = performance.now();
+    const recent = secretClickTimesRef.current.filter((t) => now - t <= 2200);
+    recent.push(now);
+    secretClickTimesRef.current = recent;
+
+    if (recent.length >= 5) {
+      secretClickTimesRef.current = [];
+      if (!isImmersiveLocked) {
+        setImmersiveEnabled(true);
+        setIsMaterialized(false);
+        if (typeof window !== "undefined") {
+          try {
+            localStorage.setItem(LOGIN_IMMERSIVE_STORAGE_KEY, "true");
+          } catch {
+            // ignore storage write failures
+          }
+        }
+      }
+      onOpenParticleStudio?.();
+      return;
+    }
+
+    if (isImmersiveLocked) {
+      return;
+    }
+
     setImmersiveEnabled((prev) => {
       const next = !prev;
       if (typeof window !== "undefined") {
@@ -70,7 +225,7 @@ export function Login({ onNavigateHome, onLoginSuccess }: LoginProps) {
       }
       return next;
     });
-  }, []);
+  }, [isImmersiveLocked, onOpenParticleStudio]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -120,18 +275,18 @@ export function Login({ onNavigateHome, onLoginSuccess }: LoginProps) {
   return (
     <div
       ref={pageRef}
-      className={`login-page ${
-        !immersiveEnabled
+      className={`login-page ${isDarkUi ? "login-page--dark" : ""} ${
+        !immersiveActive
           ? "login-page--static"
           : isMaterialized || isCardLockedActive
             ? "login-page--particle-show login-page--materialized"
             : "login-page--particle-show login-page--standby"
       }`}
       onPointerDown={() => {
-        if (immersiveEnabled) setWakeSignal((s) => s + 1);
+        if (immersiveActive) setWakeSignal((s) => s + 1);
       }}
     >
-      {immersiveEnabled && (
+      {immersiveActive && (
         <LoginParticleField
           containerRef={pageRef}
           cardRef={cardRef}
@@ -139,27 +294,67 @@ export function Login({ onNavigateHome, onLoginSuccess }: LoginProps) {
           footerRef={footerRef}
           lockedActive={isCardLockedActive}
           wakeSignal={wakeSignal}
+          themeMode={themeMode}
+          settings={particleSettings}
+          performanceTier={performanceTier}
+          disableAutoDowngrade={hasExplicitPerfOverride}
+          onTierAutoChange={handleTierAutoChange}
           onClarityChange={handleClarityChange}
           onMaterializedChange={setIsMaterialized}
+          onDarknessChange={handleDarknessChange}
+          onDarkUiChange={setIsDarkUi}
         />
       )}
 
-      {/* Persistent Switch to Toggle Immersive Particle Mode */}
-      <button
-        type="button"
-        role="switch"
-        aria-checked={immersiveEnabled}
-        className={`login-immersive-switch ${
-          immersiveEnabled ? "login-immersive-switch--on" : "login-immersive-switch--off"
-        }`}
-        onClick={handleToggleImmersive}
-        title={immersiveEnabled ? "Turn off Immersive Particle Mode" : "Turn on Immersive Particle Mode"}
+      {/* Top-Right Controls: Login Theme Switch (Auto Ambient / Light / Dark) + Immersive Switch */}
+      <div
+        className="login-top-controls"
+        onPointerDown={(e) => e.stopPropagation()}
       >
-        <span className="login-immersive-switch__label">Immersive Mode</span>
-        <span className="login-immersive-switch__track" aria-hidden="true">
-          <span className="login-immersive-switch__thumb" />
-        </span>
-      </button>
+        <button
+          type="button"
+          className={`login-theme-toggle ${manualDark || isDarkUi ? "login-theme-toggle--dark" : ""}`}
+          onClick={handleToggleDarkMode}
+          title={
+            manualDark
+              ? "Dark Mode Pinned — click to return to Auto Ambient (Idle Dark / Light Wake)"
+              : "Auto Ambient (Idle Dark -> Light Wake) — click to pin Dark Mode"
+          }
+          aria-label={manualDark ? "Unpin Dark Mode" : "Pin Dark Mode"}
+          aria-pressed={manualDark}
+        >
+          <Icon name={manualDark || isDarkUi ? "sun" : "moon"} size={15} />
+        </button>
+
+        <button
+          type="button"
+          role="switch"
+          aria-checked={immersiveActive}
+          aria-disabled={isImmersiveLocked}
+          className={`login-immersive-switch ${
+            isImmersiveLocked
+              ? "login-immersive-switch--off login-immersive-switch--locked"
+              : immersiveEnabled
+                ? "login-immersive-switch--on"
+                : "login-immersive-switch--off"
+          }`}
+          onClick={handleToggleImmersive}
+          title={
+            isImmersiveLocked
+              ? perfAssessment?.reason || "Locked due to low device graphics performance"
+              : immersiveEnabled
+                ? "Turn off Immersive Particle Mode"
+                : "Turn on Immersive Particle Mode"
+          }
+        >
+          <span className="login-immersive-switch__label">
+            {isImmersiveLocked ? "Immersive Locked" : "Immersive Mode"}
+          </span>
+          <span className="login-immersive-switch__track" aria-hidden="true">
+            <span className="login-immersive-switch__thumb" />
+          </span>
+        </button>
+      </div>
 
       {/* Top Header with GeniusOne Enterprise Brand */}
       <header ref={headerRef} className="login-header">
@@ -185,7 +380,7 @@ export function Login({ onNavigateHome, onLoginSuccess }: LoginProps) {
         <div
           ref={cardRef}
           className={`login-card ${
-            !immersiveEnabled || isMaterialized || isCardLockedActive
+            !immersiveActive || isMaterialized || isCardLockedActive
               ? "login-card--materialized"
               : "login-card--standby"
           }`}

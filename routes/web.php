@@ -400,6 +400,7 @@ Route::get('/warehouse/report/outstanding-request', fn () => view('app', ['page'
 
 // User Authentication (Frontend UI)
 Route::get('/login', fn () => view('app', ['page' => 'login']))->name('login');
+Route::get('/login/particle-studio', fn () => view('app', ['page' => 'login-particle-studio']))->name('login.particle-studio');
 
 // SuperAdmin User & Permission Management
 Route::get('/admin/user-permissions', fn () => view('app', ['page' => 'user-permission-admin']))->name('admin.user-permissions');

@@ -1,6 +1,7 @@
 // Re-export all pages organized by functional modules
 export { Dashboard } from "./Dashboard/Dashboard";
 export { Login } from "./Auth/Login";
+export { LoginParticleStudioPage } from "./Auth/LoginParticleStudioPage";
 export { EditProfile } from "./Auth/EditProfile";
 export { PurchaseRequisition } from "./Procurement/PurchaseRequest/PurchaseRequisition";
 export { PurchaseRequisitionDetail } from "./Procurement/PurchaseRequest/PurchaseRequisitionDetail";
