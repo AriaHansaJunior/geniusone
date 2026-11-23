@@ -6,6 +6,7 @@ import { CustomDatePicker } from "../../../../components/ui/CustomDatePicker";
 import { CustomSelect } from "../../../../components/ui/CustomSelect";
 import { Icon } from "../../../../components/ui/Icon";
 import { Pagination } from "../../../../components/ui/Pagination";
+import { apiFetch, apiPost, clearApiCache } from "../../../../data/api";
 import {
   fetchMasterItems,
   fetchMasterLookupsApi,
@@ -17,9 +18,15 @@ interface AdjustmentStockImportProps {
   onImported: (adjustmentNumber?: string) => void;
 }
 
+interface LookupOption {
+  value: string;
+  label: string;
+}
+
 interface ParsedPreviewRow {
   rowNum: number;
   item_code: string;
+  item_name: string;
   warehouse: string;
   adjustment_type: string;
   quantity: number | string;
@@ -28,6 +35,7 @@ interface ParsedPreviewRow {
   remark: string;
   resolvedItemName: string;
   resolvedWarehouseName: string;
+  isNewMasterItem: boolean;
   validationError: string | null;
 }
 
@@ -58,15 +66,33 @@ export function AdjustmentStockImport({ onBack, onImported }: AdjustmentStockImp
 
   const [warehouses, setWarehouses] = useState<{ id: number; code?: string; name: string }[]>([]);
   const [masterItems, setMasterItems] = useState<{ id: number; code: string; externalCode: string; name: string }[]>([]);
+  const [unitOptions, setUnitOptions] = useState<LookupOption[]>([]);
+  const [classificationOptions, setClassificationOptions] = useState<LookupOption[]>([]);
+  const [facilityOptions, setFacilityOptions] = useState<LookupOption[]>([]);
+  const [warehouseTypeOptions, setWarehouseTypeOptions] = useState<LookupOption[]>([]);
 
   const [defaultWarehouseId, setDefaultWarehouseId] = useState<string>("");
   const [adjustmentDate, setAdjustmentDate] = useState(getTodayIso());
   const [referenceCode, setReferenceCode] = useState("");
   const [note, setNote] = useState("");
+  const [autoCreateMissing, setAutoCreateMissing] = useState(true);
+
+  const [showQuickMaster, setShowQuickMaster] = useState(false);
+  const [quickTab, setQuickTab] = useState<"item" | "warehouse">("item");
+  const [quickItemCode, setQuickItemCode] = useState("");
+  const [quickItemName, setQuickItemName] = useState("");
+  const [quickItemUnitId, setQuickItemUnitId] = useState("");
+  const [quickItemClassId, setQuickItemClassId] = useState("");
+  const [quickItemFacilityId, setQuickItemFacilityId] = useState("");
+  const [quickWhCode, setQuickWhCode] = useState("");
+  const [quickWhName, setQuickWhName] = useState("");
+  const [quickWhTypeId, setQuickWhTypeId] = useState("");
+  const [isSavingQuickMaster, setIsSavingQuickMaster] = useState(false);
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [rawExcelRows, setRawExcelRows] = useState<Record<string, any>[]>([]);
   const [isDragOver, setIsDragOver] = useState(false);
+  const [isDownloadingTemplate, setIsDownloadingTemplate] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -80,6 +106,14 @@ export function AdjustmentStockImport({ onBack, onImported }: AdjustmentStockImp
     Promise.all([fetchMasterLookupsApi(), fetchMasterItems().catch(() => [])]).then(
       ([lookups, itemsData]) => {
         if (cancelled) return;
+        const mapOptions = (rows: any[]): LookupOption[] =>
+          Array.isArray(rows)
+            ? rows.map((row: any) => ({
+                value: String(row.id),
+                label: row.code ? `${row.code} - ${row.name}` : String(row.name),
+              }))
+            : [];
+
         const whList = Array.isArray(lookups?.warehouses)
           ? lookups.warehouses.map((w: any) => ({
               id: Number(w.id),
@@ -88,6 +122,19 @@ export function AdjustmentStockImport({ onBack, onImported }: AdjustmentStockImp
             }))
           : [];
         setWarehouses(whList);
+
+        const uOpts = mapOptions(lookups?.units_of_measurements);
+        const cOpts = mapOptions(lookups?.classifications);
+        const fOpts = mapOptions(lookups?.facilities);
+        const wtOpts = mapOptions(lookups?.warehouse_types);
+        setUnitOptions(uOpts);
+        setClassificationOptions(cOpts);
+        setFacilityOptions(fOpts);
+        setWarehouseTypeOptions(wtOpts);
+        if (uOpts[0]) setQuickItemUnitId((prev) => prev || uOpts[0].value);
+        if (cOpts[0]) setQuickItemClassId((prev) => prev || cOpts[0].value);
+        if (fOpts[0]) setQuickItemFacilityId((prev) => prev || fOpts[0].value);
+        if (wtOpts[0]) setQuickWhTypeId((prev) => prev || wtOpts[0].value);
 
         const mItems = Array.isArray(itemsData)
           ? itemsData.map((m) => ({
@@ -112,6 +159,7 @@ export function AdjustmentStockImport({ onBack, onImported }: AdjustmentStockImp
 
     return rawExcelRows.map((raw, idx) => {
       const itemCode = readNormalizedField(raw, ["item_code", "kode_item", "kode_barang", "code", "item"]);
+      const itemName = readNormalizedField(raw, ["item_name", "nama_item", "nama_barang", "name"]);
       const whInput = readNormalizedField(raw, ["warehouse", "warehouse_code", "warehouse_name", "gudang"]);
       const rawType = readNormalizedField(raw, ["adjustment_type", "type", "direction", "jenis"]).toUpperCase();
       const qtyStr = readNormalizedField(raw, ["quantity", "qty", "jumlah", "stock"]);
@@ -140,10 +188,12 @@ export function AdjustmentStockImport({ onBack, onImported }: AdjustmentStockImp
         resolvedType = "OUT";
       }
 
+      const isNewMasterItem = Boolean(itemCode && !matchedItem && autoCreateMissing);
+
       let rowErr: string | null = null;
       if (!itemCode) {
         rowErr = "Missing Item Code";
-      } else if (masterItems.length > 0 && !matchedItem) {
+      } else if (masterItems.length > 0 && !matchedItem && !autoCreateMissing) {
         rowErr = `Unknown Item '${itemCode}'`;
       } else if (!matchedWh) {
         rowErr = whInput ? `Unknown Warehouse '${whInput}'` : "Warehouse required";
@@ -156,18 +206,20 @@ export function AdjustmentStockImport({ onBack, onImported }: AdjustmentStockImp
       return {
         rowNum: idx + 1,
         item_code: itemCode,
+        item_name: itemName,
         warehouse: whInput || defaultWhObj?.name || "",
         adjustment_type: resolvedType,
         quantity: Number.isNaN(qtyNum) ? qtyStr : qtyNum,
         lot_number: lotNumber,
         coordinate,
         remark,
-        resolvedItemName: matchedItem?.name || "",
+        resolvedItemName: matchedItem?.name || itemName || (isNewMasterItem ? itemCode : ""),
         resolvedWarehouseName: matchedWh?.name || "",
+        isNewMasterItem,
         validationError: rowErr,
       };
     });
-  }, [rawExcelRows, masterItems, warehouses, defaultWarehouseId]);
+  }, [rawExcelRows, masterItems, warehouses, defaultWarehouseId, autoCreateMissing]);
 
   const invalidCount = useMemo(
     () => previewRows.filter((r) => Boolean(r.validationError)).length,
@@ -181,51 +233,48 @@ export function AdjustmentStockImport({ onBack, onImported }: AdjustmentStockImp
     return previewRows.slice(start, start + pageSize);
   }, [previewRows, safeCurrentPage, pageSize]);
 
-  const handleExportTemplateExcel = () => {
+  const handleExportTemplateExcel = async () => {
+    if (isDownloadingTemplate) return;
+    setIsDownloadingTemplate(true);
+    setErrorMsg(null);
     try {
-      const sampleItems = masterItems.slice(0, 2);
-      const sampleWh = warehouses[0]?.name || "Gudang Utama";
-      const templateData = [
-        ["Item Code", "Warehouse", "Type", "Quantity", "Lot Number", "Coordinate", "Remark"],
-        [
-          sampleItems[0]?.code || "50.112.100.001",
-          sampleWh,
-          "IN",
-          100,
-          "LOT-2026-001",
-          "A-01",
-          "Initial stock injection",
-        ],
-        [
-          sampleItems[1]?.code || "50.112.100.002",
-          sampleWh,
-          "SET",
-          50,
-          "LOT-2026-002",
-          "B-02",
-          "Set exact warehouse balance",
-        ],
-      ];
-
-      const worksheet = XLSX.utils.aoa_to_sheet(templateData);
-      worksheet["!cols"] = [
-        { wch: 20 },
-        { wch: 24 },
-        { wch: 12 },
-        { wch: 12 },
-        { wch: 18 },
-        { wch: 16 },
-        { wch: 30 },
-      ];
-
-      const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, "Adjustment_Stock");
-      XLSX.writeFile(workbook, "Template_Adjustment_Stock.xlsx");
-      setInfoMsg("Downloaded Excel template: Template_Adjustment_Stock.xlsx");
-      setErrorMsg(null);
+      const response = await apiFetch("/api/warehouse/adjustment-stock/template", {
+        cache: "no-store",
+        headers: {
+          Accept: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/json",
+        },
+      });
+      if (!response.ok) {
+        throw new Error("Failed to download template from server.");
+      }
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = "Template_Adjustment_Stock.xlsx";
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      window.URL.revokeObjectURL(url);
+      setInfoMsg("Downloaded Excel template with Master_Data dropdowns: Template_Adjustment_Stock.xlsx");
     } catch {
-      setErrorMsg("Failed to generate Excel template.");
+      setErrorMsg("Failed to download Excel template.");
+    } finally {
+      setIsDownloadingTemplate(false);
     }
+  };
+
+  const isPopulatedSpreadsheetRow = (obj: Record<string, any>): boolean => {
+    const candidateValues = [
+      readNormalizedField(obj, ["item_code", "kode_item", "kode_barang", "code", "item"]),
+      readNormalizedField(obj, ["warehouse", "warehouse_code", "warehouse_name", "gudang"]),
+      readNormalizedField(obj, ["adjustment_type", "type", "direction", "jenis"]),
+      readNormalizedField(obj, ["quantity", "qty", "jumlah", "stock"]),
+      readNormalizedField(obj, ["lot_number", "no_lot", "lot"]),
+      readNormalizedField(obj, ["coordinate", "coordinate_name", "lokasi"]),
+      readNormalizedField(obj, ["remark", "notes", "note", "keterangan"]),
+    ];
+    return candidateValues.some((val) => val !== "");
   };
 
   const parseSpreadsheetFile = (file: File) => {
@@ -242,13 +291,15 @@ export function AdjustmentStockImport({ onBack, onImported }: AdjustmentStockImp
       try {
         const data = evt.target?.result;
         const workbook = XLSX.read(data, { type: "array" });
-        const firstSheet = workbook.SheetNames[0];
-        if (!firstSheet) {
+        const targetSheetName =
+          workbook.SheetNames.find((n) => n === "Adjustment_Stock") || workbook.SheetNames[0];
+        if (!targetSheetName) {
           setErrorMsg("The uploaded Excel workbook contains no sheets.");
           return;
         }
-        const sheet = workbook.Sheets[firstSheet];
-        const parsed = XLSX.utils.sheet_to_json<Record<string, any>>(sheet, { defval: "" });
+        const sheet = workbook.Sheets[targetSheetName];
+        const rawParsed = XLSX.utils.sheet_to_json<Record<string, any>>(sheet, { defval: "" });
+        const parsed = rawParsed.filter(isPopulatedSpreadsheetRow);
         if (parsed.length === 0) {
           setErrorMsg("No data rows found in the uploaded file.");
           setRawExcelRows([]);
@@ -266,6 +317,96 @@ export function AdjustmentStockImport({ onBack, onImported }: AdjustmentStockImp
       }
     };
     reader.readAsArrayBuffer(file);
+  };
+
+  const handleSaveQuickItem = async () => {
+    const trimmedName = quickItemName.trim();
+    if (!trimmedName) {
+      setErrorMsg("Item Name is required for Quick Add Master Item.");
+      return;
+    }
+    if (!quickItemUnitId || !quickItemClassId || !quickItemFacilityId) {
+      setErrorMsg("Unit, Classification, and Facility must be selected.");
+      return;
+    }
+    setIsSavingQuickMaster(true);
+    setErrorMsg(null);
+    try {
+      const res = await apiPost<{ data?: any }>("/api/exim/master/items", {
+        code: quickItemCode.trim() || undefined,
+        name: trimmedName,
+        units_of_measurements_id: Number(quickItemUnitId),
+        classifications_id: Number(quickItemClassId),
+        facilities_id: Number(quickItemFacilityId),
+        status: 1,
+        stock: 0,
+      });
+      clearApiCache();
+      const created = res?.data;
+      if (created?.id) {
+        setMasterItems((prev) => [
+          ...prev,
+          {
+            id: Number(created.id),
+            code: String(created.code || quickItemCode.trim()),
+            externalCode: String(created.external_code || ""),
+            name: String(created.name || trimmedName),
+          },
+        ]);
+      }
+      setInfoMsg(
+        `Added Master Item '${created?.code || quickItemCode.trim()} - ${created?.name || trimmedName}'. Export Template Excel again if you want it in the dropdown.`
+      );
+      setQuickItemCode("");
+      setQuickItemName("");
+    } catch (err: any) {
+      setErrorMsg(err?.message || "Failed to create Master Item.");
+    } finally {
+      setIsSavingQuickMaster(false);
+    }
+  };
+
+  const handleSaveQuickWarehouse = async () => {
+    const trimmedName = quickWhName.trim();
+    if (!trimmedName) {
+      setErrorMsg("Warehouse Name is required for Quick Add Warehouse.");
+      return;
+    }
+    if (!quickWhTypeId) {
+      setErrorMsg("Warehouse Type must be selected.");
+      return;
+    }
+    setIsSavingQuickMaster(true);
+    setErrorMsg(null);
+    try {
+      const res = await apiPost<{ data?: any }>("/api/warehouse/master/warehouses", {
+        code: quickWhCode.trim() || undefined,
+        name: trimmedName,
+        warehouse_types_id: Number(quickWhTypeId),
+        status: 1,
+      });
+      clearApiCache();
+      const created = res?.data;
+      if (created?.id) {
+        setWarehouses((prev) => [
+          ...prev,
+          {
+            id: Number(created.id),
+            code: created.code ? String(created.code) : "",
+            name: String(created.name || trimmedName),
+          },
+        ]);
+      }
+      setInfoMsg(
+        `Added Master Warehouse '${created?.name || trimmedName}'. Export Template Excel again if you want it in the dropdown.`
+      );
+      setQuickWhCode("");
+      setQuickWhName("");
+    } catch (err: any) {
+      setErrorMsg(err?.message || "Failed to create Master Warehouse.");
+    } finally {
+      setIsSavingQuickMaster(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -288,8 +429,10 @@ export function AdjustmentStockImport({ onBack, onImported }: AdjustmentStockImp
         adjustment_date: adjustmentDate,
         reference_code: referenceCode.trim() || null,
         note: note.trim() || null,
+        auto_create_missing_items: autoCreateMissing,
         rows: previewRows.map((r) => ({
           item_code: r.item_code,
+          item_name: r.item_name || r.resolvedItemName || undefined,
           warehouse: r.warehouse || r.resolvedWarehouseName,
           adjustment_type: r.adjustment_type,
           quantity: Number(r.quantity),
@@ -340,16 +483,188 @@ export function AdjustmentStockImport({ onBack, onImported }: AdjustmentStockImp
       <div className="adj-card">
         <div className="adj-card-header">
           <h3 className="adj-card-title">Inject Stock via Excel Import</h3>
-          <Button type="button" variant="excel" onClick={handleExportTemplateExcel}>
-            Export Template Excel
-          </Button>
+          <div className="adj-card-header__actions">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setShowQuickMaster((prev) => !prev)}
+            >
+              {showQuickMaster ? "Close Quick Master" : "Quick Add Master"}
+            </Button>
+            <Button
+              type="button"
+              variant="excel"
+              onClick={handleExportTemplateExcel}
+              disabled={isDownloadingTemplate}
+            >
+              {isDownloadingTemplate ? "Generating Template..." : "Export Template Excel"}
+            </Button>
+          </div>
         </div>
+
+        {showQuickMaster && (
+          <div className="adj-quick-master">
+            <div className="adj-quick-master__head">
+              <h4 className="adj-quick-master__title">Quick Add Master Data</h4>
+              <div className="adj-quick-tabs" role="tablist" aria-label="Quick master entity selector">
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={quickTab === "item"}
+                  className={`adj-quick-tab ${quickTab === "item" ? "is-active" : ""}`}
+                  onClick={() => setQuickTab("item")}
+                >
+                  Master Item
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={quickTab === "warehouse"}
+                  className={`adj-quick-tab ${quickTab === "warehouse" ? "is-active" : ""}`}
+                  onClick={() => setQuickTab("warehouse")}
+                >
+                  Warehouse
+                </button>
+              </div>
+            </div>
+
+            {quickTab === "item" ? (
+              <>
+                <div className="adj-form-grid-4">
+                  <div className="master-form-group">
+                    <label htmlFor="quickItemCode" className="master-form-label">
+                      Item Code (Auto if blank)
+                    </label>
+                    <input
+                      id="quickItemCode"
+                      type="text"
+                      className="master-form-input"
+                      value={quickItemCode}
+                      onChange={(e) => setQuickItemCode(e.target.value)}
+                      placeholder="e.g. ITM-NEW-001"
+                    />
+                  </div>
+                  <div className="master-form-group">
+                    <label htmlFor="quickItemName" className="master-form-label">
+                      Item Name <span className="master-required-star">*</span>
+                    </label>
+                    <input
+                      id="quickItemName"
+                      type="text"
+                      className="master-form-input"
+                      value={quickItemName}
+                      onChange={(e) => setQuickItemName(e.target.value)}
+                      placeholder="e.g. Carton Box 40x30"
+                    />
+                  </div>
+                  <div className="master-form-group">
+                    <label className="master-form-label">
+                      Unit <span className="master-required-star">*</span>
+                    </label>
+                    <CustomSelect
+                      searchable
+                      value={quickItemUnitId}
+                      onChange={setQuickItemUnitId}
+                      options={unitOptions}
+                    />
+                  </div>
+                  <div className="master-form-group">
+                    <label className="master-form-label">
+                      Classification <span className="master-required-star">*</span>
+                    </label>
+                    <CustomSelect
+                      searchable
+                      value={quickItemClassId}
+                      onChange={setQuickItemClassId}
+                      options={classificationOptions}
+                    />
+                  </div>
+                </div>
+                <div className="adj-form-grid-3">
+                  <div className="master-form-group">
+                    <label className="master-form-label">
+                      Facility <span className="master-required-star">*</span>
+                    </label>
+                    <CustomSelect
+                      searchable
+                      value={quickItemFacilityId}
+                      onChange={setQuickItemFacilityId}
+                      options={facilityOptions}
+                    />
+                  </div>
+                </div>
+                <div className="adj-quick-master__actions">
+                  <Button
+                    type="button"
+                    variant="primary"
+                    onClick={handleSaveQuickItem}
+                    disabled={isSavingQuickMaster}
+                  >
+                    {isSavingQuickMaster ? "Saving Item..." : "Add Master Item"}
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="adj-form-grid-3">
+                  <div className="master-form-group">
+                    <label htmlFor="quickWhCode" className="master-form-label">
+                      Warehouse Code
+                    </label>
+                    <input
+                      id="quickWhCode"
+                      type="text"
+                      className="master-form-input"
+                      value={quickWhCode}
+                      onChange={(e) => setQuickWhCode(e.target.value)}
+                      placeholder="e.g. WH-NEW"
+                    />
+                  </div>
+                  <div className="master-form-group">
+                    <label htmlFor="quickWhName" className="master-form-label">
+                      Warehouse Name <span className="master-required-star">*</span>
+                    </label>
+                    <input
+                      id="quickWhName"
+                      type="text"
+                      className="master-form-input"
+                      value={quickWhName}
+                      onChange={(e) => setQuickWhName(e.target.value)}
+                      placeholder="e.g. Gudang Produksi 2"
+                    />
+                  </div>
+                  <div className="master-form-group">
+                    <label className="master-form-label">
+                      Warehouse Type <span className="master-required-star">*</span>
+                    </label>
+                    <CustomSelect
+                      searchable
+                      value={quickWhTypeId}
+                      onChange={setQuickWhTypeId}
+                      options={warehouseTypeOptions}
+                    />
+                  </div>
+                </div>
+                <div className="adj-quick-master__actions">
+                  <Button
+                    type="button"
+                    variant="primary"
+                    onClick={handleSaveQuickWarehouse}
+                    disabled={isSavingQuickMaster}
+                  >
+                    {isSavingQuickMaster ? "Saving Warehouse..." : "Add Master Warehouse"}
+                  </Button>
+                </div>
+              </>
+            )}
+          </div>
+        )}
 
         <div className="adj-steps">
           <div className="adj-step-item">
             <span className="adj-step-num">1</span>
             <span>
-              Download <strong>Export Template Excel</strong> containing Item Code, Warehouse, Type (IN, OUT, or SET), Quantity, Lot Number, Coordinate, and Remark.
+              Download <strong>Export Template Excel</strong> with dropdowns in <strong>Adjustment_Stock</strong> — or type a brand-new <strong>Item Code</strong> &amp; <strong>Item Name</strong> directly on Sheet 1 without touching <strong>Master_Data</strong>, or click <strong>Quick Add Master</strong>.
             </span>
           </div>
           <div className="adj-step-item">
@@ -432,6 +747,17 @@ export function AdjustmentStockImport({ onBack, onImported }: AdjustmentStockImp
             if (e.target.files?.[0]) parseSpreadsheetFile(e.target.files[0]);
           }}
         />
+
+        <label className="adj-auto-create-row">
+          <input
+            type="checkbox"
+            checked={autoCreateMissing}
+            onChange={(e) => setAutoCreateMissing(e.target.checked)}
+          />
+          <span>
+            Auto-create missing Master Items typed directly in <strong>Adjustment_Stock</strong> (Item Code + Item Name) on import
+          </span>
+        </label>
 
         <div
           className={`adj-dropzone ${isDragOver ? "drag-over" : ""} ${selectedFile ? "has-file" : ""}`}
@@ -553,6 +879,8 @@ export function AdjustmentStockImport({ onBack, onImported }: AdjustmentStockImp
                     <td>
                       {row.validationError ? (
                         <Badge tone="red">{row.validationError}</Badge>
+                      ) : row.isNewMasterItem ? (
+                        <Badge tone="blue">New Master + Ready</Badge>
                       ) : (
                         <Badge tone="green">Ready</Badge>
                       )}

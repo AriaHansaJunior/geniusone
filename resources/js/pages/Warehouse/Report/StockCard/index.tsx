@@ -16,9 +16,22 @@ import {
 } from "./stock-card-data";
 import type { StockCardRecord } from "./stock-card-types";
 
+function getTodayWibIso(): string {
+  try {
+    return new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Jakarta",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(new Date());
+  } catch {
+    return new Date().toISOString().slice(0, 10);
+  }
+}
+
 export function StockCardIndex() {
   const [startDate, setStartDate] = useState("2026-01-01");
-  const [endDate, setEndDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [endDate, setEndDate] = useState(getTodayWibIso);
   const [selectedItemCode, setSelectedItemCode] = useState("");
   const [selectedUnit, setSelectedUnit] = useState("All Units");
   const [selectedWarehouse, setSelectedWarehouse] = useState("All Warehouse");
@@ -26,7 +39,7 @@ export function StockCardIndex() {
   // Applied filter state (triggered on Report button click or initial mount)
   const [appliedFilters, setAppliedFilters] = useState({
     startDate: "2026-01-01",
-    endDate: new Date().toISOString().slice(0, 10),
+    endDate: getTodayWibIso(),
     itemCode: "",
     unit: "All Units",
     warehouse: "All Warehouse",
@@ -34,6 +47,7 @@ export function StockCardIndex() {
 
   const [pageSize, setPageSize] = useState<number>(25);
   const [currentPage, setCurrentPage] = useState<number>(1);
+  const [dateSortDir, setDateSortDir] = useState<"desc" | "asc">("desc");
   const [notification, setNotification] = useState<{
     type: "error" | "warning" | "success" | "info";
     message: string;
@@ -157,9 +171,11 @@ export function StockCardIndex() {
           const item = json.data.item;
           const summaryEnd = json.data?.summary?.ending_balance ?? item?.current_stock;
           setBackendEndingBalance(summaryEnd !== undefined && summaryEnd !== null ? Number(summaryEnd) : null);
+          const totalMovements = json.data.movements.length;
           const mapped: StockCardRecord[] = json.data.movements.map((m: any, idx: number) => ({
             id: String(m.id || idx + 1),
             no: idx + 1,
+            seq: totalMovements - idx,
             itemCode: item?.code || appliedFilters.itemCode,
             itemName: item?.name || "-",
             unitCode: m.unit || item?.unit || "PCE",
@@ -229,34 +245,56 @@ export function StockCardIndex() {
         });
   }, [appliedFilters, liveRecords]);
 
+  const sortedRecords = useMemo(() => {
+    const list = [...filteredRecords];
+    list.sort((a, b) => {
+      const dateCmp = String(a.date || "").localeCompare(String(b.date || ""));
+      if (dateCmp !== 0) {
+        return dateSortDir === "desc" ? -dateCmp : dateCmp;
+      }
+      const seqA = a.seq ?? a.no;
+      const seqB = b.seq ?? b.no;
+      return dateSortDir === "desc" ? seqB - seqA : seqA - seqB;
+    });
+    return list;
+  }, [filteredRecords, dateSortDir]);
+
   // Totals for In, Out, and running Stock
   const totals = useMemo(() => {
     let totalIn = 0;
     let totalOut = 0;
+    let newestRecord: StockCardRecord | null = null;
     filteredRecords.forEach((r) => {
       if (typeof r.in === "number") totalIn += r.in;
       if (typeof r.out === "number") totalOut += r.out;
+      if (
+        !newestRecord ||
+        String(r.date || "") > String(newestRecord.date || "") ||
+        (String(r.date || "") === String(newestRecord.date || "") &&
+          (r.seq ?? r.no) > (newestRecord.seq ?? newestRecord.no))
+      ) {
+        newestRecord = r;
+      }
     });
-    const lastBalance =
-      filteredRecords.length > 0
-        ? filteredRecords[filteredRecords.length - 1].stock
+    const lastBalance = newestRecord
+      ? (newestRecord as StockCardRecord).stock
       : (backendEndingBalance ?? 0);
-  return {
-    totalIn,
-    totalOut,
-    lastBalance,
-  };
-}, [filteredRecords, backendEndingBalance]);
+    return {
+      totalIn,
+      totalOut,
+      lastBalance,
+    };
+  }, [filteredRecords, backendEndingBalance]);
 
 // Pagination calculation
-const totalRecords = filteredRecords.length;
+const totalRecords = sortedRecords.length;
 const totalPages = Math.max(1, Math.ceil(totalRecords / pageSize));
 const safeCurrentPage = Math.min(Math.max(1, currentPage), totalPages);
 
 const paginatedRecords = useMemo(() => {
   const startIdx = (safeCurrentPage - 1) * pageSize;
-  return filteredRecords.slice(startIdx, startIdx + pageSize);
-}, [filteredRecords, safeCurrentPage, pageSize]);
+  return sortedRecords.slice(startIdx, startIdx + pageSize);
+}, [sortedRecords, safeCurrentPage, pageSize]);
 
 // Print report
 const handlePrint = () => {
@@ -284,7 +322,7 @@ const handleExportExcel = () => {
 
     const headers = [
       "No.",
-      "Date",
+      "Date & Time (WIB)",
       "Ref",
       "Description",
       "In",
@@ -297,9 +335,9 @@ const handleExportExcel = () => {
       "Job Number",
     ];
 
-    const rowsData = filteredRecords.map((r, idx) => [
+    const rowsData = sortedRecords.map((r, idx) => [
       idx + 1,
-      r.date,
+      r.date ? `${r.date} WIB` : "—",
       r.ref,
       r.description,
       r.in !== null ? r.in : 0,
@@ -589,7 +627,18 @@ return (
             <thead>
               <tr>
                 <th style={{ width: "50px", textAlign: "center" }}>No.</th>
-                <th style={{ minWidth: "155px" }}>Date & Time</th>
+                <th
+                  className="th-sortable"
+                  style={{ minWidth: "175px" }}
+                  onClick={() => {
+                    setDateSortDir((prev) => (prev === "desc" ? "asc" : "desc"));
+                    setCurrentPage(1);
+                  }}
+                  title="Click to sort by Date & Time (Descending / Ascending)"
+                >
+                  Date &amp; Time (WIB)
+                  <Icon name={dateSortDir === "desc" ? "arrowDown" : "arrowUp"} size={13} />
+                </th>
                 <th style={{ minWidth: "160px" }}>Ref</th>
                 <th style={{ minWidth: "200px" }}>Description</th>
                 <th style={{ minWidth: "80px", textAlign: "right" }}>In</th>
@@ -619,7 +668,7 @@ return (
                         {rowNumber}
                       </td>
                       <td style={{ whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums" }}>
-                        {item.date || "—"}
+                        {item.date ? `${item.date} WIB` : "—"}
                       </td>
                       <td style={{ fontWeight: 600, fontFamily: "ui-monospace, monospace", fontSize: "12px" }}>
                         {item.ref}

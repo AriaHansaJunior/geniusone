@@ -10,13 +10,14 @@ use App\Models\Warehouse\Inventory\StockAdjustmentItem;
 use App\Services\AuditLogger;
 use App\Services\DocumentNumber\DocumentNumberGenerator;
 use App\Services\Inventory\InventoryService;
+use App\Support\StockAdjustmentTemplateBuilder;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\ValidationException;
-use Symfony\Component\HttpFoundation\StreamedResponse;
 use ZipArchive;
 
 class StockAdjustmentApiController extends Controller
@@ -157,7 +158,10 @@ class StockAdjustmentApiController extends Controller
             'adjustment_date' => 'nullable|date',
             'reference_code' => 'nullable|string|max:100',
             'note' => 'nullable|string',
+            'auto_create_missing_items' => 'nullable|boolean',
         ]);
+
+        $autoCreateMissing = filter_var($request->input('auto_create_missing_items', false), FILTER_VALIDATE_BOOLEAN);
 
         $rows = [];
         if ($request->has('rows') && is_array($request->input('rows'))) {
@@ -214,6 +218,9 @@ class StockAdjustmentApiController extends Controller
             $itemCode = trim((string) (
                 $row['item_code'] ?? $row['kode_item'] ?? $row['kode_barang'] ?? $row['code'] ?? $row['item'] ?? ''
             ));
+            $itemNameInput = trim((string) (
+                $row['item_name'] ?? $row['nama_item'] ?? $row['nama_barang'] ?? $row['name'] ?? ''
+            ));
             $itemIdRaw = $row['items_id'] ?? $row['item_id'] ?? null;
             $whInput = trim((string) (
                 $row['warehouse'] ?? $row['warehouse_code'] ?? $row['warehouse_name'] ?? $row['gudang'] ?? ''
@@ -239,9 +246,17 @@ class StockAdjustmentApiController extends Controller
                         ?? Item::whereRaw('LOWER(name) = ?', [strtolower($itemCode)])->first())
                     : null);
 
+            $newItemSpec = null;
             if (! $item) {
-                $errors[] = "Row {$rowNum}: Item '{$itemCode}' was not found in Master Item.";
-                continue;
+                if ($autoCreateMissing && $itemCode !== '') {
+                    $newItemSpec = [
+                        'code' => $itemCode,
+                        'name' => $itemNameInput !== '' ? $itemNameInput : $itemCode,
+                    ];
+                } else {
+                    $errors[] = "Row {$rowNum}: Item '{$itemCode}' was not found in Master Item.";
+                    continue;
+                }
             }
 
             $warehouseId = null;
@@ -304,7 +319,8 @@ class StockAdjustmentApiController extends Controller
             }
 
             $resolvedLines[] = [
-                'items_id' => $item->id,
+                'items_id' => $item?->id,
+                'new_item_spec' => $newItemSpec,
                 'warehouses_id' => (int) $warehouseId,
                 'adjustment_type' => $type,
                 'quantity' => $qty,
@@ -347,30 +363,15 @@ class StockAdjustmentApiController extends Controller
         ], 201);
     }
 
-    public function template(): StreamedResponse
+    public function template(): Response
     {
-        $headers = [
-            'Content-Type' => 'text/csv; charset=UTF-8',
-            'Content-Disposition' => 'attachment; filename="Template_Adjustment_Stock.csv"',
-        ];
+        $binary = (new StockAdjustmentTemplateBuilder)->buildXlsxBinary();
 
-        $sampleItem = Item::query()->orderBy('id')->first();
-        $sampleWarehouse = Warehouse::query()->orderBy('id')->first();
-
-        return response()->stream(function () use ($sampleItem, $sampleWarehouse) {
-            $handle = fopen('php://output', 'w');
-            fputcsv($handle, ['Item Code', 'Warehouse', 'Type', 'Quantity', 'Lot Number', 'Coordinate', 'Remark']);
-            fputcsv($handle, [
-                $sampleItem?->code ?? '50.112.100.001',
-                $sampleWarehouse?->name ?? 'Gudang Utama',
-                'IN',
-                '100',
-                'LOT-2026-001',
-                'A-01',
-                'Initial stock injection',
-            ]);
-            fclose($handle);
-        }, 200, $headers);
+        return response($binary, 200, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Content-Disposition' => 'attachment; filename="Template_Adjustment_Stock.xlsx"',
+            'Cache-Control' => 'no-store, no-cache, must-revalidate',
+        ]);
     }
 
     /**
@@ -411,7 +412,19 @@ class StockAdjustmentApiController extends Controller
             ]);
 
             foreach ($lines as $lineIdx => $line) {
-                $item = Item::query()->lockForUpdate()->findOrFail($line['items_id']);
+                if (! empty($line['items_id'])) {
+                    $item = Item::query()->lockForUpdate()->findOrFail($line['items_id']);
+                } elseif (! empty($line['new_item_spec'])) {
+                    $item = $this->resolveOrCreateItemByCode(
+                        code: (string) $line['new_item_spec']['code'],
+                        name: (string) $line['new_item_spec']['name'],
+                        actorId: $actorId
+                    );
+                } else {
+                    throw ValidationException::withMessages([
+                        'items' => ['Row ' . ($lineIdx + 1) . ': Item reference is missing.'],
+                    ]);
+                }
                 $warehouseId = (int) $line['warehouses_id'];
                 $warehouse = Warehouse::findOrFail($warehouseId);
                 $type = $line['adjustment_type'];
@@ -559,6 +572,40 @@ class StockAdjustmentApiController extends Controller
         }
 
         return 0.0;
+    }
+
+    private function resolveOrCreateItemByCode(string $code, string $name, int $actorId): Item
+    {
+        $existing = Item::query()->where('code', $code)->lockForUpdate()->first();
+        if ($existing) {
+            return $existing;
+        }
+
+        $classificationId = DB::table('classifications')->orderBy('id')->value('id');
+        $facilityId = DB::table('facilities')->orderBy('id')->value('id');
+        $uomId = DB::table('units_of_measurements')->orderBy('id')->value('id');
+        $itemTypeId = DB::table('item_types')->orderBy('id')->value('id');
+
+        if (! $classificationId || ! $facilityId || ! $uomId || ! $itemTypeId) {
+            throw ValidationException::withMessages([
+                'rows' => [
+                    "Cannot auto-create Master Item '{$code}' because default reference data (Classification, Facility, Unit, or Item Type) is not seeded.",
+                ],
+            ]);
+        }
+
+        return Item::create([
+            'code' => mb_substr($code, 0, 50),
+            'name' => mb_substr($name !== '' ? $name : $code, 0, 255),
+            'classifications_id' => (int) $classificationId,
+            'facilities_id' => (int) $facilityId,
+            'units_of_measurements_id' => (int) $uomId,
+            'item_types_id' => (int) $itemTypeId,
+            'status' => 1,
+            'stock' => 0,
+            'created_by' => $actorId,
+            'updated_by' => $actorId,
+        ]);
     }
 
     private function findByCodeOrId(string $code): StockAdjustment

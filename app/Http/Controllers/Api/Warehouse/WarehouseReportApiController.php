@@ -12,6 +12,17 @@ use Illuminate\Support\Facades\DB;
 
 class WarehouseReportApiController extends Controller
 {
+    private function parseToWib(string $value): Carbon
+    {
+        $trimmed = trim($value);
+        $hasTz = preg_match('/(Z|[+-]\d{2}:?\d{2})$/i', $trimmed) === 1;
+        $dt = $hasTz
+            ? Carbon::parse($trimmed)
+            : Carbon::parse($trimmed, (string) config('app.timezone', 'UTC'));
+
+        return $dt->setTimezone('Asia/Jakarta');
+    }
+
     private function resolveMovementTimestamp(
         array &$timeQueues,
         string $refType,
@@ -33,10 +44,11 @@ class WarehouseReportApiController extends Controller
 
         if ($imTime) {
             try {
-                $parsedIm = Carbon::parse($imTime);
+                $parsedIm = $this->parseToWib((string) $imTime);
                 if ($preferDocDateOnly && $docDate && preg_match('/^\d{4}-\d{2}-\d{2}/', trim($docDate), $m)) {
                     return $m[0] . ' ' . $parsedIm->format('H:i:s');
                 }
+
                 return $parsedIm->format('Y-m-d H:i:s');
             } catch (\Throwable) {
                 // fallback below
@@ -46,15 +58,23 @@ class WarehouseReportApiController extends Controller
         $trimmedDoc = trim((string) $docDate);
         if ($trimmedDoc !== '') {
             try {
-                $parsedDoc = Carbon::parse($trimmedDoc);
-                if ($parsedDoc->format('H:i:s') !== '00:00:00') {
-                    return $parsedDoc->format('Y-m-d H:i:s');
+                $hasExplicitTime = preg_match('/\d{2}:\d{2}:\d{2}/', $trimmedDoc) === 1;
+                if ($hasExplicitTime) {
+                    $parsedDoc = $this->parseToWib($trimmedDoc);
+                    if ($parsedDoc->format('H:i:s') !== '00:00:00') {
+                        return $parsedDoc->format('Y-m-d H:i:s');
+                    }
                 }
                 if ($docUpdatedAt) {
-                    $parsedUpd = Carbon::parse($docUpdatedAt);
-                    return $parsedDoc->format('Y-m-d') . ' ' . $parsedUpd->format('H:i:s');
+                    $parsedUpd = $this->parseToWib((string) $docUpdatedAt);
+                    $datePrefix = preg_match('/^\d{4}-\d{2}-\d{2}/', $trimmedDoc, $m)
+                        ? $m[0]
+                        : $parsedUpd->format('Y-m-d');
+
+                    return $datePrefix . ' ' . $parsedUpd->format('H:i:s');
                 }
-                return $parsedDoc->format('Y-m-d H:i:s');
+
+                return Carbon::parse($trimmedDoc, 'Asia/Jakarta')->format('Y-m-d H:i:s');
             } catch (\Throwable) {
                 // ignore
             }
@@ -62,13 +82,13 @@ class WarehouseReportApiController extends Controller
 
         if ($docUpdatedAt) {
             try {
-                return Carbon::parse($docUpdatedAt)->format('Y-m-d H:i:s');
+                return $this->parseToWib((string) $docUpdatedAt)->format('Y-m-d H:i:s');
             } catch (\Throwable) {
                 // ignore
             }
         }
 
-        return now()->format('Y-m-d H:i:s');
+        return now('Asia/Jakarta')->format('Y-m-d H:i:s');
     }
 
     /**
@@ -512,6 +532,13 @@ class WarehouseReportApiController extends Controller
                 'notes' => $m['notes'],
             ];
         }
+
+        // Order history newest-first while preserving chronologically calculated running balances & sequential row numbers.
+        $movements = array_reverse($movements);
+        foreach ($movements as $idx => &$movementRow) {
+            $movementRow['no'] = $idx + 1;
+        }
+        unset($movementRow);
 
         return response()->json([
             'status' => 'success',

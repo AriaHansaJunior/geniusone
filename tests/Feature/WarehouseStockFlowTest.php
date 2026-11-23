@@ -329,10 +329,45 @@ class WarehouseStockFlowTest extends TestCase
 
     public function test_stock_adjustment_manual_and_excel_inject_update_stock_item_and_stock_card(): void
     {
-        // 1. Download template endpoint returns 200 CSV
-        $this->get('/api/warehouse/adjustment-stock/template')
+        // 1. Download template endpoint returns 200 XLSX with Master_Data sheet & dropdown validations
+        $tplRes = $this->get('/api/warehouse/adjustment-stock/template')
             ->assertOk()
-            ->assertHeader('Content-Type', 'text/csv; charset=UTF-8');
+            ->assertHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+
+        $tmpXlsx = tempnam(sys_get_temp_dir(), 'tpl_test_');
+        file_put_contents($tmpXlsx, $tplRes->getContent());
+        $zip = new \ZipArchive();
+        $this->assertTrue($zip->open($tmpXlsx) === true);
+        $workbookXml = (string) $zip->getFromName('xl/workbook.xml');
+        $stylesXml = (string) $zip->getFromName('xl/styles.xml');
+        $sharedStringsXml = (string) $zip->getFromName('xl/sharedStrings.xml');
+        $sheet1Xml = (string) $zip->getFromName('xl/worksheets/sheet1.xml');
+        $sheet2Xml = (string) $zip->getFromName('xl/worksheets/sheet2.xml');
+        $sheet3Xml = (string) $zip->getFromName('xl/worksheets/sheet3.xml');
+        $zip->close();
+        @unlink($tmpXlsx);
+
+        $this->assertStringContainsString('name="Adjustment_Stock"', $workbookXml);
+        $this->assertStringContainsString('name="Master_Data"', $workbookXml);
+        $this->assertStringContainsString('name="Master_Warehouse"', $workbookXml);
+        $this->assertStringContainsString('name="MasterItemCodes"', $workbookXml);
+        $this->assertStringContainsString('name="MasterWarehouses"', $workbookXml);
+        $this->assertStringContainsString('OFFSET(Master_Data!$A$2', $workbookXml);
+        $this->assertStringContainsString('OFFSET(Master_Warehouse!$A$2', $workbookXml);
+        $this->assertStringContainsString('<calcPr', $workbookXml);
+        $this->assertStringContainsString('<cellStyles', $stylesXml);
+        $this->assertStringContainsString('<sz val="11"/><color rgb="', $stylesXml);
+        $this->assertStringContainsString('<selection pane="bottomLeft"', $sheet1Xml);
+        $this->assertStringContainsString('<v/></c>', $sheet1Xml);
+        $this->assertStringContainsString('<dimension ref="A1:D', $sheet2Xml);
+        $this->assertStringContainsString('<dimension ref="A1:B', $sheet3Xml);
+        $this->assertStringContainsString('errorStyle="information"', $sheet1Xml);
+        $this->assertStringContainsString('sqref="A2:A500"', $sheet1Xml);
+        $this->assertStringContainsString('sqref="C2:C500"', $sheet1Xml);
+        $this->assertStringContainsString('sqref="D2:D500"', $sheet1Xml);
+        $this->assertStringContainsString($this->itemA->code, $sharedStringsXml);
+        $this->assertStringContainsString($this->warehouseA->name, $sharedStringsXml);
+        $this->assertStringContainsString($this->warehouseB->name, $sharedStringsXml);
 
         // 2. Manual IN adjustment into Warehouse B (previously 0 for itemA) + SET adjustment on itemB in Warehouse A
         $manualRes = $this->postJson('/api/warehouse/adjustment-stock', [
@@ -497,37 +532,91 @@ class WarehouseStockFlowTest extends TestCase
                 ->value('quantity')
         );
 
-        // Record OUT then IN with distinct hours on the same date to verify chronological time ordering in Stock Card
+        $todayWib = now('Asia/Jakarta')->toDateString();
+
+        // Record OUT then IN with distinct hours on the same date to verify chronological WIB ordering in Stock Card
         $adjOut = $this->postJson('/api/warehouse/adjustment-stock', [
             'warehouses_id' => $this->warehouseA->id,
-            'adjustment_date' => now()->toDateString(),
+            'adjustment_date' => $todayWib,
             'items' => [
                 ['items_id' => $newItemId, 'adjustment_type' => 'OUT', 'quantity' => 5],
             ],
         ])->assertCreated()->json('data.adjustmentNumber');
 
-        // Backdate the initial and adjustment inventory_movements timestamps intentionally to test chronological sorting by HH:mm:ss
+        // Backdate the initial and adjustment inventory_movements timestamps (stored UTC -> returned WIB/Asia/Jakarta)
         DB::table('inventory_movements')
             ->where('items_id', $newItemId)
             ->where('reference_type', 'INITIAL_STOCK')
-            ->update(['created_at' => now()->format('Y-m-d') . ' 08:15:10']);
+            ->update(['created_at' => $todayWib . ' 08:15:10']);
 
         DB::table('inventory_movements')
             ->where('items_id', $newItemId)
             ->where('reference_number', $adjOut)
-            ->update(['created_at' => now()->format('Y-m-d') . ' 14:42:33']);
+            ->update(['created_at' => $todayWib . ' 14:42:33']);
 
         $stockCard = $this->getJson(
             '/api/warehouse/reports/stock-card?itemCode=INT-SYNC-001'
             . '&warehouseId=' . $this->warehouseA->id
-            . '&startDate=' . now()->startOfYear()->toDateString()
-            . '&endDate=' . now()->toDateString()
+            . '&startDate=' . now('Asia/Jakarta')->startOfYear()->toDateString()
+            . '&endDate=' . $todayWib
         )->assertOk();
 
         $stockCard->assertJsonPath('data.summary.ending_balance', 20)
-            ->assertJsonPath('data.movements.0.date', now()->format('Y-m-d') . ' 08:15:10')
-            ->assertJsonPath('data.movements.1.date', now()->format('Y-m-d') . ' 14:42:33')
-            ->assertJsonPath('data.movements.0.balance', 25)
-            ->assertJsonPath('data.movements.1.balance', 20);
+            ->assertJsonPath('data.movements.0.no', 1)
+            ->assertJsonPath('data.movements.0.date', $todayWib . ' 21:42:33')
+            ->assertJsonPath('data.movements.0.balance', 20)
+            ->assertJsonPath('data.movements.1.no', 2)
+            ->assertJsonPath('data.movements.1.date', $todayWib . ' 15:15:10')
+            ->assertJsonPath('data.movements.1.balance', 25);
+    }
+
+    public function test_excel_import_can_auto_create_missing_master_items(): void
+    {
+        $res = $this->postJson('/api/warehouse/adjustment-stock/import', [
+            'default_warehouse_id' => $this->warehouseA->id,
+            'adjustment_date' => now()->toDateString(),
+            'reference_code' => 'AUTO-MASTER-01',
+            'auto_create_missing_items' => true,
+            'rows' => [
+                [
+                    'item_code' => 'BRAND-NEW-888',
+                    'item_name' => 'Brand New Carton Box',
+                    'warehouse' => $this->warehouseA->name,
+                    'adjustment_type' => 'IN',
+                    'quantity' => 30,
+                    'lot_number' => 'LOT-NEW-01',
+                    'coordinate' => 'Z-09',
+                    'remark' => 'Auto-created directly from Excel row',
+                ],
+                [
+                    'item_code' => 'BRAND-NEW-888',
+                    'item_name' => 'Brand New Carton Box',
+                    'warehouse' => $this->warehouseB->name,
+                    'adjustment_type' => 'IN',
+                    'quantity' => 12,
+                    'remark' => 'Second row reusing newly created item in same batch',
+                ],
+            ],
+        ])->assertCreated();
+
+        $createdItem = Item::query()->where('code', 'BRAND-NEW-888')->first();
+        $this->assertNotNull($createdItem);
+        $this->assertSame('Brand New Carton Box', $createdItem->name);
+        $this->assertSame(42.0, (float) $createdItem->stock);
+        $this->assertSame(
+            30.0,
+            (float) DB::table('item_warehouse')
+                ->where('items_id', $createdItem->id)
+                ->where('warehouses_id', $this->warehouseA->id)
+                ->value('quantity')
+        );
+        $this->assertSame(
+            12.0,
+            (float) DB::table('item_warehouse')
+                ->where('items_id', $createdItem->id)
+                ->where('warehouses_id', $this->warehouseB->id)
+                ->value('quantity')
+        );
+        $this->assertNotEmpty($res->json('data.adjustmentNumber'));
     }
 }

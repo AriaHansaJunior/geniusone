@@ -78,6 +78,16 @@ th:hover svg {
   color: var(--blue-600);
 }
 
+th.th-sortable {
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+th.th-sortable:hover {
+  background: #eff6ff;
+  color: var(--blue-700);
+}
+
 td {
   height: 52px;
   padding: 8px 14px;

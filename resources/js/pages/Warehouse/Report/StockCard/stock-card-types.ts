@@ -1,6 +1,7 @@
 export interface StockCardRecord {
   id: string;
   no: number;
+  seq?: number;
   itemCode: string;
   itemName: string;
   unitCode: string;

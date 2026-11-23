@@ -60,7 +60,7 @@ interface BufferedHttpResponse {
   status: number;
   statusText: string;
   headers: [string, string][];
-  bodyText: string;
+  body: ArrayBuffer;
   cachedAt: number;
 }
 
@@ -86,12 +86,19 @@ function resolveGetCacheTtlMs(url: string): number {
 
 function shouldSkipGetCache(url: string, init: RequestInit): boolean {
   if (init.cache === "no-store" || init.cache === "reload") return true;
-  if (url.includes("/attachment")) return true;
+  if (
+    url.includes("/attachment") ||
+    url.includes("/template") ||
+    url.includes("/export") ||
+    url.includes("/download")
+  ) {
+    return true;
+  }
   return false;
 }
 
 function buildResponseFromBuffer(entry: BufferedHttpResponse): Response {
-  return new Response(entry.bodyText, {
+  return new Response(entry.body, {
     status: entry.status,
     statusText: entry.statusText,
     headers: entry.headers,
@@ -171,7 +178,7 @@ export async function apiFetch(input: string, init: RequestInit = {}): Promise<R
     promise = (async () => {
       try {
         const res = await fetch(resolvedUrl, { credentials: "include", ...init, method, headers });
-        const bodyText = await res.text();
+        const body = await res.arrayBuffer();
         const headerEntries: [string, string][] = [];
         res.headers.forEach((value, key) => {
           headerEntries.push([key, value]);
@@ -180,7 +187,7 @@ export async function apiFetch(input: string, init: RequestInit = {}): Promise<R
           status: res.status,
           statusText: res.statusText,
           headers: headerEntries,
-          bodyText,
+          body,
           cachedAt: Date.now(),
         };
 
