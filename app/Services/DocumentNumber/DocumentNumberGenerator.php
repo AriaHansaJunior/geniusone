@@ -185,6 +185,52 @@ class DocumentNumberGenerator
     }
 
     /**
+     * Generate Berita Acara Closure Number:
+     * Format: {SEQ}/BA-IMLI/{ROMAN_MONTH}/{YEAR}
+     */
+    public static function generateBeritaAcaraNumber(?Carbon $date = null): string
+    {
+        $date = $date ?? Carbon::now();
+        $year = $date->year;
+        $month = $date->month;
+        $roman = self::getRomanMonth($month);
+        $suffix = "/BA-IMLI/{$roman}/{$year}";
+
+        return self::generateSequentialCode(
+            table: 'po_service_closures',
+            column: 'berita_acara_number',
+            year: $year,
+            month: $month,
+            likePattern: '%'.$suffix,
+            formatter: fn (int $seq) => str_pad((string) $seq, 4, '0', STR_PAD_LEFT).$suffix,
+            sequenceExtractor: fn (string $code) => preg_match('/^(\d+)\//', $code, $m) ? (int) $m[1] : 0,
+        );
+    }
+
+    /**
+     * Generate Warehouse Stock Transfer Number:
+     * Format: {SEQ}/WT-IMLI/{ROMAN_MONTH}/{YEAR}
+     */
+    public static function generateWarehouseTransferNumber(?Carbon $date = null): string
+    {
+        $date = $date ?? Carbon::now();
+        $year = $date->year;
+        $month = $date->month;
+        $roman = self::getRomanMonth($month);
+        $suffix = "/WT-IMLI/{$roman}/{$year}";
+
+        return self::generateSequentialCode(
+            table: 'warehouse_stock_transfers',
+            column: 'transfer_number',
+            year: $year,
+            month: $month,
+            likePattern: '%'.$suffix,
+            formatter: fn (int $seq) => str_pad((string) $seq, 4, '0', STR_PAD_LEFT).$suffix,
+            sequenceExtractor: fn (string $code) => preg_match('/^(\d+)\//', $code, $m) ? (int) $m[1] : 0,
+        );
+    }
+
+    /**
      * Generate the next collision-free document sequence number.
      */
     private static function generateSequentialCode(

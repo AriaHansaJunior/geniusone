@@ -26,6 +26,7 @@ class PurchaseOrder extends Model
         'po_number',
         'creator_id',
         'po_types_id',
+        'order_category',
         'date',
         'due_date',
         'valutas_id',
@@ -46,12 +47,16 @@ class PurchaseOrder extends Model
         'revision',
         'updated_by',
         'rejection_note',
+        'closed_at',
+        'closed_by',
+        'closing_note',
     ];
 
     protected $casts = [
         'is_kawasan_berikat' => 'boolean',
         'ppn_rate' => 'float',
         'discount_overall_percent' => 'float',
+        'closed_at' => 'datetime',
     ];
 
     public function isKawasanBerikat(): bool
@@ -250,6 +255,9 @@ class PurchaseOrder extends Model
         if ($rawAttr === 'Rejected') {
             return 'Rejected';
         }
+        if ($rawAttr === 'Closed') {
+            return 'Closed';
+        }
 
         $appr2 = $this->approvals->where('approval_ke', '2')->first();
         if ($appr2 && (int) $appr2->status === 1) {
@@ -276,5 +284,35 @@ class PurchaseOrder extends Model
         }
 
         return 'Waiting for Approve 1';
+    }
+
+    public function closures(): HasMany
+    {
+        return $this->hasMany(PoServiceClosure::class, 'purchase_order_id');
+    }
+
+    public function closedByUser(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'closed_by');
+    }
+
+    public function isServiceOrder(): bool
+    {
+        if (strtoupper((string) ($this->attributes['order_category'] ?? '')) === 'SERVICE') {
+            return true;
+        }
+
+        if ($this->po_types_id) {
+            $type = $this->poType;
+            if ($type && (
+                strtoupper((string) $type->code) === 'SRV'
+                || stripos((string) $type->name, 'jasa') !== false
+                || stripos((string) $type->name, 'service') !== false
+            )) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

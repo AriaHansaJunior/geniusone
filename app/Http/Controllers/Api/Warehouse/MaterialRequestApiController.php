@@ -95,6 +95,7 @@ class MaterialRequestApiController extends Controller
     public function store(Request $request): JsonResponse
     {
         $actorId = $this->requireActorId($request);
+        $actor = $request->user();
 
         $validated = $request->validate([
             'requestDate' => 'nullable|string',
@@ -108,12 +109,6 @@ class MaterialRequestApiController extends Controller
             'typeOfRequest' => 'nullable|string',
             'destination_location_id' => 'nullable|integer|exists:destination_location,id',
             'destinationLocation' => 'nullable|string',
-            'job_number_id' => 'nullable|integer|exists:job_number,id',
-            'jobNumber' => 'nullable|string',
-            'job_number' => 'nullable|string',
-            'customer' => 'nullable|string|max:255',
-            'projectType' => 'nullable|string|max:100',
-            'project_type' => 'nullable|string|max:100',
             'is_internal_warehouse' => 'nullable|boolean',
             'is_specific_station' => 'nullable|boolean',
             'requestNote' => 'nullable|string',
@@ -121,9 +116,35 @@ class MaterialRequestApiController extends Controller
             'items' => 'required|array|min:1',
         ]);
 
-        $dept = ! empty($validated['departments_id'])
+        $requestedDept = ! empty($validated['departments_id'])
             ? Department::find($validated['departments_id'])
             : (! empty($validated['department']) ? Department::where('name', $validated['department'])->first() : null);
+
+        if ($actor && $actor->departments_id !== null) {
+            $dept = Department::find($actor->departments_id);
+            if (! $dept) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Authenticated user assigned department was not found.',
+                ], 422);
+            }
+
+            $requestedDeptName = trim((string) ($validated['department'] ?? ''));
+            if (
+                (! empty($validated['departments_id']) && (int) $validated['departments_id'] !== (int) $actor->departments_id)
+                || ($requestedDeptName !== '' && (
+                    ($requestedDept && (int) $requestedDept->id !== (int) $actor->departments_id)
+                    || (! $requestedDept && strcasecmp($requestedDeptName, (string) $dept->name) !== 0)
+                ))
+            ) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Department cannot be overridden and must match the authenticated user\'s department.',
+                ], 422);
+            }
+        } else {
+            $dept = $requestedDept;
+        }
 
         $type = ! empty($validated['type_of_request_id'])
             ? TypeOfRequest::find($validated['type_of_request_id'])
@@ -138,11 +159,6 @@ class MaterialRequestApiController extends Controller
             ? Warehouse::find($whId)
             : (! empty($validated['warehouse']) ? Warehouse::where('name', $validated['warehouse'])->first() : null);
 
-        $jobNumberInput = $validated['jobNumber'] ?? $validated['job_number'] ?? null;
-        $jobModel = ! empty($validated['job_number_id'])
-            ? JobNumber::find($validated['job_number_id'])
-            : (! empty($jobNumberInput) ? JobNumber::where('name', $jobNumberInput)->first() : null);
-
         if (! $dept || ! $type || ! $wh) {
             return response()->json([
                 'status' => 'error',
@@ -152,7 +168,7 @@ class MaterialRequestApiController extends Controller
 
         $resolvedItems = $this->validateRequestedWarehouseStock($wh, $request->input('items', []));
 
-        $record = DB::transaction(function () use ($validated, $actorId, $dept, $type, $dest, $wh, $jobModel, $jobNumberInput, $resolvedItems) {
+        $record = DB::transaction(function () use ($validated, $actorId, $dept, $type, $dest, $wh, $resolvedItems) {
             $seq = RequestMaterial::withTrashed()->count() + 1;
             do {
                 $requestCode = 'REQ-WH-' . date('Y') . '-' . str_pad((string) $seq, 3, '0', STR_PAD_LEFT);
@@ -168,10 +184,10 @@ class MaterialRequestApiController extends Controller
                 'warehouses_id' => $wh->id,
                 'type_of_request_id' => $type->id,
                 'destination_location_id' => $dest?->id,
-                'job_number_id' => $jobModel?->id,
-                'job_number' => $jobModel?->name ?? $jobNumberInput,
-                'customer' => $validated['customer'] ?? null,
-                'project_type' => $validated['projectType'] ?? $validated['project_type'] ?? null,
+                'job_number_id' => null,
+                'job_number' => null,
+                'customer' => null,
+                'project_type' => null,
                 'is_internal_warehouse' => (bool) ($validated['is_internal_warehouse'] ?? false),
                 'is_specific_station' => (bool) ($validated['is_specific_station'] ?? false),
                 'creator' => $actorId,
@@ -277,10 +293,32 @@ class MaterialRequestApiController extends Controller
             $resolvedItems = $this->validateRequestedWarehouseStock($wh, $request->input('items'));
         }
 
-        DB::transaction(function () use ($request, $r, $actorId, $wh, $resolvedItems) {
-            $dept = $request->filled('departments_id')
-                ? Department::find($request->input('departments_id'))
-                : ($request->filled('department') ? Department::where('name', $request->input('department'))->first() : null);
+        $actor = $request->user();
+        $requestedDept = $request->filled('departments_id')
+            ? Department::find($request->input('departments_id'))
+            : ($request->filled('department') ? Department::where('name', $request->input('department'))->first() : null);
+
+        if ($actor && $actor->departments_id !== null) {
+            $actorDept = Department::find($actor->departments_id);
+            $requestedDeptName = trim((string) $request->input('department', ''));
+            if (
+                ($request->filled('departments_id') && (int) $request->input('departments_id') !== (int) $actor->departments_id)
+                || ($requestedDeptName !== '' && (
+                    ($requestedDept && (int) $requestedDept->id !== (int) $actor->departments_id)
+                    || (! $requestedDept && $actorDept && strcasecmp($requestedDeptName, (string) $actorDept->name) !== 0)
+                ))
+            ) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Department cannot be overridden and must match the authenticated user\'s department.',
+                ], 422);
+            }
+        }
+
+        DB::transaction(function () use ($request, $r, $actorId, $actor, $wh, $resolvedItems, $requestedDept) {
+            $deptId = ($actor && $actor->departments_id !== null)
+                ? (int) $actor->departments_id
+                : ($requestedDept?->id ?? $r->departments_id);
 
             $type = $request->filled('type_of_request_id')
                 ? TypeOfRequest::find($request->input('type_of_request_id'))
@@ -290,20 +328,11 @@ class MaterialRequestApiController extends Controller
                 ? DestinationLocation::find($request->input('destination_location_id'))
                 : ($request->filled('destinationLocation') ? DestinationLocation::where('name', $request->input('destinationLocation'))->first() : null);
 
-            $jobStr = $request->input('jobNumber', $request->input('job_number'));
-            $jobModel = $request->filled('job_number_id')
-                ? JobNumber::find($request->input('job_number_id'))
-                : (! empty($jobStr) ? JobNumber::where('name', $jobStr)->first() : null);
-
             $r->update([
-                'departments_id' => $dept?->id ?? $r->departments_id,
+                'departments_id' => $deptId,
                 'warehouses_id' => $wh->id,
                 'type_of_request_id' => $type?->id ?? $r->type_of_request_id,
                 'destination_location_id' => $dest?->id ?? $r->destination_location_id,
-                'job_number_id' => $jobModel?->id ?? $r->job_number_id,
-                'job_number' => $jobModel?->name ?? $jobStr ?? $r->job_number,
-                'customer' => $request->has('customer') ? $request->input('customer') : $r->customer,
-                'project_type' => $request->input('projectType', $request->input('project_type', $r->project_type)),
                 'is_internal_warehouse' => $request->has('is_internal_warehouse') ? (bool) $request->input('is_internal_warehouse') : $r->is_internal_warehouse,
                 'is_specific_station' => $request->has('is_specific_station') ? (bool) $request->input('is_specific_station') : $r->is_specific_station,
                 'request_date' => $request->input('requestDate', $request->input('request_date', $r->request_date)),

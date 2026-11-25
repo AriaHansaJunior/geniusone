@@ -10,15 +10,18 @@ use App\Models\Master\Finance\Ppn;
 use App\Models\Master\Finance\Valuta;
 use App\Models\Procurement\PurchaseOrder\AdditionalCost;
 use App\Models\Procurement\PurchaseOrder\AdditionalCostType;
+use App\Models\Procurement\PurchaseOrder\PoServiceClosure;
 use App\Models\Procurement\PurchaseOrder\PoType;
 use App\Models\Procurement\PurchaseOrder\PurchaseOrder;
 use App\Models\Procurement\PurchaseOrder\PurchaseOrderItem;
 use App\Models\Procurement\PurchaseRequest\PurchaseRequisition;
 use App\Models\Procurement\PurchaseRequest\PurchaseRequisitionItem;
 use App\Services\DocumentNumber\DocumentNumberGenerator;
+use Carbon\Carbon;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
 
 class PurchaseOrderService
@@ -123,14 +126,25 @@ class PurchaseOrderService
 
             $dueDate = $headerData['due_date'] ?? now()->addDays(14)->format('Y-m-d');
             $latestDeliv = $headerData['latest_delivery'] ?? now()->addDays(14);
-            $isKawasanBerikat = array_key_exists('is_kawasan_berikat', $headerData)
-                ? (bool) $headerData['is_kawasan_berikat']
-                : strtoupper($resolvedFacility) === 'FASILITAS';
+            $orderCategory = $this->resolveOrderCategory($headerData, $poTypeId ? (int) $poTypeId : null);
+
+            if ($orderCategory === 'SERVICE') {
+                if (array_key_exists('is_kawasan_berikat', $headerData) && (bool) $headerData['is_kawasan_berikat'] === true) {
+                    throw new InvalidArgumentException('Service Purchase Orders (PO Jasa) cannot be flagged as Kawasan Berikat / physical goods warehouse orders.');
+                }
+                $isKawasanBerikat = false;
+                $resolvedFacility = 'NON FASILITAS';
+            } else {
+                $isKawasanBerikat = array_key_exists('is_kawasan_berikat', $headerData)
+                    ? (bool) $headerData['is_kawasan_berikat']
+                    : strtoupper($resolvedFacility) === 'FASILITAS';
+            }
 
             $order = PurchaseOrder::create([
                 'po_number' => $poNumber,
                 'creator_id' => $actorId,
                 'po_types_id' => $poTypeId,
+                'order_category' => $orderCategory,
                 'date' => $headerData['date'] ?? now()->format('d-M-Y'),
                 'due_date' => $dueDate,
                 'valutas_id' => $valutaId,
@@ -204,12 +218,27 @@ class PurchaseOrderService
             $facilityInput = array_key_exists('facility_status', $headerData) || ! empty($items)
                 ? $this->resolveFacilityStatus(array_merge(['facility_status' => $order->facility_status], $headerData), $items)
                 : $order->facility_status;
-            $isKawasanBerikat = array_key_exists('is_kawasan_berikat', $headerData)
-                ? (bool) $headerData['is_kawasan_berikat']
-                : (bool) ($order->is_kawasan_berikat ?? (strtoupper((string) $facilityInput) === 'FASILITAS'));
+            $effectivePoTypeId = $headerData['po_types_id'] ?? $order->po_types_id;
+            $orderCategory = $this->resolveOrderCategory(
+                array_merge(['order_category' => $order->order_category], $headerData),
+                $effectivePoTypeId ? (int) $effectivePoTypeId : null
+            );
+
+            if ($orderCategory === 'SERVICE') {
+                if (array_key_exists('is_kawasan_berikat', $headerData) && (bool) $headerData['is_kawasan_berikat'] === true) {
+                    throw new InvalidArgumentException('Service Purchase Orders (PO Jasa) cannot be flagged as Kawasan Berikat / physical goods warehouse orders.');
+                }
+                $isKawasanBerikat = false;
+                $facilityInput = 'NON FASILITAS';
+            } else {
+                $isKawasanBerikat = array_key_exists('is_kawasan_berikat', $headerData)
+                    ? (bool) $headerData['is_kawasan_berikat']
+                    : (bool) ($order->is_kawasan_berikat ?? (strtoupper((string) $facilityInput) === 'FASILITAS'));
+            }
 
             $order->update([
-                'po_types_id' => $headerData['po_types_id'] ?? $order->po_types_id,
+                'po_types_id' => $effectivePoTypeId,
+                'order_category' => $orderCategory,
                 'date' => $headerData['date'] ?? $order->date,
                 'due_date' => $headerData['due_date'] ?? $order->due_date,
                 'valutas_id' => $headerData['valutas_id'] ?? $order->valutas_id,
@@ -625,13 +654,155 @@ class PurchaseOrderService
     }
 
     /**
+     * Close a Service Purchase Order (PO Jasa) with Berita Acara verification.
+     */
+    public function closeServiceOrder(int $poId, array $data, int $actorId): PurchaseOrder
+    {
+        return DB::transaction(function () use ($poId, $data, $actorId) {
+            $order = PurchaseOrder::with(['poType', 'closures'])
+                ->lockForUpdate()
+                ->findOrFail($poId);
+
+            if (! $order->isServiceOrder()) {
+                throw new InvalidArgumentException("Purchase Order '{$order->po_number}' is a Goods order. Berita Acara closure is restricted to Service Purchase Orders (PO Jasa).");
+            }
+
+            $currentStatus = $order->status;
+            if ($currentStatus === 'Closed') {
+                throw new InvalidArgumentException("Service Purchase Order '{$order->po_number}' is already Closed.");
+            }
+
+            if (! in_array($currentStatus, ['Approved', 'Approved 2'], true)) {
+                throw new InvalidArgumentException("Service Purchase Order '{$order->po_number}' must be fully Approved before closing via Berita Acara (Current status: {$currentStatus}).");
+            }
+
+            $baDate = ! empty($data['berita_acara_date'])
+                ? Carbon::parse($data['berita_acara_date'])
+                : Carbon::now();
+
+            $baNumber = ! empty($data['berita_acara_number'])
+                ? trim((string) $data['berita_acara_number'])
+                : DocumentNumberGenerator::generateBeritaAcaraNumber($baDate);
+
+            if (PoServiceClosure::where('berita_acara_number', $baNumber)->exists()) {
+                throw ValidationException::withMessages([
+                    'berita_acara_number' => ["Berita Acara number '{$baNumber}' is already registered."],
+                ]);
+            }
+
+            $completionPercentage = array_key_exists('completion_percentage', $data) && $data['completion_percentage'] !== null
+                ? (float) $data['completion_percentage']
+                : 100.0;
+
+            if ($completionPercentage <= 0 || $completionPercentage > 100) {
+                throw ValidationException::withMessages([
+                    'completion_percentage' => ['Completion percentage must be between 1 and 100.'],
+                ]);
+            }
+
+            $closure = PoServiceClosure::create([
+                'purchase_order_id' => $order->id,
+                'berita_acara_number' => $baNumber,
+                'berita_acara_date' => $baDate->format('Y-m-d'),
+                'completion_percentage' => $completionPercentage,
+                'service_description' => $data['service_description'] ?? null,
+                'verified_by_name' => $data['verified_by_name'] ?? null,
+                'attachment_path' => $data['attachment_path'] ?? null,
+                'notes' => $data['notes'] ?? null,
+                'status' => 'Closed',
+                'closed_by' => $actorId,
+            ]);
+
+            $closingNote = $data['notes'] ?? $data['service_description'] ?? "Closed via Berita Acara {$baNumber}";
+            $order->update([
+                'status' => 'Closed',
+                'closed_at' => Carbon::now(),
+                'closed_by' => $actorId,
+                'closing_note' => $closingNote,
+                'updated_by' => $actorId,
+            ]);
+
+            \App\Models\System\Governance\ApprovalHistory::create([
+                'document_type' => 'PO',
+                'document_id' => $order->id,
+                'document_number' => $order->po_number,
+                'user_id' => $actorId,
+                'action' => 'CLOSED_BERITA_ACARA',
+                'tier' => 2,
+                'from_status' => $currentStatus,
+                'to_status' => 'Closed',
+                'note' => "Berita Acara: {$closure->berita_acara_number} ({$completionPercentage}%)",
+                'metadata' => [
+                    'closure_id' => $closure->id,
+                    'berita_acara_number' => $closure->berita_acara_number,
+                    'berita_acara_date' => $closure->berita_acara_date?->format('Y-m-d'),
+                    'completion_percentage' => $completionPercentage,
+                ],
+            ]);
+
+            \App\Services\AuditLogger::logWorkflow(
+                documentType: 'PO',
+                documentNumber: $order->po_number,
+                action: 'CLOSED_BERITA_ACARA',
+                fromStatus: $currentStatus,
+                toStatus: 'Closed',
+                userId: $actorId,
+                extra: [
+                    'closure_id' => $closure->id,
+                    'berita_acara_number' => $closure->berita_acara_number,
+                    'completion_percentage' => $completionPercentage,
+                ]
+            );
+
+            return $order->fresh([
+                'supplier',
+                'valuta',
+                'poType',
+                'paymentTerm',
+                'paymentMethod',
+                'deliveryTerm',
+                'closures.closedByUser',
+                'closedByUser',
+                'items.requisitionItem.purchaseRequisition',
+                'items.requisitionItem.item.unitOfMeasurement',
+                'items.directItem.unitOfMeasurement',
+                'additionalCosts.costType',
+            ]);
+        });
+    }
+
+    /**
      * BE-05: Assert that document is not immutable/locked.
      */
     public function assertNotLocked(PurchaseOrder $order): void
     {
-        if (in_array($order->status, ['Approved', 'Approved 2', 'Completed'], true)) {
-            throw new InvalidArgumentException("Purchase Order '{$order->po_number}' is fully Approved and locked from modifications.");
+        if (in_array($order->status, ['Approved', 'Approved 2', 'Completed', 'Closed'], true)) {
+            throw new InvalidArgumentException("Purchase Order '{$order->po_number}' is {$order->status} and locked from modifications.");
         }
+    }
+
+    public function resolveOrderCategory(array $headerData, ?int $poTypeId): string
+    {
+        $explicit = strtoupper(trim((string) ($headerData['order_category'] ?? $headerData['po_category'] ?? '')));
+        if (in_array($explicit, ['SERVICE', 'JASA'], true)) {
+            return 'SERVICE';
+        }
+        if (! empty($headerData['is_service'])) {
+            return 'SERVICE';
+        }
+
+        if ($poTypeId) {
+            $type = PoType::find($poTypeId);
+            if ($type && (
+                strtoupper((string) $type->code) === 'SRV'
+                || stripos((string) $type->name, 'jasa') !== false
+                || stripos((string) $type->name, 'service') !== false
+            )) {
+                return 'SERVICE';
+            }
+        }
+
+        return $explicit === 'GOODS' ? 'GOODS' : 'GOODS';
     }
 
     private static function parseDeductionFlag(mixed $value): bool

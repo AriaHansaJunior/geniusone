@@ -410,6 +410,9 @@ class DocumentApprovalWorkflowService
             if ($this->isApprovedStatus($currentStatus)) {
                 throw new InvalidArgumentException('Cannot reject document that has already been fully Approved. Use UnApprove first.');
             }
+            if ($currentStatus === 'Closed') {
+                throw new InvalidArgumentException('Cannot reject a Closed document.');
+            }
             if ($currentStatus === self::STATUS_REJECTED) {
                 throw new InvalidArgumentException('Document is already in Rejected status.');
             }
@@ -729,13 +732,17 @@ class DocumentApprovalWorkflowService
      */
     public function postBpbStockToInventory(BpbReceiveMaterial $bpb, int $userId): void
     {
-        $mappings = PoRnToBpb::with(['poReceiveNote.purchaseOrder.items.requisitionItem.item', 'warehouse', 'coordinate'])
+        if ($bpb->isServiceBpb()) {
+            return;
+        }
+
+        $mappings = PoRnToBpb::with(['poReceiveNote.purchaseOrder.poType', 'poReceiveNote.purchaseOrder.items.requisitionItem.item', 'warehouse', 'coordinate'])
             ->where('bpb_receive_material_id', $bpb->id)
             ->get();
 
         foreach ($mappings as $map) {
             $poRn = $map->poReceiveNote;
-            if (! $poRn) {
+            if (! $poRn || $poRn->purchaseOrder?->isServiceOrder()) {
                 continue;
             }
 
@@ -792,13 +799,17 @@ class DocumentApprovalWorkflowService
      */
     public function rollbackBpbStockFromInventory(BpbReceiveMaterial $bpb, int $userId): void
     {
-        $mappings = PoRnToBpb::with(['poReceiveNote.purchaseOrder.items.requisitionItem.item', 'warehouse', 'coordinate'])
+        if ($bpb->isServiceBpb()) {
+            return;
+        }
+
+        $mappings = PoRnToBpb::with(['poReceiveNote.purchaseOrder.poType', 'poReceiveNote.purchaseOrder.items.requisitionItem.item', 'warehouse', 'coordinate'])
             ->where('bpb_receive_material_id', $bpb->id)
             ->get();
 
         foreach ($mappings as $map) {
             $poRn = $map->poReceiveNote;
-            if (! $poRn) {
+            if (! $poRn || $poRn->purchaseOrder?->isServiceOrder()) {
                 continue;
             }
 

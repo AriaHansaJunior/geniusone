@@ -20,6 +20,7 @@ class BpbReceiveMaterial extends Model
         'bpb_number',
         'source_type',
         'bpb_type',
+        'bpb_category',
         'status',
         'note',
         'rejection_note',
@@ -84,5 +85,12 @@ class BpbReceiveMaterial extends Model
     public function mappings(): HasMany
     {
         return $this->hasMany(PoRnToBpb::class, 'bpb_receive_material_id');
+    }
+
+    public function isServiceBpb(): bool
+    {
+        return strtoupper((string) ($this->attributes['bpb_category'] ?? 'GOODS')) === 'SERVICE'
+            || stripos((string) ($this->attributes['bpb_type'] ?? ''), 'jasa') !== false
+            || stripos((string) ($this->attributes['bpb_type'] ?? ''), 'service') !== false;
     }
 }

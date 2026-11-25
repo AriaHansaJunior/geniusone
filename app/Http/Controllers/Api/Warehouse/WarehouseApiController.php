@@ -238,6 +238,8 @@ class WarehouseApiController extends Controller
                     'source_type' => 'PO',
                     'id' => $po->id,
                     'document_number' => $po->po_number,
+                    'order_category' => $po->isServiceOrder() ? 'SERVICE' : 'GOODS',
+                    'is_service' => $po->isServiceOrder(),
                     'date' => $po->date ? date('Y-m-d', strtotime($po->date)) : null,
                     'supplier_id' => $po->supliers_id,
                     'supplier_name' => $po->supplier?->name,
@@ -331,6 +333,8 @@ class WarehouseApiController extends Controller
                 'rn_number' => $request->input('rn_number') ?? $request->input('rnNumber'),
                 'source_type' => $request->input('source_type') ?? $request->input('sourceType'),
                 'bpb_type' => $request->input('bpb_type') ?? $request->input('bpbType'),
+                'bpb_category' => $request->input('bpb_category') ?? $request->input('bpbCategory'),
+                'is_service' => $request->has('is_service') ? $request->boolean('is_service') : false,
                 'sj_number' => $request->input('sj_number') ?? $request->input('delivery_note'),
                 'invoice_date' => $request->input('invoice_date') ?? $request->input('invoiceDate'),
                 'invoice_number' => $request->input('invoice_number') ?? $request->input('invoiceNumber'),
@@ -436,19 +440,24 @@ class WarehouseApiController extends Controller
                             continue;
                         }
 
-                        $whId = $this->resolveWarehouseId(
-                            $itemData['warehouse_id'] ?? $itemData['warehouse'] ?? $itemData['location'] ?? $mapping->warehouses_id
-                        ) ?? $mapping->warehouses_id;
+                        if ($bpb->isServiceBpb()) {
+                            $whId = null;
+                            $coord = null;
+                        } else {
+                            $whId = $this->resolveWarehouseId(
+                                $itemData['warehouse_id'] ?? $itemData['warehouse'] ?? $itemData['location'] ?? $mapping->warehouses_id
+                            ) ?? $mapping->warehouses_id;
 
-                        $coord = $this->resolveWarehouseCoordinate(
-                            $whId,
-                            $itemData['warehouse_coordinates_id'] ?? $itemData['coordinate_id'] ?? null,
-                            $itemData['coordinate'] ?? $itemData['coordinate_name'] ?? null
-                        );
+                            $coord = $this->resolveWarehouseCoordinate(
+                                $whId,
+                                $itemData['warehouse_coordinates_id'] ?? $itemData['coordinate_id'] ?? null,
+                                $itemData['coordinate'] ?? $itemData['coordinate_name'] ?? null
+                            );
+                        }
 
                         $mapping->update([
                             'warehouses_id' => $whId,
-                            'warehouse_coordinates_id' => $coord?->id ?? $mapping->warehouse_coordinates_id,
+                            'warehouse_coordinates_id' => $bpb->isServiceBpb() ? null : ($coord?->id ?? $mapping->warehouse_coordinates_id),
                         ]);
 
                         if ($mapping->purchaseOrderReceiveNote) {
@@ -701,6 +710,8 @@ class WarehouseApiController extends Controller
             'statusFacility' => $bpbFacility,
             'bpbType' => $bpbType,
             '_rawBpbType' => $bpbType,
+            'bpb_category' => $bpb->isServiceBpb() ? 'SERVICE' : 'GOODS',
+            'is_service' => $bpb->isServiceBpb(),
             'sourceType' => $sourceType,
             'source_type' => $sourceType,
             '_rawWarehouseLocation' => $warehouseName,

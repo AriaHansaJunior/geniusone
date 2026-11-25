@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\Auth\UserProfileApiController;
 use App\Http\Controllers\Api\Common\ExchangeRateApiController;
 use App\Http\Controllers\Api\Common\ReferenceMasterApiController;
 use App\Http\Controllers\Api\Common\SystemContextApiController;
+use App\Http\Controllers\Api\Dashboard\DashboardAnalyticsApiController;
 use App\Http\Controllers\Api\Dashboard\StockNotificationApiController;
 use App\Http\Controllers\Api\Exim\Master\AccountApiController;
 use App\Http\Controllers\Api\Exim\Master\BrandApiController;
@@ -51,6 +52,7 @@ use App\Http\Controllers\Api\Warehouse\StockAdjustmentApiController;
 use App\Http\Controllers\Api\Warehouse\TransferStockReturnApiController;
 use App\Http\Controllers\Api\Warehouse\WarehouseApiController;
 use App\Http\Controllers\Api\Warehouse\WarehouseReportApiController;
+use App\Http\Controllers\Api\Warehouse\WarehouseStockTransferApiController;
 use App\Http\Controllers\Api\Workflow\ApprovalWorkflowApiController;
 // Workflow & Approval Engine Controllers (BE-03, BE-04, BE-05, BE-06)
 use Illuminate\Support\Facades\Route;
@@ -100,6 +102,7 @@ Route::middleware(['auth', 'active'])->prefix('procurement')->group(function () 
     Route::get('/po/{code}/attachment', [PurchaseOrderApiController::class, 'downloadAttachment'])->where('code', '.*(?<!/attachment)');
     Route::post('/po/{id}/approve', [PurchaseOrderApiController::class, 'approve']);
     Route::post('/po/{id}/reject', [PurchaseOrderApiController::class, 'reject']);
+    Route::post('/po/{id}/close-service', [PurchaseOrderApiController::class, 'closeService'])->middleware('permission:po.update');
     Route::post('/po/{id}/additional-costs', [PurchaseOrderApiController::class, 'storeAdditionalCost'])->middleware('permission:po.update');
     Route::delete('/po/{id}/additional-costs/{costId}', [PurchaseOrderApiController::class, 'destroyAdditionalCost'])->middleware('permission:po.update');
     Route::get('/po/{code}', [PurchaseOrderApiController::class, 'show'])->where('code', '.*');
@@ -213,6 +216,15 @@ Route::middleware(['auth', 'active'])->prefix('warehouse')->group(function () {
         Route::post('adjustment-stock/import', [StockAdjustmentApiController::class, 'import']);
     });
     Route::get('adjustment-stock/{code}', [StockAdjustmentApiController::class, 'show'])->where('code', '.*');
+
+    // Transfer Stock Between Warehouses
+    Route::get('stock-transfers', [WarehouseStockTransferApiController::class, 'index']);
+    Route::middleware(['permission:inventory.adjust'])->group(function () {
+        Route::post('stock-transfers', [WarehouseStockTransferApiController::class, 'store']);
+        Route::post('stock-transfers/{id}/post', [WarehouseStockTransferApiController::class, 'post']);
+        Route::post('stock-transfers/{id}/cancel', [WarehouseStockTransferApiController::class, 'cancel']);
+    });
+    Route::get('stock-transfers/{code}', [WarehouseStockTransferApiController::class, 'show'])->where('code', '.*');
 
     // Warehouse Master, Coordinates, Types of Request, Destination Locations
     Route::prefix('master')->group(function () {
@@ -392,6 +404,10 @@ Route::middleware(['auth', 'active'])->prefix('user')->group(function () {
 // 6. DASHBOARD, SYSTEM CONTEXT & COMMON UTILITIES DOMAIN API
 // =========================================================================
 Route::middleware(['auth', 'active'])->prefix('dashboard')->group(function () {
+    Route::get('/summary', [DashboardAnalyticsApiController::class, 'summary']);
+    Route::get('/completion-aggregation', [DashboardAnalyticsApiController::class, 'summary']);
+    Route::get('/tracking', [DashboardAnalyticsApiController::class, 'tracking']);
+    Route::get('/overview', [DashboardAnalyticsApiController::class, 'overview']);
     Route::get('/exchange-rates/latest', [ExchangeRateApiController::class, 'latest']);
     Route::get('/exchange-rates', [ExchangeRateApiController::class, 'index']);
     Route::get('/stock-alerts', [StockNotificationApiController::class, 'alerts']);
@@ -441,6 +457,7 @@ Route::middleware(['auth', 'active'])->group(function () {
     Route::put('/po/{id}', [PurchaseOrderApiController::class, 'update'])->middleware('permission:po.update');
     Route::delete('/po/{id}', [PurchaseOrderApiController::class, 'destroy'])->middleware('permission:po.delete');
     Route::get('/po/{code}/attachment', [PurchaseOrderApiController::class, 'downloadAttachment'])->where('code', '.*(?<!/attachment)');
+    Route::post('/po/{id}/close-service', [PurchaseOrderApiController::class, 'closeService'])->middleware('permission:po.update');
     Route::get('/po/{code}', [PurchaseOrderApiController::class, 'show'])->where('code', '.*');
 
     Route::get('/rn', [ReceiveNoteApiController::class, 'index']);

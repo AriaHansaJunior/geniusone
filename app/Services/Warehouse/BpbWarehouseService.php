@@ -307,6 +307,23 @@ class BpbWarehouseService
                         'rn_number' => ["Receive Note '{$rnCode}' has already been processed in BPB '{$existingBpb->bpb_number}'. Duplicate material receipt (Double BPB) is not allowed."],
                     ]);
                 }
+
+                $rnPos = PurchaseOrder::with('poType')
+                    ->whereIn('id', $rn->purchaseOrders()->pluck('purchase_order_id'))
+                    ->get();
+                if ($rnPos->contains(fn (PurchaseOrder $po) => $po->isServiceOrder())) {
+                    throw ValidationException::withMessages([
+                        'rn_number' => ["Receive Note '{$rnCode}' references a Service Purchase Order (PO Jasa) and cannot be processed as physical goods BPB."],
+                    ]);
+                }
+
+                $requestedCategory = strtoupper(trim((string) ($payload['bpb_category'] ?? '')));
+                if ($requestedCategory === 'SERVICE') {
+                    throw ValidationException::withMessages([
+                        'bpb_category' => ['Service BPB cannot be created from a Goods Receive Note (RN). Use Direct PO from a Service Purchase Order instead.'],
+                    ]);
+                }
+                $bpbCategory = 'GOODS';
             } else {
                 // Direct PO -> BPB: resolve all referenced POs and validate Approved + Non-Kawasan Berikat
                 $referencedPoIds = collect();
@@ -339,10 +356,40 @@ class BpbWarehouseService
                     ]);
                 }
 
-                $referencedPos = PurchaseOrder::with('items')
+                $referencedPos = PurchaseOrder::with(['items', 'poType'])
                     ->whereIn('id', $referencedPoIds)
                     ->lockForUpdate()
                     ->get();
+
+                $hasServicePo = $referencedPos->contains(fn (PurchaseOrder $po) => $po->isServiceOrder());
+                $hasGoodsPo = $referencedPos->contains(fn (PurchaseOrder $po) => ! $po->isServiceOrder());
+
+                if ($hasServicePo && $hasGoodsPo) {
+                    throw ValidationException::withMessages([
+                        'po_number' => ['Cannot mix Goods Purchase Orders and Service Purchase Orders (PO Jasa) inside a single BPB document.'],
+                    ]);
+                }
+
+                $requestedCategory = strtoupper(trim((string) ($payload['bpb_category'] ?? '')));
+                if ($requestedCategory === '' && (! empty($payload['is_service']) || stripos((string) ($payload['bpb_type'] ?? ''), 'jasa') !== false || stripos((string) ($payload['bpb_type'] ?? ''), 'service') !== false)) {
+                    $requestedCategory = 'SERVICE';
+                }
+
+                if ($hasServicePo) {
+                    if ($requestedCategory === 'GOODS') {
+                        throw ValidationException::withMessages([
+                            'bpb_category' => ['Cannot create a Goods BPB against a Service Purchase Order (PO Jasa).'],
+                        ]);
+                    }
+                    $bpbCategory = 'SERVICE';
+                } else {
+                    if ($requestedCategory === 'SERVICE') {
+                        throw ValidationException::withMessages([
+                            'bpb_category' => ['Cannot create a Service BPB against a Goods Purchase Order.'],
+                        ]);
+                    }
+                    $bpbCategory = 'GOODS';
+                }
 
                 foreach ($referencedPos as $refPo) {
                     if (! in_array($refPo->status, ['Approved', 'Approved 2'], true)) {
@@ -351,7 +398,7 @@ class BpbWarehouseService
                         ]);
                     }
 
-                    if ($refPo->isKawasanBerikat()) {
+                    if (! $hasServicePo && $refPo->isKawasanBerikat()) {
                         throw ValidationException::withMessages([
                             'po_number' => ["Purchase Order '{$refPo->po_number}' is a Kawasan Berikat PO and must go through Receive Note (EXIM) before Receive Material (BPB)."],
                         ]);
@@ -428,12 +475,13 @@ class BpbWarehouseService
 
             $bpbType = ! empty($payload['bpb_type'])
                 ? (string) $payload['bpb_type']
-                : ($sourceType === 'PO' ? 'Direct PO' : 'Warehouse');
+                : ($bpbCategory === 'SERVICE' ? 'Service (Jasa)' : ($sourceType === 'PO' ? 'Direct PO' : 'Warehouse'));
 
             $bpb = BpbReceiveMaterial::create([
                 'bpb_number' => $bpbNumber,
                 'source_type' => $sourceType,
                 'bpb_type' => $bpbType,
+                'bpb_category' => $bpbCategory,
                 'status' => 'Waiting for Approve 1',
                 'note' => $noteText ?: null,
                 'receive_date' => $receiveDate,
@@ -441,7 +489,9 @@ class BpbWarehouseService
                 'updated_by' => $creatorId,
             ]);
 
-            $headerWarehouseId = $this->resolveWarehouseId($payload['warehouse_input'] ?? null);
+            $headerWarehouseId = $bpbCategory === 'SERVICE'
+                ? null
+                : $this->resolveWarehouseId($payload['warehouse_input'] ?? null);
             $fallbackJobId = JobNumber::query()->value('id');
             $defaultPoId = $headerPo?->id;
 
@@ -459,19 +509,24 @@ class BpbWarehouseService
                         }
                     }
 
-                    $itemWhId = $this->resolveWarehouseId(
-                        $itemData['warehouse_id'] ?? $itemData['warehouse'] ?? $itemData['location'] ?? null
-                    ) ?? $headerWarehouseId;
+                    if ($bpbCategory === 'SERVICE') {
+                        $itemWhId = null;
+                        $itemCoordinate = null;
+                    } else {
+                        $itemWhId = $this->resolveWarehouseId(
+                            $itemData['warehouse_id'] ?? $itemData['warehouse'] ?? $itemData['location'] ?? null
+                        ) ?? $headerWarehouseId;
 
-                    if (! $itemWhId) {
-                        throw new InvalidArgumentException('Each BPB item line must specify a valid destination Warehouse.');
+                        if (! $itemWhId) {
+                            throw new InvalidArgumentException('Each BPB item line must specify a valid destination Warehouse.');
+                        }
+
+                        $itemCoordinate = $this->resolveWarehouseCoordinate(
+                            $itemWhId,
+                            $itemData['warehouse_coordinates_id'] ?? $itemData['coordinate_id'] ?? ($payload['warehouse_coordinates_id'] ?? null),
+                            $itemData['coordinate'] ?? $itemData['coordinate_name'] ?? ($payload['coordinate'] ?? null)
+                        );
                     }
-
-                    $itemCoordinate = $this->resolveWarehouseCoordinate(
-                        $itemWhId,
-                        $itemData['warehouse_coordinates_id'] ?? $itemData['coordinate_id'] ?? ($payload['warehouse_coordinates_id'] ?? null),
-                        $itemData['coordinate'] ?? $itemData['coordinate_name'] ?? ($payload['coordinate'] ?? null)
-                    );
 
                     $resolvedPoHasItemId = ! empty($itemData['po_has_items_id']) && is_numeric($itemData['po_has_items_id'])
                         ? (int) $itemData['po_has_items_id']
@@ -565,14 +620,16 @@ class BpbWarehouseService
                     ]);
                 }
             } elseif ($headerPo && $headerPo->items()->count() > 0) {
-                if (! $headerWarehouseId) {
+                if ($bpbCategory !== 'SERVICE' && ! $headerWarehouseId) {
                     throw new InvalidArgumentException('Destination Warehouse is required when creating direct BPB from Purchase Order.');
                 }
-                $headerCoordinate = $this->resolveWarehouseCoordinate(
-                    $headerWarehouseId,
-                    $payload['warehouse_coordinates_id'] ?? null,
-                    $payload['coordinate'] ?? null
-                );
+                $headerCoordinate = ($bpbCategory === 'SERVICE' || ! $headerWarehouseId)
+                    ? null
+                    : $this->resolveWarehouseCoordinate(
+                        $headerWarehouseId,
+                        $payload['warehouse_coordinates_id'] ?? null,
+                        $payload['coordinate'] ?? null
+                    );
                 foreach ($headerPo->items as $poItem) {
                     $jobId = $poItem->requisitionItem?->job_number_id ?? $fallbackJobId;
                     if (! $jobId) {

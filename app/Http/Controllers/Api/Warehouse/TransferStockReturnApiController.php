@@ -89,7 +89,8 @@ class TransferStockReturnApiController extends Controller
         $actorId = $this->requireActorId($request);
 
         $validated = $request->validate([
-            'warehouses_id' => 'required|integer|exists:warehouses,id',
+            'warehouses_id' => 'nullable|integer|exists:warehouses,id',
+            'warehouse' => 'nullable|string|max:150',
             'request_material_id' => 'required|integer|exists:request_material,id',
             'production_code' => 'nullable|string|max:100',
             'job_number_id' => 'nullable|integer|exists:job_number,id',
@@ -105,10 +106,11 @@ class TransferStockReturnApiController extends Controller
             'items.*.remark' => 'nullable|string|max:255',
         ]);
 
-        $rm = RequestMaterial::with(['items.item', 'destinationLocation'])->findOrFail($validated['request_material_id']);
+        $rm = RequestMaterial::with(['items.item', 'warehouse', 'destinationLocation'])->findOrFail($validated['request_material_id']);
         $this->validateReturnAgainstRequestMaterial($rm, $validated['items']);
+        $resolvedWarehouseId = $this->resolveAndValidateRmWarehouse($rm, $validated['warehouses_id'] ?? null, $validated['warehouse'] ?? null);
 
-        $record = DB::transaction(function () use ($validated, $actorId, $rm) {
+        $record = DB::transaction(function () use ($validated, $actorId, $rm, $resolvedWarehouseId) {
             $returnDate = ! empty($validated['return_date'])
                 ? Carbon::parse($validated['return_date'])
                 : now();
@@ -119,7 +121,7 @@ class TransferStockReturnApiController extends Controller
                 'return_number' => $returnNumber,
                 'production_code' => $validated['production_code'] ?? $rm->request_number,
                 'request_material_id' => $rm->id,
-                'warehouses_id' => (int) $validated['warehouses_id'],
+                'warehouses_id' => $resolvedWarehouseId,
                 'job_number_id' => $validated['job_number_id'] ?? $rm->job_number_id,
                 'job_number' => $validated['job_number'] ?? $rm->job_number,
                 'return_date' => $returnDate->format('Y-m-d'),
@@ -194,7 +196,8 @@ class TransferStockReturnApiController extends Controller
         }
 
         $validated = $request->validate([
-            'warehouses_id' => 'sometimes|integer|exists:warehouses,id',
+            'warehouses_id' => 'sometimes|nullable|integer|exists:warehouses,id',
+            'warehouse' => 'nullable|string|max:150',
             'request_material_id' => 'nullable|integer|exists:request_material,id',
             'production_code' => 'nullable|string|max:100',
             'job_number_id' => 'nullable|integer|exists:job_number,id',
@@ -220,16 +223,17 @@ class TransferStockReturnApiController extends Controller
             ]);
         }
 
-        $rm = RequestMaterial::with(['items.item'])->findOrFail($targetRmId);
+        $rm = RequestMaterial::with(['items.item', 'warehouse'])->findOrFail($targetRmId);
+        $resolvedWarehouseId = $this->resolveAndValidateRmWarehouse($rm, $validated['warehouses_id'] ?? null, $validated['warehouse'] ?? null);
         $itemsToCheck = $validated['items'] ?? $tsr->items()->get()->map(fn ($line) => [
             'items_id' => $line->items_id,
             'quantity' => $line->quantity,
         ])->all();
         $this->validateReturnAgainstRequestMaterial($rm, $itemsToCheck, $tsr->id);
 
-        DB::transaction(function () use ($tsr, $validated, $actorId, $targetRmId) {
+        DB::transaction(function () use ($tsr, $validated, $actorId, $targetRmId, $resolvedWarehouseId) {
             $tsr->update([
-                'warehouses_id' => $validated['warehouses_id'] ?? $tsr->warehouses_id,
+                'warehouses_id' => $resolvedWarehouseId,
                 'request_material_id' => $targetRmId,
                 'production_code' => array_key_exists('production_code', $validated) ? $validated['production_code'] : $tsr->production_code,
                 'job_number_id' => array_key_exists('job_number_id', $validated) ? $validated['job_number_id'] : $tsr->job_number_id,
@@ -632,6 +636,36 @@ class TransferStockReturnApiController extends Controller
                 ]);
             }
         }
+    }
+
+    private function resolveAndValidateRmWarehouse(RequestMaterial $rm, ?int $requestedWarehouseId, ?string $requestedWarehouseName): int
+    {
+        $originWarehouseId = (int) ($rm->warehouses_id ?? 0);
+        $originWarehouse = $originWarehouseId > 0 ? \App\Models\Warehouse\Facility\Warehouse::find($originWarehouseId) : null;
+
+        if (! $originWarehouse) {
+            throw ValidationException::withMessages([
+                'request_material_id' => ["Request Material '{$rm->request_number}' does not have a valid origin warehouse for stock return."],
+            ]);
+        }
+
+        if ($requestedWarehouseId !== null && $requestedWarehouseId > 0 && $requestedWarehouseId !== $originWarehouse->id) {
+            throw ValidationException::withMessages([
+                'warehouses_id' => ["Return warehouse must match the origin warehouse ({$originWarehouse->name}) of Request Material '{$rm->request_number}'."],
+            ]);
+        }
+
+        $trimmedName = $requestedWarehouseName !== null ? trim($requestedWarehouseName) : '';
+        if ($trimmedName !== ''
+            && strcasecmp($trimmedName, (string) $originWarehouse->name) !== 0
+            && strcasecmp($trimmedName, (string) $originWarehouse->code) !== 0
+        ) {
+            throw ValidationException::withMessages([
+                'warehouse' => ["Return warehouse must match the origin warehouse ({$originWarehouse->name}) of Request Material '{$rm->request_number}'."],
+            ]);
+        }
+
+        return $originWarehouse->id;
     }
 
     private function findByCodeOrId(string $code): TransferStockReturn

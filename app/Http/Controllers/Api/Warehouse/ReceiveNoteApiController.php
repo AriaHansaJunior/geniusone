@@ -339,6 +339,11 @@ class ReceiveNoteApiController extends Controller
                 throw new InvalidArgumentException('Each item must reference an existing Purchase Order.');
             }
 
+            $poModel = PurchaseOrder::with('poType')->find($poId);
+            if ($poModel && $poModel->isServiceOrder()) {
+                throw new InvalidArgumentException("Purchase Order '{$poModel->po_number}' is a Service Order (PO Jasa) and cannot be processed through Goods Receive Note (RN).");
+            }
+
             $poItem = null;
             if (! empty($it['po_has_items_id']) && is_numeric($it['po_has_items_id'])) {
                 $poItem = PurchaseOrderItem::with(['prItem', 'directItem'])->find((int) $it['po_has_items_id']);

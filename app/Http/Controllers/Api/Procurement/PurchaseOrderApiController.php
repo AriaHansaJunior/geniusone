@@ -12,6 +12,7 @@ use App\Models\Master\Finance\Ppn;
 use App\Models\Master\Finance\Valuta;
 use App\Models\Master\Material\Item;
 use App\Models\Master\Partner\Supplier;
+use App\Models\Procurement\PurchaseOrder\PoServiceClosure;
 use App\Models\Procurement\PurchaseOrder\PoType;
 use App\Models\Procurement\PurchaseOrder\PurchaseOrder;
 use App\Models\Procurement\PurchaseRequest\PurchaseRequisition;
@@ -52,6 +53,7 @@ class PurchaseOrderApiController extends Controller
             'approvals.user',
             'additionalCosts.type',
             'receiveNotes.receiveNote',
+            'closures',
         ]);
 
         if ($request->filled('search')) {
@@ -170,6 +172,7 @@ class PurchaseOrderApiController extends Controller
             'approvals.user',
             'additionalCosts.type',
             'receiveNotes.receiveNote',
+            'closures',
         ]);
 
         if (! $po) {
@@ -485,6 +488,25 @@ class PurchaseOrderApiController extends Controller
             'ppn_rate' => $po->ppn_rate !== null ? (float) $po->ppn_rate : null,
             'discount_overall_percent' => $po->discount_overall_percent !== null ? (float) $po->discount_overall_percent : 0.0,
             'poType' => $poTypeName,
+            'order_category' => $po->isServiceOrder() ? 'SERVICE' : 'GOODS',
+            'is_service' => $po->isServiceOrder(),
+            'closed_at' => $po->closed_at?->toIso8601String(),
+            'closed_by' => $po->closed_by,
+            'closing_note' => $po->closing_note,
+            'service_closures' => $po->relationLoaded('closures')
+                ? $po->closures->map(fn (PoServiceClosure $c) => [
+                    'id' => $c->id,
+                    'berita_acara_number' => $c->berita_acara_number,
+                    'berita_acara_date' => $c->berita_acara_date?->format('Y-m-d'),
+                    'completion_percentage' => (float) $c->completion_percentage,
+                    'service_description' => $c->service_description,
+                    'verified_by_name' => $c->verified_by_name,
+                    'attachment_path' => $c->attachment_path,
+                    'notes' => $c->notes,
+                    'status' => $c->status,
+                    'closed_by' => $c->closed_by,
+                ])->values()->all()
+                : [],
             'paymentMethod' => $paymentMethodName ?: '—',
             '_rawPaymentMethod' => $paymentMethodName,
             'paymentTerm' => $paymentTermName ?: '—',
@@ -872,6 +894,61 @@ class PurchaseOrderApiController extends Controller
     /**
      * Validate and normalize PO header, items, and additional costs for store/update.
      */
+    /**
+     * Close an Approved Service Purchase Order (PO Jasa) using Berita Acara verification.
+     */
+    public function closeService(Request $request, string $id)
+    {
+        $actorId = $this->requireActorId($request);
+        $po = $this->findPoByIdentifier($id);
+
+        if (! $po) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Purchase Order not found.',
+            ], 404);
+        }
+
+        $validated = $request->validate([
+            'berita_acara_number' => 'nullable|string|max:100',
+            'berita_acara_date' => 'required|date',
+            'completion_percentage' => 'nullable|numeric|gte:1|lte:100',
+            'service_description' => 'nullable|string|max:2000',
+            'verified_by_name' => 'nullable|string|max:150',
+            'notes' => 'nullable|string|max:2000',
+            'attachment' => 'nullable|file|max:10240',
+        ]);
+
+        if ($request->hasFile('attachment')) {
+            $validated['attachment_path'] = AttachmentStorageService::storeUploadedFile(
+                $request->file('attachment'),
+                'attachments/po-service'
+            );
+        }
+
+        try {
+            $closed = GeniusOneBackend::po()->closeServiceOrder($po->id, $validated, $actorId);
+            SystemContextApiController::forgetContextCache();
+
+            return response()->json([
+                'status' => 'success',
+                'message' => "Service Purchase Order '{$closed->po_number}' closed with Berita Acara successfully.",
+                'data' => $this->formatPoRow($closed, 1),
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => collect($e->errors())->flatten()->first() ?: $e->getMessage(),
+                'errors' => $e->errors(),
+            ], 422);
+        } catch (InvalidArgumentException $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => $e->getMessage(),
+            ], 422);
+        }
+    }
+
     private function resolvePoPayload(Request $request, ?PurchaseOrder $existingPo = null): array
     {
         $poTypeId = $this->resolveMasterId(
@@ -1037,6 +1114,8 @@ class PurchaseOrderApiController extends Controller
         $headerData = [
             'po_number' => $existingPo?->po_number ?? ($request->input('po_number') ?: null),
             'po_types_id' => $poTypeId,
+            'order_category' => $request->input('order_category') ?? $request->input('po_category') ?? $existingPo?->order_category,
+            'is_service' => $request->has('is_service') ? $request->boolean('is_service') : false,
             'supliers_id' => $supId,
             'date' => $request->input('date') ?? $existingPo?->date ?? now()->format('Y-m-d'),
             'due_date' => $request->input('due_date') ?? $existingPo?->due_date ?? now()->addDays(14)->format('Y-m-d'),
