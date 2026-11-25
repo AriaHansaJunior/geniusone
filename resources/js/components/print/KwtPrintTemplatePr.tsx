@@ -28,7 +28,7 @@ export const KwtPrintTemplatePr: React.FC<KwtPrintPrProps> = ({
   docNumber,
   date,
   department,
-  section = "Operations",
+  section = "",
   items = [],
   approved1By,
   approved2By,
@@ -38,8 +38,8 @@ export const KwtPrintTemplatePr: React.FC<KwtPrintPrProps> = ({
   const formCode = isInternal ? "KWT-PPIC-001" : "KWT-PPIC-002";
   const docTitle = isInternal ? "PERMINTAAN PEMBELIAN INTERNAL" : "PERMINTAAN PEMBELIAN";
 
-  // Standard minimum 11 rows to preserve standard paper layout
-  const minRows = 11;
+  // Standard 10-row layout per KWT-PPIC-001 / KWT-PPIC-002 form specification
+  const minRows = 10;
   const totalRows = Math.max(items.length, minRows);
   const emptyRowCount = totalRows - items.length;
 
@@ -50,18 +50,18 @@ export const KwtPrintTemplatePr: React.FC<KwtPrintPrProps> = ({
         <table className="kwt-doc-header-meta-table">
           <tbody>
             <tr>
-              <td style={{ width: "42px" }}>Form</td>
-              <td style={{ width: "10px", textAlign: "center" }}>:</td>
+              <td className="kwt-doc-header-meta-label">Form</td>
+              <td className="kwt-doc-header-meta-colon">:</td>
               <td>{formCode}</td>
             </tr>
             <tr>
               <td>Rev</td>
-              <td style={{ textAlign: "center" }}>:</td>
+              <td className="kwt-doc-header-meta-colon">:</td>
               <td>1</td>
             </tr>
             <tr>
               <td>Date</td>
-              <td style={{ textAlign: "center" }}>:</td>
+              <td className="kwt-doc-header-meta-colon">:</td>
               <td>10.11.2026</td>
             </tr>
           </tbody>
@@ -108,7 +108,7 @@ export const KwtPrintTemplatePr: React.FC<KwtPrintPrProps> = ({
                     <tr>
                       <td className="kwt-meta-label">Section</td>
                       <td className="kwt-meta-colon">:</td>
-                      <td className="kwt-meta-val">{section || "Operations"}</td>
+                      <td className="kwt-meta-val">{section || ""}</td>
                     </tr>
                   </tbody>
                 </table>
@@ -120,23 +120,23 @@ export const KwtPrintTemplatePr: React.FC<KwtPrintPrProps> = ({
         {/* Items Table */}
         <table className="kwt-items-table">
           <colgroup>
-            <col style={{ width: "5%" }} />
-            <col style={{ width: "32%" }} />
-            <col style={{ width: "10%" }} />
-            <col style={{ width: "9%" }} />
-            <col style={{ width: "15%" }} />
-            <col style={{ width: "7%" }} />
-            <col style={{ width: "22%" }} />
+            <col className="kwt-w-5" />
+            <col className="kwt-w-32" />
+            <col className="kwt-w-10" />
+            <col className="kwt-w-9" />
+            <col className="kwt-w-15" />
+            <col className="kwt-w-7" />
+            <col className="kwt-w-22" />
           </colgroup>
           <thead>
             <tr>
-              <th style={{ width: "5%" }}>No.</th>
-              <th style={{ width: "32%" }}>Nama Barang</th>
-              <th style={{ width: "10%" }}>Jumlah</th>
-              <th style={{ width: "9%" }}>Satuan</th>
-              <th style={{ width: "15%" }}>Tanggal Diperlukan</th>
-              <th style={{ width: "7%" }}>F / NF</th>
-              <th style={{ width: "22%" }}>Keterangan</th>
+              <th className="kwt-w-5">No.</th>
+              <th className="kwt-w-32">Nama Barang</th>
+              <th className="kwt-w-10">Jumlah</th>
+              <th className="kwt-w-9">Satuan</th>
+              <th className="kwt-w-15">Tanggal Diperlukan</th>
+              <th className="kwt-w-7">F / NF</th>
+              <th className="kwt-w-22">Keterangan</th>
             </tr>
           </thead>
           <tbody>
@@ -157,12 +157,11 @@ export const KwtPrintTemplatePr: React.FC<KwtPrintPrProps> = ({
                   <td className="kwt-col-center">{item.unit || "PCE"}</td>
                   <td className="kwt-col-center">{item.requiredDate || date || "-"}</td>
                   <td className="kwt-col-center">{fnfLabel}</td>
-                  <td className="kwt-col-left">{item.remark || "-"}</td>
+                  <td className="kwt-col-left">{item.remark || ""}</td>
                 </tr>
               );
             })}
 
-            {/* Empty padding rows to maintain standard document structure */}
             {Array.from({ length: emptyRowCount }).map((_, i) => (
               <tr key={`empty-${i}`} className="kwt-row-empty">
                 <td>&nbsp;</td>
@@ -183,8 +182,8 @@ export const KwtPrintTemplatePr: React.FC<KwtPrintPrProps> = ({
           <div>NF : Non Fasilitas</div>
         </div>
 
-        {/* Footer & Signatures */}
-        <table className="kwt-footer-table">
+        {/* Open Footer & Signatures (no internal vertical lines per PDF) */}
+        <table className="kwt-footer-table kwt-footer-table--open">
           <tbody>
             <tr>
               <td className="kwt-distribution-cell">
@@ -216,15 +215,14 @@ export const KwtPrintTemplatePr: React.FC<KwtPrintPrProps> = ({
                 </div>
               </td>
               <td>
-                <div className="kwt-signatures-container">
+                <div className="kwt-signatures-container kwt-signatures-container--open">
                   {isInternal ? (
-                    // KWT-PPIC-001 (Internal): Disetujui (Manager) & Diminta (User)
                     <>
                       <div className="kwt-sign-col">
                         <span className="kwt-sign-title">Disetujui oleh:</span>
                         <div className="kwt-sign-space">
                           {approved1By && (
-                            <span className="kwt-sign-actor">Approved by {approved1By}</span>
+                            <span className="kwt-sign-actor">{approved1By}</span>
                           )}
                         </div>
                         <span className="kwt-sign-role">(Manager)</span>
@@ -240,34 +238,26 @@ export const KwtPrintTemplatePr: React.FC<KwtPrintPrProps> = ({
                       </div>
                     </>
                   ) : (
-                    // KWT-PPIC-002 (Eksternal): Disetujui (Direktur), Disetujui (Manager) & Diminta (User)
                     <>
                       <div className="kwt-sign-col">
                         <span className="kwt-sign-title">Disetujui oleh:</span>
                         <div className="kwt-sign-space">
                           {approved2By && (
-                            <span className="kwt-sign-actor">Approved by {approved2By}</span>
+                            <span className="kwt-sign-actor">{approved2By}</span>
                           )}
                         </div>
                         <span className="kwt-sign-role">(Direktur)</span>
                       </div>
                       <div className="kwt-sign-col">
-                        <span className="kwt-sign-title">Disetujui oleh:</span>
+                        <span className="kwt-sign-title">Diminta oleh:</span>
                         <div className="kwt-sign-space">
-                          {approved1By && (
-                            <span className="kwt-sign-actor">Approved by {approved1By}</span>
+                          {(approved1By || createdBy) && (
+                            <span className="kwt-sign-actor">
+                              {approved1By || createdBy?.split(" ")[0]}
+                            </span>
                           )}
                         </div>
                         <span className="kwt-sign-role">(Manager)</span>
-                      </div>
-                      <div className="kwt-sign-col">
-                        <span className="kwt-sign-title">Diminta oleh:</span>
-                        <div className="kwt-sign-space">
-                          {createdBy && (
-                            <span className="kwt-sign-actor">{createdBy.split(" ")[0]}</span>
-                          )}
-                        </div>
-                        <span className="kwt-sign-role">(User)</span>
                       </div>
                     </>
                   )}
@@ -280,4 +270,3 @@ export const KwtPrintTemplatePr: React.FC<KwtPrintPrProps> = ({
     </div>
   );
 };
-

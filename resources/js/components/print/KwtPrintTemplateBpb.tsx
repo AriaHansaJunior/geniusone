@@ -36,8 +36,8 @@ export const KwtPrintTemplateBpb: React.FC<KwtPrintBpbProps> = ({
   const formCode = "KWT-PPIC-003";
   const docTitle = "BUKTI PENERIMAAN BARANG";
 
-  // Standard minimum 11 rows to preserve standard paper layout
-  const minRows = 11;
+  // Standard 10-row layout per KWT-PPIC-003 specification
+  const minRows = 10;
   const totalRows = Math.max(items.length, minRows);
   const emptyRowCount = totalRows - items.length;
 
@@ -48,18 +48,18 @@ export const KwtPrintTemplateBpb: React.FC<KwtPrintBpbProps> = ({
         <table className="kwt-doc-header-meta-table">
           <tbody>
             <tr>
-              <td style={{ width: "42px" }}>Form</td>
-              <td style={{ width: "10px", textAlign: "center" }}>:</td>
+              <td className="kwt-doc-header-meta-label">Form</td>
+              <td className="kwt-doc-header-meta-colon">:</td>
               <td>{formCode}</td>
             </tr>
             <tr>
               <td>Rev</td>
-              <td style={{ textAlign: "center" }}>:</td>
+              <td className="kwt-doc-header-meta-colon">:</td>
               <td>1</td>
             </tr>
             <tr>
               <td>Date</td>
-              <td style={{ textAlign: "center" }}>:</td>
+              <td className="kwt-doc-header-meta-colon">:</td>
               <td>10.11.2026</td>
             </tr>
           </tbody>
@@ -123,21 +123,21 @@ export const KwtPrintTemplateBpb: React.FC<KwtPrintBpbProps> = ({
         {/* Items Table */}
         <table className="kwt-items-table">
           <colgroup>
-            <col style={{ width: "5%" }} />
-            <col style={{ width: "35%" }} />
-            <col style={{ width: "10%" }} />
-            <col style={{ width: "8%" }} />
-            <col style={{ width: "18%" }} />
-            <col style={{ width: "24%" }} />
+            <col className="kwt-w-5" />
+            <col className="kwt-w-35" />
+            <col className="kwt-w-10" />
+            <col className="kwt-w-8" />
+            <col className="kwt-w-18" />
+            <col className="kwt-w-24" />
           </colgroup>
           <thead>
             <tr>
-              <th style={{ width: "5%" }}>No.</th>
-              <th style={{ width: "35%" }}>Nama Barang</th>
-              <th style={{ width: "10%" }}>Jumlah</th>
-              <th style={{ width: "8%" }}>Satuan</th>
-              <th style={{ width: "18%" }}>No. PP</th>
-              <th style={{ width: "24%" }}>Keterangan</th>
+              <th className="kwt-w-5">No.</th>
+              <th className="kwt-w-35">Nama Barang</th>
+              <th className="kwt-w-10">Jumlah</th>
+              <th className="kwt-w-8">Satuan</th>
+              <th className="kwt-w-18">No. PP</th>
+              <th className="kwt-w-24">Keterangan</th>
             </tr>
           </thead>
           <tbody>
@@ -152,11 +152,10 @@ export const KwtPrintTemplateBpb: React.FC<KwtPrintBpbProps> = ({
                 </td>
                 <td className="kwt-col-center">{item.unit || "PCE"}</td>
                 <td className="kwt-col-center">{item.noPp || "-"}</td>
-                <td className="kwt-col-left">{item.remark || "-"}</td>
+                <td className="kwt-col-left">{item.remark || ""}</td>
               </tr>
             ))}
 
-            {/* Empty padding rows */}
             {Array.from({ length: emptyRowCount }).map((_, i) => (
               <tr key={`bpb-empty-${i}`} className="kwt-row-empty">
                 <td>&nbsp;</td>
@@ -170,8 +169,8 @@ export const KwtPrintTemplateBpb: React.FC<KwtPrintBpbProps> = ({
           </tbody>
         </table>
 
-        {/* Footer & Signatures */}
-        <table className="kwt-footer-table">
+        {/* Open Footer & Signatures (no vertical dividers per PDF) */}
+        <table className="kwt-footer-table kwt-footer-table--open">
           <tbody>
             <tr>
               <td className="kwt-distribution-cell">
@@ -203,7 +202,7 @@ export const KwtPrintTemplateBpb: React.FC<KwtPrintBpbProps> = ({
                 </div>
               </td>
               <td>
-                <div className="kwt-signatures-container">
+                <div className="kwt-signatures-container kwt-signatures-container--open">
                   <div className="kwt-sign-col">
                     <span className="kwt-sign-title">Diketahui oleh:</span>
                     <div className="kwt-sign-space">
@@ -234,4 +233,3 @@ export const KwtPrintTemplateBpb: React.FC<KwtPrintBpbProps> = ({
     </div>
   );
 };
-

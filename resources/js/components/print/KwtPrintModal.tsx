@@ -1,12 +1,12 @@
 import React, { useEffect } from "react";
 import { Button } from "../ui/Button";
-import { Icon } from "../ui/Icon";
 
 export interface KwtPrintModalProps {
   isOpen: boolean;
   onClose: () => void;
   title: string;
   documentCode: string;
+  orientation?: "landscape" | "portrait";
   // Optional variant switcher for PR (Internal vs Eksternal)
   hasVariantSwitcher?: boolean;
   activeVariant?: "internal" | "eksternal";
@@ -20,6 +20,7 @@ export const KwtPrintModal: React.FC<KwtPrintModalProps> = ({
   onClose,
   title,
   documentCode,
+  orientation = "landscape",
   hasVariantSwitcher = false,
   activeVariant = "internal",
   onVariantChange,
@@ -58,7 +59,13 @@ export const KwtPrintModal: React.FC<KwtPrintModalProps> = ({
         }
       }}
     >
-      <div className="kwt-print-modal" role="dialog" aria-modal="true">
+      <div
+        className={`kwt-print-modal ${
+          orientation === "landscape" ? "kwt-print-modal--landscape" : ""
+        }`}
+        role="dialog"
+        aria-modal="true"
+      >
         {/* Modal Header */}
         <div className="kwt-print-modal__header">
           <div className="kwt-print-modal__title-box">
@@ -90,10 +97,10 @@ export const KwtPrintModal: React.FC<KwtPrintModalProps> = ({
               </div>
             )}
 
-            <Button variant="primary" icon="print" onClick={handlePrint}>
+            <Button variant="primary" onClick={handlePrint}>
               Print Now
             </Button>
-            <Button variant="secondary" icon="close" onClick={onClose}>
+            <Button variant="secondary" onClick={onClose}>
               Close
             </Button>
           </div>
@@ -105,4 +112,3 @@ export const KwtPrintModal: React.FC<KwtPrintModalProps> = ({
     </div>
   );
 };
-

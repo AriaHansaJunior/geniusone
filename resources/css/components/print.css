@@ -1,6 +1,7 @@
 /* ==========================================================================
    GeniusOne KWT Standard Print Document Stylesheet
-   Covers Forms: KWT-PPIC-001, KWT-PPIC-002, KWT-PPIC-003, KWT-PPIC-004
+   Covers Forms: KWT-PPIC-001, KWT-PPIC-002, KWT-PPIC-003,
+                 KWT-PPIC-004, KWT-PPIC-006, KWT-PURC-001
    ========================================================================== */
 
 /* Screen Preview Modal */
@@ -32,11 +33,15 @@
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35);
   display: flex;
   flex-direction: column;
-  max-width: 900px;
+  max-width: 960px;
   width: 100%;
   max-height: 94vh;
   overflow: hidden;
   border: 1px solid var(--line, #cbd5e1);
+}
+
+.kwt-print-modal--landscape {
+  max-width: 1120px;
 }
 
 .kwt-print-modal__header {
@@ -107,19 +112,21 @@
 .kwt-print-modal__body {
   flex: 1;
   overflow-y: auto;
+  overflow-x: auto;
   padding: 24px 16px;
   background: #475569;
   display: flex;
   justify-content: center;
+  align-items: flex-start;
 }
 
 /* ==========================================================================
    RESET & ISOLATION FOR KWT PRINT CONTAINER
-   (Overrides global table { min-width: max-content }, th { white-space: nowrap })
    ========================================================================== */
 .kwt-print-sheet table,
 .kwt-doc-box table,
-.kwt-doc-header-meta table {
+.kwt-doc-header-meta table,
+.kwt-po-box table {
   min-width: 0 !important;
   max-width: 100% !important;
   box-sizing: border-box !important;
@@ -128,25 +135,29 @@
 }
 
 .kwt-print-sheet th,
-.kwt-doc-box th {
+.kwt-doc-box th,
+.kwt-po-box th {
   white-space: normal !important;
   position: static !important;
   top: auto !important;
   user-select: auto !important;
-  background: #ffffff !important;
   color: #000000 !important;
   letter-spacing: normal !important;
 }
 
-/* Document Paper Sheet (A4 Dimensions Proportions) */
+.kwt-doc-box th {
+  background: #ffffff !important;
+}
+
+/* Document Paper Sheet (A4 Landscape Proportions) */
 .kwt-print-sheet {
   background: #ffffff;
   color: #000000;
   width: 100%;
-  max-width: 760px;
-  min-height: 1060px;
+  max-width: 1040px;
+  min-height: 0;
   box-sizing: border-box;
-  padding: 28px 32px 32px 32px;
+  padding: 20px 26px 24px 26px;
   font-family: "Times New Roman", Times, Georgia, serif;
   box-shadow: 0 12px 36px rgba(0, 0, 0, 0.35);
   line-height: 1.25;
@@ -155,11 +166,11 @@
 
 /* Document Top Metadata */
 .kwt-doc-header-meta {
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: "Times New Roman", Times, Georgia, serif;
   font-size: 11px;
   font-weight: 700;
-  line-height: 1.35;
-  margin-bottom: 8px;
+  line-height: 1.3;
+  margin-bottom: 6px;
   color: #000000;
 }
 
@@ -176,6 +187,15 @@
   border: none !important;
   color: #000000 !important;
   white-space: nowrap !important;
+}
+
+.kwt-doc-header-meta-label {
+  width: 42px;
+}
+
+.kwt-doc-header-meta-colon {
+  width: 10px;
+  text-align: center !important;
 }
 
 /* Outer Double-Border Box */
@@ -200,10 +220,14 @@
   margin: 0 !important;
 }
 
+.kwt-doc-box--double-header .kwt-header-table {
+  border-bottom: 3px double #000000 !important;
+}
+
 .kwt-header-left {
   width: 58% !important;
   vertical-align: middle !important;
-  padding: 8px 10px !important;
+  padding: 8px 12px !important;
   border-right: 1px solid #000000 !important;
   border-left: none !important;
   border-top: none !important;
@@ -213,7 +237,7 @@
 .kwt-header-left-inner {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
 }
 
 .kwt-header-logo {
@@ -224,28 +248,40 @@
 }
 
 .kwt-header-titles {
+  flex: 1;
   display: flex;
   flex-direction: column;
   justify-content: center;
+  align-items: center;
+  text-align: center;
   min-width: 0;
 }
 
 .kwt-header-company-name {
   font-family: "Times New Roman", Times, serif;
-  font-size: 16px;
+  font-size: 17px;
   font-weight: 900;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.4px;
   color: #000000;
   margin: 0;
   line-height: 1.2;
   white-space: nowrap;
 }
 
+.kwt-header-company-addr {
+  font-family: "Times New Roman", Times, serif;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #000000;
+  margin: 2px 0 0 0;
+  line-height: 1.25;
+}
+
 .kwt-header-doc-title {
   font-family: "Times New Roman", Times, serif;
-  font-size: 13px;
+  font-size: 13.5px;
   font-weight: 800;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.4px;
   color: #000000;
   margin: 4px 0 0 0;
   line-height: 1.2;
@@ -254,7 +290,7 @@
 .kwt-header-right {
   width: 42% !important;
   vertical-align: top !important;
-  padding: 6px 8px !important;
+  padding: 6px 10px !important;
   border-right: none !important;
   border-top: none !important;
   box-sizing: border-box !important;
@@ -265,7 +301,7 @@
   table-layout: fixed !important;
   border-collapse: collapse !important;
   font-family: "Times New Roman", Times, serif;
-  font-size: 11.5px;
+  font-size: 11px;
   box-sizing: border-box !important;
   margin: 0 !important;
 }
@@ -294,8 +330,58 @@
   word-break: break-word !important;
 }
 
+/* Full-width header + subheader for Delivery Order (KWT-PPIC-006) */
+.kwt-do-header-band {
+  width: 100%;
+  padding: 8px 16px;
+  border-bottom: 1px solid #000000;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.kwt-do-header-titles {
+  flex: 1;
+  text-align: center;
+  padding-right: 48px;
+}
+
+.kwt-do-subheader-table {
+  width: 100% !important;
+  table-layout: fixed !important;
+  border-collapse: collapse !important;
+  border-bottom: 1px solid #000000 !important;
+  margin: 0 !important;
+}
+
+.kwt-do-subheader-left {
+  width: 55% !important;
+  padding: 6px 10px !important;
+  vertical-align: top !important;
+  border-right: none !important;
+}
+
+.kwt-do-subheader-right {
+  width: 45% !important;
+  padding: 6px 10px !important;
+  vertical-align: top !important;
+}
+
+.kwt-do-kepada-box {
+  display: flex;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.kwt-do-kepada-val {
+  font-weight: 600;
+  white-space: pre-line;
+}
+
 /* ==========================================================================
-   ITEMS TABLE (STRICT TABLE-LAYOUT: FIXED & EXACT PERCENTAGE WIDTHS)
+   ITEMS TABLE (STRICT TABLE-LAYOUT: FIXED)
    ========================================================================== */
 .kwt-items-table {
   width: 100% !important;
@@ -312,7 +398,7 @@
 .kwt-items-table th,
 .kwt-items-table td {
   border: 1px solid #000000 !important;
-  padding: 4px 5px !important;
+  padding: 4px 6px !important;
   box-sizing: border-box !important;
   word-wrap: break-word !important;
   overflow-wrap: break-word !important;
@@ -326,12 +412,11 @@
   text-align: center !important;
   background-color: #ffffff !important;
   padding: 5px 4px !important;
-  font-size: 11.5px !important;
+  font-size: 11px !important;
   height: auto !important;
   border-top: none !important;
 }
 
-/* Outer column borders merge into .kwt-doc-box cleanly */
 .kwt-items-table th:first-child,
 .kwt-items-table td:first-child {
   border-left: none !important;
@@ -358,20 +443,44 @@
   text-align: left !important;
 }
 
+/* Column Width Helpers (no inline JSX styles) */
+.kwt-w-4 { width: 4%; }
+.kwt-w-5 { width: 5%; }
+.kwt-w-6 { width: 6%; }
+.kwt-w-7 { width: 7%; }
+.kwt-w-8 { width: 8%; }
+.kwt-w-9 { width: 9%; }
+.kwt-w-10 { width: 10%; }
+.kwt-w-11 { width: 11%; }
+.kwt-w-12 { width: 12%; }
+.kwt-w-13 { width: 13%; }
+.kwt-w-15 { width: 15%; }
+.kwt-w-16 { width: 16%; }
+.kwt-w-17 { width: 17%; }
+.kwt-w-18 { width: 18%; }
+.kwt-w-22 { width: 22%; }
+.kwt-w-24 { width: 24%; }
+.kwt-w-30 { width: 30%; }
+.kwt-w-32 { width: 32%; }
+.kwt-w-33 { width: 33%; }
+.kwt-w-35 { width: 35%; }
+.kwt-w-42 { width: 42%; }
+.kwt-w-72 { width: 72%; }
+
 /* Legend Section (PR Forms) */
 .kwt-legend-box {
   width: 100% !important;
   border-bottom: 1px solid #000000 !important;
   border-left: none !important;
   border-right: none !important;
-  padding: 3px 8px !important;
+  padding: 4px 10px !important;
   font-family: "Times New Roman", Times, serif;
   font-size: 11px;
   line-height: 1.35;
   box-sizing: border-box !important;
 }
 
-/* Footer Section */
+/* Footer Section (001, 002, 003, 006) */
 .kwt-footer-table {
   width: 100% !important;
   max-width: 100% !important;
@@ -390,14 +499,18 @@
 }
 
 .kwt-distribution-cell {
-  width: 30% !important;
+  width: 28% !important;
   border-right: 1px solid #000000 !important;
   border-left: none !important;
-  padding: 6px 8px 8px 8px !important;
+  padding: 6px 8px 8px 10px !important;
   font-family: "Times New Roman", Times, serif;
   font-size: 11px;
   line-height: 1.45;
   box-sizing: border-box !important;
+}
+
+.kwt-footer-table--open .kwt-distribution-cell {
+  border-right: none !important;
 }
 
 .kwt-distribution-list {
@@ -412,7 +525,7 @@
 }
 
 .kwt-dist-num {
-  width: 10px;
+  width: 12px;
   font-weight: 600;
 }
 
@@ -441,8 +554,8 @@
   flex-direction: column;
   align-items: center;
   justify-content: space-between;
-  padding: 6px 6px;
-  min-height: 85px;
+  padding: 6px 8px;
+  min-height: 82px;
   text-align: center;
   box-sizing: border-box;
 }
@@ -451,27 +564,31 @@
   border-left: 1px solid #000000 !important;
 }
 
+.kwt-signatures-container--open .kwt-sign-col + .kwt-sign-col {
+  border-left: none !important;
+}
+
 .kwt-sign-title {
   font-weight: 800;
-  font-size: 11.5px;
+  font-size: 11px;
 }
 
 .kwt-sign-space {
-  height: 44px;
+  height: 42px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .kwt-sign-actor {
-  font-size: 10.5px;
+  font-size: 10px;
   font-style: italic;
-  color: #334155;
+  color: #1e293b;
 }
 
 .kwt-sign-role {
   font-weight: 800;
-  font-size: 11.5px;
+  font-size: 11px;
 }
 
 /* NPB (KWT-PPIC-004) Specific Footer */
@@ -480,6 +597,7 @@
   max-width: 100% !important;
   table-layout: fixed !important;
   border-collapse: collapse !important;
+  border-top: 3px double #000000 !important;
   box-sizing: border-box !important;
   margin: 0 !important;
 }
@@ -492,12 +610,13 @@
 
 .kwt-npb-notes-cell {
   width: 50% !important;
-  padding: 6px 8px !important;
-  min-height: 80px !important;
-  font-size: 11.5px !important;
+  padding: 6px 10px !important;
+  min-height: 78px !important;
+  font-size: 11px !important;
   border-left: none !important;
+  border-top: none !important;
   border-bottom: none !important;
-  border-right: 1px solid #000000 !important;
+  border-right: 3px double #000000 !important;
 }
 
 .kwt-npb-notes-title {
@@ -508,14 +627,16 @@
 .kwt-npb-notes-content {
   font-size: 11px;
   line-height: 1.35;
-  color: #1e293b;
+  color: #000000;
 }
 
 .kwt-npb-signs-cell {
   width: 50% !important;
   padding: 0 !important;
+  border-top: none !important;
   border-right: none !important;
   border-bottom: none !important;
+  border-left: none !important;
 }
 
 .kwt-npb-signs-table {
@@ -532,7 +653,7 @@
   border-right: 1px solid #000000 !important;
   border-top: none !important;
   padding: 3px !important;
-  font-size: 11.5px !important;
+  font-size: 11px !important;
   font-weight: 800 !important;
   text-align: center !important;
 }
@@ -550,11 +671,344 @@
 .kwt-npb-signs-table td {
   border-right: 1px solid #000000 !important;
   border-bottom: none !important;
-  height: 55px !important;
-  padding: 3px !important;
+  height: 54px !important;
+  padding: 4px !important;
   text-align: center !important;
   vertical-align: bottom !important;
   font-size: 10.5px !important;
+}
+
+/* ==========================================================================
+   PURCHASE ORDER (KWT-PURC-001) SPECIFIC STYLES
+   Sans-serif Arial, 1px solid borders, blush pink item header, tall line body
+   ========================================================================== */
+.kwt-po-sheet {
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.kwt-po-box {
+  border: 1px solid #000000 !important;
+  box-sizing: border-box !important;
+  width: 100% !important;
+  background: #ffffff !important;
+}
+
+.kwt-po-top-header {
+  display: flex;
+  align-items: center;
+  padding: 8px 14px;
+  border-bottom: 1px solid #000000;
+  gap: 12px;
+}
+
+.kwt-po-logo {
+  height: 44px;
+  width: auto;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.kwt-po-company-block {
+  flex: 1;
+  text-align: center;
+  padding-right: 44px;
+}
+
+.kwt-po-company-name {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  color: #000000;
+  line-height: 1.2;
+}
+
+.kwt-po-company-addr {
+  margin: 2px 0 0 0;
+  font-size: 9px;
+  font-weight: 700;
+  color: #000000;
+  line-height: 1.25;
+}
+
+.kwt-po-title-band {
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid #000000;
+  padding: 5px 10px;
+}
+
+.kwt-po-title-text {
+  width: 56%;
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  color: #000000;
+}
+
+.kwt-po-number-grid {
+  width: 44%;
+}
+
+.kwt-po-meta-table {
+  width: 100% !important;
+  table-layout: fixed !important;
+  border-collapse: collapse !important;
+  font-size: 10px;
+  margin: 0 !important;
+}
+
+.kwt-po-meta-table td {
+  border: none !important;
+  padding: 1.5px 3px !important;
+  color: #000000 !important;
+  vertical-align: top !important;
+}
+
+.kwt-po-meta-lbl {
+  width: 82px;
+  font-weight: 700;
+}
+
+.kwt-po-meta-lbl-sm {
+  width: 72px;
+  font-weight: 700;
+}
+
+.kwt-po-meta-col {
+  width: 8px;
+  text-align: center !important;
+  font-weight: 700;
+}
+
+.kwt-po-meta-val {
+  font-weight: 600;
+  word-break: break-word;
+}
+
+.kwt-po-supplier-band {
+  display: flex;
+  border-bottom: 1px solid #000000;
+  padding: 6px 10px;
+  font-size: 10px;
+}
+
+.kwt-po-supplier-left {
+  width: 56%;
+  padding-right: 12px;
+  box-sizing: border-box;
+}
+
+.kwt-po-supplier-heading {
+  font-weight: 800;
+  font-size: 10.5px;
+  margin-bottom: 4px;
+}
+
+.kwt-po-supplier-name {
+  font-size: 10.5px;
+  font-weight: 600;
+}
+
+.kwt-po-supplier-addr {
+  font-size: 9.5px;
+  margin-top: 2px;
+  color: #111827;
+}
+
+.kwt-po-supplier-right {
+  width: 44%;
+}
+
+/* PO Items Table */
+.kwt-po-items-table {
+  width: 100% !important;
+  table-layout: fixed !important;
+  border-collapse: collapse !important;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 10px;
+  margin: 0 !important;
+}
+
+.kwt-po-items-table th {
+  background-color: #fdf2f2 !important;
+  border-top: none !important;
+  border-bottom: 1px solid #000000 !important;
+  border-left: 1px solid #000000 !important;
+  border-right: 1px solid #000000 !important;
+  padding: 5px 6px !important;
+  font-size: 10px !important;
+  font-weight: 800 !important;
+  text-align: center !important;
+  color: #000000 !important;
+}
+
+.kwt-po-items-table th:first-child,
+.kwt-po-items-table td:first-child {
+  border-left: none !important;
+}
+
+.kwt-po-items-table th:last-child,
+.kwt-po-items-table td:last-child {
+  border-right: none !important;
+}
+
+.kwt-po-items-table tbody td {
+  border-top: none !important;
+  border-bottom: none !important;
+  border-left: 1px solid #000000 !important;
+  border-right: 1px solid #000000 !important;
+  padding: 5px 6px !important;
+  vertical-align: top !important;
+  color: #000000 !important;
+  word-wrap: break-word !important;
+}
+
+.kwt-po-items-filler td {
+  height: 150px !important;
+}
+
+/* PO Bottom Terms + Totals + Signatures */
+.kwt-po-bottom-table {
+  width: 100% !important;
+  table-layout: fixed !important;
+  border-collapse: collapse !important;
+  border-top: 1px solid #000000 !important;
+  font-size: 10px;
+  margin: 0 !important;
+}
+
+.kwt-po-terms-cell {
+  width: 56% !important;
+  vertical-align: top !important;
+  padding: 6px 10px !important;
+  border-right: 1px solid #000000 !important;
+}
+
+.kwt-po-terms-title {
+  font-weight: 800;
+  font-size: 10.5px;
+  margin-bottom: 6px;
+}
+
+.kwt-po-terms-table {
+  width: 100% !important;
+  border-collapse: collapse !important;
+  font-size: 10px;
+}
+
+.kwt-po-terms-table td {
+  border: none !important;
+  padding: 2px 3px !important;
+  vertical-align: top !important;
+  color: #000000 !important;
+}
+
+.kwt-po-term-num {
+  width: 16px;
+}
+
+.kwt-po-term-lbl {
+  width: 95px;
+}
+
+.kwt-po-term-col {
+  width: 8px;
+  text-align: center !important;
+}
+
+.kwt-po-right-cell {
+  width: 44% !important;
+  vertical-align: top !important;
+  padding: 0 !important;
+}
+
+.kwt-po-totals-table {
+  width: 100% !important;
+  table-layout: fixed !important;
+  border-collapse: collapse !important;
+  font-size: 10px;
+}
+
+.kwt-po-totals-table td {
+  padding: 3.5px 8px !important;
+  border: none !important;
+  color: #000000 !important;
+}
+
+.kwt-po-totals-lbl {
+  width: 45%;
+  font-weight: 700;
+  border-right: 1px solid #000000 !important;
+}
+
+.kwt-po-totals-val {
+  width: 55%;
+  text-align: right !important;
+  font-weight: 700;
+}
+
+.kwt-po-totals-grand td {
+  border-top: 1px solid #000000 !important;
+  border-bottom: 1px solid #000000 !important;
+  font-weight: 800 !important;
+}
+
+.kwt-po-sign-table {
+  width: 100% !important;
+  table-layout: fixed !important;
+  border-collapse: collapse !important;
+  font-size: 10px;
+}
+
+.kwt-po-sign-cell {
+  width: 48% !important;
+  padding: 6px 8px !important;
+  text-align: center !important;
+  vertical-align: top !important;
+  border-top: 1px solid #000000 !important;
+}
+
+.kwt-po-sign-spacer {
+  width: 4% !important;
+  border-top: 1px solid #000000 !important;
+  border-left: 1px solid #000000 !important;
+  border-right: 1px solid #000000 !important;
+}
+
+.kwt-po-sign-title {
+  font-weight: 700;
+  margin-bottom: 46px;
+}
+
+.kwt-po-sign-name {
+  font-weight: 700;
+  min-height: 14px;
+}
+
+.kwt-po-distribution {
+  border-top: 1px solid #000000;
+  padding: 5px 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 28px;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.kwt-po-form-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 5px;
+  font-size: 9.5px;
+  font-weight: 600;
+  color: #000000;
+}
+
+.kwt-po-form-meta-left {
+  display: flex;
+  gap: 22px;
 }
 
 /* ==========================================================================
@@ -598,7 +1052,7 @@
 }
 
 /* ==========================================================================
-   Print Only Rules
+   Print Only Rules (A4 Landscape across all KWT forms)
    ========================================================================== */
 @media screen {
   .kwt-print-only-container {
@@ -608,8 +1062,8 @@
 
 @media print {
   @page {
-    size: A4 portrait;
-    margin: 10mm 12mm;
+    size: A4 landscape;
+    margin: 8mm 10mm;
   }
 
   html,
@@ -622,12 +1076,10 @@
     height: auto !important;
   }
 
-  /* Hide everything outside of print targets */
   body * {
     visibility: hidden !important;
   }
 
-  /* When modal is open during print, strip modal chrome */
   .kwt-print-modal-backdrop {
     position: static !important;
     background: none !important;
@@ -660,7 +1112,6 @@
     display: block !important;
   }
 
-  /* Standalone print target visibility */
   .kwt-print-target,
   .kwt-print-target * {
     visibility: visible !important;
@@ -697,17 +1148,28 @@
     break-inside: avoid !important;
   }
 
+  .kwt-po-box {
+    width: 100% !important;
+    max-width: 100% !important;
+    border: 1px solid #000000 !important;
+    box-sizing: border-box !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
   .kwt-items-table,
   .kwt-header-table,
   .kwt-footer-table,
-  .kwt-npb-footer {
+  .kwt-npb-footer,
+  .kwt-do-subheader-table,
+  .kwt-po-items-table,
+  .kwt-po-bottom-table {
     width: 100% !important;
     max-width: 100% !important;
     table-layout: fixed !important;
     box-sizing: border-box !important;
   }
 
-  /* Force print borders & graphics */
   * {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;

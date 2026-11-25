@@ -21,6 +21,7 @@ import { useNotification } from "../../../context/NotificationContext";
 import { useTheme } from "../../../context/ThemeContext";
 import { PurchaseOrderDefaultDetail } from "../../../themes/default/pages/PurchaseOrderDefaultDetail";
 import { LoadingBuffer } from "../../../components/ui/LoadingBuffer";
+import { KwtPrintModal, KwtPrintTemplatePo } from "../../../components/print";
 
 interface PurchaseOrderDetailProps {
   code: string;
@@ -145,8 +146,13 @@ export function PurchaseOrderDetail({
   const { currentUser } = useAuthPermission();
   const { isDefaultTheme } = useTheme();
   const isApproved = approvalState.status === "APPROVED";
+  const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
 
-  const handlePrintPdf = async () => {
+  const handlePrintPdf = () => {
+    setIsPrintModalOpen(true);
+  };
+
+  const handleExecutePrint = async () => {
     const newHistory = await recordDocumentActivity({
       module: "purchase_order",
       documentId: row.id ? String(row.id) : docNumber,
@@ -155,7 +161,7 @@ export function PurchaseOrderDetail({
       userId: currentUser?.id,
       userName: currentUser?.name,
       userRole: currentUser?.role,
-      note: `Printed Purchase Order ${docNumber}`,
+      note: `Printed Purchase Order ${docNumber} (KWT-PURC-001)`,
     });
     setApprovalState((prev) => ({ ...prev, history: newHistory }));
     window.print();

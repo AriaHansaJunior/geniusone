@@ -188,9 +188,7 @@ export function LoginParticleStudioPage({
       <header className="lps-topbar">
         <div className="lps-topbar__brand">
           <div className="brand__mark">
-            <span />
-            <span />
-            <span />
+            <img src="/kwt-logo.png" alt="PT. Karabha Wiratama" className="brand__logo-img" />
           </div>
           <div className="lps-topbar__titles">
             <span className="lps-topbar__eyebrow">GENIUSONE SECRET STUDIO</span>
@@ -306,9 +304,7 @@ export function LoginParticleStudioPage({
               <div ref={previewHeaderRef} className="login-header lps-mini-header">
                 <div className="login-header__brand">
                   <div className="brand__mark">
-                    <span />
-                    <span />
-                    <span />
+                    <img src="/kwt-logo.png" alt="PT. Karabha Wiratama" className="brand__logo-img" />
                   </div>
                   <div className="brand__text">
                     <strong>GENIUSONE</strong>

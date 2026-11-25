@@ -194,9 +194,7 @@ export function Header({
           role={collapsed ? "button" : undefined}
           tabIndex={collapsed ? 0 : undefined}
         >
-          <span />
-          <span />
-          <span />
+          <img src="/kwt-logo.png" alt="PT. Karabha Wiratama" className="brand__logo-img" />
         </div>
 
         {!collapsed && (

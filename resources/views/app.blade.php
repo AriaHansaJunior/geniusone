@@ -4,6 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
+    <link rel="icon" type="image/png" href="/kwt-logo.png">
     <title>GENIUSONE — Enterprise Operations</title>
 
     <!-- Google Fonts: Lato & Noto Sans -->

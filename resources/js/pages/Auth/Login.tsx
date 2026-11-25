@@ -360,9 +360,7 @@ export function Login({ onNavigateHome, onLoginSuccess, onOpenParticleStudio }: 
       <header ref={headerRef} className="login-header">
         <div className="login-header__brand">
           <div className="brand__mark">
-            <span />
-            <span />
-            <span />
+            <img src="/kwt-logo.png" alt="PT. Karabha Wiratama" className="brand__logo-img" />
           </div>
           <div className="brand__text">
             <strong>GENIUSONE</strong>
