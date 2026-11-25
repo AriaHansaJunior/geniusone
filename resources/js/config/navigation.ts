@@ -143,8 +143,8 @@ export const navigationConfig: NavSection[] = [
         id: "warehouse-operasional",
         label: "Operasional",
         items: [
-          { id: "wh-req-material", label: "RM (RECEIVE MATERIAL)", path: "/warehouse/request/request-material" },
-          { id: "transfer-stock-return", label: "TSR (TRANSFER STOCK RETURN)", path: "/warehouse/incoming/transfer-stock-return" },
+          { id: "wh-req-material", label: "Receive Material", path: "/warehouse/request/request-material" },
+          { id: "transfer-stock-return", label: "Transfer Stock Return", path: "/warehouse/incoming/transfer-stock-return" },
         ],
       },
       {
@@ -293,8 +293,8 @@ export const ALL_SIDEBAR_MENU_ITEMS: SidebarMenuItemDescriptor[] = [
   { id: "wh-adj-stock", label: "Adjustment Stock", section: "Warehouse", group: "Adjustment" },
 
   // Warehouse - Operasional
-  { id: "wh-req-material", label: "RM (RECEIVE MATERIAL)", section: "Warehouse", group: "Operasional" },
-  { id: "transfer-stock-return", label: "TSR (TRANSFER STOCK RETURN)", section: "Warehouse", group: "Operasional" },
+  { id: "wh-req-material", label: "Receive Material", section: "Warehouse", group: "Operasional" },
+  { id: "transfer-stock-return", label: "Transfer Stock Return", section: "Warehouse", group: "Operasional" },
 
   // Warehouse - Incoming
   { id: "transfer-stock-result", label: "Transfer Stock Result", section: "Warehouse", group: "Incoming" },

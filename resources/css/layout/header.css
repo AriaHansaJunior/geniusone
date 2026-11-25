@@ -593,6 +593,11 @@
     gap: 8px;
   }
 
+  .brand__mark {
+    width: 30px;
+    height: 28px;
+  }
+
   .brand__toggle {
     display: none;
   }

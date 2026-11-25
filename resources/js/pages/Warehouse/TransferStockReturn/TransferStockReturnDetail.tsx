@@ -19,6 +19,7 @@ import type { TransferStockReturnRecord } from "./transfer-stock-return-types";
 import { useTheme } from "../../../context/ThemeContext";
 import { TransferStockReturnDefaultDetail } from "../../../themes/default/pages/TransferStockReturnDefaultDetail";
 import { LoadingBuffer } from "../../../components/ui/LoadingBuffer";
+import { KwtPrintModal, KwtPrintTemplateTsr } from "../../../components/print";
 
 interface TransferStockReturnDetailProps {
   code: string;
@@ -57,6 +58,7 @@ export function TransferStockReturnDetail({
   const [actionBusy, setActionBusy] = useState<boolean>(false);
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState<boolean>(false);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState<boolean>(false);
+  const [isPrintModalOpen, setIsPrintModalOpen] = useState<boolean>(false);
 
   const [notification, setNotification] = useState<{
     type: "success" | "warning" | "error";
@@ -261,6 +263,7 @@ export function TransferStockReturnDetail({
           onApprove={handleApprove}
           onOpenRejectDialog={() => setIsRejectDialogOpen(true)}
           onOpenDeleteConfirm={() => setIsDeleteConfirmOpen(true)}
+          onPrint={() => setIsPrintModalOpen(true)}
           onEdit={onEdit}
           onBack={onBack}
         />
@@ -274,7 +277,7 @@ export function TransferStockReturnDetail({
             <span>/</span>
             <a onClick={onBack}>Operasional</a>
             <span>/</span>
-            <a onClick={onBack}>TSR (Transfer Stock Return)</a>
+            <a onClick={onBack}>Transfer Stock Return</a>
             <span>/</span>
             <span className="current">{record.mutationCode}</span>
           </div>
@@ -306,7 +309,7 @@ export function TransferStockReturnDetail({
           <Button
             type="button"
             variant="secondary"
-            onClick={() => window.print()}
+            onClick={() => setIsPrintModalOpen(true)}
           >
             Print
           </Button>
@@ -565,6 +568,58 @@ export function TransferStockReturnDetail({
         cancelLabel="Cancel"
         variant="danger"
       />
+
+      {/* KWT Official TSR Print Preview Modal */}
+      <KwtPrintModal
+        isOpen={isPrintModalOpen}
+        onClose={() => setIsPrintModalOpen(false)}
+        title="Print Preview — Transfer Stock Return"
+        documentCode={record.mutationCode}
+        orientation="landscape"
+      >
+        <KwtPrintTemplateTsr
+          docNumber={record.mutationCode}
+          transferDate={record.transferDate}
+          destinationWarehouse={warehouseDisplay}
+          productionCode={record.productionCode || "-"}
+          items={(record.items || []).map((it, idx) => ({
+            no: idx + 1,
+            itemName: it.itemCode ? `[${it.itemCode}] ${it.itemName}` : it.itemName,
+            quantity: it.quantity,
+            unit: it.unit || "PCS",
+            sourceLocation: it.sourceLocation || "-",
+            remark: it.reason || "",
+          }))}
+          notes={record.transferNote || ""}
+          knownBy={approvalTimelineState.approved2By || ""}
+          receivedBy=""
+          handedOverBy={approvalTimelineState.approved1By || ""}
+          requestedBy={record.userCreated || ""}
+        />
+      </KwtPrintModal>
+
+      {/* Hidden Print Target for Direct Browser Print (Ctrl+P) */}
+      <div className="kwt-print-only-container">
+        <KwtPrintTemplateTsr
+          docNumber={record.mutationCode}
+          transferDate={record.transferDate}
+          destinationWarehouse={warehouseDisplay}
+          productionCode={record.productionCode || "-"}
+          items={(record.items || []).map((it, idx) => ({
+            no: idx + 1,
+            itemName: it.itemCode ? `[${it.itemCode}] ${it.itemName}` : it.itemName,
+            quantity: it.quantity,
+            unit: it.unit || "PCS",
+            sourceLocation: it.sourceLocation || "-",
+            remark: it.reason || "",
+          }))}
+          notes={record.transferNote || ""}
+          knownBy={approvalTimelineState.approved2By || ""}
+          receivedBy=""
+          handedOverBy={approvalTimelineState.approved1By || ""}
+          requestedBy={record.userCreated || ""}
+        />
+      </div>
     </>
   );
 }

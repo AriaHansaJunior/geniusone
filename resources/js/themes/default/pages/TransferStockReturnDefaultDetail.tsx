@@ -21,6 +21,7 @@ interface TransferStockReturnDefaultDetailProps {
   onApprove: () => void;
   onOpenRejectDialog: () => void;
   onOpenDeleteConfirm: () => void;
+  onPrint?: () => void;
   onEdit?: (record: TransferStockReturnRecord) => void;
   onBack: () => void;
 }
@@ -39,6 +40,7 @@ export function TransferStockReturnDefaultDetail({
   onApprove,
   onOpenRejectDialog,
   onOpenDeleteConfirm,
+  onPrint,
   onEdit,
   onBack,
 }: TransferStockReturnDefaultDetailProps) {
@@ -120,7 +122,7 @@ export function TransferStockReturnDefaultDetail({
             type="button"
             variant="secondary"
             size="sm"
-            onClick={() => window.print()}
+            onClick={() => (onPrint ? onPrint() : window.print())}
           >
             Print
           </Button>

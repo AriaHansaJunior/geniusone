@@ -270,7 +270,7 @@ export const pageMeta: Record<PageKey, PageMeta> = {
   // Warehouse Operasional
   "transfer-stock-return": {
     eyebrow: "WAREHOUSE OPERASIONAL",
-    title: "TSR (Transfer Stock Return)",
+    title: "Transfer Stock Return",
     description: "Receiving returned material transfers from internal production sections.",
   },
   "transfer-stock-result": {
@@ -318,7 +318,7 @@ export const pageMeta: Record<PageKey, PageMeta> = {
   // Warehouse Operasional
   "wh-req-material": {
     eyebrow: "WAREHOUSE OPERASIONAL",
-    title: "RM (Receive Material)",
+    title: "Receive Material",
     description: "Internal departmental requisitions for stock issue.",
   },
   "wh-req-weight-note-fg": {

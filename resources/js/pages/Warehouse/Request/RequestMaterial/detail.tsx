@@ -169,7 +169,7 @@ export function RequestMaterialDetail({
             <span>/</span>
             <a onClick={onBack}>Operasional</a>
             <span>/</span>
-            <a onClick={onBack}>RM (Receive Material)</a>
+            <a onClick={onBack}>Receive Material</a>
             <span>/</span>
             <span className="current">{record.requestCode}</span>
           </div>
