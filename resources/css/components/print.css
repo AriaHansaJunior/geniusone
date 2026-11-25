@@ -121,7 +121,9 @@
 }
 
 /* ==========================================================================
-   RESET & ISOLATION FOR KWT PRINT CONTAINER
+   FULL RESET & ISOLATION FOR KWT PRINT CONTAINER
+   Neutralizes global tables.css (td { height: 52px; padding: 8px 14px; },
+   th { height: 42px; text-transform: uppercase; }, tbody tr:last-child td)
    ========================================================================== */
 .kwt-print-sheet table,
 .kwt-doc-box table,
@@ -132,24 +134,37 @@
   box-sizing: border-box !important;
   border-collapse: collapse !important;
   background: #ffffff !important;
+  font-size: inherit !important;
+  margin: 0 !important;
 }
 
 .kwt-print-sheet th,
-.kwt-doc-box th,
-.kwt-po-box th {
+.kwt-print-sheet td {
+  height: auto !important;
+  min-height: 0 !important;
+  padding: 0;
+  margin: 0;
+  text-transform: none !important;
+  letter-spacing: normal !important;
   white-space: normal !important;
   position: static !important;
   top: auto !important;
+  z-index: auto !important;
   user-select: auto !important;
+  background: #ffffff !important;
   color: #000000 !important;
-  letter-spacing: normal !important;
+  border: none;
+  line-height: 1.25 !important;
+  vertical-align: middle !important;
 }
 
-.kwt-doc-box th {
+.kwt-print-sheet tbody tr,
+.kwt-print-sheet tbody tr:hover,
+.kwt-print-sheet tbody tr:hover td {
   background: #ffffff !important;
 }
 
-/* Document Paper Sheet (A4 Landscape Proportions) */
+/* Document Paper Sheet (A4 Landscape Proportions — identical on screen & print) */
 .kwt-print-sheet {
   background: #ffffff;
   color: #000000;
@@ -157,7 +172,7 @@
   max-width: 1040px;
   min-height: 0;
   box-sizing: border-box;
-  padding: 20px 26px 24px 26px;
+  padding: 18px 24px 20px 24px;
   font-family: "Times New Roman", Times, Georgia, serif;
   box-shadow: 0 12px 36px rgba(0, 0, 0, 0.35);
   line-height: 1.25;
@@ -169,8 +184,8 @@
   font-family: "Times New Roman", Times, Georgia, serif;
   font-size: 11px;
   font-weight: 700;
-  line-height: 1.3;
-  margin-bottom: 6px;
+  line-height: 1.25;
+  margin-bottom: 5px;
   color: #000000;
 }
 
@@ -178,12 +193,13 @@
   width: auto !important;
   max-width: 260px !important;
   border-collapse: collapse !important;
-  margin: 0 !important;
 }
 
 .kwt-doc-header-meta-table td {
+  height: auto !important;
   padding: 1px 4px 1px 0 !important;
   font-size: 11px !important;
+  line-height: 1.25 !important;
   border: none !important;
   color: #000000 !important;
   white-space: nowrap !important;
@@ -204,7 +220,6 @@
   box-sizing: border-box !important;
   width: 100% !important;
   max-width: 100% !important;
-  overflow: hidden !important;
   margin: 0 !important;
   padding: 0 !important;
 }
@@ -217,7 +232,6 @@
   border-collapse: collapse !important;
   border-bottom: 1px solid #000000 !important;
   box-sizing: border-box !important;
-  margin: 0 !important;
 }
 
 .kwt-doc-box--double-header .kwt-header-table {
@@ -227,7 +241,7 @@
 .kwt-header-left {
   width: 58% !important;
   vertical-align: middle !important;
-  padding: 8px 12px !important;
+  padding: 6px 12px !important;
   border-right: 1px solid #000000 !important;
   border-left: none !important;
   border-top: none !important;
@@ -241,7 +255,7 @@
 }
 
 .kwt-header-logo {
-  height: 48px;
+  height: 46px;
   width: auto;
   object-fit: contain;
   flex-shrink: 0;
@@ -283,14 +297,14 @@
   font-weight: 800;
   letter-spacing: 0.4px;
   color: #000000;
-  margin: 4px 0 0 0;
+  margin: 3px 0 0 0;
   line-height: 1.2;
 }
 
 .kwt-header-right {
   width: 42% !important;
-  vertical-align: top !important;
-  padding: 6px 10px !important;
+  vertical-align: middle !important;
+  padding: 5px 10px !important;
   border-right: none !important;
   border-top: none !important;
   box-sizing: border-box !important;
@@ -301,20 +315,22 @@
   table-layout: fixed !important;
   border-collapse: collapse !important;
   font-family: "Times New Roman", Times, serif;
-  font-size: 11px;
+  font-size: 11px !important;
   box-sizing: border-box !important;
-  margin: 0 !important;
 }
 
 .kwt-meta-table td {
-  padding: 2px 2px !important;
+  height: auto !important;
+  padding: 1.5px 2px !important;
   vertical-align: top !important;
   border: none !important;
   color: #000000 !important;
+  font-size: 11px !important;
+  line-height: 1.25 !important;
 }
 
 .kwt-meta-table td.kwt-meta-label {
-  width: 95px !important;
+  width: 92px !important;
   font-weight: 700 !important;
   white-space: nowrap !important;
 }
@@ -333,7 +349,7 @@
 /* Full-width header + subheader for Delivery Order (KWT-PPIC-006) */
 .kwt-do-header-band {
   width: 100%;
-  padding: 8px 16px;
+  padding: 7px 16px;
   border-bottom: 1px solid #000000;
   box-sizing: border-box;
   display: flex;
@@ -344,7 +360,7 @@
 .kwt-do-header-titles {
   flex: 1;
   text-align: center;
-  padding-right: 48px;
+  padding-right: 46px;
 }
 
 .kwt-do-subheader-table {
@@ -352,19 +368,18 @@
   table-layout: fixed !important;
   border-collapse: collapse !important;
   border-bottom: 1px solid #000000 !important;
-  margin: 0 !important;
 }
 
 .kwt-do-subheader-left {
   width: 55% !important;
-  padding: 6px 10px !important;
+  padding: 5px 10px !important;
   vertical-align: top !important;
   border-right: none !important;
 }
 
 .kwt-do-subheader-right {
   width: 45% !important;
-  padding: 6px 10px !important;
+  padding: 5px 10px !important;
   vertical-align: top !important;
 }
 
@@ -390,40 +405,46 @@
   table-layout: fixed !important;
   border-collapse: collapse !important;
   font-family: "Times New Roman", Times, serif;
-  font-size: 11px;
+  font-size: 11px !important;
   box-sizing: border-box !important;
-  margin: 0 !important;
 }
 
 .kwt-items-table th,
-.kwt-items-table td {
+.kwt-items-table td,
+.kwt-items-table tbody tr:last-child td {
   border: 1px solid #000000 !important;
-  padding: 4px 6px !important;
+  padding: 3.5px 6px !important;
   box-sizing: border-box !important;
   word-wrap: break-word !important;
   overflow-wrap: break-word !important;
   word-break: break-word !important;
   white-space: normal !important;
   color: #000000 !important;
+  font-size: 11px !important;
+  line-height: 1.25 !important;
+  height: 22px !important;
 }
 
 .kwt-items-table th {
   font-weight: 800 !important;
   text-align: center !important;
   background-color: #ffffff !important;
-  padding: 5px 4px !important;
+  padding: 4.5px 4px !important;
   font-size: 11px !important;
   height: auto !important;
   border-top: none !important;
+  text-transform: none !important;
 }
 
 .kwt-items-table th:first-child,
-.kwt-items-table td:first-child {
+.kwt-items-table td:first-child,
+.kwt-items-table tbody tr:last-child td:first-child {
   border-left: none !important;
 }
 
 .kwt-items-table th:last-child,
-.kwt-items-table td:last-child {
+.kwt-items-table td:last-child,
+.kwt-items-table tbody tr:last-child td:last-child {
   border-right: none !important;
 }
 
@@ -473,10 +494,10 @@
   border-bottom: 1px solid #000000 !important;
   border-left: none !important;
   border-right: none !important;
-  padding: 4px 10px !important;
+  padding: 3px 10px !important;
   font-family: "Times New Roman", Times, serif;
   font-size: 11px;
-  line-height: 1.35;
+  line-height: 1.3;
   box-sizing: border-box !important;
 }
 
@@ -487,25 +508,25 @@
   table-layout: fixed !important;
   border-collapse: collapse !important;
   font-family: "Times New Roman", Times, serif;
-  font-size: 11px;
+  font-size: 11px !important;
   box-sizing: border-box !important;
-  margin: 0 !important;
 }
 
 .kwt-footer-table td {
   vertical-align: top !important;
   box-sizing: border-box !important;
   border: none !important;
+  height: auto !important;
 }
 
 .kwt-distribution-cell {
   width: 28% !important;
   border-right: 1px solid #000000 !important;
   border-left: none !important;
-  padding: 6px 8px 8px 10px !important;
+  padding: 6px 8px 6px 10px !important;
   font-family: "Times New Roman", Times, serif;
-  font-size: 11px;
-  line-height: 1.45;
+  font-size: 11px !important;
+  line-height: 1.4 !important;
   box-sizing: border-box !important;
 }
 
@@ -599,19 +620,19 @@
   border-collapse: collapse !important;
   border-top: 3px double #000000 !important;
   box-sizing: border-box !important;
-  margin: 0 !important;
 }
 
 .kwt-npb-footer td {
   border: 1px solid #000000 !important;
   vertical-align: top !important;
   box-sizing: border-box !important;
+  height: auto !important;
 }
 
 .kwt-npb-notes-cell {
   width: 50% !important;
   padding: 6px 10px !important;
-  min-height: 78px !important;
+  min-height: 76px !important;
   font-size: 11px !important;
   border-left: none !important;
   border-top: none !important;
@@ -645,7 +666,6 @@
   border-collapse: collapse !important;
   height: 100% !important;
   box-sizing: border-box !important;
-  margin: 0 !important;
 }
 
 .kwt-npb-signs-table th {
@@ -656,6 +676,7 @@
   font-size: 11px !important;
   font-weight: 800 !important;
   text-align: center !important;
+  height: auto !important;
 }
 
 .kwt-npb-signs-table th:first-child,
@@ -696,13 +717,13 @@
 .kwt-po-top-header {
   display: flex;
   align-items: center;
-  padding: 8px 14px;
+  padding: 7px 14px;
   border-bottom: 1px solid #000000;
   gap: 12px;
 }
 
 .kwt-po-logo {
-  height: 44px;
+  height: 42px;
   width: auto;
   object-fit: contain;
   flex-shrink: 0;
@@ -711,12 +732,12 @@
 .kwt-po-company-block {
   flex: 1;
   text-align: center;
-  padding-right: 44px;
+  padding-right: 42px;
 }
 
 .kwt-po-company-name {
   margin: 0;
-  font-size: 18px;
+  font-size: 17px;
   font-weight: 800;
   letter-spacing: 0.4px;
   color: #000000;
@@ -740,7 +761,7 @@
 
 .kwt-po-title-text {
   width: 56%;
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 800;
   letter-spacing: 0.4px;
   color: #000000;
@@ -754,15 +775,17 @@
   width: 100% !important;
   table-layout: fixed !important;
   border-collapse: collapse !important;
-  font-size: 10px;
-  margin: 0 !important;
+  font-size: 10px !important;
 }
 
 .kwt-po-meta-table td {
+  height: auto !important;
   border: none !important;
   padding: 1.5px 3px !important;
   color: #000000 !important;
   vertical-align: top !important;
+  font-size: 10px !important;
+  line-height: 1.25 !important;
 }
 
 .kwt-po-meta-lbl {
@@ -789,7 +812,7 @@
 .kwt-po-supplier-band {
   display: flex;
   border-bottom: 1px solid #000000;
-  padding: 6px 10px;
+  padding: 5px 10px;
   font-size: 10px;
 }
 
@@ -802,18 +825,12 @@
 .kwt-po-supplier-heading {
   font-weight: 800;
   font-size: 10.5px;
-  margin-bottom: 4px;
+  margin-bottom: 3px;
 }
 
 .kwt-po-supplier-name {
   font-size: 10.5px;
   font-weight: 600;
-}
-
-.kwt-po-supplier-addr {
-  font-size: 9.5px;
-  margin-top: 2px;
-  color: #111827;
 }
 
 .kwt-po-supplier-right {
@@ -826,8 +843,7 @@
   table-layout: fixed !important;
   border-collapse: collapse !important;
   font-family: Arial, Helvetica, sans-serif;
-  font-size: 10px;
-  margin: 0 !important;
+  font-size: 10px !important;
 }
 
 .kwt-po-items-table th {
@@ -841,31 +857,39 @@
   font-weight: 800 !important;
   text-align: center !important;
   color: #000000 !important;
+  height: auto !important;
+  text-transform: none !important;
 }
 
 .kwt-po-items-table th:first-child,
-.kwt-po-items-table td:first-child {
+.kwt-po-items-table td:first-child,
+.kwt-po-items-table tbody tr:last-child td:first-child {
   border-left: none !important;
 }
 
 .kwt-po-items-table th:last-child,
-.kwt-po-items-table td:last-child {
+.kwt-po-items-table td:last-child,
+.kwt-po-items-table tbody tr:last-child td:last-child {
   border-right: none !important;
 }
 
-.kwt-po-items-table tbody td {
+.kwt-po-items-table tbody td,
+.kwt-po-items-table tbody tr:last-child td {
   border-top: none !important;
   border-bottom: none !important;
   border-left: 1px solid #000000 !important;
   border-right: 1px solid #000000 !important;
-  padding: 5px 6px !important;
+  padding: 4px 6px !important;
   vertical-align: top !important;
   color: #000000 !important;
+  font-size: 10px !important;
+  height: auto !important;
   word-wrap: break-word !important;
 }
 
-.kwt-po-items-filler td {
-  height: 150px !important;
+.kwt-po-items-filler td,
+.kwt-po-items-table tbody tr.kwt-po-items-filler:last-child td {
+  height: 135px !important;
 }
 
 /* PO Bottom Terms + Totals + Signatures */
@@ -874,8 +898,7 @@
   table-layout: fixed !important;
   border-collapse: collapse !important;
   border-top: 1px solid #000000 !important;
-  font-size: 10px;
-  margin: 0 !important;
+  font-size: 10px !important;
 }
 
 .kwt-po-terms-cell {
@@ -883,25 +906,28 @@
   vertical-align: top !important;
   padding: 6px 10px !important;
   border-right: 1px solid #000000 !important;
+  height: auto !important;
 }
 
 .kwt-po-terms-title {
   font-weight: 800;
   font-size: 10.5px;
-  margin-bottom: 6px;
+  margin-bottom: 5px;
 }
 
 .kwt-po-terms-table {
   width: 100% !important;
   border-collapse: collapse !important;
-  font-size: 10px;
+  font-size: 10px !important;
 }
 
 .kwt-po-terms-table td {
+  height: auto !important;
   border: none !important;
-  padding: 2px 3px !important;
+  padding: 1.5px 3px !important;
   vertical-align: top !important;
   color: #000000 !important;
+  font-size: 10px !important;
 }
 
 .kwt-po-term-num {
@@ -921,19 +947,22 @@
   width: 44% !important;
   vertical-align: top !important;
   padding: 0 !important;
+  height: auto !important;
 }
 
 .kwt-po-totals-table {
   width: 100% !important;
   table-layout: fixed !important;
   border-collapse: collapse !important;
-  font-size: 10px;
+  font-size: 10px !important;
 }
 
 .kwt-po-totals-table td {
-  padding: 3.5px 8px !important;
+  height: auto !important;
+  padding: 3px 8px !important;
   border: none !important;
   color: #000000 !important;
+  font-size: 10px !important;
 }
 
 .kwt-po-totals-lbl {
@@ -948,7 +977,8 @@
   font-weight: 700;
 }
 
-.kwt-po-totals-grand td {
+.kwt-po-totals-grand td,
+.kwt-po-totals-table tbody tr.kwt-po-totals-grand:last-child td {
   border-top: 1px solid #000000 !important;
   border-bottom: 1px solid #000000 !important;
   font-weight: 800 !important;
@@ -958,12 +988,13 @@
   width: 100% !important;
   table-layout: fixed !important;
   border-collapse: collapse !important;
-  font-size: 10px;
+  font-size: 10px !important;
 }
 
 .kwt-po-sign-cell {
   width: 48% !important;
-  padding: 6px 8px !important;
+  height: auto !important;
+  padding: 5px 8px !important;
   text-align: center !important;
   vertical-align: top !important;
   border-top: 1px solid #000000 !important;
@@ -971,6 +1002,7 @@
 
 .kwt-po-sign-spacer {
   width: 4% !important;
+  height: auto !important;
   border-top: 1px solid #000000 !important;
   border-left: 1px solid #000000 !important;
   border-right: 1px solid #000000 !important;
@@ -978,7 +1010,7 @@
 
 .kwt-po-sign-title {
   font-weight: 700;
-  margin-bottom: 46px;
+  margin-bottom: 42px;
 }
 
 .kwt-po-sign-name {
@@ -988,7 +1020,7 @@
 
 .kwt-po-distribution {
   border-top: 1px solid #000000;
-  padding: 5px 10px;
+  padding: 4px 10px;
   display: flex;
   flex-wrap: wrap;
   gap: 28px;
@@ -1000,7 +1032,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: 5px;
+  margin-top: 4px;
   font-size: 9.5px;
   font-weight: 600;
   color: #000000;
@@ -1052,7 +1084,7 @@
 }
 
 /* ==========================================================================
-   Print Only Rules (A4 Landscape across all KWT forms)
+   Print Only Rules (A4 Landscape, Zero Clipping, Zero Duplicate Targets)
    ========================================================================== */
 @media screen {
   .kwt-print-only-container {
@@ -1074,68 +1106,108 @@
     padding: 0 !important;
     width: 100% !important;
     height: auto !important;
-  }
-
-  body * {
-    visibility: hidden !important;
-  }
-
-  .kwt-print-modal-backdrop {
-    position: static !important;
-    background: none !important;
-    backdrop-filter: none !important;
-    padding: 0 !important;
-    display: block !important;
-    inset: auto !important;
-  }
-
-  .kwt-print-modal {
-    position: static !important;
-    box-shadow: none !important;
-    border: none !important;
-    max-width: 100% !important;
-    width: 100% !important;
-    height: auto !important;
-    max-height: none !important;
+    min-height: 0 !important;
     overflow: visible !important;
-    background: transparent !important;
   }
 
-  .kwt-print-modal__header {
+  /* Case 1: Print triggered from KwtPrintModal (portaled directly to body) */
+  body.kwt-print-modal-open #root {
     display: none !important;
   }
 
-  .kwt-print-modal__body {
-    background: transparent !important;
+  body.kwt-print-modal-open .kwt-print-modal-backdrop {
+    position: static !important;
+    inset: auto !important;
+    display: block !important;
+    width: 100% !important;
+    height: auto !important;
     padding: 0 !important;
+    margin: 0 !important;
+    background: #ffffff !important;
+    backdrop-filter: none !important;
     overflow: visible !important;
+    animation: none !important;
+  }
+
+  body.kwt-print-modal-open .kwt-print-modal {
+    position: static !important;
     display: block !important;
-  }
-
-  .kwt-print-target,
-  .kwt-print-target * {
-    visibility: visible !important;
-  }
-
-  .kwt-print-target {
-    position: absolute !important;
-    left: 0 !important;
-    top: 0 !important;
     width: 100% !important;
-    display: block !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    box-shadow: none !important;
-  }
-
-  .kwt-print-sheet {
-    box-shadow: none !important;
     max-width: 100% !important;
-    width: 100% !important;
-    min-height: auto !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    background: #ffffff !important;
+  }
+
+  body.kwt-print-modal-open .kwt-print-modal__header {
+    display: none !important;
+  }
+
+  body.kwt-print-modal-open .kwt-print-modal__body {
+    display: block !important;
     padding: 0 !important;
     margin: 0 !important;
+    background: #ffffff !important;
+    overflow: visible !important;
+  }
+
+  /* Case 2: Direct Ctrl+P on a detail page without opening modal */
+  body:not(.kwt-print-modal-open):has(.kwt-print-only-container) #root,
+  body:not(.kwt-print-modal-open):has(.kwt-print-only-container) .app-shell,
+  body:not(.kwt-print-modal-open):has(.kwt-print-only-container) .workspace,
+  body:not(.kwt-print-modal-open):has(.kwt-print-only-container) main,
+  body:not(.kwt-print-modal-open):has(.kwt-print-only-container) .content,
+  body:not(.kwt-print-modal-open):has(.kwt-print-only-container) .full-page-detail {
     display: block !important;
+    position: static !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: #ffffff !important;
+    box-shadow: none !important;
+    border: none !important;
+    transform: none !important;
+  }
+
+  body:not(.kwt-print-modal-open):has(.kwt-print-only-container)
+    #root
+    *:not(.kwt-print-only-container):not(.kwt-print-only-container *):not(:has(.kwt-print-only-container)) {
+    display: none !important;
+  }
+
+  body:not(.kwt-print-modal-open) .kwt-print-only-container {
+    display: block !important;
+    position: static !important;
+    width: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Printed Sheet Layout — Natural Flow, Zero Position-Absolute Clipping */
+  .kwt-print-target,
+  .kwt-print-sheet {
+    position: static !important;
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+    background: #ffffff !important;
+    overflow: visible !important;
   }
 
   .kwt-doc-box {
@@ -1143,9 +1215,7 @@
     max-width: 100% !important;
     border: 3px double #000000 !important;
     box-sizing: border-box !important;
-    overflow: hidden !important;
-    page-break-inside: avoid !important;
-    break-inside: avoid !important;
+    overflow: visible !important;
   }
 
   .kwt-po-box {
@@ -1153,8 +1223,7 @@
     max-width: 100% !important;
     border: 1px solid #000000 !important;
     box-sizing: border-box !important;
-    page-break-inside: avoid !important;
-    break-inside: avoid !important;
+    overflow: visible !important;
   }
 
   .kwt-items-table,
@@ -1168,6 +1237,15 @@
     max-width: 100% !important;
     table-layout: fixed !important;
     box-sizing: border-box !important;
+  }
+
+  .kwt-items-table tr,
+  .kwt-po-items-table tr,
+  .kwt-footer-table,
+  .kwt-npb-footer,
+  .kwt-po-bottom-table {
+    break-inside: avoid;
+    page-break-inside: avoid;
   }
 
   * {

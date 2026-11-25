@@ -1,4 +1,5 @@
 import React, { useEffect } from "react";
+import { createPortal } from "react-dom";
 import { Button } from "../ui/Button";
 
 export interface KwtPrintModalProps {
@@ -30,6 +31,8 @@ export const KwtPrintModal: React.FC<KwtPrintModalProps> = ({
   useEffect(() => {
     if (!isOpen) return;
 
+    document.body.classList.add("kwt-print-modal-open");
+
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         onClose();
@@ -37,7 +40,10 @@ export const KwtPrintModal: React.FC<KwtPrintModalProps> = ({
     };
 
     window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    return () => {
+      document.body.classList.remove("kwt-print-modal-open");
+      window.removeEventListener("keydown", handleKeyDown);
+    };
   }, [isOpen, onClose]);
 
   if (!isOpen) return null;
@@ -50,7 +56,7 @@ export const KwtPrintModal: React.FC<KwtPrintModalProps> = ({
     }
   };
 
-  return (
+  const modalContent = (
     <div
       className="kwt-print-modal-backdrop"
       onClick={(e) => {
@@ -111,4 +117,8 @@ export const KwtPrintModal: React.FC<KwtPrintModalProps> = ({
       </div>
     </div>
   );
+
+  return typeof document !== "undefined"
+    ? createPortal(modalContent, document.body)
+    : modalContent;
 };
