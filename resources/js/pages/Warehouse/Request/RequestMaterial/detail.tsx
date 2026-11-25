@@ -167,9 +167,9 @@ export function RequestMaterialDetail({
           <div className="detail-breadcrumb-trail">
             <a onClick={onBack}>Warehouse</a>
             <span>/</span>
-            <a onClick={onBack}>Request</a>
+            <a onClick={onBack}>Operasional</a>
             <span>/</span>
-            <a onClick={onBack}>Request Material</a>
+            <a onClick={onBack}>RM (Receive Material)</a>
             <span>/</span>
             <span className="current">{record.requestCode}</span>
           </div>
@@ -199,7 +199,7 @@ export function RequestMaterialDetail({
             <Badge tone="purple">{record.department}</Badge>
           </div>
           <span className="detail-header-card__meta">
-            Request Date: <strong>{record.requestDate}</strong> · Job Number: <strong>{record.jobNumber}</strong> · Customer: <strong>{record.customer}</strong>
+            Request Date: <strong>{record.requestDate}</strong> · Department: <strong>{record.department || "—"}</strong> · Project Type: <strong>{record.projectType || "—"}</strong>
           </span>
         </div>
       </div>
@@ -250,11 +250,6 @@ export function RequestMaterialDetail({
             </div>
 
             <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px dashed var(--line)", paddingBottom: "6px" }}>
-              <span style={{ fontSize: "12px", color: "var(--muted)", fontWeight: 600 }}>Job Number</span>
-              <strong style={{ fontSize: "12.5px", color: "var(--ink)" }}>{record.jobNumber || "—"}</strong>
-            </div>
-
-            <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px dashed var(--line)", paddingBottom: "6px" }}>
               <span style={{ fontSize: "12px", color: "var(--muted)", fontWeight: 600 }}>Request Date</span>
               <span style={{ fontSize: "12.5px", fontWeight: 600 }}>{record.requestDate || "—"}</span>
             </div>
@@ -267,11 +262,6 @@ export function RequestMaterialDetail({
             <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px dashed var(--line)", paddingBottom: "6px" }}>
               <span style={{ fontSize: "12px", color: "var(--muted)", fontWeight: 600 }}>Department</span>
               <span style={{ fontSize: "12.5px", fontWeight: 700 }} className="cell-dept">{record.department || "—"}</span>
-            </div>
-
-            <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px dashed var(--line)", paddingBottom: "6px" }}>
-              <span style={{ fontSize: "12px", color: "var(--muted)", fontWeight: 600 }}>Customer</span>
-              <span style={{ fontSize: "12.5px", fontWeight: 600 }}>{record.customer || "—"}</span>
             </div>
 
             <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px dashed var(--line)", paddingBottom: "6px" }}>

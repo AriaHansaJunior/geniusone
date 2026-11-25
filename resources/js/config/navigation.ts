@@ -140,6 +140,14 @@ export const navigationConfig: NavSection[] = [
         ],
       },
       {
+        id: "warehouse-operasional",
+        label: "Operasional",
+        items: [
+          { id: "wh-req-material", label: "RM (RECEIVE MATERIAL)", path: "/warehouse/request/request-material" },
+          { id: "transfer-stock-return", label: "TSR (TRANSFER STOCK RETURN)", path: "/warehouse/incoming/transfer-stock-return" },
+        ],
+      },
+      {
         id: "warehouse-adjustment",
         label: "Adjustment",
         items: [
@@ -153,7 +161,6 @@ export const navigationConfig: NavSection[] = [
         id: "warehouse-incoming",
         label: "Incoming",
         items: [
-          { id: "transfer-stock-return", label: "Transfer Stock Return", path: "/warehouse/incoming/transfer-stock-return" },
           { id: "transfer-stock-result", label: "Transfer Stock Result", path: "/warehouse/incoming/transfer-stock-result", isPlaceholder: true },
           { id: "receive-material-non-fasilitas", label: "Receive Material (Non-Fasilitas)", path: "/warehouse/incoming/receive-material-non-fasilitas", isPlaceholder: true },
           { id: "warehouse", label: "Receive Material (BPB)", path: "/warehouse/incoming/receive-material-bpb" },
@@ -178,7 +185,6 @@ export const navigationConfig: NavSection[] = [
         label: "Request",
         items: [
           { id: "wh-req-weight-note", label: "Weight Note", path: "/warehouse/request/weight-note", isPlaceholder: true },
-          { id: "wh-req-material", label: "Request Material", path: "/warehouse/request/request-material" },
           { id: "wh-req-weight-note-fg", label: "Weight Note Multiple FG", path: "/warehouse/request/weight-note-multiple-fg", isPlaceholder: true },
           { id: "wh-req-shipping", label: "Shipping Instruction", path: "/warehouse/request/shipping-instruction", isPlaceholder: true },
         ],
@@ -286,8 +292,11 @@ export const ALL_SIDEBAR_MENU_ITEMS: SidebarMenuItemDescriptor[] = [
   { id: "wh-opname-material", label: "Opname Material", section: "Warehouse", group: "Adjustment" },
   { id: "wh-adj-stock", label: "Adjustment Stock", section: "Warehouse", group: "Adjustment" },
 
+  // Warehouse - Operasional
+  { id: "wh-req-material", label: "RM (RECEIVE MATERIAL)", section: "Warehouse", group: "Operasional" },
+  { id: "transfer-stock-return", label: "TSR (TRANSFER STOCK RETURN)", section: "Warehouse", group: "Operasional" },
+
   // Warehouse - Incoming
-  { id: "transfer-stock-return", label: "Transfer Stock Return", section: "Warehouse", group: "Incoming" },
   { id: "transfer-stock-result", label: "Transfer Stock Result", section: "Warehouse", group: "Incoming" },
   { id: "receive-material-non-fasilitas", label: "Receive Material (Non-Fasilitas)", section: "Warehouse", group: "Incoming" },
   { id: "warehouse", label: "Receive Material (BPB)", section: "Warehouse", group: "Incoming" },
@@ -301,7 +310,6 @@ export const ALL_SIDEBAR_MENU_ITEMS: SidebarMenuItemDescriptor[] = [
 
   // Warehouse - Request
   { id: "wh-req-weight-note", label: "Weight Note", section: "Warehouse", group: "Request" },
-  { id: "wh-req-material", label: "Request Material", section: "Warehouse", group: "Request" },
   { id: "wh-req-weight-note-fg", label: "Weight Note Multiple FG", section: "Warehouse", group: "Request" },
   { id: "wh-req-shipping", label: "Shipping Instruction", section: "Warehouse", group: "Request" },
 

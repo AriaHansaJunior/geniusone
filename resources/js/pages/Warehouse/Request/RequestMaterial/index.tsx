@@ -83,10 +83,8 @@ export function RequestMaterialIndex({
       if (search.trim()) {
         const query = search.toLowerCase().trim();
         const matchesCode = rec.requestCode.toLowerCase().includes(query);
-        const matchesJob = rec.jobNumber.toLowerCase().includes(query);
-        const matchesCust = rec.customer.toLowerCase().includes(query);
         const matchesNote = rec.requestNote.toLowerCase().includes(query);
-        if (!matchesCode && !matchesJob && !matchesCust && !matchesNote) {
+        if (!matchesCode && !matchesNote) {
           return false;
         }
       }
@@ -168,8 +166,6 @@ export function RequestMaterialIndex({
         "Destination Location",
         "Department",
         "Type of Request",
-        "Job Number",
-        "Customer",
         "Request Note",
         "Total Items",
         "Approval",
@@ -185,8 +181,6 @@ export function RequestMaterialIndex({
         r.destinationLocation,
         r.department,
         r.typeOfRequest,
-        r.jobNumber,
-        r.customer,
         r.requestNote,
         r.totalItems,
         r.approval,
@@ -348,7 +342,7 @@ export function RequestMaterialIndex({
                 setSearch(val);
                 setCurrentPage(1);
               }}
-              placeholder="Search request code, job no, customer, note..."
+              placeholder="Search request code, note..."
             />
           </div>
 
@@ -474,8 +468,6 @@ export function RequestMaterialIndex({
                   <th style={{ minWidth: "150px" }}>Destination Location</th>
                   <th style={{ minWidth: "120px" }}>Department</th>
                   <th style={{ minWidth: "130px" }}>Type of Request</th>
-                  <th style={{ minWidth: "120px" }}>Job Number</th>
-                  <th style={{ minWidth: "160px" }}>Customer</th>
                   <th style={{ minWidth: "200px" }}>Request Note</th>
                   <th style={{ minWidth: "80px", textAlign: "center" }}>Total Items</th>
                   <th style={{ minWidth: "110px", textAlign: "center" }}>Approval</th>
@@ -487,7 +479,7 @@ export function RequestMaterialIndex({
               <tbody>
                 {isLoading && paginatedRecords.length === 0 ? (
                   <TableLoadingRow
-                    colSpan={14}
+                    colSpan={12}
                     label="Loading Material Requests..."
                     sublabel="Retrieving request material records & approval statuses..."
                   />
@@ -531,12 +523,6 @@ export function RequestMaterialIndex({
                           <span className="cell-dept">{item.department}</span>
                         </td>
                         <td>{item.typeOfRequest}</td>
-                        <td>
-                          <span style={{ fontSize: "11.5px", fontWeight: 700 }}>
-                            {item.jobNumber}
-                          </span>
-                        </td>
-                        <td>{item.customer || "—"}</td>
                         <td style={{ maxWidth: "240px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={item.requestNote}>
                           {item.requestNote}
                         </td>
@@ -566,7 +552,7 @@ export function RequestMaterialIndex({
                   })
                 ) : (
                   <tr>
-                    <td colSpan={14} style={{ textAlign: "center", padding: "40px 16px" }}>
+                    <td colSpan={12} style={{ textAlign: "center", padding: "40px 16px" }}>
                       <div className="empty">
                         <div className="empty__icon">
                           <Icon name="search" />

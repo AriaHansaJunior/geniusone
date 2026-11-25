@@ -290,10 +290,6 @@ export function TransferStockReturnForm({
         setMasterItems(mItems);
         setAvailableSources(Array.isArray(sourcesData) ? sourcesData : []);
 
-        if (mode === "create" && whList.length > 0) {
-          setWarehousesId((prev) => prev ?? Number(whList[0].id));
-        }
-
         const defaultDest = dlList[0]?.name || whList[0]?.name || "Main Warehouse";
         if (mItems.length > 0) {
           setItems((prev) =>
@@ -380,19 +376,32 @@ export function TransferStockReturnForm({
     ];
   }, [selectedSourceItems, selectedSource, mode, items]);
 
-  const destinationSelectOptions = useMemo(() => {
-    const names = new Set<string>();
-    destinationLocations.forEach((d) => {
-      if (d.name) names.add(d.name);
-    });
-    warehouses.forEach((w) => {
-      if (w.name) names.add(w.name);
-    });
-    items.forEach((it) => {
-      if (it.destinationLocation) names.add(it.destinationLocation);
-    });
-    return Array.from(names);
-  }, [destinationLocations, warehouses, items]);
+  const resolvedRmWarehouse = useMemo(() => {
+    if (selectedSource?.warehouseName || selectedSource?.warehouses_id) {
+      const matchedWh = selectedSource.warehouses_id
+        ? warehouses.find((w) => Number(w.id) === Number(selectedSource.warehouses_id))
+        : undefined;
+      return {
+        id: selectedSource.warehouses_id ? Number(selectedSource.warehouses_id) : matchedWh?.id,
+        name:
+          selectedSource.warehouseName ||
+          (matchedWh ? (matchedWh.code ? `${matchedWh.code} - ${matchedWh.name}` : matchedWh.name) : ""),
+      };
+    }
+    if (warehousesId) {
+      const matchedWh = warehouses.find((w) => Number(w.id) === Number(warehousesId));
+      return {
+        id: warehousesId,
+        name:
+          existingRecord?.warehouseName ||
+          (matchedWh ? (matchedWh.code ? `${matchedWh.code} - ${matchedWh.name}` : matchedWh.name) : ""),
+      };
+    }
+    return {
+      id: undefined,
+      name: existingRecord?.warehouseName || "",
+    };
+  }, [selectedSource, warehouses, warehousesId, existingRecord?.warehouseName]);
 
   const rawStatus = String(existingRecord?.status || "");
   const isLocked =
@@ -408,6 +417,10 @@ export function TransferStockReturnForm({
     setSelectedSourceId(sourceIdStr);
     setErrorMessage(null);
     if (!sourceIdStr) {
+      setWarehousesId(undefined);
+      setProductionCode("");
+      setJobNumberId(undefined);
+      setJobNumber("");
       setItems([createBlankItemRow()]);
       return;
     }
@@ -423,8 +436,7 @@ export function TransferStockReturnForm({
       if (src.job_number || src.jobNumber) setJobNumber(src.job_number || src.jobNumber);
 
       if (Array.isArray(src.items) && src.items.length > 0) {
-        const destFallback =
-          src.warehouseName || destinationSelectOptions[0] || "Main Warehouse";
+        const destFallback = src.warehouseName || "";
         const srcLocFallback = src.destinationLocation || "Production Area";
         setItems(
           src.items.map((it: any, idx: number) => ({
@@ -464,7 +476,7 @@ export function TransferStockReturnForm({
           quantity: Math.max(0.01, Number(nextItem.remainingReturnableQty ?? 1)),
           unit: nextItem.unit || "PCE",
           sourceLocation: nextItem.sourceLocation || selectedSource.destinationLocation || "Production Area",
-          destinationLocation: selectedSource.warehouseName || destinationSelectOptions[0] || "",
+          destinationLocation: selectedSource.warehouseName || "",
           reason: `Return from ${selectedSource.requestNumber || selectedSource.request_number || "Request Material"}`,
         },
       ]);
@@ -524,8 +536,9 @@ export function TransferStockReturnForm({
         setErrorMessage("Transfer Date is required.");
         return;
       }
-      if (!warehousesId) {
-        setErrorMessage("Target Warehouse is required.");
+      const resolvedWhId = resolvedRmWarehouse.id ?? warehousesId;
+      if (!resolvedWhId) {
+        setErrorMessage("Target Warehouse could not be determined from the selected Request Material.");
         return;
       }
       if (items.length === 0) {
@@ -564,7 +577,7 @@ export function TransferStockReturnForm({
         return_number: mutationCode.trim(),
         production_code: productionCode.trim() && productionCode.trim() !== "-" ? productionCode.trim() : null,
         request_material_id: effectiveRmId,
-        warehouses_id: warehousesId,
+        warehouses_id: resolvedWhId,
         job_number_id: jobNumberId || null,
         job_number: jobNumber.trim() && jobNumber.trim() !== "-" ? jobNumber.trim() : null,
         return_date: toIsoDate(transferDate),
@@ -574,7 +587,7 @@ export function TransferStockReturnForm({
           quantity: Number(it.quantity),
           unit: it.unit,
           source_location: it.sourceLocation,
-          destination_location: it.destinationLocation,
+          destination_location: resolvedRmWarehouse.name || it.destinationLocation,
           remark: it.reason,
         })),
       };
@@ -695,24 +708,22 @@ export function TransferStockReturnForm({
               </div>
 
               <div className="master-form-group">
-                <label className="master-form-label">
-                  Warehouse <span className="master-required-star">*</span>
+                <label htmlFor="tsrWarehouse" className="master-form-label">
+                  Warehouse (From Source RM) <span className="master-required-star">*</span>
                 </label>
-                <CustomSelect
-                  searchable
+                <input
+                  id="tsrWarehouse"
+                  type="text"
+                  className="master-form-input tx-input-cell--disabled"
+                  value={resolvedRmWarehouse.name || ""}
+                  placeholder="Locked to selected Source Request Material"
+                  readOnly
+                  disabled
                   required
-                  value={warehousesId ? String(warehousesId) : ""}
-                  onChange={(val: string) => setWarehousesId(val ? Number(val) : undefined)}
-                  placeholder={loadingLookups ? "Loading warehouses..." : "-- Select Warehouse --"}
-                  disabled={loadingLookups || isLocked}
-                  options={[
-                    { value: "", label: "-- Select Warehouse --" },
-                    ...warehouses.map((w) => ({
-                      value: String(w.id),
-                      label: w.code ? `${w.code} - ${w.name}` : w.name,
-                    })),
-                  ]}
                 />
+                <span className="tsr-source-hint">
+                  Automatically set from the selected Request Material origin warehouse.
+                </span>
               </div>
             </div>
 
@@ -878,18 +889,12 @@ export function TransferStockReturnForm({
                         </td>
                         <td className="tsr-row-unit">{it.unit}</td>
                         <td>
-                          <CustomSelect
-                            searchable
-                            value={it.destinationLocation}
-                            onChange={(val: string) =>
-                              handleItemChange(idx, "destinationLocation", val)
-                            }
-                            placeholder="-- Select Destination --"
-                            disabled={isLocked}
-                            options={destinationSelectOptions.map((name) => ({
-                              value: name,
-                              label: name,
-                            }))}
+                          <input
+                            type="text"
+                            className="tsr-inline-input tx-input-cell--disabled"
+                            value={resolvedRmWarehouse.name || it.destinationLocation || "—"}
+                            readOnly
+                            disabled
                           />
                         </td>
                         <td>

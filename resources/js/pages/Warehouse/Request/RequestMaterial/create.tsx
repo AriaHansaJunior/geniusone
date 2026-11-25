@@ -8,10 +8,10 @@ import { LoadingBuffer } from "../../../../components/ui/LoadingBuffer";
 import {
   requestMaterialTypesList,
   requestMaterialDestinationsList,
-  requestMaterialDepartmentsList,
   requestMaterialProjectTypesList,
 } from "./request-material-data";
 import { ItemPickerModal } from "./ItemPickerModal";
+import { useAuthPermission } from "../../../../context/AuthPermissionContext";
 import {
   fetchMasterLookupsApi,
   fetchMasterItems,
@@ -42,19 +42,19 @@ export function RequestMaterialCreate({
   availableTypesOfRequest,
   availableDestinations,
 }: RequestMaterialCreateProps) {
+  const { currentUser } = useAuthPermission();
+
   // DB Lookups
   const [lookups, setLookups] = useState<{
     typeOfRequests: LookupItem[];
     departments: LookupItem[];
     warehouses: LookupItem[];
     destinationLocations: LookupItem[];
-    jobNumbers: LookupItem[];
   }>({
     typeOfRequests: [],
     departments: [],
     warehouses: [],
     destinationLocations: [],
-    jobNumbers: [],
   });
   const [masterItems, setMasterItems] = useState<ItemRecord[]>([]);
   const [warehouseStockMap, setWarehouseStockMap] = useState<Record<number, Record<number, number>>>({});
@@ -62,7 +62,7 @@ export function RequestMaterialCreate({
   const [loadingLookups, setLoadingLookups] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  // Header form states - All empty by default as requested
+  // Header form states - Department follows logged-in user from backend
   const [typeOfRequest, setTypeOfRequest] = useState("");
   const [typeOfRequestId, setTypeOfRequestId] = useState<number | undefined>();
   const [requestDate, setRequestDate] = useState("");
@@ -71,15 +71,31 @@ export function RequestMaterialCreate({
   const [isInternalWarehouse, setIsInternalWarehouse] = useState(false);
   const [destinationLocation, setDestinationLocation] = useState("");
   const [destinationLocationId, setDestinationLocationId] = useState<number | undefined>();
-  const [isSpecificStation, setIsSpecificStation] = useState(false);
-  const [department, setDepartment] = useState("");
-  const [departmentsId, setDepartmentsId] = useState<number | undefined>();
-  const [jobNumberHeader, setJobNumberHeader] = useState("");
-  const [jobNumberId, setJobNumberId] = useState<number | undefined>();
-  const [customJobMode, setCustomJobMode] = useState(false);
-  const [customer, setCustomer] = useState("");
   const [projectType, setProjectType] = useState("");
   const [requestNote, setRequestNote] = useState("");
+
+  const userDepartmentId = currentUser?.department_id ?? currentUser?.departments_id ?? undefined;
+  const userDepartmentName =
+    currentUser?.department && currentUser.department !== "-"
+      ? currentUser.department.trim()
+      : "";
+
+  const matchedUserDept = useMemo(() => {
+    if (userDepartmentId) {
+      const byId = lookups.departments.find((d) => Number(d.id) === Number(userDepartmentId));
+      if (byId) return byId;
+    }
+    if (userDepartmentName) {
+      const byName = lookups.departments.find(
+        (d) => d.name.trim().toLowerCase() === userDepartmentName.toLowerCase()
+      );
+      if (byName) return byName;
+    }
+    return undefined;
+  }, [lookups.departments, userDepartmentId, userDepartmentName]);
+
+  const departmentsId = matchedUserDept ? Number(matchedUserDept.id) : (userDepartmentId ? Number(userDepartmentId) : undefined);
+  const department = matchedUserDept?.name || userDepartmentName;
 
   useEffect(() => {
     let cancelled = false;
@@ -98,7 +114,6 @@ export function RequestMaterialCreate({
           departments: Array.isArray(d.departments) ? d.departments : [],
           warehouses: Array.isArray(d.warehouses) ? d.warehouses : [],
           destinationLocations: Array.isArray(d.destination_locations) ? d.destination_locations : [],
-          jobNumbers: Array.isArray(d.job_numbers) ? d.job_numbers : [],
         });
         if (Array.isArray(itemsData)) {
           setMasterItems(itemsData);
@@ -171,9 +186,6 @@ export function RequestMaterialCreate({
     requestDate.trim() !== "" ||
     warehouseDestination.trim() !== "" ||
     destinationLocation.trim() !== "" ||
-    department.trim() !== "" ||
-    jobNumberHeader.trim() !== "" ||
-    customer.trim() !== "" ||
     projectType.trim() !== "" ||
     requestNote.trim() !== "" ||
     items.length > 0
@@ -199,7 +211,7 @@ export function RequestMaterialCreate({
         externalCode: "—",
         itemName: "",
         unit: "PCE",
-        jobNumber: jobNumberHeader.trim() || "",
+        jobNumber: "",
         size: "",
         stockQty: 0,
         pendingQty: 0,
@@ -248,8 +260,8 @@ export function RequestMaterialCreate({
           externalCode: s.kodeEksternal || "—",
           itemName: s.itemName || "",
           unit: s.smallestUnitCode || s.smallestUnitName || "PCE",
-          jobNumber: jobNumberHeader.trim() || "",
-          size: s.specification && s.specification !== "-" ? s.specification : "Standard",
+          jobNumber: "",
+          size: "",
           stockQty: resolveWarehouseItemStock(numericId, s.stock),
           pendingQty: 0.0,
           requestQty: 1.0,
@@ -330,7 +342,7 @@ export function RequestMaterialCreate({
     }
 
     if (!department.trim()) {
-      errors.department = "Department is required.";
+      errors.department = "Logged-in user does not have a valid Department assigned.";
     }
 
     if (!warehouseDestination.trim()) {
@@ -339,14 +351,6 @@ export function RequestMaterialCreate({
 
     if (!destinationLocation.trim()) {
       errors.destinationLocation = "Destination Location is required.";
-    }
-
-    if (!jobNumberHeader.trim()) {
-      errors.jobNumber = "Job Number is required.";
-    }
-
-    if (!customer.trim()) {
-      errors.customer = "Customer name is required.";
     }
 
     if (!projectType.trim()) {
@@ -411,21 +415,20 @@ export function RequestMaterialCreate({
         destinationLocation,
         department,
         typeOfRequest,
-        jobNumber: jobNumberHeader.trim(),
-        customer: customer.trim(),
+        jobNumber: "",
+        customer: "",
         requestNote: requestNote.trim() || "Material request created via GeniusOne portal.",
         totalItems: items.length,
         approval: "Draft",
         projectType,
         createdDate: formattedDate,
         lastUpdatedDate: formattedDate,
-        createdBy: "SYSTEM USER",
+        createdBy: currentUser?.name || "System User",
         warehouseDestination,
         type_of_request_id: typeOfRequestId,
         departments_id: departmentsId,
         warehouses_id: warehousesId,
         destination_location_id: destinationLocationId,
-        job_number_id: jobNumberId,
         approved1At: "—",
         approved2At: "—",
         revisionCount: 0,
@@ -624,40 +627,18 @@ export function RequestMaterialCreate({
             )}
           </div>
 
-          {/* Department (Required) */}
+          {/* Department (Auto-assigned from logged-in user) */}
           <div className="master-form-group">
-            <label className="master-form-label">
+            <label htmlFor="rmUserDepartment" className="master-form-label">
               Department <span className="required-asterisk">*</span>
             </label>
-            <CustomSelect
-              searchable
-              required
-              invalid={Boolean(formErrors.department)}
-              value={departmentsId ? String(departmentsId) : department}
-              onChange={(val) => {
-                const chosen = lookups.departments.find((d) => String(d.id) === val);
-                if (chosen) {
-                  setDepartmentsId(Number(chosen.id));
-                  setDepartment(chosen.name);
-                } else {
-                  setDepartmentsId(undefined);
-                  setDepartment(val);
-                }
-                clearFieldError("department");
-              }}
-              placeholder={loadingLookups ? "Loading departments..." : "-- Select Department --"}
-              disabled={loadingLookups}
-              options={[
-                { value: "", label: "-- Select Department --" },
-                ...(lookups.departments.length > 0
-                  ? lookups.departments.map((d) => ({
-                    value: String(d.id),
-                    label: d.name,
-                  }))
-                  : requestMaterialDepartmentsList
-                    .filter((d) => d !== "All Departments")
-                    .map((d) => ({ value: d, label: d }))),
-              ]}
+            <input
+              id="rmUserDepartment"
+              type="text"
+              className={`master-form-input tx-input-cell--disabled ${formErrors.department ? "has-error" : ""}`}
+              value={department || "No Department Assigned"}
+              readOnly
+              disabled
             />
             {formErrors.department && (
               <span
@@ -673,134 +654,6 @@ export function RequestMaterialCreate({
               >
                 <Icon name="alertTriangle" size={12} />
                 {formErrors.department}
-              </span>
-            )}
-          </div>
-
-          {/* Job Number (Required) */}
-          <div className="master-form-group">
-            <label className="master-form-label">
-              Job Number <span className="required-asterisk">*</span>
-            </label>
-            {lookups.jobNumbers.length > 0 && !customJobMode ? (
-              <CustomSelect
-                searchable
-                required
-                invalid={Boolean(formErrors.jobNumber)}
-                value={jobNumberId ? String(jobNumberId) : ""}
-                onChange={(val) => {
-                  if (val === "__CUSTOM__") {
-                    setCustomJobMode(true);
-                    setJobNumberId(undefined);
-                    setJobNumberHeader("");
-                    return;
-                  }
-                  const chosen = lookups.jobNumbers.find((j) => String(j.id) === val);
-                  if (chosen) {
-                    setJobNumberId(Number(chosen.id));
-                    setJobNumberHeader(chosen.name || chosen.code || "");
-                  } else {
-                    setJobNumberId(undefined);
-                    setJobNumberHeader("");
-                  }
-                  clearFieldError("jobNumber");
-                }}
-                placeholder={loadingLookups ? "Loading job numbers..." : "-- Select Job Number --"}
-                disabled={loadingLookups}
-                options={[
-                  { value: "", label: "-- Select Job Number --" },
-                  ...lookups.jobNumbers.map((j) => ({
-                    value: String(j.id),
-                    label: j.code && j.code !== j.name ? `${j.code} - ${j.name}` : j.name,
-                  })),
-                  { value: "__CUSTOM__", label: "+ Enter Custom Job Number..." },
-                ]}
-              />
-            ) : (
-              <div style={{ display: "flex", gap: "6px" }}>
-                <input
-                  type="text"
-                  className="master-form-input"
-                  value={jobNumberHeader}
-                  placeholder="e.g. JOB-2026-8812"
-                  required
-                  style={{
-                    borderColor: formErrors.jobNumber ? "var(--danger, #ef4444)" : undefined,
-                    boxShadow: formErrors.jobNumber
-                      ? "0 0 0 2px rgba(239, 68, 68, 0.15)"
-                      : undefined,
-                  }}
-                  onChange={(e) => {
-                    setJobNumberId(undefined);
-                    setJobNumberHeader(e.target.value);
-                    clearFieldError("jobNumber");
-                  }}
-                />
-                {lookups.jobNumbers.length > 0 && (
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    onClick={() => setCustomJobMode(false)}
-                  >
-                    List
-                  </Button>
-                )}
-              </div>
-            )}
-            {formErrors.jobNumber && (
-              <span
-                style={{
-                  color: "#dc2626",
-                  fontSize: "11px",
-                  fontWeight: 600,
-                  marginTop: "4px",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "4px",
-                }}
-              >
-                <Icon name="alertTriangle" size={12} />
-                {formErrors.jobNumber}
-              </span>
-            )}
-          </div>
-
-          {/* Customer (Required) */}
-          <div className="master-form-group">
-            <label className="master-form-label">
-              Customer <span className="required-asterisk">*</span>
-            </label>
-            <input
-              type="text"
-              className="master-form-input"
-              value={customer}
-              placeholder="e.g. PT. Astra Honda Motor"
-              required
-              style={{
-                borderColor: formErrors.customer ? "var(--danger, #ef4444)" : undefined,
-                boxShadow: formErrors.customer
-                  ? "0 0 0 2px rgba(239, 68, 68, 0.15)"
-                  : undefined,
-              }}
-              onChange={(e) => {
-                setCustomer(e.target.value);
-                clearFieldError("customer");
-              }}
-            />
-            {formErrors.customer && (
-              <span
-                style={{
-                  color: "#dc2626",
-                  fontSize: "11px",
-                  fontWeight: 600,
-                  marginTop: "4px",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "4px",
-                }}
-              >
-                <Icon name="alertTriangle" size={12} />
-                {formErrors.customer}
               </span>
             )}
           </div>
@@ -965,17 +818,6 @@ export function RequestMaterialCreate({
                 {formErrors.destinationLocation}
               </span>
             )}
-            <label
-              className="master-checkbox-label"
-              style={{ marginTop: "6px" }}
-            >
-              <input
-                type="checkbox"
-                checked={isSpecificStation}
-                onChange={(e) => setIsSpecificStation(e.target.checked)}
-              />
-              <span>Dedicated Work Station</span>
-            </label>
           </div>
         </div>
       </form>
@@ -1052,12 +894,6 @@ export function RequestMaterialCreate({
                   <th style={{ minWidth: "220px" }} rowSpan={2}>
                     Item <span className="required-asterisk">*</span>
                   </th>
-                  <th style={{ minWidth: "130px" }} rowSpan={2}>
-                    Job Number
-                  </th>
-                  <th style={{ minWidth: "120px" }} rowSpan={2}>
-                    Size
-                  </th>
                   <th
                     style={{
                       textAlign: "center",
@@ -1087,7 +923,7 @@ export function RequestMaterialCreate({
                 {items.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={9}
+                      colSpan={7}
                       style={{
                         textAlign: "center",
                         padding: "36px 16px",
@@ -1158,10 +994,7 @@ export function RequestMaterialCreate({
                                             externalCode: picked.kodeEksternal || "—",
                                             itemName: picked.itemName || "",
                                             unit: picked.smallestUnitCode || picked.smallestUnitName || "PCE",
-                                            size:
-                                              picked.specification && picked.specification !== "-"
-                                                ? picked.specification
-                                                : r.size || "Standard",
+                                            size: "",
                                             stockQty: resolveWarehouseItemStock(
                                               Number(picked.id),
                                               picked.stock
@@ -1224,34 +1057,6 @@ export function RequestMaterialCreate({
                               </div>
                             )}
                           </div>
-                        </td>
-
-                        {/* Job Number */}
-                        <td>
-                          <input
-                            type="text"
-                            className="master-form-input"
-                            style={{ padding: "4px 8px", fontSize: "12px" }}
-                            value={row.jobNumber}
-                            placeholder="Job No"
-                            onChange={(e) =>
-                              handleUpdateRow(row.id, "jobNumber", e.target.value)
-                            }
-                          />
-                        </td>
-
-                        {/* Size */}
-                        <td>
-                          <input
-                            type="text"
-                            className="master-form-input"
-                            style={{ padding: "4px 8px", fontSize: "12px" }}
-                            value={row.size}
-                            placeholder="Size / Spec"
-                            onChange={(e) =>
-                              handleUpdateRow(row.id, "size", e.target.value)
-                            }
-                          />
                         </td>
 
                         {/* Stock Qty (Read-Only) */}
@@ -1395,7 +1200,6 @@ export function RequestMaterialCreate({
         <Button
           type="button"
           variant="primary"
-          icon="check"
           onClick={handleSave}
           disabled={saving}
         >

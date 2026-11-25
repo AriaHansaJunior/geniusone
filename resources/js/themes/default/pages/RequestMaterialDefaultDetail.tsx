@@ -28,13 +28,11 @@ export function RequestMaterialDefaultDetail({
   const columns: SmartOneField[][] = [
     [
       { label: "Transaction Number", value: <strong>{record.requestCode}</strong> },
-      { label: "Job Number", value: record.jobNumber || "—" },
       { label: "Request Date", value: record.requestDate || "—" },
       { label: "Request Type", value: record.typeOfRequest || "—" },
       { label: "Department", value: record.department || "—" },
     ],
     [
-      { label: "Customer", value: record.customer || "—" },
       { label: "SO Number", value: record.soNumber || "—" },
       { label: "PO Buyer", value: record.poBuyer || "—" },
       { label: "Warehouse Dest.", value: record.warehouseDestination || "—" },

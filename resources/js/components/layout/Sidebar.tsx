@@ -205,6 +205,7 @@ export function Sidebar({
       "procurement-reports": false,
       "exim-master": false,
       "warehouse-master": false,
+      "warehouse-operasional": false,
       "warehouse-incoming": false,
       "warehouse-adjustment": false,
       "warehouse-outcoming": false,

@@ -272,9 +272,9 @@ export function TransferStockReturnDetail({
           <div className="detail-breadcrumb-trail">
             <a onClick={onBack}>Warehouse</a>
             <span>/</span>
-            <a onClick={onBack}>Incoming</a>
+            <a onClick={onBack}>Operasional</a>
             <span>/</span>
-            <a onClick={onBack}>Transfer Stock Return</a>
+            <a onClick={onBack}>TSR (Transfer Stock Return)</a>
             <span>/</span>
             <span className="current">{record.mutationCode}</span>
           </div>
@@ -341,7 +341,7 @@ export function TransferStockReturnDetail({
       <div className="detail-header-card">
         <div className="detail-header-card__info">
           <span className="detail-header-card__eyebrow">
-            WAREHOUSE INCOMING · STOCK TRANSFER RETURN
+            WAREHOUSE OPERASIONAL · STOCK TRANSFER RETURN
           </span>
           <div className="detail-header-card__title-row">
             <h2 className="detail-header-card__title">{record.mutationCode}</h2>

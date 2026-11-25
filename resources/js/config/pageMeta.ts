@@ -267,10 +267,10 @@ export const pageMeta: Record<PageKey, PageMeta> = {
     title: "Adjustment Stock",
     description: "General warehouse stock corrections and quantity balance adjustments.",
   },
-  // Warehouse Incoming
+  // Warehouse Operasional
   "transfer-stock-return": {
-    eyebrow: "WAREHOUSE INCOMING",
-    title: "Transfer Stock Return",
+    eyebrow: "WAREHOUSE OPERASIONAL",
+    title: "TSR (Transfer Stock Return)",
     description: "Receiving returned material transfers from internal production sections.",
   },
   "transfer-stock-result": {
@@ -315,9 +315,10 @@ export const pageMeta: Record<PageKey, PageMeta> = {
     title: "Weight Note",
     description: "Scale tickets and certified gross/tare weight documentation.",
   },
+  // Warehouse Operasional
   "wh-req-material": {
-    eyebrow: "WAREHOUSE REQUEST",
-    title: "Request Material",
+    eyebrow: "WAREHOUSE OPERASIONAL",
+    title: "RM (Receive Material)",
     description: "Internal departmental requisitions for stock issue.",
   },
   "wh-req-weight-note-fg": {
