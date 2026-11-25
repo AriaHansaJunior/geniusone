@@ -231,7 +231,6 @@ export function PurchaseRequisitionDetail({
       note: `Printed Purchase Requisition ${docNumber} (${printVariant === "internal" ? "KWT-PPIC-001 Internal" : "KWT-PPIC-002 Eksternal"})`,
     });
     setApprovalState((prev) => ({ ...prev, history: newHistory }));
-    window.print();
   };
 
   const handleRecordRevision = async () => {

@@ -189,7 +189,6 @@ export function WarehouseDetail({
       note: `Printed Receive Material (BPB) ${docNumber}`,
     });
     setApprovalState((prev) => ({ ...prev, history: newHistory }));
-    window.print();
   };
 
   // Build comprehensive Transaction Activity & History Log

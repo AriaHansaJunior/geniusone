@@ -1,6 +1,7 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { Button } from "../ui/Button";
+import { printKwtSheet } from "./printKwtDocument";
 
 export interface KwtPrintModalProps {
   isOpen: boolean;
@@ -28,6 +29,20 @@ export const KwtPrintModal: React.FC<KwtPrintModalProps> = ({
   onPrint,
   children,
 }) => {
+  const bodyRef = useRef<HTMLDivElement | null>(null);
+
+  const handlePrint = useCallback(async () => {
+    if (onPrint) {
+      try {
+        await onPrint();
+      } catch {
+        // Activity logging must never block document printing
+      }
+    }
+    const sheetEl = bodyRef.current?.querySelector<HTMLElement>(".kwt-print-sheet") ?? null;
+    printKwtSheet(sheetEl, `${title} - ${documentCode}`);
+  }, [onPrint, title, documentCode]);
+
   useEffect(() => {
     if (!isOpen) return;
 
@@ -36,6 +51,9 @@ export const KwtPrintModal: React.FC<KwtPrintModalProps> = ({
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         onClose();
+      } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "p") {
+        e.preventDefault();
+        void handlePrint();
       }
     };
 
@@ -44,17 +62,9 @@ export const KwtPrintModal: React.FC<KwtPrintModalProps> = ({
       document.body.classList.remove("kwt-print-modal-open");
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [isOpen, onClose]);
+  }, [isOpen, onClose, handlePrint]);
 
   if (!isOpen) return null;
-
-  const handlePrint = () => {
-    if (onPrint) {
-      onPrint();
-    } else {
-      window.print();
-    }
-  };
 
   const modalContent = (
     <div
@@ -103,7 +113,7 @@ export const KwtPrintModal: React.FC<KwtPrintModalProps> = ({
               </div>
             )}
 
-            <Button variant="primary" onClick={handlePrint}>
+            <Button variant="primary" onClick={() => void handlePrint()}>
               Print Now
             </Button>
             <Button variant="secondary" onClick={onClose}>
@@ -113,7 +123,9 @@ export const KwtPrintModal: React.FC<KwtPrintModalProps> = ({
         </div>
 
         {/* Modal Body: Printable Document Sheet */}
-        <div className="kwt-print-modal__body">{children}</div>
+        <div ref={bodyRef} className="kwt-print-modal__body">
+          {children}
+        </div>
       </div>
     </div>
   );

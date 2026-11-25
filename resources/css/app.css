@@ -24,7 +24,6 @@
 @import "./components/dialogs.css";
 @import "./components/notifications.css";
 @import "./components/loading-buffer.css";
-@import "./components/print.css";
 
 /* Page-Specific Styles */
 @import "./pages/dashboard.css";
@@ -58,6 +57,7 @@
 @import "./pages/settings.css";
 @import "./themes/default-theme.css";
 @import "./themes/modern-floating-sidebar.css";
+@import "./components/print.css";
 
 
 

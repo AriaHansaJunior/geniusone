@@ -164,7 +164,6 @@ export function PurchaseOrderDetail({
       note: `Printed Purchase Order ${docNumber} (KWT-PURC-001)`,
     });
     setApprovalState((prev) => ({ ...prev, history: newHistory }));
-    window.print();
   };
 
   const handleExportXlsx = async () => {
