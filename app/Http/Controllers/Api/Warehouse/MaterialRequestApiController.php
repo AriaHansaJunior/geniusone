@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\Warehouse;
 
+use App\Http\Controllers\Api\Common\SystemContextApiController;
 use App\Http\Controllers\Controller;
 use App\Models\Master\Material\Item;
 use App\Models\Master\Organization\Department;
@@ -217,6 +218,8 @@ class MaterialRequestApiController extends Controller
 
         $record = $this->findRecord((string) $record->id);
 
+        SystemContextApiController::forgetContextCache();
+
         return response()->json([
             'status' => 'success',
             'message' => 'Material request created successfully.',
@@ -363,6 +366,8 @@ class MaterialRequestApiController extends Controller
             );
         });
 
+        SystemContextApiController::forgetContextCache();
+
         return response()->json([
             'status' => 'success',
             'message' => 'Material request deleted successfully.',
@@ -398,6 +403,12 @@ class MaterialRequestApiController extends Controller
             return response()->json([
                 'status' => 'error',
                 'message' => 'Material request is already fully Approved.',
+            ], 422);
+        }
+        if ($r->status === 'Rejected') {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Rejected Material request must be resubmitted before approval.',
             ], 422);
         }
 
@@ -485,6 +496,7 @@ class MaterialRequestApiController extends Controller
         }
 
         $fresh = $this->findRecord((string) $r->id);
+        SystemContextApiController::forgetContextCache();
 
         return response()->json([
             'status' => 'success',
@@ -509,29 +521,44 @@ class MaterialRequestApiController extends Controller
             return response()->json(['status' => 'error', 'message' => 'Record not found.'], 404);
         }
 
-        if (in_array($r->status, ['Approved', 'Approved 2'], true)) {
-            return response()->json(['status' => 'error', 'message' => 'Approved material requests cannot be rejected.'], 422);
+        $note = trim((string) ($request->input('reason') ?? $request->input('note') ?? ''));
+
+        $rejectError = DB::transaction(function () use ($r, $actorId, $note): ?string {
+            $locked = RequestMaterial::query()->lockForUpdate()->findOrFail($r->id);
+            if (in_array($locked->status, ['Approved', 'Approved 2'], true)) {
+                return 'Approved material requests cannot be rejected.';
+            }
+            if ($locked->status === 'Rejected') {
+                return 'Material request is already Rejected.';
+            }
+
+            $previousStatus = $locked->status;
+            $locked->update([
+                'status' => 'Rejected',
+                'rejection_note' => $note,
+                'updated_by' => $actorId,
+            ]);
+
+            ApprovalHistory::create([
+                'document_type' => 'RM',
+                'document_id' => $locked->id,
+                'document_number' => $locked->request_number,
+                'action' => 'REJECT',
+                'tier' => 1,
+                'user_id' => $actorId,
+                'note' => $note,
+                'from_status' => $previousStatus,
+                'to_status' => 'Rejected',
+            ]);
+
+            return null;
+        });
+
+        if ($rejectError !== null) {
+            return response()->json(['status' => 'error', 'message' => $rejectError], 422);
         }
 
-        $previousStatus = $r->status;
-        $note = (string) $request->input('note', '');
-        $r->update([
-            'status' => 'Rejected',
-            'rejection_note' => $note,
-            'updated_by' => $actorId,
-        ]);
-
-        ApprovalHistory::create([
-            'document_type' => 'RM',
-            'document_id' => $r->id,
-            'document_number' => $r->request_number,
-            'action' => 'REJECT',
-            'tier' => 1,
-            'user_id' => $actorId,
-            'note' => $note,
-            'from_status' => $previousStatus,
-            'to_status' => 'Rejected',
-        ]);
+        SystemContextApiController::forgetContextCache();
 
         return response()->json([
             'status' => 'success',

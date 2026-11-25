@@ -95,9 +95,9 @@ Route::get('/warehouse/create', fn () => view('app', ['page' => 'warehouse-creat
 Route::get('/warehouse/add', fn () => view('app', ['page' => 'warehouse-create']));
 Route::get('/warehouse/incoming/receive-material-bpb/create', fn () => view('app', ['page' => 'warehouse-create']));
 Route::get('/warehouse/incoming/receive-material-bpb/add', fn () => view('app', ['page' => 'warehouse-create']));
-Route::post('/warehouse/create', [WarehouseController::class, 'store']);
-Route::post('/warehouse/store', [WarehouseController::class, 'store']);
-Route::post('/warehouse/incoming/receive-material-bpb/create', [WarehouseController::class, 'store']);
+Route::post('/warehouse/create', [WarehouseController::class, 'store'])->middleware(['auth', 'active', 'permission:bpb.create']);
+Route::post('/warehouse/store', [WarehouseController::class, 'store'])->middleware(['auth', 'active', 'permission:bpb.create']);
+Route::post('/warehouse/incoming/receive-material-bpb/create', [WarehouseController::class, 'store'])->middleware(['auth', 'active', 'permission:bpb.create']);
 
 Route::get('/warehouse/detail/{code}', [WarehouseController::class, 'show'])->where('code', '.*')->name('warehouse.detail');
 Route::get('/warehouse/details/{code}', [WarehouseController::class, 'show'])->where('code', '.*');

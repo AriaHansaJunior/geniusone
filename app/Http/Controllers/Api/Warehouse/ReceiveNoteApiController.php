@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\Warehouse;
 
+use App\Http\Controllers\Api\Common\SystemContextApiController;
 use App\Http\Controllers\Controller;
 use App\Models\Master\Finance\Currency;
 use App\Models\Master\Finance\Valuta;
@@ -188,6 +189,7 @@ class ReceiveNoteApiController extends Controller
             $headerData['status'] = 'Waiting for Approve 1';
 
             $rn = GeniusOneBackend::warehouse()->createReceiveNote($headerData, $processedItems, $userId);
+            SystemContextApiController::forgetContextCache();
 
             return response()->json([
                 'status' => 'success',
@@ -235,6 +237,7 @@ class ReceiveNoteApiController extends Controller
 
         try {
             GeniusOneBackend::receiveNote()->deleteReceiveNote($id);
+            SystemContextApiController::forgetContextCache();
 
             return response()->json([
                 'status' => 'success',

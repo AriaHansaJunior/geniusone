@@ -67,7 +67,7 @@ class BpbWarehouseService
                 'bpb_number' => $bpbNumber,
                 'source_type' => $headerData['source_type'] ?? 'RN',
                 'bpb_type' => $headerData['bpb_type'] ?? 'Warehouse',
-                'status' => $headerData['status'] ?? 'Waiting for Approve 1',
+                'status' => 'Waiting for Approve 1',
                 'note' => $headerData['note'] ?? null,
                 'receive_date' => $headerData['receive_date'] ?? now(),
                 'creator_id' => $actorId,

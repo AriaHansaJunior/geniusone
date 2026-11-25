@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Http\Controllers\Api\Common\SystemContextApiController;
+use App\Models\Inventory\StockNotification;
 use App\Models\Master\Customs\CustomsReport;
 use App\Models\Master\Customs\DocumentHistory;
 use App\Models\Master\Customs\DocumentHistoryItem;
@@ -50,6 +52,7 @@ use App\Models\Procurement\PurchaseRequest\PurchaseRequisition;
 use App\Models\Procurement\PurchaseRequest\PurchaseRequisitionItem;
 use App\Models\System\Audit\Log;
 use App\Models\System\Auth\User;
+use App\Models\System\Setting\ReferenceOption;
 use App\Models\Warehouse\Facility\Warehouse;
 use App\Models\Warehouse\Facility\WarehouseCoordinate;
 use App\Models\Warehouse\Facility\WarehouseType;
@@ -61,6 +64,8 @@ use App\Models\Warehouse\GateReceiving\ReceiveNoteReturnItem;
 use App\Models\Warehouse\InboundStorage\ApprovalBpb;
 use App\Models\Warehouse\InboundStorage\BpbReceiveMaterial;
 use App\Models\Warehouse\InboundStorage\PoRnToBpb;
+use App\Models\Warehouse\RequestMaterial\DestinationLocation;
+use App\Models\Warehouse\RequestMaterial\TypeOfRequest;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -169,6 +174,67 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        $lookupModels = [
+            Account::class,
+            AdditionalCostType::class,
+            Brand::class,
+            Category::class,
+            Classification::class,
+            Colour::class,
+            Country::class,
+            Currency::class,
+            CustomsReport::class,
+            DeliveryTerm::class,
+            Department::class,
+            DestinationLocation::class,
+            DiscountType::class,
+            Facility::class,
+            GroupScrapItem::class,
+            HsCode::class,
+            ItemType::class,
+            JobNumber::class,
+            Origin::class,
+            PaymentMethod::class,
+            PaymentTerm::class,
+            PoType::class,
+            Port::class,
+            Pph::class,
+            PphType::class,
+            Ppn::class,
+            RafaksiType::class,
+            ReferenceOption::class,
+            ReportingType::class,
+            Section::class,
+            Specification::class,
+            Supplier::class,
+            TypeOfRequest::class,
+            TypeRateBm::class,
+            TypeRateCukai::class,
+            Unit::class,
+            UnitOfMeasurement::class,
+            Valuta::class,
+            Warehouse::class,
+            WarehouseCoordinate::class,
+            WarehouseType::class,
+        ];
+
+        $invalidateLookups = static function (): void {
+            SystemContextApiController::forgetLookupsCache();
+        };
+
+        foreach ($lookupModels as $modelClass) {
+            $modelClass::saved($invalidateLookups);
+            $modelClass::deleted($invalidateLookups);
+            if (method_exists($modelClass, 'restored')) {
+                $modelClass::restored($invalidateLookups);
+            }
+        }
+
+        $invalidateContext = static function (): void {
+            SystemContextApiController::forgetContextCache();
+        };
+
+        StockNotification::saved($invalidateContext);
+        StockNotification::deleted($invalidateContext);
     }
 }

@@ -211,7 +211,10 @@ class PurchaseOrder extends Model
         $dpp = $this->getDppAttribute();
         $ppn = $this->getPpnAttribute();
         $pphDeduction = (float) $this->items->sum(function ($it) {
-            if ($it->pph && $it->pph->deduction === false) {
+            if ($it->pph && ! $it->pph->isDeduction()) {
+                return 0.0;
+            }
+            if (! $it->pph) {
                 return 0.0;
             }
 

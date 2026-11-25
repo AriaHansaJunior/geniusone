@@ -280,6 +280,7 @@ class ModularApiTest extends TestCase
             'name'     => 'Rafaksi Type User',
             'email'    => 'rafaksi-type@example.test',
             'password' => 'test-password',
+            'role'     => User::ROLE_ADMIN,
             'status'   => 1,
         ]);
         $this->actingAs($user);

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\Warehouse;
 
+use App\Http\Controllers\Api\Common\SystemContextApiController;
 use App\Http\Controllers\Controller;
 use App\Models\Master\Material\Item;
 use App\Models\System\Auth\User;
@@ -161,6 +162,8 @@ class TransferStockReturnApiController extends Controller
             ]);
         });
 
+        SystemContextApiController::forgetContextCache();
+
         return response()->json([
             'status' => 'success',
             'message' => 'Transfer Stock Return created successfully.',
@@ -288,6 +291,8 @@ class TransferStockReturnApiController extends Controller
                 notes: "Deleted Transfer Stock Return {$num}"
             );
         });
+
+        SystemContextApiController::forgetContextCache();
 
         return response()->json([
             'status' => 'success',
@@ -422,6 +427,7 @@ class TransferStockReturnApiController extends Controller
         });
 
         $tsr->refresh();
+        SystemContextApiController::forgetContextCache();
 
         return response()->json([
             'status' => 'success',
@@ -433,34 +439,65 @@ class TransferStockReturnApiController extends Controller
     public function reject(Request $request, int $id): JsonResponse
     {
         $actorId = $this->requireActorId($request);
-        $tsr = TransferStockReturn::findOrFail($id);
-        $note = (string) $request->input('note', '');
+        $user = User::findOrFail($actorId);
+        $tier = (int) $request->input('tier', 1);
 
-        if ($tsr->status === 'Approved') {
+        $hasPerm = $user->isSuperAdmin()
+            || $user->isAdmin()
+            || $user->hasPermission('tsr.reject')
+            || $user->hasPermission('tsr.approve_1')
+            || $user->hasPermission('tsr.approve_2')
+            || $user->hasPermission('tsr.approve')
+            || $user->hasPermission('tsr.*')
+            || ($tier === 1 && $user->hasRole(['approver_tier1', 'approver', 'manager']))
+            || ($tier === 2 && $user->hasRole(['approver_tier2', 'approver', 'director']));
+
+        if (! $hasPerm) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Approved Transfer Stock Return cannot be rejected.',
-            ], 422);
+                'message' => 'Forbidden: Insufficient approval authority to reject Transfer Stock Return.',
+            ], 403);
         }
 
-        $previous = $tsr->status;
-        $tsr->update([
-            'status' => 'Rejected',
-            'note' => $note ?: $tsr->note,
-            'updated_by' => $actorId,
-        ]);
+        $note = trim((string) ($request->input('reason') ?? $request->input('note') ?? ''));
 
-        ApprovalHistory::create([
-            'document_type' => 'TRANSFER_STOCK_RETURN',
-            'document_id' => $tsr->id,
-            'document_number' => $tsr->return_number,
-            'action' => 'REJECT',
-            'tier' => 1,
-            'user_id' => $actorId,
-            'note' => $note,
-            'from_status' => $previous,
-            'to_status' => 'Rejected',
-        ]);
+        $tsr = DB::transaction(function () use ($id, $actorId, $tier, $note) {
+            $lockedTsr = TransferStockReturn::query()->lockForUpdate()->findOrFail($id);
+
+            if (in_array($lockedTsr->status, ['Approved', 'Approved 2'], true)) {
+                throw ValidationException::withMessages([
+                    'status' => ['Approved Transfer Stock Return cannot be rejected.'],
+                ]);
+            }
+            if ($lockedTsr->status === 'Rejected') {
+                throw ValidationException::withMessages([
+                    'status' => ['Transfer Stock Return is already Rejected.'],
+                ]);
+            }
+
+            $previous = $lockedTsr->status ?: 'Waiting for Approve 1';
+            $lockedTsr->update([
+                'status' => 'Rejected',
+                'note' => $note !== '' ? $note : $lockedTsr->note,
+                'updated_by' => $actorId,
+            ]);
+
+            ApprovalHistory::create([
+                'document_type' => 'TRANSFER_STOCK_RETURN',
+                'document_id' => $lockedTsr->id,
+                'document_number' => $lockedTsr->return_number,
+                'action' => 'REJECT',
+                'tier' => $tier,
+                'user_id' => $actorId,
+                'note' => $note,
+                'from_status' => $previous,
+                'to_status' => 'Rejected',
+            ]);
+
+            return $lockedTsr->fresh();
+        });
+
+        SystemContextApiController::forgetContextCache();
 
         return response()->json([
             'status' => 'success',

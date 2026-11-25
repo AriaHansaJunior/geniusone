@@ -26,4 +26,20 @@ class Pph extends Model
     {
         return $this->belongsTo(PphType::class, 'pph_type_id');
     }
+
+    /**
+     * Normalize enum/boolean representations of pph.deduction ('yes'|'no'|bool|int).
+     */
+    public function isDeduction(): bool
+    {
+        $raw = $this->deduction;
+        if (is_bool($raw)) {
+            return $raw;
+        }
+        if (is_numeric($raw)) {
+            return (int) $raw === 1;
+        }
+
+        return in_array(strtolower(trim((string) $raw)), ['yes', '1', 'true', 'on'], true);
+    }
 }

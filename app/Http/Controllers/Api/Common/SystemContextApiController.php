@@ -172,23 +172,25 @@ class SystemContextApiController extends Controller
             'settings' => 'required|array',
         ]);
 
-        foreach ($validated['settings'] as $key => $val) {
-            if (is_array($val)) {
-                SystemSetting::updateOrCreate(
-                    ['key' => (string) $key],
-                    [
-                        'value' => $val['value'] ?? '',
-                        'group' => $val['group'] ?? 'general',
-                        'label' => $val['label'] ?? (string) $key,
-                    ]
-                );
-            } else {
-                SystemSetting::updateOrCreate(
-                    ['key' => (string) $key],
-                    ['value' => (string) $val]
-                );
+        DB::transaction(function () use ($validated): void {
+            foreach ($validated['settings'] as $key => $val) {
+                if (is_array($val)) {
+                    SystemSetting::updateOrCreate(
+                        ['key' => (string) $key],
+                        [
+                            'value' => $val['value'] ?? '',
+                            'group' => $val['group'] ?? 'general',
+                            'label' => $val['label'] ?? (string) $key,
+                        ]
+                    );
+                } else {
+                    SystemSetting::updateOrCreate(
+                        ['key' => (string) $key],
+                        ['value' => (string) $val]
+                    );
+                }
             }
-        }
+        });
 
         self::forgetAllCaches();
 

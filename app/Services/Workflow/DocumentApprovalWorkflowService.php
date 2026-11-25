@@ -147,10 +147,16 @@ class DocumentApprovalWorkflowService
             }
             $currentStatus = $this->getDocumentStatus($doc);
 
-            // Gating Rule: Tier 1 approval requires Waiting 1 or Draft
+            // Gating Rule: Tier 1 approval requires Draft or Waiting 1 (never Rejected/Closing/Already Approved)
             if ($tier === 1) {
                 if (in_array($currentStatus, [self::STATUS_WAITING_2, 'Approved 1'], true) || $this->isApprovedStatus($currentStatus)) {
                     throw new InvalidArgumentException("Document has already passed Stage 1 approval (Current status: {$currentStatus}).");
+                }
+                if ($currentStatus === self::STATUS_REJECTED) {
+                    throw new InvalidArgumentException('Rejected documents must be resubmitted before approval.');
+                }
+                if (! in_array($currentStatus, [self::STATUS_DRAFT, self::STATUS_WAITING_1, 'Pending'], true)) {
+                    throw new InvalidArgumentException("Document status '{$currentStatus}' is not valid for Stage 1 approval.");
                 }
             }
 
@@ -252,6 +258,10 @@ class DocumentApprovalWorkflowService
 
         $result = DB::transaction(function () use ($module, $normKey, $id, $user, $tier, $reason) {
             $doc = $this->resolveDocument($module, $id);
+            $doc = $doc->newQuery()
+                ->whereKey($doc->getKey())
+                ->lockForUpdate()
+                ->firstOrFail();
             if ($doc instanceof BpbReceiveMaterial) {
                 $normKey = 'BPB';
             } elseif ($doc instanceof ReceiveNote) {
@@ -386,6 +396,10 @@ class DocumentApprovalWorkflowService
 
         $result = DB::transaction(function () use ($module, $normKey, $id, $user, $tier, $reason) {
             $doc = $this->resolveDocument($module, $id);
+            $doc = $doc->newQuery()
+                ->whereKey($doc->getKey())
+                ->lockForUpdate()
+                ->firstOrFail();
             if ($doc instanceof BpbReceiveMaterial) {
                 $normKey = 'BPB';
             } elseif ($doc instanceof ReceiveNote) {
@@ -395,6 +409,9 @@ class DocumentApprovalWorkflowService
 
             if ($this->isApprovedStatus($currentStatus)) {
                 throw new InvalidArgumentException('Cannot reject document that has already been fully Approved. Use UnApprove first.');
+            }
+            if ($currentStatus === self::STATUS_REJECTED) {
+                throw new InvalidArgumentException('Document is already in Rejected status.');
             }
 
             // 1. Update module approval table (status = 2 / Rejected)
@@ -448,6 +465,10 @@ class DocumentApprovalWorkflowService
 
         $result = DB::transaction(function () use ($module, $normKey, $id, $user, $note) {
             $doc = $this->resolveDocument($module, $id);
+            $doc = $doc->newQuery()
+                ->whereKey($doc->getKey())
+                ->lockForUpdate()
+                ->firstOrFail();
             if ($doc instanceof BpbReceiveMaterial) {
                 $normKey = 'BPB';
             } elseif ($doc instanceof ReceiveNote) {

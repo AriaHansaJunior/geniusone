@@ -369,8 +369,10 @@ class PurchaseOrderService
             $effectivePpnRate = (float) ($item['ppn_rate'] ?? $ppnModel?->value ?? $headerData['ppn_rate'] ?? 11);
             $effectivePphRate = (float) ($item['pph_rate'] ?? $pphModel?->value ?? $headerData['pph_rate'] ?? 0);
             $effectivePphDeduction = array_key_exists('is_pph_deduction', $item)
-                ? (bool) $item['is_pph_deduction']
-                : (bool) ($pphModel?->deduction ?? $headerData['is_pph_deduction'] ?? false);
+                ? self::parseDeductionFlag($item['is_pph_deduction'])
+                : ($pphModel
+                    ? $pphModel->isDeduction()
+                    : self::parseDeductionFlag($headerData['is_pph_deduction'] ?? false));
 
             $calc = ProcurementCalculationService::calculateItemFinancials(
                 price: (float) ($item['price'] ?? 0),
@@ -630,5 +632,17 @@ class PurchaseOrderService
         if (in_array($order->status, ['Approved', 'Approved 2', 'Completed'], true)) {
             throw new InvalidArgumentException("Purchase Order '{$order->po_number}' is fully Approved and locked from modifications.");
         }
+    }
+
+    private static function parseDeductionFlag(mixed $value): bool
+    {
+        if (is_bool($value)) {
+            return $value;
+        }
+        if (is_numeric($value)) {
+            return (int) $value === 1;
+        }
+
+        return in_array(strtolower(trim((string) $value)), ['yes', '1', 'true', 'on'], true);
     }
 }

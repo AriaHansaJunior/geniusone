@@ -335,4 +335,196 @@ class Phase2IntegrityTest extends TestCase
             ],
         ])->assertStatus(422);
     }
+
+    public function test_rejected_documents_cannot_be_approved_directly_and_return_requires_two_stage_approval(): void
+    {
+        $this->seed(\Database\Seeders\GovernanceAndRbacSeeder::class);
+        $approver1 = User::where('role', Role::APPROVER_TIER1)->firstOrFail();
+        $approver2 = User::where('role', Role::APPROVER_TIER2)->firstOrFail();
+        $dept = Department::query()->create(['name' => 'Wf Dept', 'status' => 1]);
+        $sec = Section::query()->create(['name' => 'Wf Sec', 'departments_id' => $dept->id, 'status' => 1]);
+
+        $pr = PurchaseRequisition::create([
+            'pr_number' => '0901/PR-WF/XI/2026',
+            'departments_id' => $dept->id,
+            'sections_id' => $sec->id,
+            'creator' => $approver1->id,
+            'date' => now()->toDateString(),
+            'due_date' => now()->addDays(7)->toDateString(),
+            'status' => 'Waiting for Approve 1',
+        ]);
+
+        // Reject PR at Stage 1
+        $this->actingAs($approver1, 'web')
+            ->postJson("/api/approval/pr/{$pr->id}/reject", ['tier' => 1, 'reason' => 'Missing qty detail'])
+            ->assertOk();
+
+        // Double reject must fail with 422
+        $this->actingAs($approver1, 'web')
+            ->postJson("/api/approval/pr/{$pr->id}/reject", ['tier' => 1, 'reason' => 'Double reject'])
+            ->assertStatus(422);
+
+        // Rejected PR MUST NOT be approvable directly at Stage 1 without resubmit
+        $this->actingAs($approver1, 'web')
+            ->postJson("/api/approval/pr/{$pr->id}/approve", ['tier' => 1])
+            ->assertStatus(422);
+
+        // After resubmit, Stage 1 -> Stage 2 approval works
+        $this->actingAs($approver1, 'web')
+            ->postJson("/api/approval/pr/{$pr->id}/resubmit", ['note' => 'Fixed quantity'])
+            ->assertOk()
+            ->assertJsonPath('data.status', 'Waiting for Approve 1');
+
+        $this->actingAs($approver1, 'web')
+            ->postJson("/api/approval/pr/{$pr->id}/approve", ['tier' => 1])
+            ->assertOk()
+            ->assertJsonPath('data.status', 'Waiting for Approve 2');
+
+        // Receive Note Return cannot bypass Tier 2 approval via /api/exim/operations/returns/{id}/approve
+        $ret = \App\Models\Warehouse\GateReceiving\ReceiveNoteReturn::create([
+            'rn_number' => 'RNR-WF-0001',
+            'customer' => 'Customer A',
+            'delivery_order' => 'DO-001',
+            'currency' => 'IDR',
+            'exchange_rate' => 1,
+            'approval_status' => 'Draft',
+            'created_by' => $approver1->id,
+            'updated_by' => $approver1->id,
+        ]);
+
+        // Skipping Stage 1 fails
+        $this->actingAs($approver2, 'web')
+            ->postJson("/api/exim/operations/returns/{$ret->id}/approve", ['tier' => 2])
+            ->assertStatus(422);
+
+        // Stage 1 moves Draft -> Waiting for Approve 2 (not straight to Approved)
+        $this->actingAs($approver1, 'web')
+            ->postJson("/api/exim/operations/returns/{$ret->id}/approve", ['tier' => 1])
+            ->assertOk()
+            ->assertJsonPath('data.approval_status', 'Waiting for Approve 2');
+
+        // Stage 2 completes approval
+        $this->actingAs($approver2, 'web')
+            ->postJson("/api/exim/operations/returns/{$ret->id}/approve", ['tier' => 2])
+            ->assertOk()
+            ->assertJsonPath('data.approval_status', 'Approved');
+    }
+
+    public function test_pph_deduction_enum_yes_vs_no_matches_across_item_order_and_calculator(): void
+    {
+        $user = User::query()->create([
+            'username' => 'pph-calc-tester',
+            'name' => 'PPh Calc Tester',
+            'email' => 'pph-calc@geniusone.test',
+            'password' => 'secret123',
+            'role' => User::ROLE_ADMIN,
+            'status' => 1,
+        ]);
+
+        $pphType = \App\Models\Master\Finance\PphType::create(['nama' => 'PPh Pasal 23 Calc']);
+        $pphNo = \App\Models\Master\Finance\Pph::create([
+            'name' => 'PPh 2% Non Deduction',
+            'value' => 2.0,
+            'deduction' => 'no',
+            'status' => 'active',
+            'pph_type_id' => $pphType->id,
+        ]);
+        $pphYes = \App\Models\Master\Finance\Pph::create([
+            'name' => 'PPh 2% Withholding',
+            'value' => 2.0,
+            'deduction' => 'yes',
+            'status' => 'active',
+            'pph_type_id' => $pphType->id,
+        ]);
+
+        $this->assertFalse($pphNo->isDeduction());
+        $this->assertTrue($pphYes->isDeduction());
+
+        $country = Country::query()->create(['code' => 'ID', 'name' => 'Indonesia PPh', 'status' => 1]);
+        $payTerm = PaymentTerm::query()->create(['name' => 'Net 30 PPh', 'status' => 1]);
+        $payMethod = PaymentMethod::query()->create(['name' => 'Bank PPh', 'status' => 1]);
+        $delivTerm = DeliveryTerm::query()->create(['name' => 'FOB PPh', 'status' => 1]);
+        $valuta = Valuta::query()->create(['code' => 'IDR', 'name' => 'Rupiah', 'status' => 1]);
+        $currency = Currency::query()->create(['name' => 'IDR', 'status' => 1]);
+        $rafaksi = \App\Models\Master\Finance\RafaksiType::query()->create(['code' => 'RF-PPH', 'name' => 'None PPh', 'status' => 1]);
+        $port = \App\Models\Master\Partner\Port::query()->create(['name' => 'Port PPh', 'status' => 1]);
+        $poType = PoType::query()->create(['code' => 'LOC', 'name' => 'Local PPh', 'status' => 1]);
+        $supplier = Supplier::query()->create([
+            'code' => 'SUP-PPH-01',
+            'name' => 'PPh Vendor',
+            'countries_id' => $country->id,
+            'payment_terms_id' => $payTerm->id,
+            'payment_methods_id' => $payMethod->id,
+            'rafaksi_types_id' => $rafaksi->id,
+            'currencies_id' => $currency->id,
+            'ports_id' => $port->id,
+        ]);
+
+        // Case A: deduction = 'no' -> 100,000 + 11,000 PPN = 111,000 (PPh 2,000 does NOT deduct total)
+        $calcNo = \App\Services\Procurement\ProcurementCalculationService::calculateItemFinancials(
+            price: 10000,
+            order: 10,
+            ppnRate: 11.0,
+            isKawasanBerikat: false,
+            pphRate: 2.0,
+            isPphDeduction: $pphNo->isDeduction()
+        );
+        $this->assertSame(2000.0, $calcNo['pph_amount']);
+        $this->assertSame(111000.0, $calcNo['grand_total']);
+        $this->assertSame(111000.0, \App\Services\Procurement\ProcurementCalculationService::calculateOrderGrandTotals([$calcNo])['grand_total']);
+
+        $poNo = GeniusOneBackend::po()->createPo([
+            'po_types_id' => $poType->id,
+            'supliers_id' => $supplier->id,
+            'date' => now()->toDateString(),
+            'due_date' => now()->addDays(7)->toDateString(),
+            'valutas_id' => $valuta->id,
+            'rate' => '1',
+            'address' => 'PPh Vendor Address',
+            'payment_terms_id' => $payTerm->id,
+            'payment_methods_id' => $payMethod->id,
+            'delivery_terms_id' => $delivTerm->id,
+            'latest_delivery' => now()->addDays(7)->toDateString(),
+            'is_kawasan_berikat' => false,
+            'facility_status' => 'NON FASILITAS',
+        ], [
+            ['item_alias' => 'Service A', 'price' => 10000, 'order' => 10, 'pph_id' => $pphNo->id, 'ppn_rate' => 11.0],
+        ], [], $user->id)->load(['items.pph', 'items.ppn', 'additionalCosts']);
+
+        $this->assertSame(111000.0, (float) $poNo->items->first()->grand_total);
+        $this->assertSame(111000.0, $poNo->grand_total);
+
+        // Case B: deduction = 'yes' -> 100,000 + 11,000 - 2,000 = 109,000
+        $calcYes = \App\Services\Procurement\ProcurementCalculationService::calculateItemFinancials(
+            price: 10000,
+            order: 10,
+            ppnRate: 11.0,
+            isKawasanBerikat: false,
+            pphRate: 2.0,
+            isPphDeduction: $pphYes->isDeduction()
+        );
+        $this->assertSame(109000.0, $calcYes['grand_total']);
+        $this->assertSame(109000.0, \App\Services\Procurement\ProcurementCalculationService::calculateOrderGrandTotals([$calcYes])['grand_total']);
+
+        $poYes = GeniusOneBackend::po()->createPo([
+            'po_types_id' => $poType->id,
+            'supliers_id' => $supplier->id,
+            'date' => now()->toDateString(),
+            'due_date' => now()->addDays(7)->toDateString(),
+            'valutas_id' => $valuta->id,
+            'rate' => '1',
+            'address' => 'PPh Vendor Address',
+            'payment_terms_id' => $payTerm->id,
+            'payment_methods_id' => $payMethod->id,
+            'delivery_terms_id' => $delivTerm->id,
+            'latest_delivery' => now()->addDays(7)->toDateString(),
+            'is_kawasan_berikat' => false,
+            'facility_status' => 'NON FASILITAS',
+        ], [
+            ['item_alias' => 'Service B', 'price' => 10000, 'order' => 10, 'pph_id' => $pphYes->id, 'ppn_rate' => 11.0],
+        ], [], $user->id)->load(['items.pph', 'items.ppn', 'additionalCosts']);
+
+        $this->assertSame(109000.0, (float) $poYes->items->first()->grand_total);
+        $this->assertSame(109000.0, $poYes->grand_total);
+    }
 }

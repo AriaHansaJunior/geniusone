@@ -97,6 +97,8 @@ class StockNotificationApiController extends Controller
             'updated_by' => $actorId,
         ]);
 
+        SystemContextApiController::forgetContextCache();
+
         return response()->json([
             'status' => 'success',
             'message' => 'Stock notification rule created.',

@@ -381,4 +381,67 @@ class SecurityAuthorizationTest extends TestCase
         ]);
         $this->assertSame([], $unknownRoleUser->getAllPermissions());
     }
+
+    public function test_legacy_plaintext_token_is_compatibly_migrated_and_viewer_cannot_bypass_aliases(): void
+    {
+        $legacyToken = str_repeat('L', 60);
+        $user = User::query()->create([
+            'username' => 'legacy-token-user',
+            'name' => 'Legacy Token User',
+            'email' => 'legacy-token@geniusone.test',
+            'password' => Hash::make('secret123'),
+            'role' => User::ROLE_PROCUREMENT,
+            'status' => 1,
+        ]);
+        $user->forceFill(['remember_token' => $legacyToken])->save();
+        Cache::put(ApiTokenResolver::cacheKey($legacyToken), $user->id, now()->addDays(5));
+
+        // 1. Pre-upgrade legacy plaintext token still authenticates cleanly
+        $this->withHeader('Authorization', 'Bearer '.$legacyToken)
+            ->getJson('/api/auth/me')
+            ->assertOk()
+            ->assertJsonPath('data.username', 'legacy-token-user');
+
+        // 2. Transparently migrated to SHA-256 hash in both DB & Cache
+        $user->refresh();
+        $expectedHash = ApiTokenResolver::hashToken($legacyToken);
+        $this->assertSame($expectedHash, $user->remember_token);
+        $this->assertNull(Cache::get(ApiTokenResolver::cacheKey($legacyToken)));
+        $this->assertEquals($user->id, Cache::get(ApiTokenResolver::cacheKey($expectedHash)));
+
+        // 3. Migrated token continues working & logout revokes it
+        \Illuminate\Support\Facades\Auth::logout();
+        $this->app['auth']->forgetGuards();
+        $this->withHeader('Authorization', 'Bearer '.$legacyToken)
+            ->postJson('/api/auth/logout')
+            ->assertOk();
+
+        \Illuminate\Support\Facades\Auth::logout();
+        $this->app['auth']->forgetGuards();
+        $this->withHeader('Authorization', 'Bearer '.$legacyToken)
+            ->getJson('/api/auth/me')
+            ->assertStatus(401);
+
+        // 4. Viewer cannot bypass RBAC via backward-compatibility aliases, TSR reject, or web POST
+        $viewer = User::query()->create([
+            'username' => 'viewer-alias-test',
+            'name' => 'Viewer Alias Test',
+            'email' => 'viewer-alias@geniusone.test',
+            'password' => Hash::make('secret123'),
+            'role' => User::ROLE_VIEWER,
+            'status' => 1,
+        ]);
+        $this->actingAs($viewer, 'web');
+
+        $this->postJson('/api/pr', [])->assertStatus(403);
+        $this->postJson('/api/po', [])->assertStatus(403);
+        $this->postJson('/api/rn', [])->assertStatus(403);
+        $this->postJson('/api/warehouse', [])->assertStatus(403);
+        $this->deleteJson('/api/warehouse/bpb/1')->assertStatus(403);
+        $this->postJson('/api/procurement/master/rafaksi-types', ['name' => 'Nope'])->assertStatus(403);
+        $this->postJson('/api/exim/master/brands', ['name' => 'Nope'])->assertStatus(403);
+        $this->postJson('/api/warehouse/transfer-stock-returns', [])->assertStatus(403);
+        $this->postJson('/api/warehouse/transfer-stock-returns/1/reject', ['reason' => 'Nope'])->assertStatus(403);
+        $this->post('/warehouse/create', [])->assertStatus(403);
+    }
 }

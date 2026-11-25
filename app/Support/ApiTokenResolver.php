@@ -42,7 +42,14 @@ class ApiTokenResolver
     }
 
     /**
-     * Resolve an authenticated active user from the request's hashed API token.
+     * Minimum length required before considering legacy plaintext token fallback.
+     */
+    private const MIN_LEGACY_TOKEN_LENGTH = 20;
+
+    /**
+     * Resolve an authenticated active user from the request's API token.
+     * Supports SHA-256 hashed tokens and transparently migrates legacy plaintext
+     * tokens stored prior to SHA-256 hardening without disrupting active logins.
      */
     public static function resolveUserFromRequest(Request $request): ?User
     {
@@ -53,18 +60,32 @@ class ApiTokenResolver
 
         $tokenHash = self::hashToken($plainToken);
         $userId = Cache::get(self::cacheKey($tokenHash));
-
         $user = $userId ? User::find($userId) : User::where('remember_token', $tokenHash)->first();
+        $matchedLegacy = false;
+
+        if (! $user && strlen($plainToken) >= self::MIN_LEGACY_TOKEN_LENGTH) {
+            $legacyUserId = Cache::get(self::cacheKey($plainToken));
+            $user = $legacyUserId
+                ? User::find($legacyUserId)
+                : User::where('remember_token', $plainToken)->first();
+            $matchedLegacy = $user !== null;
+        }
 
         if (! $user || ! $user->isActive()) {
             if ($user && ! $user->isActive()) {
                 Cache::forget(self::cacheKey($tokenHash));
+                if ($matchedLegacy) {
+                    Cache::forget(self::cacheKey($plainToken));
+                }
             }
 
             return null;
         }
 
-        if (! $userId) {
+        if ($matchedLegacy) {
+            Cache::forget(self::cacheKey($plainToken));
+            self::storeIssuedToken($user, $plainToken);
+        } elseif (! $userId) {
             Cache::put(self::cacheKey($tokenHash), $user->id, now()->addDays(self::TTL_DAYS));
         }
 
@@ -90,9 +111,13 @@ class ApiTokenResolver
         if ($plainToken) {
             $tokenHash = self::hashToken($plainToken);
             Cache::forget(self::cacheKey($tokenHash));
+            Cache::forget(self::cacheKey($plainToken));
 
-            if ($user && ! empty($user->remember_token) && hash_equals((string) $user->remember_token, $tokenHash)) {
-                $user->forceFill(['remember_token' => null])->save();
+            if ($user && ! empty($user->remember_token)) {
+                $stored = (string) $user->remember_token;
+                if (hash_equals($stored, $tokenHash) || hash_equals($stored, $plainToken)) {
+                    $user->forceFill(['remember_token' => null])->save();
+                }
             }
 
             return;

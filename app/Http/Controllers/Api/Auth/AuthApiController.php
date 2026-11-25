@@ -73,12 +73,8 @@ class AuthApiController extends Controller
             ], 403);
         }
 
-        // Establish real authenticated session
         // Establish session for same-origin stateful API tests & web routes without overwriting API token hash
         Auth::login($user, false);
-        if ($request->hasSession()) {
-            $request->session()->regenerate();
-        }
         if ($request->hasSession()) {
             $request->session()->regenerate();
         }
@@ -141,11 +137,6 @@ class AuthApiController extends Controller
         }
 
         Auth::logout();
-        if ($request->hasSession()) {
-            $request->session()->invalidate();
-            $request->session()->regenerateToken();
-        }
-
         if ($request->hasSession()) {
             $request->session()->invalidate();
             $request->session()->regenerateToken();

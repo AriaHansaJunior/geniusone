@@ -204,5 +204,80 @@ class Phase3ApiReliabilityTest extends TestCase
         $inventoryService = app(\App\Services\Inventory\InventoryService::class);
         $this->assertIsArray($inventoryService->getItemStockTotals());
         $this->assertSame(0.0, $inventoryService->getWarehouseStockBalance(999999, 999999));
+
+        // Additional Master invalidation coverage (Brand create/toggle/delete + validation failure preservation)
+        $this->getJson('/api/master/lookups')->assertOk();
+        $this->assertTrue(\Illuminate\Support\Facades\Cache::has(\App\Http\Controllers\Api\Common\SystemContextApiController::LOOKUPS_CACHE_KEY));
+
+        $brandRes = $this->postJson('/api/exim/master/brands', [
+            'code' => 'BRD-CACHE-1',
+            'name' => 'Cache Brand One',
+            'status' => 1,
+        ])->assertCreated();
+        $brandId = $brandRes->json('data.id');
+        $this->assertFalse(\Illuminate\Support\Facades\Cache::has(\App\Http\Controllers\Api\Common\SystemContextApiController::LOOKUPS_CACHE_KEY));
+
+        // Re-warm cache and verify status toggle invalidates cache
+        $this->getJson('/api/master/lookups')->assertOk();
+        $this->assertTrue(\Illuminate\Support\Facades\Cache::has(\App\Http\Controllers\Api\Common\SystemContextApiController::LOOKUPS_CACHE_KEY));
+        $this->patchJson("/api/exim/master/brands/{$brandId}/toggle-status")->assertOk();
+        $this->assertFalse(\Illuminate\Support\Facades\Cache::has(\App\Http\Controllers\Api\Common\SystemContextApiController::LOOKUPS_CACHE_KEY));
+
+        // Failed validation write MUST NOT poison or invalidate warm cache
+        $this->getJson('/api/master/lookups')->assertOk();
+        $this->postJson('/api/exim/master/brands', ['code' => 'BRD-CACHE-1', 'name' => 'Duplicate'])->assertStatus(422);
+        $this->assertTrue(\Illuminate\Support\Facades\Cache::has(\App\Http\Controllers\Api\Common\SystemContextApiController::LOOKUPS_CACHE_KEY));
+
+        // Failed DB transaction rollback leaves committed lookups intact
+        try {
+            \Illuminate\Support\Facades\DB::transaction(function () {
+                \App\Models\Master\Material\Brand::create(['code' => 'BRD-ROLLBACK', 'name' => 'Should Rollback', 'status' => 1]);
+                throw new \RuntimeException('Simulated failure');
+            });
+        } catch (\RuntimeException $e) {
+            // Expected rollback
+        }
+        $lookupsAfterRollback = $this->getJson('/api/master/lookups')->assertOk()->json('data.brands');
+        $this->assertFalse(collect($lookupsAfterRollback)->contains(fn ($b) => ($b['code'] ?? '') === 'BRD-ROLLBACK'));
+    }
+
+    public function test_hs_code_status_migration_preserves_existing_rows_on_rollback_and_reapply(): void
+    {
+        $user = $this->createAdminUser();
+        $this->actingAs($user, 'web');
+
+        $bm = TypeRateBm::create(['name' => 'BM MIG', 'status' => 1]);
+        $cukai = TypeRateCukai::create(['name' => 'CK MIG', 'status' => 1]);
+
+        $hs = HsCode::create([
+            'name' => '8471.30.10',
+            'description' => 'Existing Laptop HS Code',
+            'rates_bm' => 5.0,
+            'rates_cukai' => 0,
+            'rates_ppn' => 11.0,
+            'rates_pph' => 2.5,
+            'rates_ppnbm' => 0,
+            'types_rates_bm_id' => $bm->id,
+            'types_rates_cukai_id' => $cukai->id,
+            'status' => 1,
+        ]);
+
+        $migration = require database_path('migrations/2026_11_25_000001_add_status_to_hs_code_table.php');
+
+        // Rollback removes status column without deleting existing hs_code rows
+        $migration->down();
+        $this->assertFalse(\Illuminate\Support\Facades\Schema::hasColumn('hs_code', 'status'));
+        $this->assertDatabaseHas('hs_code', ['id' => $hs->id, 'name' => '8471.30.10']);
+
+        // Re-apply migration onto populated table defaults existing rows to status = 1
+        $migration->up();
+        $this->assertTrue(\Illuminate\Support\Facades\Schema::hasColumn('hs_code', 'status'));
+        $this->assertDatabaseHas('hs_code', ['id' => $hs->id, 'name' => '8471.30.10', 'status' => 1]);
+
+        // Pre-existing row remains readable & status toggleable via API
+        $this->getJson('/api/exim/master/hs-codes')->assertOk();
+        $this->patchJson("/api/exim/master/hs-codes/{$hs->id}/toggle-status")
+            ->assertOk()
+            ->assertJsonPath('data.status', 0);
     }
 }

@@ -146,6 +146,7 @@ class StockAdjustmentApiController extends Controller
             note: $validated['note'] ?? null,
             lines: $normalizedLines
         );
+        \App\Http\Controllers\Api\Common\SystemContextApiController::forgetContextCache();
 
         return response()->json([
             'status' => 'success',
@@ -368,6 +369,7 @@ class StockAdjustmentApiController extends Controller
             note: $request->input('note') ?: ('Excel import (' . count($resolvedLines) . ' rows)'),
             lines: $resolvedLines
         );
+        \App\Http\Controllers\Api\Common\SystemContextApiController::forgetAllCaches();
 
         return response()->json([
             'status' => 'success',

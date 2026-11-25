@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\Warehouse;
 
+use App\Http\Controllers\Api\Common\SystemContextApiController;
 use App\Http\Controllers\Controller;
 use App\Models\Master\Material\Item;
 use App\Models\Master\Organization\JobNumber;
@@ -343,6 +344,7 @@ class WarehouseApiController extends Controller
                 'coordinate' => $request->input('coordinate'),
                 'items' => $request->input('items', []),
             ], $creatorId);
+            SystemContextApiController::forgetContextCache();
 
             if ($request->expectsJson() || $request->is('api/*')) {
                 return response()->json([
@@ -519,6 +521,7 @@ class WarehouseApiController extends Controller
 
         try {
             GeniusOneBackend::bpb()->deleteBpb($id, $actorId);
+            SystemContextApiController::forgetContextCache();
 
             return response()->json([
                 'status' => 'success',

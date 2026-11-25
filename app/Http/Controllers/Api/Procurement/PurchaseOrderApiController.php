@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\Procurement;
 
+use App\Http\Controllers\Api\Common\SystemContextApiController;
 use App\Http\Controllers\Controller;
 use App\Models\Master\Finance\DeliveryTerm;
 use App\Models\Master\Finance\PaymentMethod;
@@ -636,6 +637,8 @@ class PurchaseOrderApiController extends Controller
             ], 422);
         }
 
+        SystemContextApiController::forgetContextCache();
+
         return response()->json([
             'status' => 'success',
             'message' => 'Purchase Order created successfully',
@@ -696,6 +699,8 @@ class PurchaseOrderApiController extends Controller
         } catch (InvalidArgumentException $e) {
             return response()->json(['status' => 'error', 'message' => $e->getMessage()], 422);
         }
+
+        SystemContextApiController::forgetContextCache();
 
         return response()->json([
             'status' => 'success',
@@ -1013,7 +1018,11 @@ class PurchaseOrderApiController extends Controller
                 'discount_val' => $discVal,
                 'pph_id' => $pphId,
                 'pph_rate' => (float) ($it['pph_rate'] ?? $it['pphRate'] ?? $pphModel?->value ?? 0),
-                'is_pph_deduction' => array_key_exists('is_pph_deduction', $it) ? (bool) $it['is_pph_deduction'] : (bool) ($pphModel?->deduction ?? false),
+                'is_pph_deduction' => array_key_exists('is_pph_deduction', $it)
+                    ? (is_bool($it['is_pph_deduction'])
+                        ? $it['is_pph_deduction']
+                        : in_array(strtolower(trim((string) $it['is_pph_deduction'])), ['1', 'true', 'yes', 'on'], true))
+                    : ($pphModel?->isDeduction() ?? false),
                 'ppn_id' => $ppnId,
                 'ppn_rate' => (float) ($it['ppn_rate'] ?? $it['ppnRate'] ?? $ppnModel?->value ?? $headerPpnRate),
                 'lme' => (float) ($it['lme'] ?? 0),

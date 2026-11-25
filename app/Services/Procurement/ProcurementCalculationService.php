@@ -100,6 +100,7 @@ class ProcurementCalculationService
         $sumDpp = 0.0;
         $sumPpn = 0.0;
         $sumPph = 0.0;
+        $sumPphDeduction = 0.0;
         $sumAdditionalCosts = 0.0;
 
         foreach ($items as $item) {
@@ -107,14 +108,19 @@ class ProcurementCalculationService
             $sumDiscount += $item['discount'] ?? 0;
             $sumDpp += $item['dpp'] ?? 0;
             $sumPpn += $item['ppn_amount'] ?? 0;
-            $sumPph += $item['pph_amount'] ?? 0;
+            $pphAmount = (float) ($item['pph_amount'] ?? $item['subtotal_pph'] ?? 0);
+            $sumPph += $pphAmount;
+            $isDeduct = filter_var($item['is_pph_deduction'] ?? false, FILTER_VALIDATE_BOOLEAN);
+            if ($isDeduct) {
+                $sumPphDeduction += $pphAmount;
+            }
         }
 
         foreach ($additionalCosts as $cost) {
             $sumAdditionalCosts += (float) ($cost['value'] ?? 0);
         }
 
-        $orderGrandTotal = round($sumDpp + $sumPpn + $sumAdditionalCosts, 2);
+        $orderGrandTotal = round($sumDpp + $sumPpn + $sumAdditionalCosts - $sumPphDeduction, 2);
 
         return [
             'subtotal' => round($sumSubtotal, 2),

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\Procurement;
 
+use App\Http\Controllers\Api\Common\SystemContextApiController;
 use App\Http\Controllers\Controller;
 use App\Models\Master\Material\Item;
 use App\Models\Master\Organization\Department;
@@ -657,6 +658,8 @@ class PurchaseRequisitionApiController extends Controller
             ], 422);
         }
 
+        SystemContextApiController::forgetContextCache();
+
         return response()->json([
             'status' => 'success',
             'message' => 'Purchase Requisition created successfully',
@@ -738,6 +741,8 @@ class PurchaseRequisitionApiController extends Controller
         } catch (InvalidArgumentException $e) {
             return response()->json(['status' => 'error', 'message' => $e->getMessage()], 422);
         }
+
+        SystemContextApiController::forgetContextCache();
 
         return response()->json([
             'status' => 'success',

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\Exim\Operations;
 
+use App\Http\Controllers\Api\Common\SystemContextApiController;
 use App\Http\Controllers\Controller;
 use App\Models\Common\ExchangeRate;
 use App\Models\Master\Finance\Currency;
@@ -9,10 +10,12 @@ use App\Models\Warehouse\GateReceiving\PurchaseOrderReceiveNote;
 use App\Models\Warehouse\GateReceiving\ReceiveNoteReturn;
 use App\Models\Warehouse\GateReceiving\ReceiveNoteReturnItem;
 use App\Services\DocumentNumber\DocumentNumberGenerator;
+use App\Services\Workflow\DocumentApprovalWorkflowService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use InvalidArgumentException;
 
 class ReceiveNoteReturnApiController extends Controller
 {
@@ -209,6 +212,8 @@ class ReceiveNoteReturnApiController extends Controller
                 $header->update(['amount' => $totalAmount]);
             }
 
+            SystemContextApiController::forgetContextCache();
+
             return response()->json([
                 'message' => 'Receive note return created successfully',
                 'data' => $header->load(['items', 'createdByUser', 'updatedByUser']),
@@ -225,69 +230,72 @@ class ReceiveNoteReturnApiController extends Controller
 
     public function approve(Request $request, int $id): JsonResponse
     {
-        $actor = $this->requireActor($request);
-        $actorId = (int) $actor->id;
-        if (! $actor->hasPermission('return.approve_1') && ! $actor->hasPermission('return.approve_2')) {
+        $actorId = $this->requireActorId($request);
+        $tier = (int) $request->input('tier', 1);
+        $note = $request->input('note');
+
+        try {
+            $updated = app(DocumentApprovalWorkflowService::class)->approve('RETURN', $id, $actorId, $tier, $note);
+
+            return response()->json([
+                'message' => "Receive note return Stage {$tier} approved successfully",
+                'data' => $updated->load(['items', 'createdByUser', 'updatedByUser']),
+            ]);
+        } catch (InvalidArgumentException $e) {
+            $status = str_contains($e->getMessage(), 'permission') || str_contains($e->getMessage(), 'authority') ? 403 : 422;
+
             return response()->json([
                 'status' => 'error',
-                'message' => 'Forbidden: Insufficient permission to approve Receive Note Return.',
-            ], 403);
+                'message' => $e->getMessage(),
+            ], $status);
         }
-
-        $record = ReceiveNoteReturn::findOrFail($id);
-        $record->update([
-            'approval_status' => 'Approved',
-            'rejection_note' => null,
-            'updated_by' => $actorId,
-        ]);
-
-        return response()->json([
-            'message' => 'Receive note return approved successfully',
-            'data' => $record->load(['items', 'createdByUser', 'updatedByUser']),
-        ]);
     }
 
     public function reject(Request $request, int $id): JsonResponse
     {
-        $actor = $this->requireActor($request);
-        $actorId = (int) $actor->id;
-        if (! $actor->hasPermission('return.reject') && ! $actor->hasPermission('return.approve_1') && ! $actor->hasPermission('return.approve_2')) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Forbidden: Insufficient permission to reject Receive Note Return.',
-            ], 403);
-        }
-
+        $actorId = $this->requireActorId($request);
         $validated = $request->validate([
-            'reason' => 'nullable|string|max:500',
-            'note' => 'nullable|string|max:500',
-            'rejection_note' => 'nullable|string|max:500',
+            'tier' => 'nullable|integer|in:1,2',
+            'reason' => 'nullable|string|max:1000',
+            'note' => 'nullable|string|max:1000',
+            'rejection_note' => 'nullable|string|max:1000',
         ]);
 
-        $record = ReceiveNoteReturn::findOrFail($id);
-        if (in_array($record->approval_status, ['Approved', 'Approved 2'], true)) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Approved Receive Note Return cannot be rejected.',
-            ], 422);
+        $tier = (int) ($validated['tier'] ?? 1);
+        $reason = trim((string) ($validated['reason'] ?? $validated['note'] ?? $validated['rejection_note'] ?? ''));
+        if (strlen($reason) < 3) {
+            $reason = 'Rejected by approver';
         }
 
-        $record->update([
-            'approval_status' => 'Rejected',
-            'rejection_note' => $validated['reason'] ?? $validated['note'] ?? $validated['rejection_note'] ?? null,
-            'updated_by' => $actorId,
-        ]);
+        try {
+            $updated = app(DocumentApprovalWorkflowService::class)->reject('RETURN', $id, $actorId, $tier, $reason);
 
-        return response()->json([
-            'message' => 'Receive note return rejected successfully',
-            'data' => $record->load(['items', 'createdByUser', 'updatedByUser']),
-        ]);
+            return response()->json([
+                'message' => 'Receive note return rejected successfully',
+                'data' => $updated->load(['items', 'createdByUser', 'updatedByUser']),
+            ]);
+        } catch (InvalidArgumentException $e) {
+            $status = str_contains($e->getMessage(), 'authority') || str_contains($e->getMessage(), 'permission') ? 403 : 422;
+
+            return response()->json([
+                'status' => 'error',
+                'message' => $e->getMessage(),
+            ], $status);
+        }
     }
 
     public function destroy(int $id): JsonResponse
     {
         $record = ReceiveNoteReturn::findOrFail($id);
+        if (in_array($record->approval_status, ['Approved', 'Approved 2'], true)) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Approved Receive Note Return cannot be deleted.',
+            ], 422);
+        }
+
         $record->delete();
+        SystemContextApiController::forgetContextCache();
 
         return response()->json(['message' => 'Receive note return deleted successfully']);
     }
