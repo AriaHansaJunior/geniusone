@@ -584,6 +584,57 @@ export function PurchaseOrderDetail({
     );
   }
 
+  const poPrintProps = {
+    poNumber: docNumber,
+    orderDate: String(dateStr),
+    revisedNumber: String((row as any)._rawRevision || ""),
+    revisedDate: String((row as any).revisedDate || ""),
+    supplierName: String((row as any).supplierName || supplierName),
+    contactPerson: String((row as any).supplierContact || ""),
+    phoneNumber: String((row as any).supplierPhone || ""),
+    email: String((row as any).supplierEmail || ""),
+    currency,
+    items: poItems.map((it: any, idx: number) => ({
+      no: idx + 1,
+      description: String(it.itemAlias || it.itemName || it.item || it.name || "Material Item"),
+      quantity: it.orderQty ?? it.rawQty ?? it.quantity ?? 0,
+      uom: String(it.unit || "PCS"),
+      unitPrice: it.rawPrice ?? it.price_numeric ?? it.priceRp ?? it.price ?? 0,
+      totalPrice: it.subtotal_numeric ?? it.subtotalRp ?? it.subtotal ?? 0,
+      remarks: String(it.remark || ""),
+    })),
+    deliveryTerm: String((row as any).deliveryTerm || ""),
+    latestDelivery: String((row as any).latestDeliveryDate || dueDate || ""),
+    paymentTerm,
+    poNote,
+    subtotal: materialSubtotal,
+    vatAmount: ppnAmount,
+    discountAmount,
+    otherCostsAmount: totalOtherCosts,
+    pphAmount: totalPph,
+    grandTotal: computedGrandTotal,
+    approvedBy: approvalState.approved2By || approvedBy,
+  };
+
+  const poPrintMarkup = (
+    <>
+      <KwtPrintModal
+        isOpen={isPrintModalOpen}
+        onClose={() => setIsPrintModalOpen(false)}
+        title="Print Preview — Purchase Order"
+        documentCode={docNumber}
+        orientation="landscape"
+        onPrint={handleExecutePrint}
+      >
+        <KwtPrintTemplatePo {...poPrintProps} />
+      </KwtPrintModal>
+
+      <div className="kwt-print-only-container">
+        <KwtPrintTemplatePo {...poPrintProps} />
+      </div>
+    </>
+  );
+
   if (isDefaultTheme) {
     return (
       <>
@@ -647,6 +698,7 @@ export function PurchaseOrderDetail({
           onDownloadAttachment={handleDownloadAttachment}
           activityLogEntries={activityLogEntries}
         />
+        {poPrintMarkup}
       </>
     );
   }
@@ -1440,6 +1492,7 @@ export function PurchaseOrderDetail({
           </div>
         </div>
       </div>
+      {poPrintMarkup}
     </div>
   );
 }
