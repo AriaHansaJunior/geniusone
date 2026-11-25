@@ -30,11 +30,6 @@ class ApprovalWorkflowApiController extends Controller
             return (int) $request->user()->id;
         }
 
-        $headerId = $request->header('X-User-Id');
-        if ($headerId && is_numeric($headerId) && app()->environment('testing')) {
-            return (int) $headerId;
-        }
-
         return $this->requireActorId($request);
     }
 
@@ -94,11 +89,30 @@ class ApprovalWorkflowApiController extends Controller
                     'updatedAt' => $updatedDoc->updated_at?->format('Y-m-d H:i:s'),
                 ],
             ]);
-        } catch (Throwable $e) {
+        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
             return response()->json([
                 'status' => 'error',
                 'message' => $e->getMessage(),
-            ], 422);
+            ], 403);
+        } catch (\InvalidArgumentException $e) {
+            $status = str_contains($e->getMessage(), 'authority') ? 403 : 422;
+
+            return response()->json([
+                'status' => 'error',
+                'message' => $e->getMessage(),
+            ], $status);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Document not found.',
+            ], 404);
+        } catch (Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Workflow approval error.', ['module' => $module, 'id' => $id, 'error' => $e->getMessage()]);
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Approval action failed due to an unexpected server error.',
+            ], 500);
         }
     }
 
@@ -135,11 +149,30 @@ class ApprovalWorkflowApiController extends Controller
                     'updatedAt' => $updatedDoc->updated_at?->format('Y-m-d H:i:s'),
                 ],
             ]);
-        } catch (Throwable $e) {
+        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
             return response()->json([
                 'status' => 'error',
                 'message' => $e->getMessage(),
-            ], 422);
+            ], 403);
+        } catch (\InvalidArgumentException $e) {
+            $status = str_contains($e->getMessage(), 'authority') ? 403 : 422;
+
+            return response()->json([
+                'status' => 'error',
+                'message' => $e->getMessage(),
+            ], $status);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Document not found.',
+            ], 404);
+        } catch (Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Workflow approval error.', ['module' => $module, 'id' => $id, 'error' => $e->getMessage()]);
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Approval action failed due to an unexpected server error.',
+            ], 500);
         }
     }
 
@@ -179,11 +212,30 @@ class ApprovalWorkflowApiController extends Controller
                     'updatedAt' => $updatedDoc->updated_at?->format('Y-m-d H:i:s'),
                 ],
             ]);
-        } catch (Throwable $e) {
+        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
             return response()->json([
                 'status' => 'error',
                 'message' => $e->getMessage(),
-            ], 422);
+            ], 403);
+        } catch (\InvalidArgumentException $e) {
+            $status = str_contains($e->getMessage(), 'authority') ? 403 : 422;
+
+            return response()->json([
+                'status' => 'error',
+                'message' => $e->getMessage(),
+            ], $status);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Document not found.',
+            ], 404);
+        } catch (Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Workflow approval error.', ['module' => $module, 'id' => $id, 'error' => $e->getMessage()]);
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Approval action failed due to an unexpected server error.',
+            ], 500);
         }
     }
 
@@ -216,11 +268,30 @@ class ApprovalWorkflowApiController extends Controller
                     'updatedAt' => $updatedDoc->updated_at?->format('Y-m-d H:i:s'),
                 ],
             ]);
-        } catch (Throwable $e) {
+        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
             return response()->json([
                 'status' => 'error',
                 'message' => $e->getMessage(),
-            ], 422);
+            ], 403);
+        } catch (\InvalidArgumentException $e) {
+            $status = str_contains($e->getMessage(), 'authority') ? 403 : 422;
+
+            return response()->json([
+                'status' => 'error',
+                'message' => $e->getMessage(),
+            ], $status);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Document not found.',
+            ], 404);
+        } catch (Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Workflow approval error.', ['module' => $module, 'id' => $id, 'error' => $e->getMessage()]);
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Approval action failed due to an unexpected server error.',
+            ], 500);
         }
     }
 
@@ -294,11 +365,30 @@ class ApprovalWorkflowApiController extends Controller
                     'timestamp' => $history->created_at?->format('d-M-Y H:i'),
                 ],
             ], 201);
-        } catch (Throwable $e) {
+        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
             return response()->json([
                 'status' => 'error',
                 'message' => $e->getMessage(),
-            ], 422);
+            ], 403);
+        } catch (\InvalidArgumentException $e) {
+            $status = str_contains($e->getMessage(), 'authority') ? 403 : 422;
+
+            return response()->json([
+                'status' => 'error',
+                'message' => $e->getMessage(),
+            ], $status);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Document not found.',
+            ], 404);
+        } catch (Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Workflow approval error.', ['module' => $module, 'id' => $id, 'error' => $e->getMessage()]);
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Approval action failed due to an unexpected server error.',
+            ], 500);
         }
     }
 
@@ -317,11 +407,23 @@ class ApprovalWorkflowApiController extends Controller
                 'status' => 'success',
                 'data' => $history,
             ]);
-        } catch (Throwable $e) {
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Document not found.',
+            ], 404);
+        } catch (\InvalidArgumentException $e) {
             return response()->json([
                 'status' => 'error',
                 'message' => $e->getMessage(),
-            ], 404);
+            ], 422);
+        } catch (Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Workflow history retrieval error.', ['module' => $module, 'id' => $id, 'error' => $e->getMessage()]);
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Unable to load workflow history.',
+            ], 500);
         }
     }
 }

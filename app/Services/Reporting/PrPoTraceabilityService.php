@@ -156,20 +156,36 @@ class PrPoTraceabilityService
      */
     public function getExecutiveSummary(): array
     {
-        $totalPrCount = PurchaseRequisition::count();
+        $totalPrCount = PurchaseRequisition::where('status', '!=', 'Rejected')->count();
         $approvedPrCount = PurchaseRequisition::whereIn('status', ['Approved', 'Approved 1', 'Approved 2', 'Ordered', 'Outstanding', 'Partial Closing'])->count();
 
-        $totalPoCount = PurchaseOrder::count();
+        $totalPoCount = PurchaseOrder::where('status', '!=', 'Rejected')->count();
         $approvedPoCount = PurchaseOrder::whereIn('status', ['Approved', 'Approved 1', 'Approved 2', 'Completed'])->count();
-        $totalPoValue = (float) DB::table('purchase_order_has_purchase_requisitions')->sum('grand_total');
 
-        $totalRnCount = ReceiveNote::count();
-        $totalBpbCount = BpbReceiveMaterial::count();
+        $orderColumn = DB::connection()->getQueryGrammar()->wrap('poi.order');
+        $poTotals = DB::table('purchase_order_has_purchase_requisitions as poi')
+            ->join('purchase_order as po', 'po.id', '=', 'poi.purchase_order_id')
+            ->whereNull('poi.deleted_at')
+            ->whereNull('po.deleted_at')
+            ->where('po.status', '!=', 'Rejected')
+            ->selectRaw("COALESCE(SUM(poi.grand_total), 0) as total_value, COALESCE(SUM({$orderColumn}), 0) as total_order")
+            ->first();
+        $totalPoValue = (float) ($poTotals->total_value ?? 0);
+        $allPoLines = (float) ($poTotals->total_order ?? 0);
 
-        // Calculate outstanding items count
-        $allPoLines = (float) DB::table('purchase_order_has_purchase_requisitions')->sum('order');
-        $allReceivedLines = (float) DB::table('purchase_order_has_receive_note')->sum('quantity');
-        $allRafaksi = (float) DB::table('purchase_order_has_receive_note')->sum('rafaksi');
+        $totalRnCount = ReceiveNote::where('status', '!=', 'Rejected')->count();
+        $totalBpbCount = BpbReceiveMaterial::where('status', '!=', 'Rejected')->count();
+
+        // Calculate outstanding items count excluding rejected and soft-deleted Receive Notes
+        $rnTotals = DB::table('purchase_order_has_receive_note as porn')
+            ->join('receive_note as rn', 'rn.id', '=', 'porn.receive_note_id')
+            ->whereNull('porn.deleted_at')
+            ->whereNull('rn.deleted_at')
+            ->where('rn.status', '!=', 'Rejected')
+            ->selectRaw('COALESCE(SUM(porn.quantity), 0) as qty_sum, COALESCE(SUM(porn.rafaksi), 0) as rafaksi_sum')
+            ->first();
+        $allReceivedLines = (float) ($rnTotals->qty_sum ?? 0);
+        $allRafaksi = (float) ($rnTotals->rafaksi_sum ?? 0);
         $netReceived = $allReceivedLines - $allRafaksi;
         $totalOutstandingQty = max(0, $allPoLines - $netReceived);
 

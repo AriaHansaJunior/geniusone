@@ -195,6 +195,8 @@ export interface AppViewRendererProps {
   handleNavigateAdjustmentStockImport: () => void;
   handleNavigateAdjustmentStockDetail: (code: string) => void;
   handleNavigateReferenceCreate: (page: ReferenceMasterPageKey) => void;
+  handleSavedReferenceMaster: (key: ReferenceMasterPageKey, record: ReferenceMasterRecord) => void;
+  handleToggleReferenceMasterStatus: (key: ReferenceMasterPageKey, id: string) => Promise<void> | void;
   handleDeleteReferenceMaster: (key: ReferenceMasterPageKey, id: string) => Promise<void>;
   handleNavigateMasterWarehouseCreate: () => void;
   handleNavigateWarehouseMasterEdit: (warehouse: WarehouseMasterRecord) => void;
@@ -270,6 +272,7 @@ export interface AppViewRendererProps {
   handleToggleFacilityStatus: (id: string) => void;
   handleNavigateHsEdit: (hs: HsRecord) => void;
   handleSaveHs: (record: HsRecord, isEdit: boolean) => Promise<void>;
+  handleToggleHsStatus: (id: string) => Promise<void> | void;
   handleDeleteHs: (id: string) => Promise<void>;
   handleNavigateCategoryEdit: (cat: CategoryRecord) => void;
   handleSaveCategory: (record: CategoryRecord, isEdit: boolean) => Promise<void>;
@@ -431,6 +434,8 @@ export function AppViewRenderer({
   handleNavigateAdjustmentStockImport,
   handleNavigateAdjustmentStockDetail,
   handleNavigateReferenceCreate,
+  handleSavedReferenceMaster,
+  handleToggleReferenceMasterStatus,
   handleDeleteReferenceMaster,
   handleNavigateMasterWarehouseCreate,
   handleNavigateWarehouseMasterEdit,
@@ -506,6 +511,7 @@ export function AppViewRenderer({
   handleToggleFacilityStatus,
   handleNavigateHsEdit,
   handleSaveHs,
+  handleToggleHsStatus,
   handleDeleteHs,
   handleNavigateCategoryEdit,
   handleSaveCategory,
@@ -887,6 +893,7 @@ export function AppViewRenderer({
           records={hsRecords}
           isLoading={masterFetchStates["hs-codes"] !== "done"}
           onAddNew={() => handleNavigateCreate("hs")}
+          onToggleStatus={handleToggleHsStatus}
           onDelete={handleDeleteHs}
         />
       )}
@@ -1136,6 +1143,7 @@ export function AppViewRenderer({
               records={referenceRecordsMap[refKey] || []}
               isLoading={masterFetchStates[`ref-${refKey}`] !== "done"}
               onAddNew={() => handleNavigateReferenceCreate(refKey)}
+              onToggleStatus={(id) => handleToggleReferenceMasterStatus(refKey, id)}
               onDelete={(id) => handleDeleteReferenceMaster(refKey, id)}
             />
           );
@@ -1903,6 +1911,7 @@ export function AppViewRenderer({
           return (
             <ReferenceMasterForm
               config={config}
+              onSaved={(saved) => handleSavedReferenceMaster(config.pageKey, saved)}
               onCancel={() => handleNavigateList(config.pageKey, config.listPath)}
             />
           );

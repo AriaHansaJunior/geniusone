@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo, useRef } from "react";
-import * as XLSX from "xlsx";
+import { loadXlsxModule } from "../../../utils/xlsxExport";
 import { Icon } from "../../../components/ui/Icon";
 import { Button } from "../../../components/ui/Button";
 import { Badge } from "../../../components/ui/Badge";
@@ -284,7 +284,7 @@ export function PurchaseRequisitionDetail({
       const fresh = await fetchDetail("pr", row.id ? String(row.id) : code);
       if (fresh) setRow(fresh);
     } catch (err: any) {
-      window.alert(err?.message || "Failed to update the PR item closing status.");
+      notifyError("PR Item Closing Failed", err?.message || "Failed to update the PR item closing status.");
     }
   };
 
@@ -385,7 +385,7 @@ export function PurchaseRequisitionDetail({
     return [...dynamicEntries, ...baselineEntries];
   })();
 
-  const handleExportDetailXLSX = () => {
+  const handleExportDetailXLSX = async () => {
     const wsData = [
       ["PURCHASE REQUISITION SPECIFICATION", ""],
       ["Document Number", docNumber],
@@ -418,6 +418,7 @@ export function PurchaseRequisitionDetail({
       ["Stage 2 (Director / Final)", approvalState.approved2By || "-", approvalState.status === "APPROVED" ? "Approved" : "Pending", approvalState.approved2At || "-"]
     ];
 
+    const XLSX = await loadXlsxModule();
     const ws = XLSX.utils.aoa_to_sheet(wsData);
     ws["!cols"] = [
       { wch: 8 },
@@ -582,7 +583,7 @@ export function PurchaseRequisitionDetail({
 
             <div className="detail-top-bar__right">
               <Badge tone="purple">{dept}</Badge>
-              <Button variant="secondary" icon="print" onClick={handlePrintPdf}>
+              <Button variant="secondary" onClick={handlePrintPdf}>
                 Print PDF
               </Button>
               <Button variant="excel" onClick={handleExportDetailXLSX}>Export XLSX</Button>

@@ -9,6 +9,7 @@ import { ConfirmDialog } from "../../../../components/ui/ConfirmDialog";
 import { MasterDeleteButton } from "../../../../components/ui/MasterDeleteButton";
 import { useMasterDelete } from "../../../../hooks/useMasterDelete";
 import { useNotification } from "../../../../context/NotificationContext";
+import { downloadCsvFile } from "../../../../utils/csvExport";
 import { initialHsRecords } from "./hs-data";
 import type {
   HsRecord,
@@ -20,6 +21,7 @@ interface HsIndexProps {
   records?: HsRecord[];
   isLoading?: boolean;
   onAddNew: () => void;
+  onToggleStatus?: (id: string) => Promise<void> | void;
   onDelete?: (id: string) => Promise<void> | void;
 }
 
@@ -27,6 +29,7 @@ export function HsIndex({
   records = initialHsRecords,
   isLoading = false,
   onAddNew,
+  onToggleStatus,
   onDelete,
 }: HsIndexProps) {
   const { notifySuccess, notifyError, notifyWarning } = useNotification();
@@ -150,34 +153,21 @@ export function HsIndex({
         "Cukai Rate (%)",
       ];
 
-      const csvRows = [headers.join(",")];
+      const rows = sortedRecords.map((row, index) => [
+        index + 1,
+        row.name || "",
+        row.description || "",
+        row.typeRateBm || "ADVOLORUM",
+        row.ratesBm,
+        row.typeRateCukai || "ADVOLORUM",
+        row.ratesCukai,
+      ]);
 
-      sortedRecords.forEach((row, index) => {
-        const values = [
-          index + 1,
-          `"${(row.name || "").replace(/"/g, '""')}"`,
-          `"${(row.description || "").replace(/"/g, '""')}"`,
-          `"${row.typeRateBm || "ADVOLORUM"}"`,
-          row.ratesBm,
-          `"${row.typeRateCukai || "ADVOLORUM"}"`,
-          row.ratesCukai,
-        ];
-        csvRows.push(values.join(","));
-      });
-
-      const csvString = "\uFEFF" + csvRows.join("\r\n");
-      const blob = new Blob([csvString], { type: "text/csv;charset=utf-8;" });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.setAttribute("href", url);
-      link.setAttribute(
-        "download",
-        `Master_HS_Export_${new Date().toISOString().slice(0, 10)}.csv`
+      downloadCsvFile(
+        `Master_HS_Export_${new Date().toISOString().slice(0, 10)}.csv`,
+        headers,
+        rows
       );
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
 
       notifySuccess("Export Completed", `Exported ${sortedRecords.length} HS Code record(s).`);
     } catch {
@@ -324,12 +314,13 @@ export function HsIndex({
                         <td className="master-cell-center">
                           <StatusToggle
                             active={item.status ?? true}
-                            onToggle={() =>
-                              notifyError(
-                                "Status Toggle Unavailable",
-                                `Cannot change status for HS Code "${item.name}": table \`hs_code\` has no status column and backend endpoint PATCH /api/exim/master/hs-codes/{id}/toggle-status is not yet registered in routes/api.php.`
-                              )
-                            }
+                            onToggle={() => {
+                              if (onToggleStatus) {
+                                onToggleStatus(item.id);
+                              } else {
+                                notifyError("Status Toggle Unavailable", "HS Code toggle handler is not connected.");
+                              }
+                            }}
                             ariaLabel={`Toggle status for ${item.name}`}
                           />
                         </td>

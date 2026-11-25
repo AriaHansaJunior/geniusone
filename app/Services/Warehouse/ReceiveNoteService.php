@@ -41,10 +41,11 @@ class ReceiveNoteService
         }
 
         return DB::transaction(function () use ($headerData, $receivedItems, $userId) {
-            $rnNumber = $headerData['rn_number'] ?? DocumentNumberGenerator::generateRnNumber();
-            if (ReceiveNote::withTrashed()->where('rn_number', $rnNumber)->exists()) {
-                $rnNumber = DocumentNumberGenerator::generateRnNumber();
+            $customRnNumber = ! empty($headerData['rn_number']) ? trim((string) $headerData['rn_number']) : null;
+            if ($customRnNumber !== null && ReceiveNote::withTrashed()->where('rn_number', $customRnNumber)->exists()) {
+                throw new InvalidArgumentException("Receive Note number '{$customRnNumber}' already exists.");
             }
+            $rnNumber = $customRnNumber ?? DocumentNumberGenerator::generateRnNumber();
 
             $receiveNote = ReceiveNote::create([
                 'rn_number' => $rnNumber,
@@ -149,8 +150,9 @@ class ReceiveNoteService
             $query->where('supliers_id', $filters['supplier_id']);
         }
 
-        $sortField = $filters['sort_by'] ?? 'created_at';
-        $sortOrder = $filters['sort_order'] ?? 'desc';
+        $allowedSorts = ['id', 'rn_number', 'arrival_date', 'status', 'created_at', 'updated_at'];
+        $sortField = in_array($filters['sort_by'] ?? '', $allowedSorts, true) ? $filters['sort_by'] : 'created_at';
+        $sortOrder = strtolower((string) ($filters['sort_order'] ?? 'desc')) === 'asc' ? 'asc' : 'desc';
         $query->orderBy($sortField, $sortOrder);
 
         return $query->paginate($perPage);

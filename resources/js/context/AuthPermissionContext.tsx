@@ -68,7 +68,7 @@ function ucfirstRole(role: string): string {
 function getStoredUser(): UserAccount | null {
   if (typeof window === "undefined") return null;
   try {
-    const raw = sessionStorage.getItem("geniusone_user") || localStorage.getItem("geniusone_user");
+    const raw = sessionStorage.getItem("geniusone_user");
     if (raw) {
       const parsed = JSON.parse(raw);
       if (parsed && typeof parsed === "object" && (parsed.id || parsed.username)) {
@@ -84,7 +84,7 @@ function getStoredUser(): UserAccount | null {
 function getStoredToken(): string | null {
   if (typeof window === "undefined") return null;
   try {
-    const raw = sessionStorage.getItem("geniusone_token") || localStorage.getItem("geniusone_token");
+    const raw = sessionStorage.getItem("geniusone_token");
     return isValidAuthToken(raw) ? raw : null;
   } catch {
     return null;
@@ -121,6 +121,13 @@ export function AuthPermissionProvider({ children }: { children: React.ReactNode
   );
 
   const refreshRoles = useCallback(async (): Promise<RoleDefinition[]> => {
+    const activeUser = currentUser ?? getStoredUser();
+    const isAdminActor = Boolean(
+      activeUser?.isSuperAdmin || String(activeUser?.role || "").toLowerCase() === "superadmin"
+    );
+    if (!getStoredToken() || !isAdminActor) {
+      return [];
+    }
     try {
       const list = await fetchRolesApi();
       setRoles(list);
@@ -128,15 +135,19 @@ export function AuthPermissionProvider({ children }: { children: React.ReactNode
     } catch {
       return [];
     }
-  }, []);
+  }, [currentUser]);
 
   const refreshUsers = useCallback(() => {
-    if (!getStoredToken()) return;
+    const activeUser = currentUser ?? getStoredUser();
+    const isAdminActor = Boolean(
+      activeUser?.isSuperAdmin || String(activeUser?.role || "").toLowerCase() === "superadmin"
+    );
+    if (!getStoredToken() || !isAdminActor) return;
     fetchUsersApi()
       .then((list) => setUsers(list))
       .catch(() => {});
     refreshRoles();
-  }, [refreshRoles]);
+  }, [currentUser, refreshRoles]);
 
   // Verify token against backend /api/auth/me once on mount
   useEffect(() => {
@@ -167,7 +178,7 @@ export function AuthPermissionProvider({ children }: { children: React.ReactNode
           setCurrentUserState(u);
           try {
             sessionStorage.setItem("geniusone_user", JSON.stringify(u));
-            localStorage.setItem("geniusone_user", JSON.stringify(u));
+            localStorage.removeItem("geniusone_user");
           } catch {
             // ignore
           }
@@ -218,10 +229,10 @@ export function AuthPermissionProvider({ children }: { children: React.ReactNode
     try {
       if (tokenStr) {
         sessionStorage.setItem("geniusone_token", tokenStr);
-        localStorage.setItem("geniusone_token", tokenStr);
+        localStorage.removeItem("geniusone_token");
       }
       sessionStorage.setItem("geniusone_user", JSON.stringify(normalizedUser));
-      localStorage.setItem("geniusone_user", JSON.stringify(normalizedUser));
+      localStorage.removeItem("geniusone_user");
     } catch {
       // ignore
     }
@@ -248,7 +259,7 @@ export function AuthPermissionProvider({ children }: { children: React.ReactNode
       const next = { ...prev, ...patch };
       try {
         sessionStorage.setItem("geniusone_user", JSON.stringify(next));
-        localStorage.setItem("geniusone_user", JSON.stringify(next));
+        localStorage.removeItem("geniusone_user");
       } catch {
         // ignore
       }
@@ -266,7 +277,7 @@ export function AuthPermissionProvider({ children }: { children: React.ReactNode
         setCurrentUserState(u);
         try {
           sessionStorage.setItem("geniusone_user", JSON.stringify(u));
-          localStorage.setItem("geniusone_user", JSON.stringify(u));
+          localStorage.removeItem("geniusone_user");
         } catch {
           // ignore
         }

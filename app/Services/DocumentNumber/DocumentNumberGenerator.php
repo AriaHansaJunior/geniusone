@@ -32,15 +32,17 @@ class DocumentNumberGenerator
         $year = $date->year;
         $month = $date->month;
         $roman = self::getRomanMonth($month);
+        $suffix = "/PR-IMLI/{$roman}/{$year}";
 
-        $count = DB::table('purchase_requisitions')
-            ->whereYear('created_at', $year)
-            ->whereMonth('created_at', $month)
-            ->count();
-
-        $sequence = str_pad($count + 1, 4, '0', STR_PAD_LEFT);
-
-        return "{$sequence}/PR-IMLI/{$roman}/{$year}";
+        return self::generateSequentialCode(
+            table: 'purchase_requisitions',
+            column: 'pr_number',
+            year: $year,
+            month: $month,
+            likePattern: '%'.$suffix,
+            formatter: fn (int $seq) => str_pad((string) $seq, 4, '0', STR_PAD_LEFT).$suffix,
+            sequenceExtractor: fn (string $code) => preg_match('/^(\d+)\//', $code, $m) ? (int) $m[1] : 0,
+        );
     }
 
     /**
@@ -51,16 +53,18 @@ class DocumentNumberGenerator
     public static function generatePoNumber(?Carbon $date = null): string
     {
         $date = $date ?? Carbon::now();
-        $mmyy = $date->format('my'); // e.g., 1026 for Oct 2026
+        $mmyy = $date->format('my');
+        $prefix = "POL-{$mmyy}-";
 
-        $count = DB::table('purchase_order')
-            ->whereYear('created_at', $date->year)
-            ->whereMonth('created_at', $date->month)
-            ->count();
-
-        $sequence = str_pad($count + 1, 4, '0', STR_PAD_LEFT);
-
-        return "POL-{$mmyy}-{$sequence}";
+        return self::generateSequentialCode(
+            table: 'purchase_order',
+            column: 'po_number',
+            year: $date->year,
+            month: $date->month,
+            likePattern: $prefix.'%',
+            formatter: fn (int $seq) => $prefix.str_pad((string) $seq, 4, '0', STR_PAD_LEFT),
+            sequenceExtractor: fn (string $code) => preg_match('/-(\d+)$/', $code, $m) ? (int) $m[1] : 0,
+        );
     }
 
     /**
@@ -74,15 +78,17 @@ class DocumentNumberGenerator
         $year = $date->year;
         $month = $date->month;
         $roman = self::getRomanMonth($month);
+        $suffix = "/RN-IMLI/{$roman}/{$year}";
 
-        $count = DB::table('receive_note')
-            ->whereYear('created_at', $year)
-            ->whereMonth('created_at', $month)
-            ->count();
-
-        $sequence = str_pad($count + 1, 4, '0', STR_PAD_LEFT);
-
-        return "{$sequence}/RN-IMLI/{$roman}/{$year}";
+        return self::generateSequentialCode(
+            table: 'receive_note',
+            column: 'rn_number',
+            year: $year,
+            month: $month,
+            likePattern: '%'.$suffix,
+            formatter: fn (int $seq) => str_pad((string) $seq, 4, '0', STR_PAD_LEFT).$suffix,
+            sequenceExtractor: fn (string $code) => preg_match('/^(\d+)\//', $code, $m) ? (int) $m[1] : 0,
+        );
     }
 
     /**
@@ -96,15 +102,17 @@ class DocumentNumberGenerator
         $year = $date->year;
         $month = $date->month;
         $roman = self::getRomanMonth($month);
+        $suffix = "/WHIN-IMLI/G/{$roman}/{$year}";
 
-        $count = DB::table('bpb_receive_material')
-            ->whereYear('created_at', $year)
-            ->whereMonth('created_at', $month)
-            ->count();
-
-        $sequence = str_pad($count + 1, 4, '0', STR_PAD_LEFT);
-
-        return "{$sequence}/WHIN-IMLI/G/{$roman}/{$year}";
+        return self::generateSequentialCode(
+            table: 'bpb_receive_material',
+            column: 'bpb_number',
+            year: $year,
+            month: $month,
+            likePattern: '%'.$suffix,
+            formatter: fn (int $seq) => str_pad((string) $seq, 4, '0', STR_PAD_LEFT).$suffix,
+            sequenceExtractor: fn (string $code) => preg_match('/^(\d+)\//', $code, $m) ? (int) $m[1] : 0,
+        );
     }
 
     /**
@@ -117,19 +125,17 @@ class DocumentNumberGenerator
         $year = $date->year;
         $month = $date->month;
         $roman = self::getRomanMonth($month);
+        $suffix = "/TSR-IMLI/{$roman}/{$year}";
 
-        $count = DB::table('transfer_stock_returns')
-            ->whereYear('created_at', $year)
-            ->whereMonth('created_at', $month)
-            ->count();
-
-        do {
-            $count++;
-            $sequence = str_pad($count, 4, '0', STR_PAD_LEFT);
-            $candidate = "{$sequence}/TSR-IMLI/{$roman}/{$year}";
-        } while (DB::table('transfer_stock_returns')->where('return_number', $candidate)->exists());
-
-        return $candidate;
+        return self::generateSequentialCode(
+            table: 'transfer_stock_returns',
+            column: 'return_number',
+            year: $year,
+            month: $month,
+            likePattern: '%'.$suffix,
+            formatter: fn (int $seq) => str_pad((string) $seq, 4, '0', STR_PAD_LEFT).$suffix,
+            sequenceExtractor: fn (string $code) => preg_match('/^(\d+)\//', $code, $m) ? (int) $m[1] : 0,
+        );
     }
 
     /**
@@ -142,19 +148,17 @@ class DocumentNumberGenerator
         $year = $date->year;
         $month = $date->month;
         $roman = self::getRomanMonth($month);
+        $suffix = "/RNR-IMLI/{$roman}/{$year}";
 
-        $count = DB::table('receive_note_returns')
-            ->whereYear('created_at', $year)
-            ->whereMonth('created_at', $month)
-            ->count();
-
-        do {
-            $count++;
-            $sequence = str_pad($count, 4, '0', STR_PAD_LEFT);
-            $candidate = "{$sequence}/RNR-IMLI/{$roman}/{$year}";
-        } while (DB::table('receive_note_returns')->where('rn_number', $candidate)->exists());
-
-        return $candidate;
+        return self::generateSequentialCode(
+            table: 'receive_note_returns',
+            column: 'rn_number',
+            year: $year,
+            month: $month,
+            likePattern: '%'.$suffix,
+            formatter: fn (int $seq) => str_pad((string) $seq, 4, '0', STR_PAD_LEFT).$suffix,
+            sequenceExtractor: fn (string $code) => preg_match('/^(\d+)\//', $code, $m) ? (int) $m[1] : 0,
+        );
     }
 
     /**
@@ -167,17 +171,56 @@ class DocumentNumberGenerator
         $year = $date->year;
         $month = $date->month;
         $roman = self::getRomanMonth($month);
+        $suffix = "/ADJ-IMLI/{$roman}/{$year}";
 
-        $count = DB::table('stock_adjustments')
+        return self::generateSequentialCode(
+            table: 'stock_adjustments',
+            column: 'adjustment_number',
+            year: $year,
+            month: $month,
+            likePattern: '%'.$suffix,
+            formatter: fn (int $seq) => str_pad((string) $seq, 4, '0', STR_PAD_LEFT).$suffix,
+            sequenceExtractor: fn (string $code) => preg_match('/^(\d+)\//', $code, $m) ? (int) $m[1] : 0,
+        );
+    }
+
+    /**
+     * Generate the next collision-free document sequence number.
+     */
+    private static function generateSequentialCode(
+        string $table,
+        string $column,
+        int $year,
+        int $month,
+        string $likePattern,
+        callable $formatter,
+        callable $sequenceExtractor
+    ): string {
+        $existingQuery = DB::table($table)->where($column, 'like', $likePattern);
+        if (DB::transactionLevel() > 0) {
+            $existingQuery->lockForUpdate();
+        }
+        $existingCodes = $existingQuery->pluck($column);
+
+        $maxSeq = 0;
+        foreach ($existingCodes as $code) {
+            $seq = (int) $sequenceExtractor((string) $code);
+            if ($seq > $maxSeq) {
+                $maxSeq = $seq;
+            }
+        }
+
+        $monthCount = DB::table($table)
             ->whereYear('created_at', $year)
             ->whereMonth('created_at', $month)
             ->count();
 
+        $next = max($maxSeq, $monthCount);
+
         do {
-            $count++;
-            $sequence = str_pad($count, 4, '0', STR_PAD_LEFT);
-            $candidate = "{$sequence}/ADJ-IMLI/{$roman}/{$year}";
-        } while (DB::table('stock_adjustments')->where('adjustment_number', $candidate)->exists());
+            $next++;
+            $candidate = (string) $formatter($next);
+        } while (DB::table($table)->where($column, $candidate)->exists());
 
         return $candidate;
     }

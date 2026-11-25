@@ -24,8 +24,9 @@ class RolePermissionApiController extends Controller
      * List all roles with attached permissions.
      * GET /api/v1/admin/roles
      */
-    public function listRoles(): JsonResponse
+    public function listRoles(Request $request): JsonResponse
     {
+        $this->requireSuperAdmin($request);
         $roles = $this->permissionService->listRoles();
 
         return response()->json([
@@ -40,6 +41,7 @@ class RolePermissionApiController extends Controller
      */
     public function storeRole(Request $request): JsonResponse
     {
+        $this->requireSuperAdmin($request);
         $validated = $request->validate([
             'name' => 'required|string|max:50|unique:roles,name',
             'label' => 'nullable|string|max:100',
@@ -65,6 +67,7 @@ class RolePermissionApiController extends Controller
      */
     public function updateRole(Request $request, int $id): JsonResponse
     {
+        $this->requireSuperAdmin($request);
         $validated = $request->validate([
             'name' => 'sometimes|required|string|max:50',
             'label' => 'nullable|string|max:100',
@@ -90,7 +93,8 @@ class RolePermissionApiController extends Controller
      */
     public function destroyRole(Request $request, int $id): JsonResponse
     {
-        $actorId = $this->requireActorId($request);
+        $actor = $this->requireSuperAdmin($request);
+        $actorId = (int) $actor->id;
         $this->permissionService->deleteRole($id, $actorId);
 
         return response()->json([
@@ -103,8 +107,9 @@ class RolePermissionApiController extends Controller
      * List all granular permissions grouped by module.
      * GET /api/v1/admin/permissions
      */
-    public function listPermissions(): JsonResponse
+    public function listPermissions(Request $request): JsonResponse
     {
+        $this->requireSuperAdmin($request);
         $grouped = $this->permissionService->listPermissionsGrouped();
 
         return response()->json([
@@ -117,8 +122,9 @@ class RolePermissionApiController extends Controller
      * Get complete Permission Matrix representation for tabular UI.
      * GET /api/v1/admin/permission-matrix
      */
-    public function permissionMatrix(): JsonResponse
+    public function permissionMatrix(Request $request): JsonResponse
     {
+        $this->requireSuperAdmin($request);
         $matrix = $this->permissionService->getPermissionMatrix();
 
         return response()->json([
@@ -133,6 +139,7 @@ class RolePermissionApiController extends Controller
      */
     public function updateRolePermissions(Request $request, int $id): JsonResponse
     {
+        $this->requireSuperAdmin($request);
         $validated = $request->validate([
             'permissions' => 'required|array',
             'permissions.*' => 'string',

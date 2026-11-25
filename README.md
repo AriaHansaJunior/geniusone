@@ -1,36 +1,46 @@
-# GENIUSONE
+# GENIUSONE ERP
 
-GENIUSONE is a Laravel 13 application with a React and TypeScript frontend.
+Enterprise operations platform built with **Laravel**, **React**, **TypeScript**, and **Vite**, covering Procurement, Warehouse, Customs / EXIM, Reporting, and Role-Based Access Control.
 
-## Requirements
+## Key Modules
 
-- PHP 8.3 or newer with the SQLite PDO extension enabled
-- Composer 2
-- Node.js 20.19 or newer and npm
+- **Procurement**: Purchase Requisitions (PR), Purchase Orders (PO), Approval Workflows, Master Data (Suppliers, Job Numbers, Rafaksi Types, Payment Terms, PPh Types), and PR–PO Traceability Reports.
+- **Warehouse**: Gate Receive Notes (RN), Inbound Material Slips (BPB), Material Requests (RM), Stock Adjustments, Transfer Stock Returns (TSR), Stock Card & Stock Item Reports, and Master Facilities/Coordinates.
+- **EXIM & Customs**: Item, Unit, HS Code, Classification, Style/Model, Color, Country, Currency, Department/Section masters, Receive Note Returns, and Customs Document History.
+- **Administration**: Users & Granular Permission Roles (`UserPermissionAdmin`), System Context & Fiscal Year settings, Audit Logs, and API/session authentication.
 
-## Local setup
+## Local Development Setup
 
-From the project directory, install dependencies, create the local environment,
-initialize SQLite, run migrations, and build the frontend:
-
-```powershell
-composer setup
+```bash
+composer install
+npm install
+cp .env.example .env
+php artisan key:generate
+php artisan migrate
 ```
 
-Start the Laravel and Vite development processes:
+Run the development server and asset watcher:
 
-```powershell
-composer dev
+```bash
+php artisan serve
+npm run dev
 ```
 
-Open <http://127.0.0.1:8000>. To load the sample data, run
-`php artisan db:seed` in another terminal.
+Build production frontend assets:
 
-## Tests
-
-```powershell
-composer test
+```bash
+npm run build
 ```
 
-The test suite uses an in-memory SQLite database and does not require local
-sample data.
+## Verification Commands
+
+- **PHPUnit test suite**: `php artisan test`
+- **TypeScript type-check**: `npx tsc --noEmit`
+- **Production Vite build**: `npm run build`
+- **Route inspection**: `php artisan route:list`
+
+## Frontend & UI Conventions
+
+- Follow all UI/UX rules in [`AGENTS.md`](./AGENTS.md) (dedicated create/edit form pages, external stylesheets under `resources/css/`, strict icon-only OR text-only `<Button>`, sequential `No` column regardless of sort, footer-only pagination).
+- Styling tokens, glassmorphism layers, responsive breakpoints (`< 768px` via `max-width: 767px`), and component contracts are documented in [`CSS.md`](./CSS.md).
+- Shared spreadsheet utilities live in `resources/js/utils/csvExport.ts` and `resources/js/utils/xlsxExport.ts` (lazy-loaded `xlsx` chunk).

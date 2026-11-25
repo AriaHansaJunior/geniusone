@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef, useMemo } from "react";
+import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { Icon } from "./Icon";
 
 export interface CustomDatePickerProps {
@@ -78,7 +79,45 @@ export function CustomDatePicker({
 }: CustomDatePickerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isYearPickerOpen, setIsYearPickerOpen] = useState(false);
+  const [popupStyle, setPopupStyle] = useState<React.CSSProperties>({});
   const containerRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLDivElement>(null);
+  const popupRef = useRef<HTMLDivElement>(null);
+
+  const updatePopupPosition = useCallback(() => {
+    const triggerEl = triggerRef.current;
+    if (!triggerEl) return;
+    const rect = triggerEl.getBoundingClientRect();
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const margin = 8;
+    const gap = 6;
+    const popupWidth = Math.min(280, vw - margin * 2);
+    const estPopupHeight = 330;
+
+    const spaceBelow = Math.max(0, vh - rect.bottom - margin - gap);
+    const spaceAbove = Math.max(0, rect.top - margin - gap);
+    const openUpwards = spaceBelow < estPopupHeight && spaceAbove > spaceBelow;
+
+    const preferredLeft = align === "right" ? rect.right - popupWidth : rect.left;
+    const safeLeft = Math.max(margin, Math.min(preferredLeft, vw - popupWidth - margin));
+
+    const nextStyle: React.CSSProperties = {
+      width: `${popupWidth}px`,
+      left: `${safeLeft}px`,
+      right: "auto",
+    };
+
+    if (openUpwards) {
+      nextStyle.top = "auto";
+      nextStyle.bottom = `${Math.max(margin, vh - rect.top + gap)}px`;
+    } else {
+      nextStyle.top = `${Math.max(margin, rect.bottom + gap)}px`;
+      nextStyle.bottom = "auto";
+    }
+
+    setPopupStyle(nextStyle);
+  }, [align]);
 
   // Initialize view year & month from value or today
   const today = useMemo(() => new Date(), []);
@@ -104,15 +143,22 @@ export function CustomDatePicker({
     }
   }, [value]);
 
-  // Handle click outside to close popup
+  // Handle click outside, Escape key, and viewport scroll/resize repositioning
   useEffect(() => {
     if (!isOpen) {
       setIsYearPickerOpen(false);
       return;
     }
 
+    updatePopupPosition();
+
     const handleClickOutside = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+      const target = e.target as Node;
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(target) &&
+        (!popupRef.current || !popupRef.current.contains(target))
+      ) {
         setIsOpen(false);
         setIsYearPickerOpen(false);
       }
@@ -125,13 +171,19 @@ export function CustomDatePicker({
       }
     };
 
+    const handleViewportUpdate = () => updatePopupPosition();
+
     document.addEventListener("mousedown", handleClickOutside);
     document.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("scroll", handleViewportUpdate, true);
+    window.addEventListener("resize", handleViewportUpdate);
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
       document.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("scroll", handleViewportUpdate, true);
+      window.removeEventListener("resize", handleViewportUpdate);
     };
-  }, [isOpen]);
+  }, [isOpen, updatePopupPosition]);
 
   const handlePrevMonth = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -298,12 +350,17 @@ export function CustomDatePicker({
 
       {/* Trigger Field - Click anywhere opens popup */}
       <div
+        ref={triggerRef}
         className={`custom-datepicker-trigger ${isOpen ? "is-active" : ""} ${
           invalid || className.includes("has-error") ? "has-error" : ""
         }`.trim()}
         onClick={() => {
           if (!disabled) {
-            setIsOpen((prev) => !prev);
+            setIsOpen((prev) => {
+              const next = !prev;
+              if (next) updatePopupPosition();
+              return next;
+            });
           }
         }}
         role="button"
@@ -311,7 +368,11 @@ export function CustomDatePicker({
         onKeyDown={(e) => {
           if ((e.key === "Enter" || e.key === " ") && !disabled) {
             e.preventDefault();
-            setIsOpen((prev) => !prev);
+            setIsOpen((prev) => {
+              const next = !prev;
+              if (next) updatePopupPosition();
+              return next;
+            });
           }
         }}
         aria-haspopup="dialog"
@@ -328,14 +389,18 @@ export function CustomDatePicker({
         </div>
       </div>
 
-      {/* Custom GeniusOne Calendar Popup */}
-      {isOpen && (
-        <div
-          className={`custom-calendar-popup ${align === "right" ? "custom-calendar-popup--right" : ""}`}
-          role="dialog"
-          aria-modal="true"
-          aria-label="Choose Date"
-        >
+      {/* Custom GeniusOne Calendar Popup via Portal to prevent clipping inside containers/modals */}
+      {isOpen &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <div
+            ref={popupRef}
+            className="custom-calendar-popup custom-calendar-popup--portal"
+            style={popupStyle}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Choose Date"
+          >
           {/* Calendar Header */}
           <div className="custom-calendar-header">
             {isYearPickerOpen ? (
@@ -443,12 +508,11 @@ export function CustomDatePicker({
               {/* Days Grid */}
               <div className="custom-calendar-grid">
                 {calendarDays.map((item, idx) => (
-                  <button
-                    key={`${item.iso}-${idx}`}
-                    type="button"
-                    disabled={item.isDisabled}
-                    style={item.isDisabled ? { opacity: 0.35, cursor: "not-allowed" } : undefined}
-                    className={`custom-calendar-day ${
+                    <button
+                      key={`${item.iso}-${idx}`}
+                      type="button"
+                      disabled={item.isDisabled}
+                      className={`custom-calendar-day ${
                       !item.isCurrentMonth ? "is-outside" : ""
                     } ${item.isSelected ? "is-selected" : ""} ${
                       item.isToday ? "is-today" : ""
@@ -479,7 +543,8 @@ export function CustomDatePicker({
               </div>
             </>
           )}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

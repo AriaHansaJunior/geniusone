@@ -94,13 +94,15 @@ class PrPoTraceabilityCompositeController extends Controller
             ]);
         }
 
-        return view('app', [
+        return view('app', auth()->check() ? [
             'page' => 'report',
             'initialData' => [
                 'stats' => $stats,
                 'rows' => $rows,
                 'summary' => $summary,
             ],
+        ] : [
+            'page' => 'report',
         ]);
     }
 
@@ -149,10 +151,13 @@ class PrPoTraceabilityCompositeController extends Controller
             ]);
         }
 
-        return view('app', [
+        return view('app', auth()->check() ? [
             'page' => 'report-detail',
             'code' => $code,
             'initialData' => ['item' => $detailRow],
+        ] : [
+            'page' => 'report-detail',
+            'code' => $code,
         ]);
     }
 

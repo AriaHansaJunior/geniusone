@@ -72,13 +72,13 @@ use Illuminate\Support\Facades\Route;
 // =========================================================================
 // 1. PROCUREMENT DOMAIN API
 // =========================================================================
-Route::prefix('procurement')->group(function () {
+Route::middleware(['auth', 'active'])->prefix('procurement')->group(function () {
     // Purchase Requisition (PR)
     Route::get('/pr', [PurchaseRequisitionApiController::class, 'index']);
-    Route::post('/pr', [PurchaseRequisitionApiController::class, 'store']);
-    Route::put('/pr/{id}', [PurchaseRequisitionApiController::class, 'update']);
-    Route::patch('/pr/{id}', [PurchaseRequisitionApiController::class, 'update']);
-    Route::delete('/pr/{id}', [PurchaseRequisitionApiController::class, 'destroy']);
+    Route::post('/pr', [PurchaseRequisitionApiController::class, 'store'])->middleware('permission:pr.create');
+    Route::put('/pr/{id}', [PurchaseRequisitionApiController::class, 'update'])->middleware('permission:pr.update');
+    Route::patch('/pr/{id}', [PurchaseRequisitionApiController::class, 'update'])->middleware('permission:pr.update');
+    Route::delete('/pr/{id}', [PurchaseRequisitionApiController::class, 'destroy'])->middleware('permission:pr.delete');
     Route::get('/pr/{code}/attachment', [PurchaseRequisitionApiController::class, 'downloadAttachment'])->where('code', '.*(?<!/attachment)');
     Route::post('/pr/{code}/attachment', [PurchaseRequisitionApiController::class, 'uploadAttachment'])->where('code', '.*(?<!/attachment)');
     Route::post('/pr/{id}/approve', [PurchaseRequisitionApiController::class, 'approve']);
@@ -93,10 +93,10 @@ Route::prefix('procurement')->group(function () {
 
     // Purchase Order (PO)
     Route::get('/po', [PurchaseOrderApiController::class, 'index']);
-    Route::post('/po', [PurchaseOrderApiController::class, 'store']);
-    Route::put('/po/{id}', [PurchaseOrderApiController::class, 'update']);
-    Route::patch('/po/{id}', [PurchaseOrderApiController::class, 'update']);
-    Route::delete('/po/{id}', [PurchaseOrderApiController::class, 'destroy']);
+    Route::post('/po', [PurchaseOrderApiController::class, 'store'])->middleware('permission:po.create');
+    Route::put('/po/{id}', [PurchaseOrderApiController::class, 'update'])->middleware('permission:po.update');
+    Route::patch('/po/{id}', [PurchaseOrderApiController::class, 'update'])->middleware('permission:po.update');
+    Route::delete('/po/{id}', [PurchaseOrderApiController::class, 'destroy'])->middleware('permission:po.delete');
     Route::get('/po/{code}/attachment', [PurchaseOrderApiController::class, 'downloadAttachment'])->where('code', '.*(?<!/attachment)');
     Route::post('/po/{id}/approve', [PurchaseOrderApiController::class, 'approve']);
     Route::post('/po/{id}/reject', [PurchaseOrderApiController::class, 'reject']);
@@ -117,6 +117,10 @@ Route::prefix('procurement')->group(function () {
         Route::apiResource('additional-costs', AdditionalCostsApiController::class);
         Route::patch('additional-costs/{id}/toggle-status', [AdditionalCostsApiController::class, 'toggleStatus']);
         Route::get('pph-types', [PphApiController::class, 'pphTypes']);
+        Route::post('pph-types', [ReferenceMasterApiController::class, 'store'])->defaults('key', 'pph-type');
+        Route::put('pph-types/{id}', [ReferenceMasterApiController::class, 'update'])->defaults('key', 'pph-type');
+        Route::patch('pph-types/{id}/toggle-status', [ReferenceMasterApiController::class, 'toggleStatus'])->defaults('key', 'pph-type');
+        Route::delete('pph-types/{id}', [ReferenceMasterApiController::class, 'destroy'])->defaults('key', 'pph-type');
         Route::apiResource('pph', PphApiController::class);
         Route::patch('pph/{id}/toggle-status', [PphApiController::class, 'toggleStatus']);
         Route::apiResource('countries', CountryApiController::class)->only(['index', 'show']);
@@ -142,22 +146,22 @@ Route::prefix('procurement')->group(function () {
 // =========================================================================
 // 2. WAREHOUSE & LOGISTICS DOMAIN API
 // =========================================================================
-Route::prefix('warehouse')->group(function () {
+Route::middleware(['auth', 'active'])->prefix('warehouse')->group(function () {
     // Inbound BPB (Receive Material)
     Route::get('/bpb', [WarehouseApiController::class, 'index']);
     Route::get('/bpb/available-sources', [WarehouseApiController::class, 'availableSources']);
-    Route::post('/bpb', [WarehouseApiController::class, 'store']);
-    Route::put('/bpb/{id}', [WarehouseApiController::class, 'update']);
-    Route::patch('/bpb/{id}', [WarehouseApiController::class, 'update']);
+    Route::post('/bpb', [WarehouseApiController::class, 'store'])->middleware('permission:bpb.create');
+    Route::put('/bpb/{id}', [WarehouseApiController::class, 'update'])->middleware('permission:bpb.update');
+    Route::patch('/bpb/{id}', [WarehouseApiController::class, 'update'])->middleware('permission:bpb.update');
     Route::delete('/bpb/{id}', [WarehouseApiController::class, 'destroy']);
     Route::get('/bpb/{code}', [WarehouseApiController::class, 'show'])->where('code', '.*');
 
     // Gate Receive Notes (RN)
     Route::get('/rn', [ReceiveNoteApiController::class, 'index']);
     Route::get('/rn/available-pos', [ReceiveNoteApiController::class, 'availablePos']);
-    Route::post('/rn', [ReceiveNoteApiController::class, 'store']);
-    Route::put('/rn/{id}', [ReceiveNoteApiController::class, 'update']);
-    Route::patch('/rn/{id}', [ReceiveNoteApiController::class, 'update']);
+    Route::post('/rn', [ReceiveNoteApiController::class, 'store'])->middleware('permission:rn.create');
+    Route::put('/rn/{id}', [ReceiveNoteApiController::class, 'update'])->middleware('permission:rn.update');
+    Route::patch('/rn/{id}', [ReceiveNoteApiController::class, 'update'])->middleware('permission:rn.update');
     Route::delete('/rn/{id}', [ReceiveNoteApiController::class, 'destroy']);
     Route::post('/rn/{id}/approve', [ReceiveNoteApiController::class, 'approve']);
     Route::post('/rn/{id}/reject', [ReceiveNoteApiController::class, 'reject']);
@@ -176,24 +180,25 @@ Route::prefix('warehouse')->group(function () {
     });
 
     // Material Requisitions (Request Material)
-    Route::apiResource('request-materials', MaterialRequestApiController::class);
+    Route::apiResource('request-materials', MaterialRequestApiController::class)->only(['index', 'show']);
+    Route::post('request-materials', [MaterialRequestApiController::class, 'store'])->middleware('permission:rm.create');
+    Route::match(['put', 'patch'], 'request-materials/{request_material}', [MaterialRequestApiController::class, 'update'])->middleware('permission:rm.update');
+    Route::delete('request-materials/{request_material}', [MaterialRequestApiController::class, 'destroy']);
     Route::post('request-materials/{id}/approve', [MaterialRequestApiController::class, 'approve']);
     Route::post('request-materials/{id}/reject', [MaterialRequestApiController::class, 'reject']);
 
     // Transfer Stock Returns
     Route::get('transfer-stock-returns', [TransferStockReturnApiController::class, 'index']);
     Route::get('transfer-stock-returns/available-sources', [TransferStockReturnApiController::class, 'availableSourceItems']);
-    Route::middleware(['auth', 'active'])->group(function () {
-        Route::post('transfer-stock-returns/{id}/approve', [TransferStockReturnApiController::class, 'approve']);
-        Route::post('transfer-stock-returns/{id}/reject', [TransferStockReturnApiController::class, 'reject']);
-        Route::apiResource('transfer-stock-returns', TransferStockReturnApiController::class)->except(['index', 'show']);
-    });
+    Route::post('transfer-stock-returns/{id}/approve', [TransferStockReturnApiController::class, 'approve']);
+    Route::post('transfer-stock-returns/{id}/reject', [TransferStockReturnApiController::class, 'reject']);
+    Route::apiResource('transfer-stock-returns', TransferStockReturnApiController::class)->except(['index', 'show']);
     Route::get('transfer-stock-returns/{code}', [TransferStockReturnApiController::class, 'show'])->where('code', '.*');
 
     // Adjustment Stock (Manual & Excel Inject)
     Route::get('adjustment-stock', [StockAdjustmentApiController::class, 'index']);
     Route::get('adjustment-stock/template', [StockAdjustmentApiController::class, 'template']);
-    Route::middleware(['auth', 'active'])->group(function () {
+    Route::middleware(['permission:inventory.adjust'])->group(function () {
         Route::post('adjustment-stock', [StockAdjustmentApiController::class, 'store']);
         Route::post('adjustment-stock/import', [StockAdjustmentApiController::class, 'import']);
     });
@@ -202,6 +207,10 @@ Route::prefix('warehouse')->group(function () {
     // Warehouse Master, Coordinates, Types of Request, Destination Locations
     Route::prefix('master')->group(function () {
         Route::get('warehouse-types', [WarehouseMasterApiController::class, 'warehouseTypes']);
+        Route::post('warehouse-types', [ReferenceMasterApiController::class, 'store'])->defaults('key', 'warehouse-type');
+        Route::put('warehouse-types/{id}', [ReferenceMasterApiController::class, 'update'])->defaults('key', 'warehouse-type');
+        Route::patch('warehouse-types/{id}/toggle-status', [ReferenceMasterApiController::class, 'toggleStatus'])->defaults('key', 'warehouse-type');
+        Route::delete('warehouse-types/{id}', [ReferenceMasterApiController::class, 'destroy'])->defaults('key', 'warehouse-type');
         Route::apiResource('warehouses', WarehouseMasterApiController::class);
         Route::patch('warehouses/{id}/toggle-status', [WarehouseMasterApiController::class, 'toggleStatus']);
         Route::get('warehouses/{id}/coordinates', [WarehouseMasterApiController::class, 'listCoordinates']);
@@ -221,7 +230,7 @@ Route::prefix('warehouse')->group(function () {
 // =========================================================================
 // 3. EXIM DOMAIN API
 // =========================================================================
-Route::prefix('exim')->group(function () {
+Route::middleware(['auth', 'active'])->prefix('exim')->group(function () {
     // Exim Master Data
     Route::prefix('master')->group(function () {
         Route::apiResource('units', UnitApiController::class);
@@ -249,6 +258,44 @@ Route::prefix('exim')->group(function () {
         Route::patch('facilities/{id}/toggle-status', [FacilityApiController::class, 'toggleStatus']);
         Route::get('hs-codes/rate-types', [HsCodeApiController::class, 'rateTypes']);
         Route::apiResource('hs-codes', HsCodeApiController::class);
+        Route::patch('hs-codes/{id}/toggle-status', [HsCodeApiController::class, 'toggleStatus']);
+
+        // EXIM Reference Master CRUD & status toggles
+        Route::get('types-rates-bm', [ReferenceMasterApiController::class, 'index'])->defaults('key', 'type-rates-bm');
+        Route::post('types-rates-bm', [ReferenceMasterApiController::class, 'store'])->defaults('key', 'type-rates-bm');
+        Route::put('types-rates-bm/{id}', [ReferenceMasterApiController::class, 'update'])->defaults('key', 'type-rates-bm');
+        Route::patch('types-rates-bm/{id}/toggle-status', [ReferenceMasterApiController::class, 'toggleStatus'])->defaults('key', 'type-rates-bm');
+        Route::delete('types-rates-bm/{id}', [ReferenceMasterApiController::class, 'destroy'])->defaults('key', 'type-rates-bm');
+
+        Route::get('types-rates-cukai', [ReferenceMasterApiController::class, 'index'])->defaults('key', 'type-rates-cukai');
+        Route::post('types-rates-cukai', [ReferenceMasterApiController::class, 'store'])->defaults('key', 'type-rates-cukai');
+        Route::put('types-rates-cukai/{id}', [ReferenceMasterApiController::class, 'update'])->defaults('key', 'type-rates-cukai');
+        Route::patch('types-rates-cukai/{id}/toggle-status', [ReferenceMasterApiController::class, 'toggleStatus'])->defaults('key', 'type-rates-cukai');
+        Route::delete('types-rates-cukai/{id}', [ReferenceMasterApiController::class, 'destroy'])->defaults('key', 'type-rates-cukai');
+
+        Route::get('custom-reports', [ReferenceMasterApiController::class, 'index'])->defaults('key', 'custom-report');
+        Route::post('custom-reports', [ReferenceMasterApiController::class, 'store'])->defaults('key', 'custom-report');
+        Route::put('custom-reports/{id}', [ReferenceMasterApiController::class, 'update'])->defaults('key', 'custom-report');
+        Route::patch('custom-reports/{id}/toggle-status', [ReferenceMasterApiController::class, 'toggleStatus'])->defaults('key', 'custom-report');
+        Route::delete('custom-reports/{id}', [ReferenceMasterApiController::class, 'destroy'])->defaults('key', 'custom-report');
+
+        Route::get('item-types', [ReferenceMasterApiController::class, 'index'])->defaults('key', 'item-type');
+        Route::post('item-types', [ReferenceMasterApiController::class, 'store'])->defaults('key', 'item-type');
+        Route::put('item-types/{id}', [ReferenceMasterApiController::class, 'update'])->defaults('key', 'item-type');
+        Route::patch('item-types/{id}/toggle-status', [ReferenceMasterApiController::class, 'toggleStatus'])->defaults('key', 'item-type');
+        Route::delete('item-types/{id}', [ReferenceMasterApiController::class, 'destroy'])->defaults('key', 'item-type');
+
+        Route::get('group-scrap-items', [ReferenceMasterApiController::class, 'index'])->defaults('key', 'group-scrap-item');
+        Route::post('group-scrap-items', [ReferenceMasterApiController::class, 'store'])->defaults('key', 'group-scrap-item');
+        Route::put('group-scrap-items/{id}', [ReferenceMasterApiController::class, 'update'])->defaults('key', 'group-scrap-item');
+        Route::patch('group-scrap-items/{id}/toggle-status', [ReferenceMasterApiController::class, 'toggleStatus'])->defaults('key', 'group-scrap-item');
+        Route::delete('group-scrap-items/{id}', [ReferenceMasterApiController::class, 'destroy'])->defaults('key', 'group-scrap-item');
+
+        Route::get('specifications', [ReferenceMasterApiController::class, 'index'])->defaults('key', 'specification');
+        Route::post('specifications', [ReferenceMasterApiController::class, 'store'])->defaults('key', 'specification');
+        Route::put('specifications/{id}', [ReferenceMasterApiController::class, 'update'])->defaults('key', 'specification');
+        Route::patch('specifications/{id}/toggle-status', [ReferenceMasterApiController::class, 'toggleStatus'])->defaults('key', 'specification');
+        Route::delete('specifications/{id}', [ReferenceMasterApiController::class, 'destroy'])->defaults('key', 'specification');
         Route::apiResource('categories', CategoryApiController::class);
         Route::patch('categories/{id}/toggle-status', [CategoryApiController::class, 'toggleStatus']);
         Route::post('styles/import', [StyleImportApiController::class, 'import']);
@@ -283,7 +330,7 @@ Route::prefix('exim')->group(function () {
 // =========================================================================
 // 4. REPORTING & TRACEABILITY DOMAIN API
 // =========================================================================
-Route::prefix('reporting')->group(function () {
+Route::middleware(['auth', 'active'])->prefix('reporting')->group(function () {
     Route::get('/traceability', [TraceabilityReportApiController::class, 'index']);
     Route::get('/traceability/{code}', [TraceabilityReportApiController::class, 'show'])->where('code', '.*');
     Route::get('/pr-report', [TraceabilityReportApiController::class, 'prReport']);
@@ -294,13 +341,15 @@ Route::prefix('reporting')->group(function () {
 // 5. AUTH & USER PROFILE DOMAIN API
 // =========================================================================
 Route::prefix('auth')->group(function () {
-    Route::post('/login', [AuthApiController::class, 'login']);
-    Route::post('/logout', [AuthApiController::class, 'logout']);
-    Route::get('/me', [AuthApiController::class, 'me']);
-    Route::get('/users', [AuthApiController::class, 'users']);
+    Route::post('/login', [AuthApiController::class, 'login'])->middleware(['throttle:10,1']);
+    Route::middleware(['auth', 'active'])->group(function () {
+        Route::post('/logout', [AuthApiController::class, 'logout']);
+        Route::get('/me', [AuthApiController::class, 'me']);
+        Route::get('/users', [AuthApiController::class, 'users'])->middleware(['superadmin']);
+    });
 });
 
-Route::prefix('user')->group(function () {
+Route::middleware(['auth', 'active'])->prefix('user')->group(function () {
     Route::get('/profile', [UserProfileApiController::class, 'show']);
     Route::post('/profile', [UserProfileApiController::class, 'update']);
     Route::put('/profile', [UserProfileApiController::class, 'update']);
@@ -309,7 +358,7 @@ Route::prefix('user')->group(function () {
 // =========================================================================
 // 6. DASHBOARD, SYSTEM CONTEXT & COMMON UTILITIES DOMAIN API
 // =========================================================================
-Route::prefix('dashboard')->group(function () {
+Route::middleware(['auth', 'active'])->prefix('dashboard')->group(function () {
     Route::get('/exchange-rates/latest', [ExchangeRateApiController::class, 'latest']);
     Route::get('/exchange-rates', [ExchangeRateApiController::class, 'index']);
     Route::post('/exchange-rates', [ExchangeRateApiController::class, 'store']);
@@ -321,52 +370,62 @@ Route::prefix('dashboard')->group(function () {
     Route::apiResource('stock-notifications', StockNotificationApiController::class);
 });
 
-Route::prefix('system')->group(function () {
+Route::middleware(['auth', 'active'])->prefix('system')->group(function () {
     Route::get('/context', [SystemContextApiController::class, 'context']);
     Route::get('/settings', [SystemContextApiController::class, 'settings']);
-    Route::put('/settings', [SystemContextApiController::class, 'updateSettings']);
+    Route::put('/settings', [SystemContextApiController::class, 'updateSettings'])->middleware(['superadmin']);
 });
 
-Route::get('/master/lookups', [SystemContextApiController::class, 'lookups']);
-Route::delete('/master/reference/{key}/{id}', [ReferenceMasterApiController::class, 'destroy']);
+Route::middleware(['auth', 'active'])->group(function () {
+    Route::get('/master/lookups', [SystemContextApiController::class, 'lookups']);
+    Route::get('/master/reference/{key}', [ReferenceMasterApiController::class, 'index']);
+    Route::post('/master/reference/{key}', [ReferenceMasterApiController::class, 'store']);
+    Route::put('/master/reference/{key}/{id}', [ReferenceMasterApiController::class, 'update']);
+    Route::patch('/master/reference/{key}/{id}/toggle-status', [ReferenceMasterApiController::class, 'toggleStatus']);
+    Route::delete('/master/reference/{key}/{id}', [ReferenceMasterApiController::class, 'destroy']);
+});
 
 // =========================================================================
 // 7. BACKWARD-COMPATIBILITY ALIASES (Direct Routes for Existing Frontend)
 // =========================================================================
-Route::get('/pr', [PurchaseRequisitionApiController::class, 'index']);
-Route::post('/pr', [PurchaseRequisitionApiController::class, 'store']);
-Route::put('/pr/{id}', [PurchaseRequisitionApiController::class, 'update']);
-Route::delete('/pr/{id}', [PurchaseRequisitionApiController::class, 'destroy']);
-Route::get('/pr/{code}/attachment', [PurchaseRequisitionApiController::class, 'downloadAttachment'])->where('code', '.*(?<!/attachment)');
-Route::post('/pr/{code}/attachment', [PurchaseRequisitionApiController::class, 'uploadAttachment'])->where('code', '.*(?<!/attachment)');
-Route::get('/pr/{code}', [PurchaseRequisitionApiController::class, 'show'])->where('code', '.*');
+Route::middleware(['auth', 'active'])->group(function () {
+    Route::get('/pr', [PurchaseRequisitionApiController::class, 'index']);
+    Route::post('/pr', [PurchaseRequisitionApiController::class, 'store']);
+    Route::put('/pr/{id}', [PurchaseRequisitionApiController::class, 'update']);
+    Route::delete('/pr/{id}', [PurchaseRequisitionApiController::class, 'destroy']);
+    Route::get('/pr/{code}/attachment', [PurchaseRequisitionApiController::class, 'downloadAttachment'])->where('code', '.*(?<!/attachment)');
+    Route::post('/pr/{code}/attachment', [PurchaseRequisitionApiController::class, 'uploadAttachment'])->where('code', '.*(?<!/attachment)');
+    Route::get('/pr/{code}', [PurchaseRequisitionApiController::class, 'show'])->where('code', '.*');
 
-Route::get('/po', [PurchaseOrderApiController::class, 'index']);
-Route::post('/po', [PurchaseOrderApiController::class, 'store']);
-Route::put('/po/{id}', [PurchaseOrderApiController::class, 'update']);
-Route::delete('/po/{id}', [PurchaseOrderApiController::class, 'destroy']);
-Route::get('/po/{code}/attachment', [PurchaseOrderApiController::class, 'downloadAttachment'])->where('code', '.*(?<!/attachment)');
-Route::get('/po/{code}', [PurchaseOrderApiController::class, 'show'])->where('code', '.*');
+    Route::get('/po', [PurchaseOrderApiController::class, 'index']);
+    Route::post('/po', [PurchaseOrderApiController::class, 'store']);
+    Route::put('/po/{id}', [PurchaseOrderApiController::class, 'update']);
+    Route::delete('/po/{id}', [PurchaseOrderApiController::class, 'destroy']);
+    Route::get('/po/{code}/attachment', [PurchaseOrderApiController::class, 'downloadAttachment'])->where('code', '.*(?<!/attachment)');
+    Route::get('/po/{code}', [PurchaseOrderApiController::class, 'show'])->where('code', '.*');
 
-Route::get('/rn', [ReceiveNoteApiController::class, 'index']);
-Route::post('/rn', [ReceiveNoteApiController::class, 'store']);
-Route::put('/rn/{id}', [ReceiveNoteApiController::class, 'update']);
-Route::delete('/rn/{id}', [ReceiveNoteApiController::class, 'destroy']);
-Route::get('/rn/{code}', [ReceiveNoteApiController::class, 'show'])->where('code', '.*');
+    Route::get('/rn', [ReceiveNoteApiController::class, 'index']);
+    Route::post('/rn', [ReceiveNoteApiController::class, 'store']);
+    Route::put('/rn/{id}', [ReceiveNoteApiController::class, 'update']);
+    Route::delete('/rn/{id}', [ReceiveNoteApiController::class, 'destroy']);
+    Route::get('/rn/{code}', [ReceiveNoteApiController::class, 'show'])->where('code', '.*');
 
-Route::get('/report', [TraceabilityReportApiController::class, 'index']);
-Route::get('/report/{code}', [TraceabilityReportApiController::class, 'show'])->where('code', '.*');
+    Route::get('/report', [TraceabilityReportApiController::class, 'index']);
+    Route::get('/report/{code}', [TraceabilityReportApiController::class, 'show'])->where('code', '.*');
+});
 
-Route::get('/warehouse', [WarehouseApiController::class, 'index']);
-Route::post('/warehouse', [WarehouseApiController::class, 'store']);
-Route::put('/warehouse/{id}', [WarehouseApiController::class, 'update']);
-Route::delete('/warehouse/{id}', [WarehouseApiController::class, 'destroy']);
-Route::get('/warehouse/{code}', [WarehouseApiController::class, 'show'])->where('code', '.*');
+Route::middleware(['auth', 'active'])->group(function () {
+    Route::get('/warehouse', [WarehouseApiController::class, 'index']);
+    Route::post('/warehouse', [WarehouseApiController::class, 'store']);
+    Route::put('/warehouse/{id}', [WarehouseApiController::class, 'update']);
+    Route::delete('/warehouse/{id}', [WarehouseApiController::class, 'destroy']);
+    Route::get('/warehouse/{code}', [WarehouseApiController::class, 'show'])->where('code', '.*');
+});
 
 // =========================================================================
 // 8. GOVERNANCE & SUPERADMIN API (BE-01, BE-02, BE-06)
 // =========================================================================
-Route::prefix('admin')->group(function () {
+Route::middleware(['auth', 'active', 'superadmin'])->prefix('admin')->group(function () {
     // User Account Management (BE-01)
     Route::get('/users', [UserManagementApiController::class, 'index']);
     Route::post('/users', [UserManagementApiController::class, 'store']);
@@ -392,7 +451,7 @@ Route::prefix('admin')->group(function () {
 });
 
 // Versioned /v1/admin aliases
-Route::prefix('v1/admin')->group(function () {
+Route::middleware(['auth', 'active', 'superadmin'])->prefix('v1/admin')->group(function () {
     Route::get('/users', [UserManagementApiController::class, 'index']);
     Route::post('/users', [UserManagementApiController::class, 'store']);
     Route::get('/users/{id}', [UserManagementApiController::class, 'show']);
@@ -417,7 +476,7 @@ Route::prefix('v1/admin')->group(function () {
 // =========================================================================
 // 9. UNIFIED WORKFLOW APPROVAL ENGINE API (BE-03, BE-04, BE-05, BE-06)
 // =========================================================================
-Route::prefix('approval')->group(function () {
+Route::middleware(['auth', 'active'])->prefix('approval')->group(function () {
     Route::post('/{module}/{id}/approve', [ApprovalWorkflowApiController::class, 'approve']);
     Route::post('/{module}/{id}/unapprove', [ApprovalWorkflowApiController::class, 'unapprove']);
     Route::post('/{module}/{id}/reject', [ApprovalWorkflowApiController::class, 'reject']);
@@ -426,7 +485,7 @@ Route::prefix('approval')->group(function () {
     Route::get('/{module}/{id}/history', [ApprovalWorkflowApiController::class, 'history']);
 });
 
-Route::prefix('v1/approval')->group(function () {
+Route::middleware(['auth', 'active'])->prefix('v1/approval')->group(function () {
     Route::post('/{module}/{id}/approve', [ApprovalWorkflowApiController::class, 'approve']);
     Route::post('/{module}/{id}/unapprove', [ApprovalWorkflowApiController::class, 'unapprove']);
     Route::post('/{module}/{id}/reject', [ApprovalWorkflowApiController::class, 'reject']);
@@ -436,17 +495,21 @@ Route::prefix('v1/approval')->group(function () {
 });
 
 // Direct Per-Module Approval Routes (For Seamless Frontend Consumption)
-$workflowModules = ['pr', 'po', 'rn', 'bpb', 'warehouse', 'request-materials', 'returns', 'return'];
-foreach ($workflowModules as $mod) {
-    Route::post("{$mod}/{id}/approve", [ApprovalWorkflowApiController::class, 'approve'])->defaults('module', $mod);
-    Route::post("{$mod}/{id}/unapprove", [ApprovalWorkflowApiController::class, 'unapprove'])->defaults('module', $mod);
-    Route::post("{$mod}/{id}/reject", [ApprovalWorkflowApiController::class, 'reject'])->defaults('module', $mod);
-    Route::post("{$mod}/{id}/resubmit", [ApprovalWorkflowApiController::class, 'resubmit'])->defaults('module', $mod);
-    Route::post("{$mod}/{id}/activity", [ApprovalWorkflowApiController::class, 'recordActivity'])->defaults('module', $mod);
-    Route::get("{$mod}/{id}/approval-history", [ApprovalWorkflowApiController::class, 'history'])->defaults('module', $mod);
-}
+Route::middleware(['auth', 'active'])->group(function () {
+    $workflowModules = ['pr', 'po', 'rn', 'bpb', 'warehouse', 'request-materials', 'returns', 'return'];
+    foreach ($workflowModules as $mod) {
+        Route::post("{$mod}/{id}/approve", [ApprovalWorkflowApiController::class, 'approve'])->defaults('module', $mod);
+        Route::post("{$mod}/{id}/unapprove", [ApprovalWorkflowApiController::class, 'unapprove'])->defaults('module', $mod);
+        Route::post("{$mod}/{id}/reject", [ApprovalWorkflowApiController::class, 'reject'])->defaults('module', $mod);
+        Route::post("{$mod}/{id}/resubmit", [ApprovalWorkflowApiController::class, 'resubmit'])->defaults('module', $mod);
+        Route::post("{$mod}/{id}/activity", [ApprovalWorkflowApiController::class, 'recordActivity'])->defaults('module', $mod);
+        Route::get("{$mod}/{id}/approval-history", [ApprovalWorkflowApiController::class, 'history'])->defaults('module', $mod);
+    }
+});
 
-Route::post('po/{id}/additional-costs', [PurchaseOrderApiController::class, 'storeAdditionalCost'])->where('id', '.*');
-Route::delete('po/{id}/additional-costs/{costId}', [PurchaseOrderApiController::class, 'destroyAdditionalCost'])->where('id', '.*');
-Route::post('procurement/transactions/purchase-order/{id}/additional-costs', [PurchaseOrderApiController::class, 'storeAdditionalCost'])->where('id', '.*');
-Route::delete('procurement/transactions/purchase-order/{id}/additional-costs/{costId}', [PurchaseOrderApiController::class, 'destroyAdditionalCost'])->where('id', '.*');
+Route::middleware(['auth', 'active'])->group(function () {
+    Route::post('po/{id}/additional-costs', [PurchaseOrderApiController::class, 'storeAdditionalCost'])->where('id', '.*');
+    Route::delete('po/{id}/additional-costs/{costId}', [PurchaseOrderApiController::class, 'destroyAdditionalCost'])->where('id', '.*');
+    Route::post('procurement/transactions/purchase-order/{id}/additional-costs', [PurchaseOrderApiController::class, 'storeAdditionalCost'])->where('id', '.*');
+    Route::delete('procurement/transactions/purchase-order/{id}/additional-costs/{costId}', [PurchaseOrderApiController::class, 'destroyAdditionalCost'])->where('id', '.*');
+});

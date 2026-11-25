@@ -41,16 +41,23 @@ class ReceiveNoteApiController extends Controller
             });
         }
 
-        $records = $query->orderBy('id', 'desc')->get();
+        $perPage = min(max((int) $request->query('per_page', 100), 1), 500);
+        $paginated = $query->orderBy('id', 'desc')->paginate($perPage);
 
-        $rows = $records->map(function ($rn) {
+        $rows = $paginated->getCollection()->map(function ($rn) {
             return (new ReceiveNoteViewModel($rn))->toArray();
         });
 
         return response()->json([
             'status' => 'success',
-            'total' => $records->count(),
+            'total' => $paginated->total(),
             'rows' => $rows,
+            'meta' => [
+                'current_page' => $paginated->currentPage(),
+                'last_page' => $paginated->lastPage(),
+                'per_page' => $paginated->perPage(),
+                'total' => $paginated->total(),
+            ],
         ]);
     }
 
@@ -59,7 +66,7 @@ class ReceiveNoteApiController extends Controller
      */
     public function show(Request $request, string $code)
     {
-        $rawCode = str_replace('-', '/', $code);
+        $rawCode = \App\Support\DocumentCodeHelper::hyphenToSlash($code);
         $cleanCode = preg_replace('/[^A-Za-z0-9]/', '', $code);
         $rn = ReceiveNote::with([
             'supplier',
@@ -178,6 +185,7 @@ class ReceiveNoteApiController extends Controller
             $processedItems = $this->resolveItems($request->input('items', []));
             $headerData = $this->buildHeaderData($request, $supId, $processedItems);
             $headerData['rn_number'] = $request->input('rn_number') ?? $request->input('rnNumber');
+            $headerData['status'] = 'Waiting for Approve 1';
 
             $rn = GeniusOneBackend::warehouse()->createReceiveNote($headerData, $processedItems, $userId);
 
@@ -246,7 +254,13 @@ class ReceiveNoteApiController extends Controller
         $tier = (int) $request->input('tier', 1);
         $note = $request->input('note');
 
-        $rn = GeniusOneBackend::warehouse()->approveRn($id, $userId, $tier, $note);
+        try {
+            $rn = GeniusOneBackend::warehouse()->approveRn($id, $userId, $tier, $note);
+        } catch (InvalidArgumentException $e) {
+            $status = str_contains($e->getMessage(), 'authority') ? 403 : 422;
+
+            return response()->json(['status' => 'error', 'message' => $e->getMessage()], $status);
+        }
 
         return response()->json([
             'message' => "Receive Note Tier {$tier} approved successfully",
@@ -263,7 +277,13 @@ class ReceiveNoteApiController extends Controller
         $tier = (int) $request->input('tier', 1);
         $reason = $request->input('reason', 'Rejected at gate inspection');
 
-        $rn = GeniusOneBackend::warehouse()->rejectRn($id, $userId, $tier, $reason);
+        try {
+            $rn = GeniusOneBackend::warehouse()->rejectRn($id, $userId, $tier, $reason);
+        } catch (InvalidArgumentException $e) {
+            $status = str_contains($e->getMessage(), 'authority') ? 403 : 422;
+
+            return response()->json(['status' => 'error', 'message' => $e->getMessage()], $status);
+        }
 
         return response()->json([
             'message' => 'Receive Note rejected successfully',

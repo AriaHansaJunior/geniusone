@@ -320,7 +320,6 @@ export function ReceiveNoteDetail({
           {isApproved && !rnData.bpb_number && !rnData.is_received_in_bpb && !(rnData as any).warehouseTransaction && !(rnData as any).bpbNumber && onCreateBpb && (
             <Button
               variant="primary"
-              icon="box"
               onClick={() => onCreateBpb(rnData.rnNumber)}
               title="Create Receive Material (BPB) for this Approved RN"
             >
@@ -336,7 +335,7 @@ export function ReceiveNoteDetail({
               <Icon name="check" size={12} /> Received in BPB {rnData.bpb_number || (rnData as any).bpbNumber || (rnData as any).warehouseTransaction ? `(${rnData.bpb_number || (rnData as any).bpbNumber || (rnData as any).warehouseTransaction})` : ""}
             </span>
           )}
-          <Button variant="secondary" icon="print" onClick={() => handlePrint("po")}>
+          <Button variant="secondary" onClick={() => handlePrint("po")}>
             Print Document
           </Button>
         </div>

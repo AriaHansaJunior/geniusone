@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\System\Auth\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -11,6 +12,16 @@ class EximUnitApiTest extends TestCase
 
     public function test_exim_unit_can_be_created_and_persisted(): void
     {
+        $user = User::query()->create([
+            'username' => 'unit-test-user',
+            'name' => 'Unit Test User',
+            'email' => 'unit-test@example.test',
+            'password' => 'test-password',
+            'role' => User::ROLE_ADMIN,
+            'status' => 1,
+        ]);
+        $this->actingAs($user, 'web');
+
         $response = $this->postJson('/api/exim/master/units', [
             'name' => 'Quality Assurance',
             'status' => 1,

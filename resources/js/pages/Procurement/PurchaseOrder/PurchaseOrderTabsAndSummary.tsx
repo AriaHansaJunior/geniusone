@@ -95,8 +95,8 @@ export function PurchaseOrderTabsAndSummary({
       {/* Tab 1: Item Detail */}
       {activeTab === "items" && (
         <div>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
-            <span style={{ fontSize: "12px", color: "var(--muted)", fontWeight: 600 }}>
+          <div className="tx-tab-hint-bar">
+            <span className="tx-tab-hint-text">
               Select an approved PR Number below to auto-populate requisition items and quantities.
             </span>
             <div style={{ display: "flex", gap: "8px" }}>

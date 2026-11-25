@@ -103,7 +103,6 @@ export { DestinationLocationIndex } from "./Warehouse/Master/DestinationLocation
 export { DestinationLocationForm } from "./Warehouse/Master/DestinationLocation/DestinationLocationForm";
 export { TransferStockReturnIndex } from "./Warehouse/TransferStockReturn/TransferStockReturnIndex";
 export { TransferStockReturnDetail } from "./Warehouse/TransferStockReturn/TransferStockReturnDetail";
-export { TransferStockReturnDetailModal } from "./Warehouse/TransferStockReturn/TransferStockReturnDetailModal";
 export { TransferStockReturnForm } from "./Warehouse/TransferStockReturn/TransferStockReturnForm";
 export { AdjustmentStockIndex } from "./Warehouse/Adjustment/AdjustmentStock/AdjustmentStockIndex";
 export { AdjustmentStockForm } from "./Warehouse/Adjustment/AdjustmentStock/AdjustmentStockForm";

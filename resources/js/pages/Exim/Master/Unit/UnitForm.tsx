@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Button } from "../../../../components/ui/Button";
 import { Icon } from "../../../../components/ui/Icon";
+import { useAuthPermission } from "../../../../context/AuthPermissionContext";
 import type { UnitRecord } from "./unit-types";
 
 interface UnitFormProps {
@@ -10,6 +11,7 @@ interface UnitFormProps {
 }
 
 export function UnitForm({ initialRecord, onBack, onSave }: UnitFormProps) {
+  const { currentUser } = useAuthPermission();
   const isEdit = !!initialRecord;
   const [name, setName] = useState(initialRecord?.name || "");
   const [saving, setSaving] = useState(false);
@@ -44,7 +46,7 @@ export function UnitForm({ initialRecord, onBack, onSave }: UnitFormProps) {
       createdAt:
         initialRecord?.createdAt ||
         new Date().toISOString().replace("T", " ").substring(0, 19),
-      createdBy: initialRecord?.createdBy || "ADMINISTRATOR",
+      createdBy: initialRecord?.createdBy || currentUser?.name || "System User",
     };
 
     if (onSave) {

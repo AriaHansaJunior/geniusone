@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import * as XLSX from "xlsx";
+import { exportSheetsToXlsx } from "../../../utils/xlsxExport";
 import { Button } from "../../../components/ui/Button";
 import { SearchField } from "../../../components/ui/SearchField";
 import { Pagination } from "../../../components/ui/Pagination";
@@ -181,7 +181,7 @@ export function WarehouseOperationalReport({ reportKind }: WarehouseOperationalR
     return filteredRows.slice(startIdx, startIdx + pageSize);
   }, [filteredRows, safeCurrentPage, pageSize]);
 
-  const handleExportExcel = () => {
+  const handleExportExcel = async () => {
     if (filteredRows.length === 0) {
       setNotice("No report records match the current filter to export.");
       setTimeout(() => setNotice(null), 4000);
@@ -197,10 +197,15 @@ export function WarehouseOperationalReport({ reportKind }: WarehouseOperationalR
       }),
     ]);
 
-    const ws = XLSX.utils.aoa_to_sheet([headers, ...body]);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, config.sheetName.slice(0, 31));
-    XLSX.writeFile(wb, `${config.filePrefix}_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    await exportSheetsToXlsx(
+      `${config.filePrefix}_${new Date().toISOString().slice(0, 10)}.xlsx`,
+      [
+        {
+          name: config.sheetName.slice(0, 31),
+          rows: [headers, ...body],
+        },
+      ]
+    );
   };
 
   return (

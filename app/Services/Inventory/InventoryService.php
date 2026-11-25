@@ -22,6 +22,65 @@ class InventoryService
     }
 
     /**
+     * Aggregate total stock per item from item_warehouse pivot or warehouse_stocks.
+     *
+     * @return array<int|string, float|int|string>
+     */
+    public function getItemStockTotals(): array
+    {
+        if (Schema::hasTable('item_warehouse')) {
+            $pivotTotals = DB::table('item_warehouse')
+                ->select('items_id', DB::raw('SUM(quantity) as total_qty'))
+                ->groupBy('items_id')
+                ->pluck('total_qty', 'items_id')
+                ->toArray();
+
+            if (! empty($pivotTotals)) {
+                return $pivotTotals;
+            }
+        }
+
+        if (Schema::hasTable('warehouse_stocks')) {
+            return DB::table('warehouse_stocks')
+                ->select('items_id', DB::raw('SUM(quantity) as total_qty'))
+                ->groupBy('items_id')
+                ->pluck('total_qty', 'items_id')
+                ->toArray();
+        }
+
+        return [];
+    }
+
+    /**
+     * Resolve stock quantity for an item in a specific warehouse from warehouse_stocks or item_warehouse.
+     */
+    public function getWarehouseStockBalance(int $itemId, int $warehouseId): float
+    {
+        if (Schema::hasTable('warehouse_stocks')) {
+            $wsRow = DB::table('warehouse_stocks')
+                ->where('items_id', $itemId)
+                ->where('warehouses_id', $warehouseId)
+                ->selectRaw('COUNT(*) as cnt, COALESCE(SUM(quantity), 0) as qty')
+                ->first();
+            if ($wsRow && (int) $wsRow->cnt > 0) {
+                return (float) $wsRow->qty;
+            }
+        }
+
+        if (Schema::hasTable('item_warehouse')) {
+            $pivotQty = DB::table('item_warehouse')
+                ->where('items_id', $itemId)
+                ->where('warehouses_id', $warehouseId)
+                ->value('quantity');
+            if ($pivotQty !== null) {
+                return (float) $pivotQty;
+            }
+        }
+
+        return 0.0;
+    }
+
+    /**
      * Adjust physical item stock with full audit tracking.
      *
      * @param  float  $quantityDelta  Positive for addition, negative for deduction

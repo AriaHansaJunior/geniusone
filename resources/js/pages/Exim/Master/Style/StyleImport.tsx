@@ -1,5 +1,5 @@
 import React, { useRef, useState } from "react";
-import * as XLSX from "xlsx";
+import { exportSheetsToXlsx } from "../../../../utils/xlsxExport";
 import { Button } from "../../../../components/ui/Button";
 import { Icon } from "../../../../components/ui/Icon";
 import { apiFetch } from "../../../../data/api";
@@ -16,26 +16,20 @@ export function StyleImport({ onBack }: StyleImportProps) {
   const [isDragOver, setIsDragOver] = useState(false);
 
   // Download genuine Excel .xlsx template containing Kode, Name, Description
-  const handleExportTemplateExcel = () => {
+  const handleExportTemplateExcel = async () => {
     try {
       const templateData = [
         ["Kode", "Name", "Description"],
         ["01", "No Style", "-"],
       ];
 
-      const worksheet = XLSX.utils.aoa_to_sheet(templateData);
-
-      // Set explicit column widths for clarity
-      worksheet["!cols"] = [
-        { wch: 15 }, // Kode
-        { wch: 30 }, // Name
-        { wch: 40 }, // Description
-      ];
-
-      const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, "Template");
-
-      XLSX.writeFile(workbook, "Template_Master_Style.xlsx");
+      await exportSheetsToXlsx("Template_Master_Style.xlsx", [
+        {
+          name: "Template",
+          rows: templateData,
+          colWidths: [{ wch: 15 }, { wch: 30 }, { wch: 40 }],
+        },
+      ]);
 
       setInfoNotice("Template downloaded: Template_Master_Style.xlsx");
       setTimeout(() => setInfoNotice(null), 4000);

@@ -16,6 +16,7 @@ use App\Services\DocumentNumber\DocumentNumberGenerator;
 use App\Services\GeniusOneBackend;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 
 class PurchaseRequisitionApiController extends Controller
@@ -52,14 +53,16 @@ class PurchaseRequisitionApiController extends Controller
             });
         }
 
-        $records = $query->orderBy('id', 'desc')->get();
-
-        // Calculate Summary Cards
-        $totalCount = $records->count();
-        $approvedCount = $records->filter(fn ($r) => in_array($r->status, ['Approved 1', 'Approved 2', 'Completed']))->count();
-        $draftCount = $records->filter(fn ($r) => in_array($r->status, ['Draft', 'Ready']))->count();
-        $totalItems = $records->sum(fn ($r) => $r->items->count());
-        $totalQuantity = $records->sum(fn ($r) => $r->items->sum('quantity'));
+        // Calculate Summary Cards across all filtered PR records without full hydration
+        $totalCount = (clone $query)->count();
+        $approvedCount = (clone $query)->whereIn('status', ['Approved 1', 'Approved 2', 'Completed'])->count();
+        $itemTotals = DB::table('purchase_requisitions_has_items')
+            ->whereIn('purchase_requisitions_id', (clone $query)->select('id'))
+            ->whereNull('deleted_at')
+            ->selectRaw('COUNT(*) as item_count, COALESCE(SUM(quantity), 0) as total_quantity')
+            ->first();
+        $totalItems = (int) ($itemTotals->item_count ?? 0);
+        $totalQuantity = (float) ($itemTotals->total_quantity ?? 0);
 
         $stats = [
             ['Total PR Documents', (string) $totalCount, 'Generated this month'],
@@ -67,6 +70,10 @@ class PurchaseRequisitionApiController extends Controller
             ['Pending Approval', (string) ($totalCount - $approvedCount), 'Draft & Pending'],
             ['Total Items Requested', number_format($totalQuantity, 2).' Units', "Across {$totalItems} line items"],
         ];
+
+        $perPage = min(max((int) $request->query('per_page', 100), 1), 500);
+        $paginated = $query->orderBy('id', 'desc')->paginate($perPage);
+        $records = $paginated->getCollection();
 
         // Format rows for Frontend Table
         $rows = $records->values()->map(function ($pr, $idx) {
@@ -231,17 +238,27 @@ class PurchaseRequisitionApiController extends Controller
             ];
         })->toArray();
 
+        $meta = [
+            'current_page' => $paginated->currentPage(),
+            'last_page' => $paginated->lastPage(),
+            'per_page' => $paginated->perPage(),
+            'total' => $paginated->total(),
+        ];
+
         if ($request->expectsJson() || $request->is('api/*') || $request->query('format') === 'json') {
             return response()->json([
                 'status' => 'success',
                 'stats' => $stats,
                 'rows' => $rows,
+                'meta' => $meta,
             ]);
         }
 
-        return view('app', [
+        return view('app', auth()->check() ? [
             'page' => 'pr',
             'initialData' => ['stats' => $stats, 'rows' => $rows],
+        ] : [
+            'page' => 'pr',
         ]);
     }
 
@@ -250,7 +267,7 @@ class PurchaseRequisitionApiController extends Controller
      */
     public function show(Request $request, string $code)
     {
-        $rawCode = str_replace('-', '/', $code);
+        $rawCode = \App\Support\DocumentCodeHelper::hyphenToSlash($code);
         $cleanCode = preg_replace('/[^A-Za-z0-9]/', '', $code);
 
         $pr = PurchaseRequisition::with([
@@ -437,10 +454,13 @@ class PurchaseRequisitionApiController extends Controller
             ]);
         }
 
-        return view('app', [
+        return view('app', auth()->check() ? [
             'page' => 'pr-detail',
             'code' => $code,
             'initialData' => ['item' => $detailRow],
+        ] : [
+            'page' => 'pr-detail',
+            'code' => $code,
         ]);
     }
 
@@ -484,8 +504,8 @@ class PurchaseRequisitionApiController extends Controller
      */
     private function findPrByIdentifier(string $code): ?PurchaseRequisition
     {
-        $decodedCode = urldecode($code);
-        $rawCode = str_replace('-', '/', $decodedCode);
+        $decodedCode = \App\Support\DocumentCodeHelper::decode($code);
+        $rawCode = \App\Support\DocumentCodeHelper::hyphenToSlash($decodedCode);
         $cleanCode = preg_replace('/[^A-Za-z0-9]/', '', $decodedCode);
 
         $numericId = null;
@@ -609,7 +629,7 @@ class PurchaseRequisitionApiController extends Controller
             ], 422);
         }
 
-        $prNumber = $request->input('pr_number') ?? DocumentNumberGenerator::generatePrNumber();
+        $prNumber = $request->input('pr_number') ?: null;
         $date = $this->safeToDatabaseDate($request->input('date'), now()->format('Y-m-d'));
         $dueDate = $this->safeToDatabaseDate($request->input('due_date'), now()->addDays(14)->format('Y-m-d'));
         $attachmentPath = $this->resolveAttachmentPath($request);
@@ -741,7 +761,7 @@ class PurchaseRequisitionApiController extends Controller
             }
         }
 
-        $normalizedSlash = str_replace('-', '/', $codeOrId);
+        $normalizedSlash = \App\Support\DocumentCodeHelper::hyphenToSlash($codeOrId);
         $cleanCode = preg_replace('/[^A-Za-z0-9]/', '', $codeOrId);
 
         return PurchaseRequisition::where('pr_number', $codeOrId)
@@ -897,7 +917,13 @@ class PurchaseRequisitionApiController extends Controller
             $id = $found?->id ?? $id;
         }
 
-        $pr = GeniusOneBackend::procurement()->approvePr((int) $id, $userId, $tier, $note);
+        try {
+            $pr = GeniusOneBackend::procurement()->approvePr((int) $id, $userId, $tier, $note);
+        } catch (InvalidArgumentException $e) {
+            $status = str_contains($e->getMessage(), 'authority') ? 403 : 422;
+
+            return response()->json(['status' => 'error', 'message' => $e->getMessage()], $status);
+        }
 
         return response()->json([
             'status' => 'success',
@@ -921,7 +947,13 @@ class PurchaseRequisitionApiController extends Controller
             $id = $found?->id ?? $id;
         }
 
-        $pr = GeniusOneBackend::procurement()->rejectPr((int) $id, $userId, $tier, $reason);
+        try {
+            $pr = GeniusOneBackend::procurement()->rejectPr((int) $id, $userId, $tier, $reason);
+        } catch (InvalidArgumentException $e) {
+            $status = str_contains($e->getMessage(), 'authority') ? 403 : 422;
+
+            return response()->json(['status' => 'error', 'message' => $e->getMessage()], $status);
+        }
 
         return response()->json([
             'status' => 'success',
@@ -935,7 +967,7 @@ class PurchaseRequisitionApiController extends Controller
      */
     protected function resolvePrAndItem(Request $request, $prId, $itemId): array
     {
-        $rawPrId = str_replace('-', '/', (string) $prId);
+        $rawPrId = \App\Support\DocumentCodeHelper::hyphenToSlash((string) $prId);
         $cleanPrId = preg_replace('/[^A-Za-z0-9]/', '', (string) $prId);
 
         $pr = is_numeric($prId)

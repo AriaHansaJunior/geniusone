@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from "react";
-import * as XLSX from "xlsx";
+import { loadXlsxModule } from "../../../utils/xlsxExport";
 import { Icon } from "../../../components/ui/Icon";
 import { Button } from "../../../components/ui/Button";
 import { SearchField } from "../../../components/ui/SearchField";
@@ -337,7 +337,7 @@ export function ReceiveNoteIndex({
   };
 
   // Export to genuine Excel (.xlsx) file
-  const handleExportToExcel = () => {
+  const handleExportToExcel = async () => {
     if (sortedRecords.length === 0) {
       setExportNotice("No records available to export.");
       setTimeout(() => setExportNotice(null), 3500);
@@ -378,6 +378,7 @@ export function ReceiveNoteIndex({
         ]),
       ];
 
+      const XLSX = await loadXlsxModule();
       const worksheet = XLSX.utils.aoa_to_sheet(rows);
       worksheet["!cols"] = [
         { wch: 6 },  // No

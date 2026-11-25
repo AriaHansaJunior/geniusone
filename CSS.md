@@ -266,21 +266,29 @@ It governs all visual styles, design tokens, layout foundations, component struc
 ## 7. Responsive Design Strategy
 
 ### 7.1 Target Viewport Tiers
-1. **Phone Viewport (`< 768px`)**
-   - Single-column fluid layout.
-   - Header features a mobile hamburger button to toggle the sidebar drawer.
+1. **Phone Viewport (`< 768px` / `@media (max-width: 767px)`)**
+   - Standardized `max-width: 767px` breakpoint across `resources/css/` so `768px` viewports stay cleanly in the tablet/desktop tier without boundary overlap.
+   - Single-column fluid layout with `min-width: 0` on main workspace containers to prevent flex/grid blowout.
+   - Header features a mobile hamburger button (`aria-label` + keyboard activation) to toggle the sidebar drawer; mobile bottom dock and floating sidebar remain preserved.
    - Sidebar functions as an off-canvas drawer with a blurred backdrop overlay (`rgba(15, 23, 42, 0.4)`).
-   - Data tables are contained inside scroll wrappers with soft horizontal overflow indicators.
+   - Data tables are contained inside scroll wrappers with soft horizontal overflow indicators; pagination and entry counts live strictly inside the table footer.
+   - Modal dialogs (`.perm-dialog-card`, `.dialog-card--profile`) constrain cleanly to `calc(100vw - 16px)` with wrapping `.perm-modal-tabs`, `.perm-modal-footer`, and single-column `.perm-section-grid` / `.perm-group-box__items`.
    - Touch targets are padded to a minimum of 38px–44px for reliable touch input.
    - Fixed viewport footer collapses into a compact single-line or stacked status bar.
 
 2. **Laptop & Desktop Viewport (`≥ 768px`)**
    - Multi-column enterprise workspace.
    - Persistent collapsible sidebar:
-     - **Expanded State:** `240px` fixed width with hierarchical accordions.
-     - **Collapsed State:** `72px` icon rail with floating hover tooltips.
+     - **Expanded State:** `240px` fixed width (`238px` sidebar width + gutter) with hierarchical accordions.
+     - **Collapsed State:** `72px` icon rail with floating hover tooltips and keyboard-accessible brand toggle.
    - Header is fixed/sticky at `64px` height with brand mark, company identifier, and user profile pill.
-   - Data tables expand to full content container width with fixed table header and sequential numbering.
+   - Data tables expand to full content container width with interactive 3-state column sorting and sequential `No` numbering.
+
+### 7.2 Portals, Performance & Utility Rules
+- **Floating Overlays:** `CustomSelect` menus and `CustomDatePicker` calendars (`.custom-calendar-popup--portal` at `z-index: 12000`) render via React `createPortal` into `document.body` with viewport collision flipping, avoiding clipping inside `overflow` cards or tables.
+- **No Blocking CSS `@import`:** Google Fonts load from `app.blade.php` rather than blocking CSS `@import` inside `resources/css/app.css`.
+- **No Inline Layout Styles:** Avoid `style={{...}}` in page/form JSX; helper banner/hint classes such as `.tx-tab-hint-bar` and `.tx-tab-hint-text` live in `resources/css/pages/master-data.css`.
+- **Single Icon-Settings Ownership:** `.column-settings-*` styles live solely in `resources/css/components/column-settings.css`.
 
 ---
 
@@ -324,8 +332,8 @@ It governs all visual styles, design tokens, layout foundations, component struc
 ## 10. Verification & Quality Gates
 
 Every session following this foundation must satisfy:
-1. `npm run build` succeeds without bundle or chunk errors.
+1. `npm run build` succeeds without bundle or chunk errors (with `xlsx` isolated into its lazy chunk).
 2. `npx tsc --noEmit` verifies strict TypeScript validity.
-3. All existing Laravel route definitions (429 routes) remain fully functional and unbroken.
+3. `php artisan test` passes across all feature/unit suites and registered routes remain unbroken.
 4. Accessibility contrast verified for text against glass and neutral surfaces.
-5. Smooth responsive behavior tested at `<768px` (phone) and `≥768px` (laptop/desktop).
+5. Smooth responsive behavior tested at `< 768px` (phone) and `≥ 768px` (laptop/desktop).

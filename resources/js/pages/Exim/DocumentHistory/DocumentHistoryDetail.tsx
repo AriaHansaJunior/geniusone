@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef } from "react";
-import * as XLSX from "xlsx";
+import { loadXlsxModule } from "../../../utils/xlsxExport";
 import { Icon } from "../../../components/ui/Icon";
 import { Button } from "../../../components/ui/Button";
 import { ExpandedHistoryTable } from "./ExpandedHistoryTable";
 import { initialDocumentHistoryRecords } from "./document-history-data";
 import type { DocumentHistoryRecord } from "./document-history-types";
-import { fetchDocumentHistories } from "../../../data/masterApi";
+import { fetchDocumentHistories, synchronizeDocumentHistoriesApi } from "../../../data/masterApi";
 import { useTheme } from "../../../context/ThemeContext";
 import { DocumentHistoryDefaultDetail } from "../../../themes/default/pages/DocumentHistoryDefaultDetail";
 import { LoadingBuffer } from "../../../components/ui/LoadingBuffer";
@@ -50,7 +50,14 @@ export function DocumentHistoryDetail({
         );
         if (found) setFetchedRecord(found);
       })
-      .catch(() => { })
+      .catch((err) => {
+        if (active) {
+          setNotice({
+            type: "warning",
+            message: err?.message || "Failed to load Document History record from server.",
+          });
+        }
+      })
       .finally(() => {
         if (active) setIsLoadingDetail(false);
       });
@@ -125,18 +132,43 @@ export function DocumentHistoryDetail({
     });
   };
 
-  // Generate History dropdown selection
-  const handleSelectGenerateOption = (option: string) => {
+  // Generate / synchronize Document History records from approved backend documents
+  const handleSelectGenerateOption = async (option: string) => {
     setGenerateMenuOpen(false);
     setNotice({
       type: "info",
-      message: `Selected generation mode: "${option}". (Frontend demonstration mode — not connected to backend processing)`,
+      message: `Synchronizing Document History (${option}) from approved Receive Notes...`,
     });
-    setTimeout(() => setNotice(null), 4500);
+    try {
+      await synchronizeDocumentHistoriesApi();
+      const cleanCode = code.replace(/^details?\//i, "").trim();
+      const list = await fetchDocumentHistories();
+      if (Array.isArray(list)) {
+        const found = list.find(
+          (r) =>
+            r.id === cleanCode ||
+            r.invoiceNumber === cleanCode ||
+            (typeof r.invoiceNumber === "string" &&
+              r.invoiceNumber.replace(/[\/\\]/g, "-") === cleanCode.replace(/[\/\\]/g, "-"))
+        );
+        if (found) setFetchedRecord(found);
+      }
+      setNotice({
+        type: "success",
+        message: `Document History synchronized successfully using "${option}".`,
+      });
+    } catch (err: any) {
+      setNotice({
+        type: "warning",
+        message: err?.message || "Failed to synchronize Document History from server.",
+      });
+    } finally {
+      setTimeout(() => setNotice(null), 4500);
+    }
   };
 
   // Export detail data to genuine Excel (.xlsx) file
-  const handleExportToExcel = () => {
+  const handleExportToExcel = async () => {
     try {
       const rows: (string | number)[][] = [
         ["DOCUMENT HISTORY DETAIL", dhData.invoiceNumber],
@@ -227,6 +259,7 @@ export function DocumentHistoryDetail({
         }
       });
 
+      const XLSX = await loadXlsxModule();
       const worksheet = XLSX.utils.aoa_to_sheet(rows);
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, "Document History");

@@ -67,18 +67,23 @@ class MaterialRequestApiController extends Controller
             $query->where('status', $approval);
         }
 
+        $perPage = min(max((int) $request->query('per_page', 100), 1), 500);
         $stockByItem = $this->getItemStockTotals();
-        $records = $query->get();
+        $paginated = $query->paginate($perPage);
+        $offset = ($paginated->currentPage() - 1) * $paginated->perPage();
 
-        $formatted = $records->map(function (RequestMaterial $r, int $idx) use ($stockByItem) {
-            return $this->formatDatabaseRecord($r, $idx + 1, $stockByItem);
+        $formatted = $paginated->getCollection()->values()->map(function (RequestMaterial $r, int $idx) use ($stockByItem, $offset) {
+            return $this->formatDatabaseRecord($r, $offset + $idx + 1, $stockByItem);
         });
 
         return response()->json([
             'status' => 'success',
             'data' => $formatted,
             'meta' => [
-                'total' => $formatted->count(),
+                'current_page' => $paginated->currentPage(),
+                'last_page' => $paginated->lastPage(),
+                'per_page' => $paginated->perPage(),
+                'total' => $paginated->total(),
             ],
         ]);
     }
@@ -112,7 +117,6 @@ class MaterialRequestApiController extends Controller
             'is_specific_station' => 'nullable|boolean',
             'requestNote' => 'nullable|string',
             'note' => 'nullable|string',
-            'status' => 'nullable|string|max:45',
             'items' => 'required|array|min:1',
         ]);
 
@@ -155,7 +159,7 @@ class MaterialRequestApiController extends Controller
             } while (RequestMaterial::withTrashed()->where('request_number', $requestCode)->exists());
 
             $requestDate = $validated['requestDate'] ?? $validated['request_date'] ?? date('Y-m-d H:i:s');
-            $initialStatus = $validated['status'] ?? 'Waiting for Approve 1';
+            $initialStatus = 'Waiting for Approve 1';
 
             $reqMaterial = RequestMaterial::create([
                 'request_number' => $requestCode,
@@ -370,7 +374,17 @@ class MaterialRequestApiController extends Controller
      */
     public function approve(Request $request, string $id): JsonResponse
     {
-        $actorId = $this->requireActorId($request);
+        $actor = $this->requireActor($request);
+        $actorId = (int) $actor->id;
+        $requestedTierInput = (int) $request->input('tier', 1);
+        $requiredPerm = $requestedTierInput === 2 ? 'rm.approve_2' : 'rm.approve_1';
+        if (! $actor->hasPermission($requiredPerm)) {
+            return response()->json([
+                'status' => 'error',
+                'message' => "Forbidden: Required permission '{$requiredPerm}' not granted.",
+            ], 403);
+        }
+
         $r = $this->findRecord($id);
 
         if (! $r) {
@@ -481,7 +495,15 @@ class MaterialRequestApiController extends Controller
 
     public function reject(Request $request, string $id): JsonResponse
     {
-        $actorId = $this->requireActorId($request);
+        $actor = $this->requireActor($request);
+        $actorId = (int) $actor->id;
+        if (! $actor->hasPermission('rm.reject') && ! $actor->hasPermission('rm.approve_1') && ! $actor->hasPermission('rm.approve_2')) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Forbidden: Insufficient approval authority to reject Request Material.',
+            ], 403);
+        }
+
         $r = $this->findRecord($id);
         if (! $r) {
             return response()->json(['status' => 'error', 'message' => 'Record not found.'], 404);
@@ -647,21 +669,7 @@ class MaterialRequestApiController extends Controller
 
     private function getItemStockTotals(): array
     {
-        $pivotTotals = DB::table('item_warehouse')
-            ->select('items_id', DB::raw('SUM(quantity) as total_qty'))
-            ->groupBy('items_id')
-            ->pluck('total_qty', 'items_id')
-            ->toArray();
-
-        if (! empty($pivotTotals)) {
-            return $pivotTotals;
-        }
-
-        return DB::table('warehouse_stocks')
-            ->select('items_id', DB::raw('SUM(quantity) as total_qty'))
-            ->groupBy('items_id')
-            ->pluck('total_qty', 'items_id')
-            ->toArray();
+        return \App\Services\GeniusOneBackend::inventory()->getItemStockTotals();
     }
 
     private function formatDatabaseRecord(RequestMaterial $r, int $no, array $stockByItem): array

@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { downloadCsvFile } from "../../../../utils/csvExport";
 import { Button } from "../../../../components/ui/Button";
 import { Icon } from "../../../../components/ui/Icon";
 import { SearchField } from "../../../../components/ui/SearchField";
@@ -147,37 +148,24 @@ export function SupplierIndex({
         "Status",
       ];
 
-      const csvRows = [headers.join(",")];
+      const rows = sortedRecords.map((row, index) => [
+        index + 1,
+        row.supplierCode || "",
+        row.supplierName || "",
+        row.address || "",
+        row.country || "",
+        row.npwp || "",
+        row.nitku || "",
+        row.createdBy || "",
+        row.createdAt || "",
+        row.hidden ? "Inactive" : "Active",
+      ]);
 
-      sortedRecords.forEach((row, index) => {
-        const values = [
-          index + 1,
-          `"${(row.supplierCode || "").replace(/"/g, '""')}"`,
-          `"${(row.supplierName || "").replace(/"/g, '""')}"`,
-          `"${(row.address || "").replace(/"/g, '""')}"`,
-          `"${(row.country || "").replace(/"/g, '""')}"`,
-          `"${(row.npwp || "").replace(/"/g, '""')}"`,
-          `"${(row.nitku || "").replace(/"/g, '""')}"`,
-          `"${(row.createdBy || "").replace(/"/g, '""')}"`,
-          `"${(row.createdAt || "").replace(/"/g, '""')}"`,
-          row.hidden ? "Inactive" : "Active",
-        ];
-        csvRows.push(values.join(","));
-      });
-
-      const csvString = "\uFEFF" + csvRows.join("\r\n");
-      const blob = new Blob([csvString], { type: "text/csv;charset=utf-8;" });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.setAttribute("href", url);
-      link.setAttribute(
-        "download",
-        `Supplier_Master_Export_${new Date().toISOString().slice(0, 10)}.csv`
+      downloadCsvFile(
+        `Supplier_Master_Export_${new Date().toISOString().slice(0, 10)}.csv`,
+        headers,
+        rows
       );
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
 
       notifySuccess("Export Completed", `Exported ${sortedRecords.length} supplier record(s).`);
     } catch {

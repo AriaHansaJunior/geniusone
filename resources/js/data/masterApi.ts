@@ -715,6 +715,7 @@ export async function fetchMasterHsCodes(): Promise<HsRecord[] | null> {
     ratesPpn: Number(r.rates_ppn ?? r.ppn ?? 0),
     ratesPph: Number(r.rates_pph ?? r.pph ?? 0),
     ratesPpnbm: Number(r.rates_ppnbm ?? r.ppnbm ?? 0),
+    status: isTruthyStatus(r.status ?? 1),
   }));
 }
 
@@ -731,6 +732,9 @@ export async function saveHsApi(record: HsRecord, isEdit: boolean): Promise<HsRe
   if (record.typeRateCukaiId) {
     payload.types_rates_cukai_id = Number(record.typeRateCukaiId);
   }
+  if (record.status !== undefined) {
+    payload.status = record.status ? 1 : 0;
+  }
   const res = isEdit
     ? await apiPut<{ data: any }>(`/api/exim/master/hs-codes/${toNumericOrCleanId(record.id)}`, payload)
     : await apiPost<{ data: any }>("/api/exim/master/hs-codes", payload);
@@ -738,6 +742,7 @@ export async function saveHsApi(record: HsRecord, isEdit: boolean): Promise<HsRe
   if (!r) {
     throw new Error("HS Code was not returned after saving.");
   }
+  clearApiCache();
   return {
     ...record,
     id: String(r.id),
@@ -752,11 +757,20 @@ export async function saveHsApi(record: HsRecord, isEdit: boolean): Promise<HsRe
     ratesPpn: Number(r.rates_ppn ?? record.ratesPpn ?? 0),
     ratesPph: Number(r.rates_pph ?? record.ratesPph ?? 0),
     ratesPpnbm: Number(r.rates_ppnbm ?? record.ratesPpnbm ?? 0),
+    status: isTruthyStatus(r.status ?? record.status ?? 1),
   };
 }
 
+export async function toggleHsStatusApi(id: string): Promise<boolean> {
+  const res = await apiPatch<{ data?: any }>(`/api/exim/master/hs-codes/${toNumericOrCleanId(id)}/toggle-status`);
+  clearApiCache();
+  return Boolean(res?.data || res);
+}
+
 export async function deleteHsApi(id: string): Promise<boolean> {
-  return apiDelete(`/api/exim/master/hs-codes/${toNumericOrCleanId(id)}`);
+  const ok = await apiDelete(`/api/exim/master/hs-codes/${toNumericOrCleanId(id)}`);
+  if (ok) clearApiCache();
+  return ok;
 }
 
 export async function fetchMasterCategories(): Promise<CategoryRecord[] | null> {
@@ -1600,6 +1614,36 @@ export async function fetchSpecificationsMasterApi(): Promise<ReferenceMasterRec
 export async function fetchWarehouseTypesListApi(): Promise<ReferenceMasterRecord[]> {
   const res = await apiGet<{ data: any[] }>("/api/warehouse/master/warehouse-types");
   return mapReferenceRows(Array.isArray(res?.data) ? res.data : [], true);
+}
+
+export async function saveReferenceMasterApi(
+  key: string,
+  payload: { code?: string; name: string; status?: boolean }
+): Promise<ReferenceMasterRecord> {
+  const res = await apiPost<{ data: any }>(`/api/master/reference/${encodeURIComponent(key)}`, payload);
+  const r = res?.data;
+  if (!r) {
+    throw new Error("Reference record was not returned after saving.");
+  }
+  clearApiCache();
+  return {
+    id: String(r.id),
+    no: 1,
+    code: r.code ?? payload.code,
+    name: r.name || r.nama || payload.name,
+    status: r.status !== undefined ? isTruthyStatus(r.status) : payload.status,
+  };
+}
+
+export async function toggleReferenceMasterStatusApi(
+  key: string,
+  id: string
+): Promise<boolean> {
+  const res = await apiPatch<{ data?: any }>(
+    `/api/master/reference/${encodeURIComponent(key)}/${toNumericOrCleanId(id)}/toggle-status`
+  );
+  clearApiCache();
+  return Boolean(res?.data || res);
 }
 
 export async function deleteReferenceMasterApi(key: string, id: string): Promise<boolean> {

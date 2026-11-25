@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import * as XLSX from "xlsx";
+import { loadXlsxModule } from "../../../../utils/xlsxExport";
 import { Button } from "../../../../components/ui/Button";
 import { SearchField } from "../../../../components/ui/SearchField";
 import { Icon } from "../../../../components/ui/Icon";
@@ -131,13 +131,14 @@ export function ColorIndex({
     }
   };
 
-  const handleExportToExcel = () => {
+  const handleExportToExcel = async () => {
     if (sortedRecords.length === 0) {
       notifyWarning("Nothing to Export", "No colour records match your current filter.");
       return;
     }
 
     try {
+      const XLSX = await loadXlsxModule();
       const rows = [
         ["No", "Color Code", "Color Name", "Status"],
         ...sortedRecords.map((item, index) => [

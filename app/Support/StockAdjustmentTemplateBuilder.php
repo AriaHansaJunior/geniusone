@@ -81,6 +81,22 @@ class StockAdjustmentTemplateBuilder
         $sheet3Xml = $this->masterWarehousesSheetXml($whRows);
         $sharedStringsXml = $this->sharedStringsXml();
 
+        $entries = [
+            '[Content_Types].xml' => $this->contentTypesXml(),
+            '_rels/.rels' => $this->rootRelsXml(),
+            'xl/workbook.xml' => $this->workbookXml(),
+            'xl/_rels/workbook.xml.rels' => $this->workbookRelsXml(),
+            'xl/styles.xml' => $this->stylesXml(),
+            'xl/sharedStrings.xml' => $sharedStringsXml,
+            'xl/worksheets/sheet1.xml' => $sheet1Xml,
+            'xl/worksheets/sheet2.xml' => $sheet2Xml,
+            'xl/worksheets/sheet3.xml' => $sheet3Xml,
+        ];
+
+        if (! class_exists(ZipArchive::class)) {
+            return SimpleXlsxZip::createBinary($entries);
+        }
+
         $tmpFile = tempnam(sys_get_temp_dir(), 'g1_adj_tpl_');
         if ($tmpFile === false) {
             throw new RuntimeException('Unable to allocate temporary file for Excel template.');
@@ -92,15 +108,9 @@ class StockAdjustmentTemplateBuilder
             throw new RuntimeException('Unable to create Excel archive.');
         }
 
-        $zip->addFromString('[Content_Types].xml', $this->contentTypesXml());
-        $zip->addFromString('_rels/.rels', $this->rootRelsXml());
-        $zip->addFromString('xl/workbook.xml', $this->workbookXml());
-        $zip->addFromString('xl/_rels/workbook.xml.rels', $this->workbookRelsXml());
-        $zip->addFromString('xl/styles.xml', $this->stylesXml());
-        $zip->addFromString('xl/sharedStrings.xml', $sharedStringsXml);
-        $zip->addFromString('xl/worksheets/sheet1.xml', $sheet1Xml);
-        $zip->addFromString('xl/worksheets/sheet2.xml', $sheet2Xml);
-        $zip->addFromString('xl/worksheets/sheet3.xml', $sheet3Xml);
+        foreach ($entries as $entryName => $entryXml) {
+            $zip->addFromString($entryName, $entryXml);
+        }
         $zip->close();
 
         $binary = file_get_contents($tmpFile);

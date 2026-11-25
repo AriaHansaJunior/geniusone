@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from "react";
-import * as XLSX from "xlsx";
+import { loadXlsxModule } from "../../../../utils/xlsxExport";
 import { Button } from "../../../../components/ui/Button";
 import { SearchField } from "../../../../components/ui/SearchField";
 import { Pagination } from "../../../../components/ui/Pagination";
@@ -139,8 +139,9 @@ export function TypeOfRequestIndex({
     }
   };
 
-  const handleExportExcel = () => {
+  const handleExportExcel = async () => {
     try {
+      const XLSX = await loadXlsxModule();
       const dataToExport = sortedRecords.map((r, idx) => ({
         No: idx + 1,
         "Request Type Name": r.name,

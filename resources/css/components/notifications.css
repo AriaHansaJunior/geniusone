@@ -134,7 +134,7 @@
   color: var(--ink);
 }
 
-@media (max-width: 768px) {
+@media (max-width: 767px) {
   .g1-toast-viewport {
     top: 64px;
     left: 12px;

@@ -642,7 +642,17 @@ class WarehouseReportApiController extends Controller
             }
         }
 
-        $stockRows = $query->orderBy('i.code')->orderBy('w.name')->get();
+        $perPage = min(max((int) $request->query('per_page', 100), 1), 500);
+        $itemPaginator = (clone $query)
+            ->select('i.id', 'i.code')
+            ->groupBy('i.id', 'i.code')
+            ->orderBy('i.code')
+            ->paginate($perPage);
+        $pageItemIds = $itemPaginator->getCollection()->pluck('id')->all();
+
+        $stockRows = empty($pageItemIds)
+            ? collect()
+            : $query->whereIn('i.id', $pageItemIds)->orderBy('i.code')->orderBy('w.name')->get();
 
         $records = $stockRows->groupBy('item_id')->map(function ($rows) {
             $item = $rows->first();
@@ -704,7 +714,10 @@ class WarehouseReportApiController extends Controller
             'status' => 'success',
             'data' => $records,
             'meta' => [
-                'total' => $records->count(),
+                'current_page' => $itemPaginator->currentPage(),
+                'last_page' => $itemPaginator->lastPage(),
+                'per_page' => $itemPaginator->perPage(),
+                'total' => $itemPaginator->total(),
             ],
         ]);
     }
@@ -848,9 +861,20 @@ class WarehouseReportApiController extends Controller
                 return $r;
             });
 
+        $perPage = min(max((int) $request->query('per_page', 200), 1), 500);
+        $page = max((int) $request->query('page', 1), 1);
+        $total = $rows->count();
+        $pagedRows = $rows->slice(($page - 1) * $perPage, $perPage)->values();
+
         return response()->json([
             'status' => 'success',
-            'data' => $rows,
+            'data' => $pagedRows,
+            'meta' => [
+                'current_page' => $page,
+                'last_page' => max(1, (int) ceil($total / $perPage)),
+                'per_page' => $perPage,
+                'total' => $total,
+            ],
         ]);
     }
 
@@ -968,9 +992,20 @@ class WarehouseReportApiController extends Controller
                 return $r;
             });
 
+        $perPage = min(max((int) $request->query('per_page', 200), 1), 500);
+        $page = max((int) $request->query('page', 1), 1);
+        $total = $rows->count();
+        $pagedRows = $rows->slice(($page - 1) * $perPage, $perPage)->values();
+
         return response()->json([
             'status' => 'success',
-            'data' => $rows,
+            'data' => $pagedRows,
+            'meta' => [
+                'current_page' => $page,
+                'last_page' => max(1, (int) ceil($total / $perPage)),
+                'per_page' => $perPage,
+                'total' => $total,
+            ],
         ]);
     }
 
@@ -1147,9 +1182,20 @@ class WarehouseReportApiController extends Controller
             return $r;
         });
 
+        $perPage = min(max((int) $request->query('per_page', 200), 1), 500);
+        $page = max((int) $request->query('page', 1), 1);
+        $total = $rows->count();
+        $pagedRows = $rows->slice(($page - 1) * $perPage, $perPage)->values();
+
         return response()->json([
             'status' => 'success',
-            'data' => $rows,
+            'data' => $pagedRows,
+            'meta' => [
+                'current_page' => $page,
+                'last_page' => max(1, (int) ceil($total / $perPage)),
+                'per_page' => $perPage,
+                'total' => $total,
+            ],
         ]);
     }
 
@@ -1246,9 +1292,20 @@ class WarehouseReportApiController extends Controller
                 return $r;
             });
 
+        $perPage = min(max((int) $request->query('per_page', 200), 1), 500);
+        $page = max((int) $request->query('page', 1), 1);
+        $total = $rows->count();
+        $pagedRows = $rows->slice(($page - 1) * $perPage, $perPage)->values();
+
         return response()->json([
             'status' => 'success',
-            'data' => $rows,
+            'data' => $pagedRows,
+            'meta' => [
+                'current_page' => $page,
+                'last_page' => max(1, (int) ceil($total / $perPage)),
+                'per_page' => $perPage,
+                'total' => $total,
+            ],
         ]);
     }
 }

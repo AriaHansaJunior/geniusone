@@ -51,22 +51,24 @@ class WarehouseApiController extends Controller
             });
         }
 
-        $records = $query->orderBy('id', 'desc')->get();
-
-        // Calculate KPI Stats Cards
-        $totalCount = $records->count();
-        $readyCount = $records->filter(fn ($r) => $r->status !== 'Approved')->count();
-        $totalQty = $records->sum(function ($bpb) {
-            return $bpb->mappings->sum(function ($map) {
-                $poRn = $map->purchaseOrderReceiveNote;
-
-                return (float) (($poRn?->quantity ?? 0) - ($poRn?->rafaksi ?? 0));
-            });
+        // Calculate KPI Stats Cards in bounded chunks across filtered records
+        $totalCount = (clone $query)->count();
+        $readyCount = (clone $query)->where('status', '!=', 'Approved')->count();
+        $totalQty = 0.0;
+        $supplierIds = collect();
+        (clone $query)->orderBy('id', 'desc')->chunk(200, function ($chunk) use (&$totalQty, &$supplierIds) {
+            foreach ($chunk as $bpb) {
+                foreach ($bpb->mappings as $map) {
+                    $poRn = $map->purchaseOrderReceiveNote;
+                    $totalQty += (float) (($poRn?->quantity ?? 0) - ($poRn?->rafaksi ?? 0));
+                    $supId = $poRn?->purchaseOrder?->supliers_id ?? $poRn?->receiveNote?->supliers_id;
+                    if ($supId) {
+                        $supplierIds->push($supId);
+                    }
+                }
+            }
         });
-
-        $suppliersCount = $records->map(function ($bpb) {
-            return $bpb->mappings->map(fn ($m) => $m->purchaseOrderReceiveNote?->purchaseOrder?->supliers_id ?? $m->purchaseOrderReceiveNote?->receiveNote?->supliers_id);
-        })->flatten()->filter()->unique()->count();
+        $suppliersCount = $supplierIds->unique()->count();
 
         $stats = [
             ['Receive documents', (string) $totalCount, 'Warehouse inbound receipts'],
@@ -75,22 +77,36 @@ class WarehouseApiController extends Controller
             ['Registered suppliers', (string) $suppliersCount, 'Supplying incoming materials'],
         ];
 
+        $perPage = min(max((int) $request->query('per_page', 100), 1), 500);
+        $paginated = $query->orderBy('id', 'desc')->paginate($perPage);
+        $offset = ($paginated->currentPage() - 1) * $paginated->perPage();
+
         // Format rows for Frontend Table
-        $rows = $records->values()->map(function ($bpb, $idx) {
-            return $this->formatWarehouseRow($bpb, $idx + 1);
+        $rows = $paginated->getCollection()->values()->map(function ($bpb, $idx) use ($offset) {
+            return $this->formatWarehouseRow($bpb, $offset + $idx + 1);
         })->toArray();
+
+        $meta = [
+            'current_page' => $paginated->currentPage(),
+            'last_page' => $paginated->lastPage(),
+            'per_page' => $paginated->perPage(),
+            'total' => $paginated->total(),
+        ];
 
         if ($request->expectsJson() || $request->is('api/*') || $request->query('format') === 'json') {
             return response()->json([
                 'status' => 'success',
                 'stats' => $stats,
                 'rows' => $rows,
+                'meta' => $meta,
             ]);
         }
 
-        return view('app', [
+        return view('app', auth()->check() ? [
             'page' => 'warehouse',
             'initialData' => ['stats' => $stats, 'rows' => $rows],
+        ] : [
+            'page' => 'warehouse',
         ]);
     }
 
@@ -170,7 +186,7 @@ class WarehouseApiController extends Controller
             ->whereNull('porn.deleted_at')
             ->whereNull('pb.deleted_at')
             ->whereNull('bpb.deleted_at')
-            ->selectRaw('porn.po_has_items_id, SUM(GREATEST(0, porn.quantity - COALESCE(porn.rafaksi, 0))) as received_qty')
+            ->selectRaw('porn.po_has_items_id, SUM(CASE WHEN (porn.quantity - COALESCE(porn.rafaksi, 0)) > 0 THEN (porn.quantity - COALESCE(porn.rafaksi, 0)) ELSE 0 END) as received_qty')
             ->groupBy('porn.po_has_items_id')
             ->pluck('received_qty', 'po_has_items_id');
 
@@ -244,7 +260,7 @@ class WarehouseApiController extends Controller
      */
     public function show(Request $request, string $code)
     {
-        $rawCode = str_replace('-', '/', $code);
+        $rawCode = \App\Support\DocumentCodeHelper::hyphenToSlash($code);
         $cleanCode = preg_replace('/[^A-Za-z0-9]/', '', $code);
 
         $bpb = BpbReceiveMaterial::with([
@@ -289,10 +305,13 @@ class WarehouseApiController extends Controller
             ]);
         }
 
-        return view('app', [
+        return view('app', auth()->check() ? [
             'page' => 'warehouse-detail',
             'code' => $code,
             'initialData' => ['item' => $detailRow],
+        ] : [
+            'page' => 'warehouse-detail',
+            'code' => $code,
         ]);
     }
 
@@ -301,529 +320,68 @@ class WarehouseApiController extends Controller
      */
     public function store(Request $request)
     {
-        DB::beginTransaction();
+        $creatorId = $this->requireActorId($request);
+
         try {
-            $bpbNumber = $request->input('bpb_number') ?: GeniusOneBackend::numbering()->generateBpbNumber();
-
-            $rawReceiveDate = $request->input('receive_date') ?? $request->input('receiveDate');
-            $receiveDate = Carbon::now();
-            if (! empty($rawReceiveDate)) {
-                try {
-                    if (preg_match('/^(\d{2})-(\d{2})-(\d{4})$/', $rawReceiveDate, $m)) {
-                        $receiveDate = Carbon::createFromFormat('d-m-Y', $rawReceiveDate);
-                    } else {
-                        $receiveDate = Carbon::parse($rawReceiveDate);
-                    }
-                } catch (\Throwable $e) {
-                    $receiveDate = Carbon::now();
-                }
-            }
-
-            $creatorId = $this->requireActorId($request);
-
-            // Resolve Supplier
-            $supInput = $request->input('supliers_id') ?? $request->input('supplier_id') ?? $request->input('supplier');
-            $supplierId = null;
-            if (is_numeric($supInput) && Supplier::where('id', (int) $supInput)->exists()) {
-                $supplierId = (int) $supInput;
-            } elseif (! empty($supInput)) {
-                $cleanSup = trim(preg_replace('/^\[[^\]]*\]\s*/', '', (string) $supInput));
-                $supObj = Supplier::where('code', $cleanSup)
-                    ->orWhere('name', $cleanSup)
-                    ->orWhere('name', 'like', "%{$cleanSup}%")
-                    ->first();
-                $supplierId = $supObj?->id;
-            }
-
-            // Resolve Header PO if provided
-            $headerPoCode = $request->input('po_number') ?? $request->input('poNumber');
-            $headerPo = null;
-            if (! empty($headerPoCode)) {
-                $cleanPo = preg_replace('/[^A-Za-z0-9]/', '', (string) $headerPoCode);
-                $headerPo = PurchaseOrder::where('po_number', $headerPoCode)
-                    ->orWhereRaw("REPLACE(REPLACE(po_number, '/', ''), '-', '') = ?", [$cleanPo])
-                    ->first();
-                if ($headerPo && ! $supplierId) {
-                    $supplierId = $headerPo->supliers_id;
-                }
-            }
-
-            $rawItems = $request->input('items', []);
-            $rnCode = trim((string) ($request->input('rn_number') ?? $request->input('rnNumber') ?? ''));
-            $requestedSource = strtoupper(trim((string) ($request->input('source_type') ?? $request->input('sourceType') ?? '')));
-            $hasPoReference = $headerPo !== null || (is_array($rawItems) && collect($rawItems)->contains(function ($it) {
-                $p = trim((string) ($it['poNumber'] ?? $it['po_number'] ?? ''));
-
-                return $p !== '' && $p !== '—' && $p !== '-';
-            }));
-
-            if ($requestedSource === '') {
-                $sourceType = $rnCode !== '' ? 'RN' : ($hasPoReference ? 'PO' : 'RN');
-            } else {
-                $sourceType = $requestedSource;
-            }
-
-            if (! in_array($sourceType, ['RN', 'PO'], true)) {
-                DB::rollBack();
-
-                return response()->json([
-                    'status' => 'error',
-                    'message' => "Invalid BPB source type '{$sourceType}'. Allowed values are 'RN' or 'PO'.",
-                ], 422);
-            }
-
-            $rn = null;
-            if ($sourceType === 'RN') {
-                if ($rnCode === '') {
-                    DB::rollBack();
-
-                    return response()->json([
-                        'status' => 'error',
-                        'message' => 'RN Number is required when creating BPB from Receive Note.',
-                        'errors' => ['rn_number' => ['Please select an RN Number to create BPB.']],
-                    ], 422);
-                }
-
-                $cleanRn = preg_replace('/[^A-Za-z0-9]/', '', $rnCode);
-                $rn = ReceiveNote::where('rn_number', $rnCode)
-                    ->orWhereRaw("REPLACE(REPLACE(rn_number, '/', ''), '-', '') = ?", [$cleanRn])
-                    ->first();
-
-                if (! $rn) {
-                    DB::rollBack();
-
-                    return response()->json([
-                        'status' => 'error',
-                        'message' => "Receive Note '{$rnCode}' not found. BPB from RN requires an existing Receive Note.",
-                        'errors' => ['rn_number' => ['The selected RN does not exist in the database.']],
-                    ], 422);
-                }
-
-                if ($rn->status !== 'Approved') {
-                    DB::rollBack();
-
-                    return response()->json([
-                        'status' => 'error',
-                        'message' => "Receive Note '{$rnCode}' has not been approved yet (Current status: {$rn->status}). Only approved Receive Notes can be received into warehouse.",
-                        'errors' => ['rn_number' => ["Receive Note '{$rnCode}' must be Approved before creating a BPB."]],
-                    ], 422);
-                }
-
-                // Double BPB Prevention for RN
-                $existingBpb = BpbReceiveMaterial::where('status', '!=', 'Rejected')
-                    ->whereHas('mappings.purchaseOrderReceiveNote', function ($q) use ($rn) {
-                        $q->where('receive_note_id', $rn->id);
-                    })
-                    ->first();
-
-                if ($existingBpb) {
-                    DB::rollBack();
-
-                    return response()->json([
-                        'status' => 'error',
-                        'message' => "Receive Note '{$rnCode}' has already been processed in BPB '{$existingBpb->bpb_number}'. Duplicate material receipt (Double BPB) is not allowed.",
-                        'errors' => ['rn_number' => ["Receive Note '{$rnCode}' has already been processed in BPB '{$existingBpb->bpb_number}'."]],
-                    ], 422);
-                }
-            } else {
-                // Direct PO -> BPB: resolve all referenced POs and validate Approved + Non-Kawasan Berikat
-                $referencedPoIds = collect();
-                if ($headerPo) {
-                    $referencedPoIds->push($headerPo->id);
-                }
-                if (is_array($rawItems)) {
-                    foreach ($rawItems as $it) {
-                        $itPoCode = trim((string) ($it['poNumber'] ?? $it['po_number'] ?? ''));
-                        if ($itPoCode !== '' && $itPoCode !== '—' && $itPoCode !== '-') {
-                            $cleanItPo = preg_replace('/[^A-Za-z0-9]/', '', $itPoCode);
-                            $matched = PurchaseOrder::where('po_number', $itPoCode)
-                                ->orWhereRaw("REPLACE(REPLACE(po_number, '/', ''), '-', '') = ?", [$cleanItPo])
-                                ->first();
-                            if (! $matched) {
-                                DB::rollBack();
-
-                                return response()->json([
-                                    'status' => 'error',
-                                    'message' => "Purchase Order '{$itPoCode}' not found.",
-                                    'errors' => ['po_number' => ["Purchase Order '{$itPoCode}' not found."]],
-                                ], 422);
-                            }
-                            $referencedPoIds->push($matched->id);
-                            if (! $headerPo) {
-                                $headerPo = $matched;
-                                $supplierId = $matched->supliers_id ?: $supplierId;
-                            }
-                        }
-                    }
-                }
-
-                $referencedPoIds = $referencedPoIds->unique()->values();
-                if ($referencedPoIds->isEmpty()) {
-                    DB::rollBack();
-
-                    return response()->json([
-                        'status' => 'error',
-                        'message' => 'PO Number is required when creating direct BPB from Purchase Order.',
-                        'errors' => ['po_number' => ['Please select an Approved Non-Kawasan Berikat Purchase Order.']],
-                    ], 422);
-                }
-
-                $referencedPos = PurchaseOrder::with('items')->whereIn('id', $referencedPoIds)->get();
-                foreach ($referencedPos as $refPo) {
-                    if (! in_array($refPo->status, ['Approved', 'Approved 2'], true)) {
-                        DB::rollBack();
-
-                        return response()->json([
-                            'status' => 'error',
-                            'message' => "Purchase Order '{$refPo->po_number}' is not fully Approved yet (Current status: {$refPo->status}).",
-                            'errors' => ['po_number' => ["Purchase Order '{$refPo->po_number}' must be Approved before receiving into BPB."]],
-                        ], 422);
-                    }
-
-                    if ($refPo->isKawasanBerikat()) {
-                        DB::rollBack();
-
-                        return response()->json([
-                            'status' => 'error',
-                            'message' => "Purchase Order '{$refPo->po_number}' is a Kawasan Berikat PO and must go through Receive Note (EXIM) before Receive Material (BPB).",
-                            'errors' => ['po_number' => ["PO '{$refPo->po_number}' is Kawasan Berikat and requires a Receive Note (RN)."]],
-                        ], 422);
-                    }
-
-                    // Prevent duplicate/over-receiving direct PO items
-                    $orderedTotal = (float) $refPo->items->sum('order');
-                    if ($orderedTotal > 0) {
-                        $alreadyReceived = (float) DB::table('purchase_order_has_receive_note as porn')
-                            ->join('po_rn_to_bpb as pb', 'pb.po_has_rn_id', '=', 'porn.id')
-                            ->join('bpb_receive_material as bpb', 'pb.bpb_receive_material_id', '=', 'bpb.id')
-                            ->where('porn.purchase_order_id', $refPo->id)
-                            ->where('bpb.status', '!=', 'Rejected')
-                            ->whereNull('porn.deleted_at')
-                            ->whereNull('bpb.deleted_at')
-                            ->sum(DB::raw('GREATEST(0, porn.quantity - COALESCE(porn.rafaksi, 0))'));
-
-                        $incomingTotal = is_array($rawItems) ? collect($rawItems)->sum(function ($it) use ($refPo) {
-                            $p = trim((string) ($it['poNumber'] ?? $it['po_number'] ?? $refPo->po_number));
-                            $cleanP = preg_replace('/[^A-Za-z0-9]/', '', $p);
-                            $cleanRef = preg_replace('/[^A-Za-z0-9]/', '', $refPo->po_number);
-                            if ($cleanP !== '' && $cleanP !== $cleanRef) {
-                                return 0;
-                            }
-                            $q = (float) ($it['receiveQty'] ?? $it['quantity'] ?? $it['qty'] ?? 0);
-                            $r = (float) ($it['rafaksi'] ?? 0);
-
-                            return max(0.0, $q - $r);
-                        }) : 0.0;
-
-                        if ($alreadyReceived >= $orderedTotal - 0.0001 || ($alreadyReceived + $incomingTotal) > $orderedTotal + 0.0001) {
-                            DB::rollBack();
-
-                            return response()->json([
-                                'status' => 'error',
-                                'message' => "Purchase Order '{$refPo->po_number}' quantity already received or exceeded (Ordered: {$orderedTotal}, Already Received: {$alreadyReceived}, Incoming: {$incomingTotal}).",
-                                'errors' => ['po_number' => ["PO '{$refPo->po_number}' exceeds remaining receivable quantity."]],
-                            ], 422);
-                        }
-                    }
-                }
-            }
-
-            $firstSj = $request->input('sj_number') ?? $request->input('delivery_note');
-            if (! $firstSj && is_array($rawItems) && ! empty($rawItems)) {
-                $firstSj = $rawItems[0]['deliveryNote'] ?? $rawItems[0]['dn_number'] ?? $rawItems[0]['sjNumber'] ?? null;
-            }
-
-            $invoiceDate = null;
-            $rawInvDate = $request->input('invoice_date') ?? $request->input('invoiceDate');
-            if (! empty($rawInvDate)) {
-                try {
-                    $invoiceDate = Carbon::parse($rawInvDate);
-                } catch (\Throwable $e) {
-                    $invoiceDate = null;
-                }
-            }
-
-            $regDate = null;
-            $rawRegDate = $request->input('reg_date') ?? $request->input('regDate');
-            if (! empty($rawRegDate)) {
-                try {
-                    $regDate = Carbon::parse($rawRegDate);
-                } catch (\Throwable $e) {
-                    $regDate = null;
-                }
-            }
-
-            $ajuNumber = $request->input('aju_number') ?? $request->input('ajuNumber');
-            $noPen = $request->input('no_pen') ?? $request->input('noPen');
-            $plateNo = $request->input('plate_no') ?? $request->input('plateNo') ?? $request->input('license_plate');
-            $invoiceNumber = $request->input('invoice_number') ?? $request->input('invoiceNumber');
-            $taxInvoice = $request->input('tax_invoice') ?? $request->input('taxInvoice');
-
-            // Update optional customs/logistics metadata on the Receive Note if RN mode
-            if ($rn) {
-                $rnUpdates = [];
-                if ($invoiceNumber) {
-                    $rnUpdates['invoice_number'] = $invoiceNumber;
-                }
-                if ($invoiceDate) {
-                    $rnUpdates['invoice_date'] = $invoiceDate;
-                }
-                if ($taxInvoice) {
-                    $rnUpdates['tax_invoice'] = $taxInvoice;
-                }
-                if ($plateNo) {
-                    $rnUpdates['license_plate'] = $plateNo;
-                }
-                if ($firstSj) {
-                    $rnUpdates['sj_number'] = $firstSj;
-                }
-                if ($noPen) {
-                    $rnUpdates['pl_number'] = $noPen;
-                }
-                if ($ajuNumber) {
-                    $rnUpdates['note'] = $ajuNumber;
-                }
-                if (! empty($rnUpdates)) {
-                    $rn->update($rnUpdates);
-                }
-            }
-
-            $noteText = $request->input('note') ?? $request->input('remark');
-            if (! $noteText && is_array($rawItems) && ! empty($rawItems)) {
-                $noteText = $rawItems[0]['purpose'] ?? $rawItems[0]['remark'] ?? null;
-            }
-
-            $bpbType = $request->input('bpb_type') ?? $request->input('bpbType') ?? ($sourceType === 'PO' ? 'Direct PO' : 'Warehouse');
-
-            $bpb = BpbReceiveMaterial::create([
-                'bpb_number' => $bpbNumber,
-                'source_type' => $sourceType,
-                'bpb_type' => $bpbType,
-                'status' => 'Waiting for Approve 1',
-                'note' => $noteText ?: null,
-                'receive_date' => $receiveDate,
-                'creator_id' => $creatorId,
-                'updated_by' => $creatorId,
-            ]);
-
-            $headerWarehouseId = $this->resolveWarehouseId(
-                $request->input('warehouse_id') ?? $request->input('warehouse') ?? $request->input('location')
-            );
-            $fallbackJobId = JobNumber::query()->value('id');
-            $defaultPoId = $headerPo?->id;
-
-            if (is_array($rawItems) && count($rawItems) > 0) {
-                foreach ($rawItems as $itemData) {
-                    $itemPoId = $defaultPoId;
-                    $itemPoCode = $itemData['poNumber'] ?? $itemData['po_number'] ?? null;
-                    if (! empty($itemPoCode) && $itemPoCode !== '—' && $itemPoCode !== '-') {
-                        $cleanItemPo = preg_replace('/[^A-Za-z0-9]/', '', (string) $itemPoCode);
-                        $matchedPo = PurchaseOrder::where('po_number', $itemPoCode)
-                            ->orWhereRaw("REPLACE(REPLACE(po_number, '/', ''), '-', '') = ?", [$cleanItemPo])
-                            ->first();
-                        if ($matchedPo) {
-                            $itemPoId = $matchedPo->id;
-                        }
-                    }
-
-                    $itemWhId = $this->resolveWarehouseId(
-                        $itemData['warehouse_id'] ?? $itemData['warehouse'] ?? $itemData['location'] ?? null
-                    ) ?? $headerWarehouseId;
-
-                    if (! $itemWhId) {
-                        throw new InvalidArgumentException('Each BPB item line must specify a valid destination Warehouse.');
-                    }
-
-                    $itemCoordinate = $this->resolveWarehouseCoordinate(
-                        $itemWhId,
-                        $itemData['warehouse_coordinates_id'] ?? $itemData['coordinate_id'] ?? $request->input('warehouse_coordinates_id'),
-                        $itemData['coordinate'] ?? $itemData['coordinate_name'] ?? $request->input('coordinate')
-                    );
-
-                    $resolvedPoHasItemId = ! empty($itemData['po_has_items_id']) && is_numeric($itemData['po_has_items_id'])
-                        ? (int) $itemData['po_has_items_id']
-                        : null;
-                    $poItem = $resolvedPoHasItemId ? PurchaseOrderItem::with(['prItem', 'directItem'])->find($resolvedPoHasItemId) : null;
-
-                    $itemJobId = null;
-                    if (! empty($itemData['job_number_id']) && is_numeric($itemData['job_number_id'])) {
-                        $itemJobId = (int) $itemData['job_number_id'];
-                    } elseif (! empty($itemData['jobNumber']) || ! empty($itemData['job_number'])) {
-                        $jobCode = $itemData['jobNumber'] ?? $itemData['job_number'];
-                        if ($jobCode !== '—' && $jobCode !== '-') {
-                            $itemJobId = JobNumber::where('code', $jobCode)->orWhere('name', 'like', "%{$jobCode}%")->value('id');
-                        }
-                    }
-                    $itemJobId = $itemJobId ?? $poItem?->prItem?->job_number_id ?? $fallbackJobId;
-
-                    $itemName = trim((string) ($itemData['name'] ?? $itemData['itemName'] ?? $itemData['item_name'] ?? $poItem?->item_alias ?? $poItem?->item?->name ?? ''));
-                    $qty = (float) ($itemData['receiveQty'] ?? $itemData['quantity'] ?? $itemData['qty'] ?? 0);
-                    if ($qty <= 0) {
-                        throw new InvalidArgumentException('Receive quantity must be greater than zero.');
-                    }
-                    $rafaksi = (float) ($itemData['rafaksi'] ?? 0);
-                    $dnNumber = $itemData['deliveryNote'] ?? $itemData['dn_number'] ?? $itemData['sjNumber'] ?? $firstSj;
-
-                    $poRn = null;
-                    if ($rn) {
-                        if (! empty($itemData['po_has_rn_id']) && is_numeric($itemData['po_has_rn_id'])) {
-                            $poRn = PurchaseOrderReceiveNote::where('id', (int) $itemData['po_has_rn_id'])
-                                ->where('receive_note_id', $rn->id)
-                                ->first();
-                        }
-                        if (! $poRn && $itemName !== '') {
-                            $poRn = PurchaseOrderReceiveNote::where('receive_note_id', $rn->id)
-                                ->where('item_name', $itemName)
-                                ->first();
-                        }
-                    }
-
-                    if ($poRn) {
-                        $poRn->update([
-                            'quantity' => $qty,
-                            'rafaksi' => $rafaksi,
-                            'dn_number' => $dnNumber,
-                        ]);
-                    } else {
-                        if (! $itemPoId) {
-                            throw new InvalidArgumentException('Purchase Order reference is required for direct BPB item lines.');
-                        }
-                        if (! $itemJobId) {
-                            throw new InvalidArgumentException('A valid Job Number is required before creating BPB item lines.');
-                        }
-                        $linePrice = (float) ($itemData['price'] ?? ($poItem?->price ?? 0));
-                        $poRn = PurchaseOrderReceiveNote::create([
-                            'purchase_order_id' => $itemPoId,
-                            'po_has_items_id' => $resolvedPoHasItemId,
-                            'receive_note_id' => $rn?->id,
-                            'dn_number' => $dnNumber,
-                            'job_number_id' => $itemJobId,
-                            'item_name' => $itemName ?: $poItem?->item?->name,
-                            'quantity' => $qty,
-                            'rafaksi' => $rafaksi,
-                            'price' => $linePrice,
-                            'additional_price' => 0,
-                            'discount' => 0,
-                            'ppn' => 0,
-                            'grand_total' => max(0.0, ($qty - $rafaksi) * $linePrice),
-                        ]);
-                    }
-
-                    $bpb->mappings()->create([
-                        'po_has_rn_id' => $poRn->id,
-                        'warehouses_id' => $itemWhId,
-                        'warehouse_coordinates_id' => $itemCoordinate?->id,
-                    ]);
-                }
-            } elseif ($rn && $rn->purchaseOrders()->count() > 0) {
-                if (! $headerWarehouseId) {
-                    throw new InvalidArgumentException('Destination Warehouse is required when creating BPB from Receive Note.');
-                }
-                $headerCoordinate = $this->resolveWarehouseCoordinate(
-                    $headerWarehouseId,
-                    $request->input('warehouse_coordinates_id'),
-                    $request->input('coordinate')
-                );
-                foreach ($rn->purchaseOrders as $poRn) {
-                    $bpb->mappings()->create([
-                        'po_has_rn_id' => $poRn->id,
-                        'warehouses_id' => $headerWarehouseId,
-                        'warehouse_coordinates_id' => $headerCoordinate?->id,
-                    ]);
-                }
-            } elseif ($headerPo && $headerPo->items()->count() > 0) {
-                if (! $headerWarehouseId) {
-                    throw new InvalidArgumentException('Destination Warehouse is required when creating direct BPB from Purchase Order.');
-                }
-                $headerCoordinate = $this->resolveWarehouseCoordinate(
-                    $headerWarehouseId,
-                    $request->input('warehouse_coordinates_id'),
-                    $request->input('coordinate')
-                );
-                foreach ($headerPo->items as $poItem) {
-                    $jobId = $poItem->requisitionItem?->job_number_id ?? $fallbackJobId;
-                    if (! $jobId) {
-                        throw new InvalidArgumentException('A valid Job Number is required before creating BPB item lines.');
-                    }
-                    $itName = $poItem->requisitionItem?->item?->name ?? $poItem->directItem?->name ?? $poItem->item_alias;
-                    $qty = (float) ($poItem->order ?? 0);
-                    $price = (float) ($poItem->price ?? 0);
-                    $poRn = PurchaseOrderReceiveNote::create([
-                        'purchase_order_id' => $headerPo->id,
-                        'po_has_items_id' => $poItem->id,
-                        'receive_note_id' => $rn?->id,
-                        'dn_number' => $firstSj,
-                        'job_number_id' => $jobId,
-                        'item_name' => $itName,
-                        'quantity' => $qty,
-                        'rafaksi' => 0,
-                        'price' => $price,
-                        'additional_price' => 0,
-                        'discount' => 0,
-                        'ppn' => 0,
-                        'grand_total' => $qty * $price,
-                    ]);
-
-                    $bpb->mappings()->create([
-                        'po_has_rn_id' => $poRn->id,
-                        'warehouses_id' => $headerWarehouseId,
-                        'warehouse_coordinates_id' => $headerCoordinate?->id,
-                    ]);
-                }
-            } else {
-                throw new InvalidArgumentException('At least one material item from an Approved RN or Approved Non-Kawasan Berikat PO is required.');
-            }
-
-            // Create initial approval tier
-            $bpb->approvals()->create([
-                'approval_ke' => '1',
-                'users_id' => $creatorId,
-                'status' => 0,
-            ]);
-
-            // Audit Log
-            GeniusOneBackend::audit()->logAction(
-                action: 'created',
-                modelName: 'BpbReceiveMaterial',
-                modelId: $bpb->id,
-                after: $bpb->toArray(),
-                notes: "Created Warehouse Receive Material {$bpbNumber}",
-                userId: $creatorId
-            );
-
-            DB::commit();
-
-            $freshBpb = $bpb->fresh([
-                'creator',
-                'approvals.user',
-                'mappings.warehouse',
-                'mappings.coordinate',
-                'mappings.purchaseOrderReceiveNote.purchaseOrder.supplier',
-                'mappings.purchaseOrderReceiveNote.purchaseOrder.valuta',
-                'mappings.purchaseOrderReceiveNote.purchaseOrder.items.requisitionItem.purchaseRequisition',
-                'mappings.purchaseOrderReceiveNote.purchaseOrder.items.requisitionItem.item.unitOfMeasurement',
-                'mappings.purchaseOrderReceiveNote.purchaseOrder.items.directItem.unitOfMeasurement',
-                'mappings.purchaseOrderReceiveNote.receiveNote.supplier',
-                'mappings.purchaseOrderReceiveNote.receiveNote.currency',
-                'mappings.purchaseOrderReceiveNote.jobNumber',
-            ]);
+            $freshBpb = GeniusOneBackend::bpb()->createBpbFromPayload([
+                'bpb_number' => $request->input('bpb_number'),
+                'receive_date' => $request->input('receive_date') ?? $request->input('receiveDate'),
+                'po_number' => $request->input('po_number') ?? $request->input('poNumber'),
+                'rn_number' => $request->input('rn_number') ?? $request->input('rnNumber'),
+                'source_type' => $request->input('source_type') ?? $request->input('sourceType'),
+                'bpb_type' => $request->input('bpb_type') ?? $request->input('bpbType'),
+                'sj_number' => $request->input('sj_number') ?? $request->input('delivery_note'),
+                'invoice_date' => $request->input('invoice_date') ?? $request->input('invoiceDate'),
+                'invoice_number' => $request->input('invoice_number') ?? $request->input('invoiceNumber'),
+                'tax_invoice' => $request->input('tax_invoice') ?? $request->input('taxInvoice'),
+                'aju_number' => $request->input('aju_number') ?? $request->input('ajuNumber'),
+                'no_pen' => $request->input('no_pen') ?? $request->input('noPen'),
+                'plate_no' => $request->input('plate_no') ?? $request->input('plateNo') ?? $request->input('license_plate'),
+                'note' => $request->input('note') ?? $request->input('remark'),
+                'warehouse_input' => $request->input('warehouse_id') ?? $request->input('warehouse') ?? $request->input('location'),
+                'warehouse_coordinates_id' => $request->input('warehouse_coordinates_id'),
+                'coordinate' => $request->input('coordinate'),
+                'items' => $request->input('items', []),
+            ], $creatorId);
 
             if ($request->expectsJson() || $request->is('api/*')) {
                 return response()->json([
                     'status' => 'success',
-                    'message' => "BPB {$bpbNumber} created successfully.",
+                    'message' => "BPB {$freshBpb->bpb_number} created successfully.",
                     'data' => $this->formatWarehouseRow($freshBpb),
                 ], 201);
             }
 
-            return redirect('/warehouse/incoming/receive-material-bpb/detail/'.str_replace('/', '-', $bpbNumber));
-        } catch (\Throwable $e) {
-            DB::rollBack();
+            return redirect('/warehouse/incoming/receive-material-bpb/detail/'.str_replace('/', '-', $freshBpb->bpb_number));
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            if ($request->expectsJson() || $request->is('api/*')) {
+                $errors = $e->errors();
+                $firstMsg = collect($errors)->flatten()->first() ?: $e->getMessage();
+
+                return response()->json(['status' => 'error', 'message' => $firstMsg, 'errors' => $errors], 422);
+            }
+
+            return back()->withErrors($e->errors());
+        } catch (InvalidArgumentException $e) {
             if ($request->expectsJson() || $request->is('api/*')) {
                 return response()->json(['status' => 'error', 'message' => $e->getMessage(), 'error' => $e->getMessage()], 422);
             }
 
             return back()->withErrors(['error' => $e->getMessage()]);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Failed creating BPB record.', [
+                'creator_id' => $creatorId,
+                'error' => $e->getMessage(),
+            ]);
+
+            if ($request->expectsJson() || $request->is('api/*')) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Failed to create BPB record due to an unexpected server error.',
+                ], 500);
+            }
+
+            return back()->withErrors(['error' => 'Failed to create BPB record.']);
         }
     }
 
@@ -934,8 +492,21 @@ class WarehouseApiController extends Controller
                 'message' => 'BPB updated successfully.',
                 'data' => $this->formatWarehouseRow($fresh),
             ]);
-        } catch (\Throwable $e) {
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json(['status' => 'error', 'message' => 'BPB Receive Material not found.'], 404);
+        } catch (InvalidArgumentException $e) {
             return response()->json(['status' => 'error', 'message' => $e->getMessage()], 422);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Failed updating BPB record.', [
+                'bpb_id' => $id,
+                'actor_id' => $actorId,
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to update BPB record due to an unexpected server error.',
+            ], 500);
         }
     }
 
@@ -960,45 +531,12 @@ class WarehouseApiController extends Controller
 
     private function resolveWarehouseId(mixed $warehouseInput): ?int
     {
-        if (is_numeric($warehouseInput) && Warehouse::where('id', (int) $warehouseInput)->exists()) {
-            return (int) $warehouseInput;
-        }
-
-        if (! empty($warehouseInput)) {
-            $name = trim((string) $warehouseInput);
-            $matched = Warehouse::where('name', $name)
-                ->orWhere('name', 'like', "%{$name}%")
-                ->first();
-            if ($matched) {
-                return (int) $matched->id;
-            }
-        }
-
-        return null;
+        return GeniusOneBackend::bpb()->resolveWarehouseId($warehouseInput);
     }
 
     private function resolveWarehouseCoordinate(int $warehouseId, mixed $coordId = null, mixed $coordName = null): ?WarehouseCoordinate
     {
-        if (is_numeric($coordId)) {
-            $found = WarehouseCoordinate::where('warehouses_id', $warehouseId)->where('id', (int) $coordId)->first();
-            if ($found) {
-                return $found;
-            }
-        }
-
-        if (! empty($coordName)) {
-            $name = trim((string) $coordName);
-            $found = WarehouseCoordinate::where('warehouses_id', $warehouseId)
-                ->where(function ($q) use ($name) {
-                    $q->where('name', $name)->orWhere('code', $name);
-                })
-                ->first();
-            if ($found) {
-                return $found;
-            }
-        }
-
-        return WarehouseCoordinate::where('warehouses_id', $warehouseId)->orderBy('id')->first();
+        return GeniusOneBackend::bpb()->resolveWarehouseCoordinate($warehouseId, $coordId, $coordName);
     }
 
     /**

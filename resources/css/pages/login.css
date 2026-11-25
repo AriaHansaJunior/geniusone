@@ -695,7 +695,7 @@
   display: none;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 767px) {
   .login-header {
     padding: 0 208px 0 16px;
   }

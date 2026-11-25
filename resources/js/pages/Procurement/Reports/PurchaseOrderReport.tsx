@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import * as XLSX from "xlsx";
+import { loadXlsxModule } from "../../../utils/xlsxExport";
 import { Button } from "../../../components/ui/Button";
 import { SummaryCard } from "../../../components/ui/SummaryCard";
 import { SearchField } from "../../../components/ui/SearchField";
@@ -7,6 +7,7 @@ import { DataTable } from "../../../components/ui/DataTable";
 import { FilterPanel } from "../../../components/common/FilterPanel";
 import { listColumns } from "../../../config/listColumns";
 import { fetchList } from "../../../data/api";
+import { useNotification } from "../../../context/NotificationContext";
 import type { TableRow } from "../../../types";
 
 interface PurchaseOrderReportProps {
@@ -20,6 +21,7 @@ export function PurchaseOrderReport({
   onSelectPo,
   onSelectPr,
 }: PurchaseOrderReportProps) {
+  const { notifyWarning } = useNotification();
   const [search, setSearch] = useState("");
   const columns = listColumns.report;
   const [stats, setStats] = useState<[string, string, string][]>([]);
@@ -86,9 +88,9 @@ export function PurchaseOrderReport({
     });
   }, [rows, search, reportFilters]);
 
-  const handleExportXLSX = () => {
+  const handleExportXLSX = async () => {
     if (filtered.length === 0) {
-      alert("No report records to export.");
+      notifyWarning("Nothing to Export", "No report records to export.");
       return;
     }
     const headers = [
@@ -115,6 +117,7 @@ export function PurchaseOrderReport({
       typeof r._rawPrStatus === "string" ? r._rawPrStatus : "Approved",
     ]);
 
+    const XLSX = await loadXlsxModule();
     const ws = XLSX.utils.aoa_to_sheet([headers, ...dataRows]);
     ws["!cols"] = [
       { wch: 6 },
@@ -186,9 +189,6 @@ export function PurchaseOrderReport({
 
         <div className="filter-actions">
           <SearchField value={search} onChange={setSearch} />
-          <Button variant="secondary" icon="filter">
-            More filters
-          </Button>
           <Button onClick={handleApplyFilters}>Apply filters</Button>
         </div>
       </section>

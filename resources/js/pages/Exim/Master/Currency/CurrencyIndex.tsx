@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { downloadCsvFile } from "../../../../utils/csvExport";
 import { Button } from "../../../../components/ui/Button";
 import { SearchField } from "../../../../components/ui/SearchField";
 import { Pagination } from "../../../../components/ui/Pagination";
@@ -100,30 +101,17 @@ export function CurrencyIndex({
 
     try {
       const headers = ["No", "Currency Code", "Status"];
-      const csvRows = [headers.join(",")];
+      const rows = sortedRecords.map((row, index) => [
+        index + 1,
+        row.currencyCode || "",
+        row.status === false ? "Inactive" : "Active",
+      ]);
 
-      sortedRecords.forEach((row, index) => {
-        const values = [
-          index + 1,
-          `"${(row.currencyCode || "").replace(/"/g, '""')}"`,
-          row.status === false ? "Inactive" : "Active",
-        ];
-        csvRows.push(values.join(","));
-      });
-
-      const csvString = "\uFEFF" + csvRows.join("\r\n");
-      const blob = new Blob([csvString], { type: "text/csv;charset=utf-8;" });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.setAttribute("href", url);
-      link.setAttribute(
-        "download",
-        `Master_Currency_Export_${new Date().toISOString().slice(0, 10)}.csv`
+      downloadCsvFile(
+        `Master_Currency_Export_${new Date().toISOString().slice(0, 10)}.csv`,
+        headers,
+        rows
       );
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
 
       notifySuccess("Export Completed", `Exported ${sortedRecords.length} currency record(s).`);
     } catch {

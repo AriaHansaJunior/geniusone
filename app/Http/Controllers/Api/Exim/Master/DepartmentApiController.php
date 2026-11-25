@@ -18,7 +18,7 @@ class DepartmentApiController extends Controller
             $query->where('name', 'like', "%{$search}%");
         }
 
-        $perPage = (int) $request->query('per_page', 10);
+        $perPage = min(max((int) $request->query('per_page', 10), 1), 500);
         $records = $query->latest('id')->paginate($perPage);
 
         return response()->json([
@@ -41,6 +41,7 @@ class DepartmentApiController extends Controller
         ]);
 
         $record = Department::create($validated);
+        \App\Http\Controllers\Api\Common\SystemContextApiController::forgetLookupsCache();
 
         return response()->json([
             'message' => 'Department created successfully',
@@ -66,6 +67,7 @@ class DepartmentApiController extends Controller
         ]);
 
         $record->update($validated);
+        \App\Http\Controllers\Api\Common\SystemContextApiController::forgetLookupsCache();
 
         return response()->json([
             'message' => 'Department updated successfully',
@@ -77,6 +79,7 @@ class DepartmentApiController extends Controller
     {
         $record = Department::findOrFail($id);
         $record->delete();
+        \App\Http\Controllers\Api\Common\SystemContextApiController::forgetLookupsCache();
 
         return response()->json(['message' => 'Department deleted successfully']);
     }
@@ -86,6 +89,7 @@ class DepartmentApiController extends Controller
         $record = Department::findOrFail($id);
         $record->status = (int) $record->status === 1 ? 0 : 1;
         $record->save();
+        \App\Http\Controllers\Api\Common\SystemContextApiController::forgetLookupsCache();
 
         return response()->json([
             'message' => 'Department status updated successfully',
@@ -104,9 +108,18 @@ class DepartmentApiController extends Controller
             $query->where('name', 'like', "%{$search}%");
         }
 
-        $records = $query->latest('id')->get();
+        $perPage = min(max((int) $request->query('per_page', 100), 1), 500);
+        $records = $query->latest('id')->paginate($perPage);
 
-        return response()->json(['data' => $records]);
+        return response()->json([
+            'data' => $records->items(),
+            'meta' => [
+                'current_page' => $records->currentPage(),
+                'last_page' => $records->lastPage(),
+                'per_page' => $records->perPage(),
+                'total' => $records->total(),
+            ],
+        ]);
     }
 
     public function storeSection(Request $request): JsonResponse
@@ -117,6 +130,7 @@ class DepartmentApiController extends Controller
         ]);
 
         $record = Section::create($validated);
+        \App\Http\Controllers\Api\Common\SystemContextApiController::forgetLookupsCache();
 
         return response()->json([
             'message' => 'Section created successfully',
@@ -134,6 +148,7 @@ class DepartmentApiController extends Controller
         ]);
 
         $record->update($validated);
+        \App\Http\Controllers\Api\Common\SystemContextApiController::forgetLookupsCache();
 
         return response()->json([
             'message' => 'Section updated successfully',
@@ -146,6 +161,7 @@ class DepartmentApiController extends Controller
         $record = Section::findOrFail($id);
         $record->status = (int) $record->status === 1 ? 0 : 1;
         $record->save();
+        \App\Http\Controllers\Api\Common\SystemContextApiController::forgetLookupsCache();
 
         return response()->json([
             'message' => 'Section status updated successfully',
@@ -157,6 +173,7 @@ class DepartmentApiController extends Controller
     {
         $record = Section::findOrFail($id);
         $record->delete();
+        \App\Http\Controllers\Api\Common\SystemContextApiController::forgetLookupsCache();
 
         return response()->json(['message' => 'Section deleted successfully']);
     }

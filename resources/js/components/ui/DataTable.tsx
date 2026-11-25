@@ -71,6 +71,8 @@ export function DataTable({
 }: DataTableProps) {
   const [currentPage, setCurrentPage] = React.useState(1);
   const [pageSize, setPageSize] = React.useState(25);
+  const [sortField, setSortField] = React.useState<string | null>(null);
+  const [sortDirection, setSortDirection] = React.useState<"none" | "asc" | "desc">("none");
 
   const visibleColumns = React.useMemo(
     () => columns.filter((col) => col.key !== "actions"),
@@ -79,11 +81,63 @@ export function DataTable({
 
   React.useEffect(() => {
     setCurrentPage(1);
-  }, [rows.length]);
+  }, [rows, sortField, sortDirection]);
 
-  const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
+  const sortedRows = React.useMemo(() => {
+    if (!sortField || sortDirection === "none") return rows;
+
+    const getComparable = (row: TableRow, key: string): string | number => {
+      const rawCandidate =
+        key === "poNumber" ? row._rawPo ?? row[key]
+        : key === "prNumber" ? row._rawPr ?? row[key]
+        : key === "totalPrice" ? row._rawTotalPrice ?? row[key]
+        : key === "subTotal" ? row._rawSubTotal ?? row[key]
+        : key === "date" ? row._rawDate ?? row[key]
+        : row[key];
+
+      if (rawCandidate === null || rawCandidate === undefined || React.isValidElement(rawCandidate)) {
+        return "";
+      }
+      if (typeof rawCandidate === "number") return rawCandidate;
+      const str = String(rawCandidate).trim();
+      const numCandidate = str.replace(/[^0-9.-]/g, "");
+      if (/^-?\d+(\.\d+)?$/.test(numCandidate) && !/[a-zA-Z/-]{2,}/.test(str)) {
+        const parsed = Number(numCandidate);
+        if (!Number.isNaN(parsed)) return parsed;
+      }
+      return str.toLowerCase();
+    };
+
+    const next = [...rows];
+    next.sort((a, b) => {
+      const aVal = getComparable(a, sortField);
+      const bVal = getComparable(b, sortField);
+      if (typeof aVal === "number" && typeof bVal === "number") {
+        return sortDirection === "asc" ? aVal - bVal : bVal - aVal;
+      }
+      if (aVal < bVal) return sortDirection === "asc" ? -1 : 1;
+      if (aVal > bVal) return sortDirection === "asc" ? 1 : -1;
+      return 0;
+    });
+    return next;
+  }, [rows, sortField, sortDirection]);
+
+  const handleToggleSort = (key: string) => {
+    if (sortField === key) {
+      if (sortDirection === "asc") setSortDirection("desc");
+      else if (sortDirection === "desc") {
+        setSortDirection("none");
+        setSortField(null);
+      } else setSortDirection("asc");
+    } else {
+      setSortField(key);
+      setSortDirection("asc");
+    }
+  };
+
+  const totalPages = Math.max(1, Math.ceil(sortedRows.length / pageSize));
   const safeCurrentPage = Math.min(Math.max(1, currentPage), totalPages);
-  const displayedRows = rows.slice(
+  const displayedRows = sortedRows.slice(
     (safeCurrentPage - 1) * pageSize,
     safeCurrentPage * pageSize
   );
@@ -99,18 +153,35 @@ export function DataTable({
         <table role="table" aria-label="Data Table">
           <thead>
             <tr>
-              {visibleColumns.map((col) => (
-                <th
-                  key={col.key}
-                  className={col.align === "right" ? "align-right" : col.key === "no" || col.key === "num" ? "cell-center" : ""}
-                  style={{ minWidth: col.min }}
-                >
-                  {col.label}
-                  {col.key !== "actions" && col.key !== "no" && col.key !== "num" && (
-                    <Icon name="arrowDown" size={12} />
-                  )}
-                </th>
-              ))}
+              {visibleColumns.map((col) => {
+                const isSortable = col.key !== "actions" && col.key !== "no" && col.key !== "num";
+                const isActiveSort = sortField === col.key && sortDirection !== "none";
+                const alignCls =
+                  col.align === "right" ? "align-right" : col.key === "no" || col.key === "num" ? "cell-center" : "";
+                return (
+                  <th
+                    key={col.key}
+                    className={`${alignCls} ${isSortable ? "th-sortable" : ""}`.trim()}
+                    style={{ minWidth: col.min, cursor: isSortable ? "pointer" : undefined }}
+                    onClick={isSortable ? () => handleToggleSort(col.key) : undefined}
+                    aria-sort={
+                      isActiveSort
+                        ? sortDirection === "asc"
+                          ? "ascending"
+                          : "descending"
+                        : undefined
+                    }
+                  >
+                    {col.label}
+                    {isSortable && (
+                      <Icon
+                        name={isActiveSort && sortDirection === "asc" ? "arrowUp" : "arrowDown"}
+                        size={12}
+                      />
+                    )}
+                  </th>
+                );
+              })}
             </tr>
           </thead>
           <tbody>
@@ -297,7 +368,7 @@ export function DataTable({
         </table>
       </div>
       <Pagination
-        totalRecords={rows.length}
+        totalRecords={sortedRows.length}
         currentPage={safeCurrentPage}
         pageSize={pageSize}
         onPageChange={setCurrentPage}

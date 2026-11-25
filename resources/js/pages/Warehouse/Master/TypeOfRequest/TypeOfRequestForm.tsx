@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Button } from "../../../../components/ui/Button";
 import { Icon } from "../../../../components/ui/Icon";
 import { CustomSelect } from "../../../../components/ui/CustomSelect";
+import { useAuthPermission } from "../../../../context/AuthPermissionContext";
 import type { DepartmentRecord } from "../../../Exim/Master/Department/department-types";
 import type { TypeOfRequestRecord } from "./type-of-request-types";
 
@@ -10,7 +11,7 @@ interface TypeOfRequestFormProps {
   departments: DepartmentRecord[];
   isDepartmentsLoading?: boolean;
   onBack: () => void;
-  onSave: (record: TypeOfRequestRecord, isEdit: boolean) => void;
+  onSave: (record: TypeOfRequestRecord, isEdit: boolean) => Promise<void> | void;
 }
 
 export function TypeOfRequestForm({
@@ -20,6 +21,7 @@ export function TypeOfRequestForm({
   onBack,
   onSave,
 }: TypeOfRequestFormProps) {
+  const { currentUser } = useAuthPermission();
   const isEdit = !!initialRecord;
 
   const [name, setName] = useState(initialRecord?.name || "");
@@ -27,10 +29,12 @@ export function TypeOfRequestForm({
   const [description, setDescription] = useState(initialRecord?.description || "");
   const [requiresJobNumber, setRequiresJobNumber] = useState(initialRecord ? initialRecord.requiresJobNumber : true);
   const [status, setStatus] = useState<"Active" | "Inactive">(initialRecord?.status || "Active");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
 
     const trimmedName = name.trim();
 
@@ -45,6 +49,7 @@ export function TypeOfRequestForm({
     }
 
     setError(null);
+    const actorName = currentUser?.name || "System User";
 
     const record: TypeOfRequestRecord = {
       id: initialRecord ? initialRecord.id : `trq-${Date.now()}`,
@@ -56,12 +61,17 @@ export function TypeOfRequestForm({
       requiresJobNumber,
       status,
       createdAt: initialRecord?.createdAt || new Date().toISOString().replace("T", " ").substring(0, 19),
-      createdBy: initialRecord?.createdBy || "ADMINISTRATOR",
+      createdBy: initialRecord?.createdBy || actorName,
       updatedAt: new Date().toISOString().replace("T", " ").substring(0, 19),
-      updatedBy: "ADMINISTRATOR",
+      updatedBy: actorName,
     };
 
-    onSave(record, isEdit);
+    setIsSubmitting(true);
+    try {
+      await onSave(record, isEdit);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -161,10 +171,10 @@ export function TypeOfRequestForm({
 
         {/* Form Actions */}
         <div className="master-form-actions">
-          <Button type="button" variant="ghost" onClick={onBack}>
+          <Button type="button" variant="ghost" onClick={onBack} disabled={isSubmitting}>
             Cancel
           </Button>
-          <Button type="submit" variant="primary">
+          <Button type="submit" variant="primary" loading={isSubmitting} disabled={isSubmitting}>
             Save
           </Button>
         </div>

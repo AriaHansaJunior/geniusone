@@ -2,12 +2,13 @@ import React, { useState } from "react";
 import { Button } from "../../../../components/ui/Button";
 import { Icon } from "../../../../components/ui/Icon";
 import { CustomSelect } from "../../../../components/ui/CustomSelect";
+import { useAuthPermission } from "../../../../context/AuthPermissionContext";
 import type { DestinationLocationRecord } from "./destination-location-types";
 
 interface DestinationLocationFormProps {
   initialRecord?: DestinationLocationRecord | null;
   onBack: () => void;
-  onSave: (record: DestinationLocationRecord, isEdit: boolean) => void;
+  onSave: (record: DestinationLocationRecord, isEdit: boolean) => Promise<void> | void;
 }
 
 export function DestinationLocationForm({
@@ -15,15 +16,18 @@ export function DestinationLocationForm({
   onBack,
   onSave,
 }: DestinationLocationFormProps) {
+  const { currentUser } = useAuthPermission();
   const isEdit = !!initialRecord;
 
   const [name, setName] = useState(initialRecord?.name || "");
   const [description, setDescription] = useState(initialRecord?.description || "");
   const [status, setStatus] = useState<"Active" | "Inactive">(initialRecord?.status || "Active");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
 
     const trimmedName = name.trim();
 
@@ -33,6 +37,7 @@ export function DestinationLocationForm({
     }
 
     setError(null);
+    const actorName = currentUser?.name || "System User";
 
     const record: DestinationLocationRecord = {
       id: initialRecord ? initialRecord.id : `dest-${Date.now()}`,
@@ -44,12 +49,17 @@ export function DestinationLocationForm({
       description: description.trim(),
       status,
       createdAt: initialRecord?.createdAt || new Date().toISOString().replace("T", " ").substring(0, 19),
-      createdBy: initialRecord?.createdBy || "ADMINISTRATOR",
+      createdBy: initialRecord?.createdBy || actorName,
       updatedAt: new Date().toISOString().replace("T", " ").substring(0, 19),
-      updatedBy: "ADMINISTRATOR",
+      updatedBy: actorName,
     };
 
-    onSave(record, isEdit);
+    setIsSubmitting(true);
+    try {
+      await onSave(record, isEdit);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -111,10 +121,10 @@ export function DestinationLocationForm({
 
         {/* Form Actions */}
         <div className="master-form-actions">
-          <Button type="button" variant="ghost" onClick={onBack}>
+          <Button type="button" variant="ghost" onClick={onBack} disabled={isSubmitting}>
             Cancel
           </Button>
-          <Button type="submit" variant="primary">
+          <Button type="submit" variant="primary" loading={isSubmitting} disabled={isSubmitting}>
             Save
           </Button>
         </div>

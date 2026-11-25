@@ -33,7 +33,7 @@ class ReceiveNoteReturnApiController extends Controller
             $query->where('approval_status', $status);
         }
 
-        $perPage = (int) $request->query('per_page', 10);
+        $perPage = min(max((int) $request->query('per_page', 10), 1), 500);
         $records = $query->latest('id')->paginate($perPage);
 
         return response()->json([
@@ -225,7 +225,15 @@ class ReceiveNoteReturnApiController extends Controller
 
     public function approve(Request $request, int $id): JsonResponse
     {
-        $actorId = $this->requireActorId($request);
+        $actor = $this->requireActor($request);
+        $actorId = (int) $actor->id;
+        if (! $actor->hasPermission('return.approve_1') && ! $actor->hasPermission('return.approve_2')) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Forbidden: Insufficient permission to approve Receive Note Return.',
+            ], 403);
+        }
+
         $record = ReceiveNoteReturn::findOrFail($id);
         $record->update([
             'approval_status' => 'Approved',
@@ -241,7 +249,15 @@ class ReceiveNoteReturnApiController extends Controller
 
     public function reject(Request $request, int $id): JsonResponse
     {
-        $actorId = $this->requireActorId($request);
+        $actor = $this->requireActor($request);
+        $actorId = (int) $actor->id;
+        if (! $actor->hasPermission('return.reject') && ! $actor->hasPermission('return.approve_1') && ! $actor->hasPermission('return.approve_2')) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Forbidden: Insufficient permission to reject Receive Note Return.',
+            ], 403);
+        }
+
         $validated = $request->validate([
             'reason' => 'nullable|string|max:500',
             'note' => 'nullable|string|max:500',
@@ -249,6 +265,13 @@ class ReceiveNoteReturnApiController extends Controller
         ]);
 
         $record = ReceiveNoteReturn::findOrFail($id);
+        if (in_array($record->approval_status, ['Approved', 'Approved 2'], true)) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Approved Receive Note Return cannot be rejected.',
+            ], 422);
+        }
+
         $record->update([
             'approval_status' => 'Rejected',
             'rejection_note' => $validated['reason'] ?? $validated['note'] ?? $validated['rejection_note'] ?? null,

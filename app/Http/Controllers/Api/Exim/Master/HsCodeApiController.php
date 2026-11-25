@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\Exim\Master;
 
+use App\Http\Controllers\Api\Common\SystemContextApiController;
 use App\Http\Controllers\Controller;
 use App\Models\Master\Customs\HsCode;
 use App\Models\Master\Customs\TypeRateBm;
@@ -22,7 +23,7 @@ class HsCodeApiController extends Controller
             });
         }
 
-        $perPage = (int) $request->query('per_page', 10);
+        $perPage = min(max((int) $request->query('per_page', 10), 1), 500);
         $records = $query->latest('id')->paginate($perPage);
 
         return response()->json([
@@ -59,7 +60,12 @@ class HsCodeApiController extends Controller
             'rates_ppnbm' => 'nullable|numeric',
             'types_rates_bm_id' => 'nullable|exists:types_rates_bm,id',
             'types_rates_cukai_id' => 'nullable|exists:types_rates_cukai,id',
+            'status' => 'nullable|integer|in:0,1',
         ]);
+
+        if (! array_key_exists('status', $validated) || $validated['status'] === null) {
+            $validated['status'] = 1;
+        }
 
         if (empty($validated['types_rates_bm_id'])) {
             $bm = TypeRateBm::query()->orderBy('id')->first();
@@ -78,6 +84,7 @@ class HsCodeApiController extends Controller
         }
 
         $record = HsCode::create($validated);
+        SystemContextApiController::forgetLookupsCache();
 
         return response()->json([
             'message' => 'HS Code created successfully',
@@ -106,12 +113,32 @@ class HsCodeApiController extends Controller
             'rates_ppnbm' => 'nullable|numeric',
             'types_rates_bm_id' => 'nullable|exists:types_rates_bm,id',
             'types_rates_cukai_id' => 'nullable|exists:types_rates_cukai,id',
+            'status' => 'nullable|integer|in:0,1',
         ]);
 
+        if (array_key_exists('status', $validated) && $validated['status'] === null) {
+            unset($validated['status']);
+        }
+
         $record->update($validated);
+        SystemContextApiController::forgetLookupsCache();
 
         return response()->json([
             'message' => 'HS Code updated successfully',
+            'data' => $record->load(['typeRateBm', 'typeRateCukai']),
+        ]);
+    }
+
+    public function toggleStatus(int $id): JsonResponse
+    {
+        $record = HsCode::findOrFail($id);
+        $record->status = (int) ($record->status ?? 1) === 1 ? 0 : 1;
+        $record->save();
+        SystemContextApiController::forgetLookupsCache();
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'HS Code status updated successfully',
             'data' => $record->load(['typeRateBm', 'typeRateCukai']),
         ]);
     }
@@ -120,6 +147,7 @@ class HsCodeApiController extends Controller
     {
         $record = HsCode::findOrFail($id);
         $record->delete();
+        SystemContextApiController::forgetLookupsCache();
 
         return response()->json(['message' => 'HS Code deleted successfully']);
     }

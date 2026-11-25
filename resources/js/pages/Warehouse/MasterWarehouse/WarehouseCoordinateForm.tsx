@@ -9,7 +9,7 @@ import type {
 interface WarehouseCoordinateFormProps {
   warehouse: WarehouseMasterRecord;
   onBack: () => void;
-  onSave?: (newCoordinate: WarehouseCoordinateRecord) => void;
+  onSave?: (newCoordinate: WarehouseCoordinateRecord) => Promise<void> | void;
 }
 
 export function WarehouseCoordinateForm({
@@ -18,10 +18,12 @@ export function WarehouseCoordinateForm({
   onSave,
 }: WarehouseCoordinateFormProps) {
   const [name, setName] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
 
     const trimmed = name.trim();
     if (!trimmed) {
@@ -38,7 +40,12 @@ export function WarehouseCoordinateForm({
     };
 
     if (onSave) {
-      onSave(newCoordinate);
+      setIsSubmitting(true);
+      try {
+        await onSave(newCoordinate);
+      } finally {
+        setIsSubmitting(false);
+      }
     }
   };
 
@@ -80,10 +87,10 @@ export function WarehouseCoordinateForm({
 
           {/* Form Actions */}
           <div className="wh-form-actions">
-            <Button type="button" variant="ghost" onClick={onBack}>
+            <Button type="button" variant="ghost" onClick={onBack} disabled={isSubmitting}>
               Cancel
             </Button>
-            <Button type="submit" variant="primary">
+            <Button type="submit" variant="primary" loading={isSubmitting} disabled={isSubmitting}>
               Save
             </Button>
           </div>

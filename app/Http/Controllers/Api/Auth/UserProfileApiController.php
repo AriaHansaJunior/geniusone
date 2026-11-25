@@ -58,8 +58,28 @@ class UserProfileApiController extends Controller
             'department_id' => 'nullable|integer|exists:departments,id',
             'departments_id' => 'nullable|integer|exists:departments,id',
             'password' => 'nullable|string|min:6',
-            'photo' => 'nullable', // Base64 data URL, image file, or string path
+            'photo' => $request->hasFile('photo')
+                ? 'required|file|image|mimes:jpg,jpeg,png,webp|max:2048'
+                : 'nullable|string',
         ]);
+
+        $deleteOldAvatar = function (?string $oldPhoto): void {
+            if (! $oldPhoto || ! is_string($oldPhoto)) {
+                return;
+            }
+            $base = basename($oldPhoto);
+            if ($base === '' || $base === '.' || $base === '..') {
+                return;
+            }
+            if (str_starts_with($oldPhoto, '/avatars/') || str_starts_with($oldPhoto, '/storage/avatars/')) {
+                \Illuminate\Support\Facades\Storage::disk('public')->delete('avatars/'.$base);
+            } elseif (str_starts_with($oldPhoto, '/uploads/avatars/')) {
+                $legacyFile = public_path('uploads/avatars/'.$base);
+                if (is_file($legacyFile)) {
+                    @unlink($legacyFile);
+                }
+            }
+        };
 
         if (! empty($validated['name'])) {
             $user->name = $validated['name'];
@@ -91,43 +111,60 @@ class UserProfileApiController extends Controller
 
         if (! empty($validated['password'])) {
             $user->password = Hash::make($validated['password']);
+            $currentPlainToken = \App\Support\ApiTokenResolver::extractToken($request);
+            $currentHash = $currentPlainToken ? \App\Support\ApiTokenResolver::hashToken($currentPlainToken) : null;
+            if (! empty($user->remember_token) && (! $currentHash || ! hash_equals((string) $user->remember_token, $currentHash))) {
+                \App\Support\ApiTokenResolver::revokeUserTokens($user);
+            }
         }
 
-        // Handle avatar photo removal or upload (file or cropped base64 data URL)
+        // Handle avatar photo removal or upload (validated image file or cropped base64 data URL)
         if ($request->boolean('remove_photo') || (array_key_exists('photo', $validated) && ($validated['photo'] === null || $validated['photo'] === ''))) {
+            $deleteOldAvatar($user->photo);
             $user->photo = null;
         } elseif ($request->hasFile('photo')) {
-            $dir = public_path('uploads/avatars');
-            if (! is_dir($dir)) {
-                mkdir($dir, 0755, true);
-            }
-            $ext = strtolower($request->file('photo')->getClientOriginalExtension() ?: 'png');
+            $file = $request->file('photo');
+            $ext = strtolower($file->guessExtension() ?: $file->getClientOriginalExtension() ?: 'png');
             if (! in_array($ext, ['jpg', 'jpeg', 'png', 'webp'], true)) {
                 $ext = 'png';
             }
             $fileName = 'avatar_'.$user->id.'_'.Str::uuid().'.'.$ext;
-            $request->file('photo')->move($dir, $fileName);
-            $user->photo = '/uploads/avatars/'.$fileName;
+            \Illuminate\Support\Facades\Storage::disk('public')->putFileAs('avatars', $file, $fileName);
+            $deleteOldAvatar($user->photo);
+            $user->photo = '/avatars/'.$fileName;
         } elseif (! empty($validated['photo']) && is_string($validated['photo'])) {
-            $photoStr = $validated['photo'];
-            if (str_starts_with($photoStr, 'data:image')) {
-                @[$type, $data] = explode(';', $photoStr);
-                @[, $data] = explode(',', $data);
-                if ($data) {
-                    $decoded = base64_decode($data);
-                    if ($decoded !== false) {
-                        $dir = public_path('uploads/avatars');
-                        if (! is_dir($dir)) {
-                            mkdir($dir, 0755, true);
-                        }
-                        $ext = (str_contains((string) $type, 'jpeg') || str_contains((string) $type, 'jpg')) ? 'jpg' : 'png';
-                        $fileName = 'avatar_'.$user->id.'_'.Str::uuid().'.'.$ext;
-                        file_put_contents($dir.DIRECTORY_SEPARATOR.$fileName, $decoded);
-                        $user->photo = '/uploads/avatars/'.$fileName;
-                    }
+            $photoStr = trim($validated['photo']);
+            if ($photoStr === $user->photo) {
+                // Keep existing stored avatar unchanged
+            } elseif (preg_match('/^data:image\/(png|jpeg|jpg|webp);base64,([A-Za-z0-9+\/\r\n=]+)$/', $photoStr, $matches)) {
+                $rawB64 = preg_replace('/\s+/', '', $matches[2]);
+                $decoded = $rawB64 ? base64_decode($rawB64, true) : false;
+                if ($decoded === false || $decoded === '' || strlen($decoded) > 2 * 1024 * 1024) {
+                    throw \Illuminate\Validation\ValidationException::withMessages([
+                        'photo' => ['Avatar image is invalid or exceeds the 2MB limit.'],
+                    ]);
                 }
+
+                $imgInfo = @getimagesizefromstring($decoded);
+                if (! $imgInfo || ! in_array($imgInfo[2], [IMAGETYPE_PNG, IMAGETYPE_JPEG, IMAGETYPE_WEBP], true)) {
+                    throw \Illuminate\Validation\ValidationException::withMessages([
+                        'photo' => ['Uploaded avatar content is not a valid PNG, JPEG, or WEBP image.'],
+                    ]);
+                }
+
+                $ext = match ($imgInfo[2]) {
+                    IMAGETYPE_JPEG => 'jpg',
+                    IMAGETYPE_WEBP => 'webp',
+                    default => 'png',
+                };
+                $fileName = 'avatar_'.$user->id.'_'.Str::uuid().'.'.$ext;
+                \Illuminate\Support\Facades\Storage::disk('public')->put('avatars/'.$fileName, $decoded);
+                $deleteOldAvatar($user->photo);
+                $user->photo = '/avatars/'.$fileName;
             } else {
-                $user->photo = $photoStr;
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'photo' => ['Avatar must be a valid image file upload or PNG/JPEG/WEBP data URL.'],
+                ]);
             }
         }
 

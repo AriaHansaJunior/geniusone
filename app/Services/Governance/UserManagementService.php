@@ -122,6 +122,10 @@ class UserManagementService
 
         $user->update($updatePayload);
 
+        if (! empty($data['password']) || (int) $user->status === 0) {
+            \App\Support\ApiTokenResolver::revokeUserTokens($user);
+        }
+
         if (array_key_exists('permissions', $data) && is_array($data['permissions'])) {
             $this->syncUserDirectPermissions($user, $data['permissions']);
         }
@@ -174,6 +178,10 @@ class UserManagementService
         $newStatus = ($oldStatus === 1) ? 0 : 1;
         $user->update(['status' => $newStatus]);
 
+        if ($newStatus === 0) {
+            \App\Support\ApiTokenResolver::revokeUserTokens($user);
+        }
+
         AuditLogger::log(
             userId: $actorId,
             type: $newStatus === 1 ? 'USER_ACTIVATED' : 'USER_DEACTIVATED',
@@ -194,6 +202,7 @@ class UserManagementService
         $user->update([
             'password' => Hash::make($newPassword),
         ]);
+        \App\Support\ApiTokenResolver::revokeUserTokens($user);
 
         AuditLogger::log(
             userId: $actorId,
@@ -235,5 +244,6 @@ class UserManagementService
     {
         $permissionIds = Permission::whereIn('name', $permissionNames)->pluck('id')->toArray();
         $user->directPermissions()->sync($permissionIds);
+        $user->clearPermissionCache();
     }
 }

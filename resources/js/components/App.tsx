@@ -117,6 +117,7 @@ import {
   deleteFacilityApi,
   fetchMasterHsCodes,
   saveHsApi,
+  toggleHsStatusApi,
   deleteHsApi,
   fetchMasterCategories,
   saveCategoryApi,
@@ -174,6 +175,7 @@ import {
   saveDestinationLocationApi,
   deleteDestinationLocationApi,
   toggleDestinationLocationStatusApi,
+  toggleReferenceMasterStatusApi,
   deleteReferenceMasterApi,
 } from "../data/masterApi";
 import { clearApiCache, createReceiveNote } from "../data/api";
@@ -1518,6 +1520,20 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
     [handleNavigateList, notifySuccess, notifyError]
   );
 
+  const handleToggleHsStatus = useCallback(
+    (id: string) =>
+      runOptimisticStatusToggle(
+        id,
+        "status",
+        "HS Code",
+        setHsRecords,
+        toggleHsStatusApi,
+        notifySuccess,
+        notifyError
+      ),
+    [notifySuccess, notifyError]
+  );
+
   const handleDeleteHs = useCallback(
     async (id: string) => {
       try {
@@ -2469,6 +2485,46 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
     [notifySuccess, notifyError]
   );
 
+  const handleSavedReferenceMaster = useCallback(
+    (key: ReferenceMasterPageKey, record: ReferenceMasterRecord) => {
+      setReferenceRecordsMap((prev) => {
+        const current = prev[key] || [];
+        const updated = [record, ...current].map((r, idx) => ({ ...r, no: idx + 1 }));
+        return { ...prev, [key]: updated };
+      });
+      const cfg = REFERENCE_MASTER_CONFIGS[key];
+      if (cfg) {
+        handleNavigateList(cfg.pageKey, cfg.listPath);
+      }
+    },
+    [handleNavigateList]
+  );
+
+  const handleToggleReferenceMasterStatus = useCallback(
+    async (key: ReferenceMasterPageKey, id: string) => {
+      const label = REFERENCE_MASTER_CONFIGS[key]?.singularLabel || "Reference";
+      setReferenceRecordsMap((prev) => ({
+        ...prev,
+        [key]: (prev[key] || []).map((row) =>
+          row.id === id ? { ...row, status: row.status === false } : row
+        ),
+      }));
+      try {
+        await toggleReferenceMasterStatusApi(key, id);
+        notifySuccess("Status Updated", `${label} status updated.`);
+      } catch (err) {
+        setReferenceRecordsMap((prev) => ({
+          ...prev,
+          [key]: (prev[key] || []).map((row) =>
+            row.id === id ? { ...row, status: row.status === false } : row
+          ),
+        }));
+        notifyError("Status Update Failed", err);
+      }
+    },
+    [notifySuccess, notifyError]
+  );
+
   const handleDeleteReferenceMaster = useCallback(
     async (key: ReferenceMasterPageKey, id: string) => {
       try {
@@ -2717,6 +2773,8 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
             handleSaveDestinationLocation={handleSaveDestinationLocation}
             handleDeleteDestinationLocation={handleDeleteDestinationLocation}
             handleToggleDestinationLocationStatus={handleToggleDestinationLocationStatus}
+            handleSavedReferenceMaster={handleSavedReferenceMaster}
+            handleToggleReferenceMasterStatus={handleToggleReferenceMasterStatus}
             handleDeleteReferenceMaster={handleDeleteReferenceMaster}
             handleToggleSupplierHide={handleToggleSupplierHide}
             handleTogglePaymentTermHide={handleTogglePaymentTermHide}
@@ -2770,6 +2828,7 @@ export function App({ initialPage = "dashboard", initialCode = "" }: AppProps) {
             handleToggleFacilityStatus={handleToggleFacilityStatus}
             handleNavigateHsEdit={handleNavigateHsEdit}
             handleSaveHs={handleSaveHs}
+            handleToggleHsStatus={handleToggleHsStatus}
             handleDeleteHs={handleDeleteHs}
             handleNavigateCategoryEdit={handleNavigateCategoryEdit}
             handleSaveCategory={handleSaveCategory}

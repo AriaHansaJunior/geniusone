@@ -780,6 +780,19 @@ select.tx-input-cell {
   font-weight: 800;
 }
 
+.tx-tab-hint-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.tx-tab-hint-text {
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 600;
+}
+
 /* PO Financial Summary Layout */
 .po-summary-container {
   display: flex;
@@ -1904,7 +1917,7 @@ select.tx-input-cell {
   }
 }
 
-@media (max-width: 768px) {
+@media (max-width: 767px) {
   .master-table-toolbar {
     padding: 12px 14px;
     flex-direction: column;

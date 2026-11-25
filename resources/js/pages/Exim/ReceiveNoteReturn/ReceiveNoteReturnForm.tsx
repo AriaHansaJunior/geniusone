@@ -63,7 +63,14 @@ export function ReceiveNoteReturnForm({
           setAdditionalCostsList(res);
         }
       })
-      .catch(() => { })
+      .catch((err) => {
+        if (isMounted) {
+          setNotice({
+            type: "warning",
+            message: err?.message || "Failed to load Additional Cost options.",
+          });
+        }
+      })
       .finally(() => {
         if (isMounted) setLoadingLookups(false);
       });

@@ -1,5 +1,5 @@
 import React, { useState, useRef, useMemo, useEffect } from "react";
-import * as XLSX from "xlsx";
+import { loadXlsxModule } from "../../../utils/xlsxExport";
 import { Button } from "../../../components/ui/Button";
 import { Icon } from "../../../components/ui/Icon";
 import { ConfirmDialog } from "../../../components/ui/ConfirmDialog";
@@ -117,7 +117,7 @@ export function PurchaseRequisitionCreate({
     : [];
 
   // Download Excel Template for PR Items
-  const handleDownloadExcelTemplate = () => {
+  const handleDownloadExcelTemplate = async () => {
     setIsUploadDropdownOpen(false);
     const headers = [
       "No",
@@ -156,7 +156,8 @@ export function PurchaseRequisitionCreate({
       ],
     ];
 
-    const ws = XLSX.utils.aoa_to_sheet([headers, ...sampleRows]);
+      const XLSX = await loadXlsxModule();
+      const ws = XLSX.utils.aoa_to_sheet([headers, ...sampleRows]);
     ws["!cols"] = [
       { wch: 6 },
       { wch: 22 },
@@ -175,7 +176,7 @@ export function PurchaseRequisitionCreate({
 
     setNotification({
       type: "success",
-      message: "Template Excel PR berhasil diunduh. Silakan lengkapi data dan unggah kembali.",
+      message: "PR Excel template downloaded successfully. Please fill in the data and re-upload it.",
     });
   };
 
@@ -186,8 +187,9 @@ export function PurchaseRequisitionCreate({
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = (evt) => {
+    reader.onload = async (evt) => {
       try {
+        const XLSX = await loadXlsxModule();
         const bstr = evt.target?.result;
         const wb = XLSX.read(bstr, { type: "binary" });
         const wsname = wb.SheetNames[0];
@@ -197,7 +199,7 @@ export function PurchaseRequisitionCreate({
         if (!rawRows || rawRows.length === 0) {
           setNotification({
             type: "error",
-            message: "File Excel yang diunggah tidak memiliki baris data.",
+            message: "The uploaded Excel file has no data rows.",
           });
           return;
         }

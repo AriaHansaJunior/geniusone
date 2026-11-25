@@ -500,7 +500,7 @@ export function UserPermissionAdmin({ onNavigateAudit }: UserPermissionAdminProp
     }
 
     try {
-      const res = await apiFetch(`/api/admin/users/${editingUser.id}/permissions`, {
+      const res = await apiFetch(`/api/admin/users/${encodeURIComponent(String(editingUser.id))}/permissions`, {
         method: "POST",
         body: JSON.stringify({
           permissions: permissionStrings,
@@ -526,7 +526,7 @@ export function UserPermissionAdmin({ onNavigateAudit }: UserPermissionAdminProp
   // Toggle user active / inactive status
   const handleToggleStatus = async (user: UserAccount) => {
     try {
-      const res = await apiFetch(`/api/admin/users/${user.id}/toggle-status`, {
+      const res = await apiFetch(`/api/admin/users/${encodeURIComponent(String(user.id))}/toggle-status`, {
         method: "PATCH",
       });
       const data = await res.json();
@@ -656,7 +656,7 @@ export function UserPermissionAdmin({ onNavigateAudit }: UserPermissionAdminProp
         payload.password = trimmedPassword;
       }
 
-      const res = await apiFetch(`/api/admin/users/${editingUserProfile.id}`, {
+      const res = await apiFetch(`/api/admin/users/${encodeURIComponent(String(editingUserProfile.id))}`, {
         method: "PUT",
         body: JSON.stringify(payload),
       });
@@ -674,7 +674,7 @@ export function UserPermissionAdmin({ onNavigateAudit }: UserPermissionAdminProp
             : ALL_SIDEBAR_MENU_ITEMS.map((i) => i.id);
 
           try {
-            await apiFetch(`/api/admin/users/${editingUserProfile.id}/permissions`, {
+            await apiFetch(`/api/admin/users/${encodeURIComponent(String(editingUserProfile.id))}/permissions`, {
               method: "POST",
               body: JSON.stringify({
                 permissions: derivedPermStrings,
@@ -707,7 +707,7 @@ export function UserPermissionAdmin({ onNavigateAudit }: UserPermissionAdminProp
     if (!userToDelete) return;
     setIsDeleting(true);
     try {
-      const res = await apiFetch(`/api/admin/users/${userToDelete.id}`, {
+      const res = await apiFetch(`/api/admin/users/${encodeURIComponent(String(userToDelete.id))}`, {
         method: "DELETE",
       });
       const data = await res.json();
@@ -756,7 +756,7 @@ export function UserPermissionAdmin({ onNavigateAudit }: UserPermissionAdminProp
     );
 
     try {
-      await apiFetch(`/api/admin/users/${user.id}`, {
+      const updateRes = await apiFetch(`/api/admin/users/${encodeURIComponent(String(user.id))}`, {
         method: "PUT",
         body: JSON.stringify({
           name: user.name,
@@ -767,15 +767,19 @@ export function UserPermissionAdmin({ onNavigateAudit }: UserPermissionAdminProp
           status: user.status === "active" || user.status === 1 ? 1 : 0,
         }),
       });
-      await apiFetch(`/api/admin/users/${user.id}/permissions`, {
+      if (!updateRes.ok) throw new Error("Failed to update user role.");
+      const permRes = await apiFetch(`/api/admin/users/${encodeURIComponent(String(user.id))}/permissions`, {
         method: "POST",
         body: JSON.stringify({
           permissions: derivedPermStrings,
           sidebar_permissions: newSidebarPerms,
         }),
       });
-    } catch {
-      // local state already updated
+      if (!permRes.ok) throw new Error("Failed to sync role permissions.");
+      showFeedback("success", `Updated role for ${user.name}.`);
+    } catch (err: any) {
+      loadUsers();
+      showFeedback("error", err?.message || `Failed to assign role for ${user.name}.`);
     }
 
     showFeedback(

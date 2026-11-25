@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers\Api\Warehouse\Master;
 
+use App\Http\Controllers\Api\Common\SystemContextApiController;
 use App\Http\Controllers\Controller;
 use App\Models\Warehouse\Facility\Warehouse;
 use App\Models\Warehouse\Facility\WarehouseCoordinate;
 use App\Models\Warehouse\Facility\WarehouseType;
+use App\Support\DocumentCodeHelper;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -34,7 +36,7 @@ class WarehouseMasterApiController extends Controller
             });
         }
 
-        $perPage = (int) $request->query('per_page', 10);
+        $perPage = min(500, max(1, (int) $request->query('per_page', 10)));
         $records = $query->latest('id')->paginate($perPage);
 
         return response()->json([
@@ -83,6 +85,7 @@ class WarehouseMasterApiController extends Controller
         $validated['updated_by'] = $actorId;
 
         $record = Warehouse::create($validated);
+        SystemContextApiController::forgetLookupsCache();
 
         return response()->json([
             'message' => 'Warehouse created successfully',
@@ -123,6 +126,7 @@ class WarehouseMasterApiController extends Controller
         $validated['updated_by'] = $actorId;
 
         $record->update($validated);
+        SystemContextApiController::forgetLookupsCache();
 
         return response()->json([
             'message' => 'Warehouse updated successfully',
@@ -134,6 +138,7 @@ class WarehouseMasterApiController extends Controller
     {
         $record = Warehouse::findOrFail($id);
         $record->delete();
+        SystemContextApiController::forgetLookupsCache();
 
         return response()->json(['message' => 'Warehouse deleted successfully']);
     }
@@ -145,6 +150,7 @@ class WarehouseMasterApiController extends Controller
         $record->status = (int) $record->status === 1 ? 0 : 1;
         $record->updated_by = $actorId;
         $record->save();
+        SystemContextApiController::forgetLookupsCache();
 
         return response()->json([
             'message' => 'Warehouse status updated successfully',
@@ -165,8 +171,8 @@ class WarehouseMasterApiController extends Controller
             }
         }
 
-        $decoded = trim(urldecode((string) $identifier));
-        $normalized = str_replace('-', '/', $decoded);
+        $decoded = trim(DocumentCodeHelper::decode((string) $identifier));
+        $normalized = DocumentCodeHelper::hyphenToSlash($decoded);
 
         return Warehouse::where('code', $decoded)
             ->orWhere('code', $normalized)

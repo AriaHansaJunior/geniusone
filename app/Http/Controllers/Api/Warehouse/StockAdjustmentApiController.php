@@ -10,6 +10,7 @@ use App\Models\Warehouse\Inventory\StockAdjustmentItem;
 use App\Services\AuditLogger;
 use App\Services\DocumentNumber\DocumentNumberGenerator;
 use App\Services\Inventory\InventoryService;
+use App\Support\SpreadsheetParser;
 use App\Support\StockAdjustmentTemplateBuilder;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
@@ -18,7 +19,7 @@ use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\ValidationException;
-use ZipArchive;
+use RuntimeException;
 
 class StockAdjustmentApiController extends Controller
 {
@@ -66,13 +67,17 @@ class StockAdjustmentApiController extends Controller
             $query->whereDate('adjustment_date', '<=', (string) $request->query('endDate'));
         }
 
-        $rows = $query->get();
+        $perPage = min(max((int) $request->query('per_page', 100), 1), 500);
+        $paginated = $query->paginate($perPage);
 
         return response()->json([
             'status' => 'success',
-            'data' => $rows->map(fn (StockAdjustment $adj) => $this->transform($adj))->values(),
+            'data' => $paginated->getCollection()->map(fn (StockAdjustment $adj) => $this->transform($adj))->values(),
             'meta' => [
-                'total' => $rows->count(),
+                'current_page' => $paginated->currentPage(),
+                'last_page' => $paginated->lastPage(),
+                'per_page' => $paginated->perPage(),
+                'total' => $paginated->total(),
             ],
         ]);
     }
@@ -159,6 +164,7 @@ class StockAdjustmentApiController extends Controller
             'reference_code' => 'nullable|string|max:100',
             'note' => 'nullable|string',
             'auto_create_missing_items' => 'nullable|boolean',
+            'file' => 'nullable|file|max:5120|mimes:csv,txt,xlsx',
         ]);
 
         $autoCreateMissing = filter_var($request->input('auto_create_missing_items', false), FILTER_VALIDATE_BOOLEAN);
@@ -170,13 +176,20 @@ class StockAdjustmentApiController extends Controller
             $file = $request->file('file');
             $ext = strtolower((string) $file->getClientOriginalExtension());
             if ($ext === 'csv' || $ext === 'txt') {
-                $rows = $this->parseCsv($file->getRealPath());
+                $rows = SpreadsheetParser::parseCsv($file->getRealPath());
             } elseif ($ext === 'xlsx') {
-                $rows = $this->parseXlsx($file->getRealPath());
+                try {
+                    $rows = SpreadsheetParser::parseXlsx($file->getRealPath());
+                } catch (RuntimeException $e) {
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => $e->getMessage(),
+                    ], 503);
+                }
             } else {
                 return response()->json([
                     'status' => 'error',
-                    'message' => "Unsupported file extension '.{$ext}'. Please upload an .xlsx, .xls, or .csv file.",
+                    'message' => "Unsupported file extension '.{$ext}'. Please upload an .xlsx or .csv file.",
                 ], 422);
             }
         } else {
@@ -363,9 +376,16 @@ class StockAdjustmentApiController extends Controller
         ], 201);
     }
 
-    public function template(): Response
+    public function template(): Response|JsonResponse
     {
-        $binary = (new StockAdjustmentTemplateBuilder)->buildXlsxBinary();
+        try {
+            $binary = (new StockAdjustmentTemplateBuilder)->buildXlsxBinary();
+        } catch (RuntimeException $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => $e->getMessage(),
+            ], 503);
+        }
 
         return response($binary, 200, [
             'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -550,28 +570,7 @@ class StockAdjustmentApiController extends Controller
 
     private function getWarehouseQuantity(int $itemId, int $warehouseId): float
     {
-        if (Schema::hasTable('warehouse_stocks')) {
-            $wsRow = DB::table('warehouse_stocks')
-                ->where('items_id', $itemId)
-                ->where('warehouses_id', $warehouseId)
-                ->selectRaw('COUNT(*) as cnt, COALESCE(SUM(quantity), 0) as qty')
-                ->first();
-            if ($wsRow && (int) $wsRow->cnt > 0) {
-                return (float) $wsRow->qty;
-            }
-        }
-
-        if (Schema::hasTable('item_warehouse')) {
-            $pivotQty = DB::table('item_warehouse')
-                ->where('items_id', $itemId)
-                ->where('warehouses_id', $warehouseId)
-                ->value('quantity');
-            if ($pivotQty !== null) {
-                return (float) $pivotQty;
-            }
-        }
-
-        return 0.0;
+        return \App\Services\GeniusOneBackend::inventory()->getWarehouseStockBalance($itemId, $warehouseId);
     }
 
     private function resolveOrCreateItemByCode(string $code, string $name, int $actorId): Item
@@ -703,131 +702,5 @@ class StockAdjustmentApiController extends Controller
         }
 
         return $out;
-    }
-
-    private function parseCsv(string $filePath): array
-    {
-        $rows = [];
-        if (! file_exists($filePath) || ! is_readable($filePath)) {
-            return $rows;
-        }
-
-        if (($handle = fopen($filePath, 'r')) !== false) {
-            $headers = null;
-            while (($data = fgetcsv($handle, 4000, ',')) !== false) {
-                if ($headers === null) {
-                    $headers = array_map(fn ($h) => trim((string) preg_replace('/^\xEF\xBB\xBF/', '', (string) $h)), $data);
-                    continue;
-                }
-                if (count($data) >= 1 && ! empty(array_filter($data, fn ($v) => $v !== null && trim((string) $v) !== ''))) {
-                    $row = [];
-                    foreach ($headers as $i => $header) {
-                        $row[$header] = $data[$i] ?? '';
-                    }
-                    $rows[] = $row;
-                }
-            }
-            fclose($handle);
-        }
-
-        return $rows;
-    }
-
-    private function parseXlsx(string $filePath): array
-    {
-        $rows = [];
-        $zip = new ZipArchive;
-        if ($zip->open($filePath) !== true) {
-            return $rows;
-        }
-
-        $sharedStrings = [];
-        $sharedStringsXml = $zip->getFromName('xl/sharedStrings.xml');
-        if ($sharedStringsXml) {
-            $xml = simplexml_load_string($sharedStringsXml);
-            if ($xml) {
-                foreach ($xml->si as $si) {
-                    if (isset($si->t)) {
-                        $sharedStrings[] = (string) $si->t;
-                    } elseif (isset($si->r)) {
-                        $text = '';
-                        foreach ($si->r as $run) {
-                            $text .= (string) ($run->t ?? '');
-                        }
-                        $sharedStrings[] = $text;
-                    } else {
-                        $sharedStrings[] = '';
-                    }
-                }
-            }
-        }
-
-        $sheetXml = $zip->getFromName('xl/worksheets/sheet1.xml');
-        if ($sheetXml) {
-            $xml = simplexml_load_string($sheetXml);
-            if ($xml && isset($xml->sheetData->row)) {
-                $rawRows = [];
-                foreach ($xml->sheetData->row as $row) {
-                    $cells = [];
-                    $fallbackIdx = 0;
-                    foreach ($row->c as $c) {
-                        $ref = (string) $c['r'];
-                        $colIdx = $ref !== '' ? $this->columnLettersToIndex($ref) : $fallbackIdx;
-                        $fallbackIdx = $colIdx + 1;
-
-                        $cellType = (string) $c['t'];
-                        if ($cellType === 'inlineStr' && isset($c->is)) {
-                            $val = (string) ($c->is->t ?? '');
-                        } else {
-                            $val = (string) ($c->v ?? '');
-                            if ($cellType === 's' && $val !== '' && isset($sharedStrings[(int) $val])) {
-                                $val = $sharedStrings[(int) $val];
-                            }
-                        }
-                        $cells[$colIdx] = $val;
-                    }
-                    if (! empty($cells)) {
-                        ksort($cells);
-                        $rawRows[] = $cells;
-                    }
-                }
-
-                if (count($rawRows) > 1) {
-                    $headerMap = [];
-                    foreach ($rawRows[0] as $colIdx => $headerName) {
-                        $headerMap[$colIdx] = trim((string) $headerName);
-                    }
-                    for ($i = 1; $i < count($rawRows); $i++) {
-                        $assoc = [];
-                        foreach ($headerMap as $colIdx => $header) {
-                            if ($header !== '') {
-                                $assoc[$header] = $rawRows[$i][$colIdx] ?? '';
-                            }
-                        }
-                        if (! empty(array_filter($assoc, fn ($v) => $v !== null && trim((string) $v) !== ''))) {
-                            $rows[] = $assoc;
-                        }
-                    }
-                }
-            }
-        }
-
-        $zip->close();
-
-        return $rows;
-    }
-
-    private function columnLettersToIndex(string $cellRef): int
-    {
-        if (! preg_match('/^([A-Z]+)/i', $cellRef, $m)) {
-            return 0;
-        }
-        $letters = strtoupper($m[1]);
-        $idx = 0;
-        for ($i = 0; $i < strlen($letters); $i++) {
-            $idx = ($idx * 26) + (ord($letters[$i]) - ord('A') + 1);
-        }
-
-        return max(0, $idx - 1);
     }
 }

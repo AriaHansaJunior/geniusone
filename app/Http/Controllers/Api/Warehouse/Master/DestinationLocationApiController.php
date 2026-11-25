@@ -36,11 +36,19 @@ class DestinationLocationApiController extends Controller
             }
         }
 
-        $rows = $query->get()->map(fn (DestinationLocation $row) => $this->transform($row));
+        $perPage = min(max((int) $request->query('per_page', 100), 1), 500);
+        $paginated = $query->paginate($perPage);
+        $rows = $paginated->getCollection()->map(fn (DestinationLocation $row) => $this->transform($row));
 
         return response()->json([
             'status' => 'success',
             'data' => $rows,
+            'meta' => [
+                'current_page' => $paginated->currentPage(),
+                'last_page' => $paginated->lastPage(),
+                'per_page' => $paginated->perPage(),
+                'total' => $paginated->total(),
+            ],
         ]);
     }
 
@@ -71,6 +79,8 @@ class DestinationLocationApiController extends Controller
             'created_by' => $actorId,
             'updated_by' => $actorId,
         ]);
+
+        \App\Http\Controllers\Api\Common\SystemContextApiController::forgetLookupsCache();
 
         return response()->json([
             'status' => 'success',
@@ -112,6 +122,8 @@ class DestinationLocationApiController extends Controller
         $record->updated_by = $actorId;
         $record->save();
 
+        \App\Http\Controllers\Api\Common\SystemContextApiController::forgetLookupsCache();
+
         return response()->json([
             'status' => 'success',
             'message' => 'Destination Location updated.',
@@ -127,6 +139,8 @@ class DestinationLocationApiController extends Controller
         $record->updated_by = $actorId;
         $record->save();
 
+        \App\Http\Controllers\Api\Common\SystemContextApiController::forgetLookupsCache();
+
         return response()->json([
             'status' => 'success',
             'message' => 'Destination Location status updated.',
@@ -139,6 +153,8 @@ class DestinationLocationApiController extends Controller
         $this->requireActorId($request);
         $record = DestinationLocation::findOrFail($id);
         $record->delete();
+
+        \App\Http\Controllers\Api\Common\SystemContextApiController::forgetLookupsCache();
 
         return response()->json([
             'status' => 'success',

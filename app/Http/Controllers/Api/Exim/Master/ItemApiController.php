@@ -23,21 +23,16 @@ class ItemApiController extends Controller
      */
     protected function authorizeItemAction(Request $request, string $action = 'create'): void
     {
-        $user = $request->user();
-        if (! $user && $headerId = $request->header('X-User-Id')) {
-            $user = \App\Models\System\Auth\User::find($headerId);
-        }
+        $user = $this->requireActor($request);
 
-        if ($user) {
-            $hasPerm = $user->hasPermission("master_item.{$action}")
-                || $user->hasPermission('master_item.*')
-                || $user->isSuperAdmin()
-                || $user->isAdmin()
-                || in_array($user->role, ['superadmin', 'admin', 'procurement', 'accounting', 'master_item_manager'], true);
+        $hasPerm = $user->hasPermission("master_item.{$action}")
+            || $user->hasPermission('master_item.*')
+            || $user->isSuperAdmin()
+            || $user->isAdmin()
+            || in_array($user->role, ['superadmin', 'admin', 'procurement', 'accounting', 'master_item_manager'], true);
 
-            if (! $hasPerm) {
-                abort(403, "Forbidden: Your role does not possess 'master_item.{$action}' permission.");
-            }
+        if (! $hasPerm) {
+            abort(403, "Forbidden: Your role does not possess 'master_item.{$action}' permission.");
         }
     }
     private function itemRelations(): array

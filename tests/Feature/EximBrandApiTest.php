@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\System\Auth\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -11,6 +12,16 @@ class EximBrandApiTest extends TestCase
 
     public function test_exim_brand_can_be_created_and_persisted(): void
     {
+        $user = User::query()->create([
+            'username' => 'brand-test-user',
+            'name' => 'Brand Test User',
+            'email' => 'brand-test@example.test',
+            'password' => 'test-password',
+            'role' => User::ROLE_ADMIN,
+            'status' => 1,
+        ]);
+        $this->actingAs($user, 'web');
+
         $response = $this->postJson('/api/exim/master/brands', [
             'code' => 'BRD-NEW',
             'name' => 'New Brand',

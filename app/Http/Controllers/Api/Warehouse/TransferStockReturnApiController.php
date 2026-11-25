@@ -67,11 +67,19 @@ class TransferStockReturnApiController extends Controller
             $query->whereDate('return_date', '<=', $to);
         }
 
-        $rows = $query->get()->map(fn (TransferStockReturn $row) => $this->transform($row));
+        $perPage = min(max((int) $request->query('per_page', 100), 1), 500);
+        $paginated = $query->paginate($perPage);
+        $rows = $paginated->getCollection()->map(fn (TransferStockReturn $row) => $this->transform($row));
 
         return response()->json([
             'status' => 'success',
             'data' => $rows,
+            'meta' => [
+                'current_page' => $paginated->currentPage(),
+                'last_page' => $paginated->lastPage(),
+                'per_page' => $paginated->perPage(),
+                'total' => $paginated->total(),
+            ],
         ]);
     }
 
@@ -87,7 +95,6 @@ class TransferStockReturnApiController extends Controller
             'job_number' => 'nullable|string|max:100',
             'return_date' => 'nullable|date',
             'note' => 'nullable|string',
-            'status' => 'nullable|string|max:45',
             'items' => 'required|array|min:1',
             'items.*.items_id' => 'required|integer|exists:items,id',
             'items.*.quantity' => 'required|numeric|gt:0',
@@ -116,7 +123,7 @@ class TransferStockReturnApiController extends Controller
                 'job_number' => $validated['job_number'] ?? $rm->job_number,
                 'return_date' => $returnDate->format('Y-m-d'),
                 'note' => $validated['note'] ?? null,
-                'status' => $validated['status'] ?? 'Waiting for Approve 1',
+                'status' => 'Waiting for Approve 1',
                 'creator_id' => $actorId,
                 'updated_by' => $actorId,
             ]);

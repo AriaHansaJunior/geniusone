@@ -101,6 +101,7 @@ class NewModulesBackendTest extends TestCase
      */
     public function test_style_import_endpoints(): void
     {
+        $this->actingAs($this->user, 'web');
         // 1. Download template
         $templateRes = $this->get('/api/exim/master/styles/template');
         $templateRes->assertStatus(200);
@@ -124,6 +125,7 @@ class NewModulesBackendTest extends TestCase
      */
     public function test_warehouse_reports_endpoints(): void
     {
+        $this->actingAs($this->user, 'web');
         $stockCardRes = $this->getJson('/api/warehouse/reports/stock-card');
         $stockCardRes->assertStatus(200);
         $stockCardRes->assertJsonStructure(['status', 'data' => ['summary', 'movements']]);
@@ -220,6 +222,7 @@ class NewModulesBackendTest extends TestCase
      */
     public function test_dashboard_exchange_rates(): void
     {
+        $this->actingAs($this->user, 'web');
         $valuta = Valuta::firstOrCreate(['code' => 'USD'], ['name' => 'US Dollar']);
         $currency = Currency::firstOrCreate(['name' => 'USD'], ['symbol' => '$', 'status' => 1]);
         ExchangeRate::create([

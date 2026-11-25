@@ -485,6 +485,17 @@
   right: 0 !important;
 }
 
+.custom-calendar-popup--portal {
+  position: fixed;
+  right: auto;
+  z-index: 12000;
+}
+
+.custom-calendar-day.is-disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
 /* Date range inputs container sizing */
 .rn-date-inputs,
 .rnr-date-inputs,

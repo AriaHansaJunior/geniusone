@@ -778,7 +778,7 @@
   }
 }
 
-@media (max-width: 768px) {
+@media (max-width: 767px) {
   .rnr-page-header,
   .rnr-detail-header,
   .rnr-form-header {

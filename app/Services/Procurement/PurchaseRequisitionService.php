@@ -185,9 +185,10 @@ class PurchaseRequisitionService
             $query->where('status', $filters['status']);
         }
 
-        // Sorting
-        $sortField = $filters['sort_by'] ?? 'created_at';
-        $sortOrder = $filters['sort_order'] ?? 'desc';
+        // Sorting (allowlisted column & direction)
+        $allowedSorts = ['id', 'pr_number', 'date', 'due_date', 'status', 'created_at', 'updated_at'];
+        $sortField = in_array($filters['sort_by'] ?? '', $allowedSorts, true) ? $filters['sort_by'] : 'created_at';
+        $sortOrder = strtolower((string) ($filters['sort_order'] ?? 'desc')) === 'asc' ? 'asc' : 'desc';
         $query->orderBy($sortField, $sortOrder);
 
         return $query->paginate($perPage);

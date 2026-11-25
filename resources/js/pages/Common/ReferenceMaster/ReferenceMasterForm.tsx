@@ -2,27 +2,32 @@ import React, { useState } from "react";
 import { Button } from "../../../components/ui/Button";
 import { Icon } from "../../../components/ui/Icon";
 import { useNotification } from "../../../context/NotificationContext";
-import type { ReferenceMasterConfig } from "./reference-master-types";
+import { saveReferenceMasterApi } from "../../../data/masterApi";
+import type { ReferenceMasterConfig, ReferenceMasterRecord } from "./reference-master-types";
 
 interface ReferenceMasterFormProps {
   config: ReferenceMasterConfig;
   onCancel: () => void;
+  onSaved?: (record: ReferenceMasterRecord) => void;
 }
 
 export function ReferenceMasterForm({
   config,
   onCancel,
+  onSaved,
 }: ReferenceMasterFormProps) {
-  const { notifyError } = useNotification();
+  const { notifySuccess, notifyError } = useNotification();
 
   const [code, setCode] = useState("");
   const [name, setName] = useState("");
   const [status, setStatus] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<{ code?: string; name?: string }>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
 
     const nextErrors: { code?: string; name?: string } = {};
     if (config.hasCode && !code.trim()) {
@@ -41,23 +46,33 @@ export function ReferenceMasterForm({
     }
 
     setErrors({});
-    const dependencyMessage = `Cannot persist ${config.singularLabel} "${name.trim()}" to table \`${config.dbTable}\`: backend endpoint ${config.expectedWriteEndpoint} is not yet registered in routes/api.php. Read operations currently use ${config.readEndpoint}.`;
-    setSubmitError(dependencyMessage);
-    notifyError(`${config.singularLabel} Write Endpoint Unavailable`, dependencyMessage);
+    setSubmitError(null);
+    setIsSubmitting(true);
+    try {
+      const saved = await saveReferenceMasterApi(config.pageKey, {
+        code: config.hasCode ? code.trim() : undefined,
+        name: name.trim(),
+        status: config.hasStatus && config.hasStatusColumn !== false ? status : undefined,
+      });
+      notifySuccess(`${config.singularLabel} Created`, `${config.singularLabel} "${saved.name}" saved successfully.`);
+      if (onSaved) {
+        onSaved(saved);
+      } else {
+        onCancel();
+      }
+    } catch (err: any) {
+      const message = err?.message || `Failed to save ${config.singularLabel}.`;
+      setSubmitError(message);
+      notifyError(`Save ${config.singularLabel} Failed`, err);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
     <div className="master-form-page">
       <div className="master-form-header">
         <h1 className="master-form-page-title">{config.formTitle}</h1>
-      </div>
-
-      <div className="master-banner master-banner--info" role="status">
-        <span>
-          Connected to live table <code>{config.dbTable}</code> via{" "}
-          <code>{config.readEndpoint}</code>. Write persistence requires backend endpoint{" "}
-          <code>{config.expectedWriteEndpoint}</code> in <code>routes/api.php</code>.
-        </span>
       </div>
 
       {submitError && (
@@ -132,10 +147,10 @@ export function ReferenceMasterForm({
         </div>
 
         <div className="master-form-actions">
-          <Button type="button" variant="ghost" onClick={onCancel}>
+          <Button type="button" variant="ghost" onClick={onCancel} disabled={isSubmitting}>
             Cancel
           </Button>
-          <Button type="submit" variant="primary">
+          <Button type="submit" variant="primary" loading={isSubmitting} disabled={isSubmitting}>
             Save
           </Button>
         </div>

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import * as XLSX from "xlsx";
+import { loadXlsxModule } from "../../../utils/xlsxExport";
 import { Button } from "../../../components/ui/Button";
 import { SearchField } from "../../../components/ui/SearchField";
 import { Icon } from "../../../components/ui/Icon";
@@ -145,13 +145,14 @@ export function MasterWarehouseIndex({
     );
   };
 
-  const handleExportExcel = () => {
+  const handleExportExcel = async () => {
     if (sortedRecords.length === 0) {
       notifyWarning("Nothing to Export", "No warehouse records match your current filter.");
       return;
     }
 
     try {
+      const XLSX = await loadXlsxModule();
       const dataToExport = sortedRecords.map((r, idx) => ({
         No: idx + 1,
         Name: r.name,

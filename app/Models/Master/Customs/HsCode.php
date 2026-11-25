@@ -26,6 +26,11 @@ class HsCode extends Model
         'hs_codecol',
         'types_rates_bm_id',
         'types_rates_cukai_id',
+        'status',
+    ];
+
+    protected $casts = [
+        'status' => 'integer',
     ];
 
     public function typeRateBm(): BelongsTo

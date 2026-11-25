@@ -111,7 +111,7 @@ export async function updateUserApi(
         ? convertPermissionMapToStrings(updates.permissions)
         : undefined;
 
-    const res = await apiPut<{ data: any }>(`/api/admin/users/${userId}`, {
+    const res = await apiPut<{ data: any }>(`/api/admin/users/${encodeURIComponent(String(userId))}`, {
       name: updates.name,
       username: updates.username,
       email: updates.email,
@@ -148,7 +148,7 @@ export async function updateUserPermissionsApi(
     const permsArray = Array.isArray(permissions)
       ? permissions
       : convertPermissionMapToStrings(permissions);
-    const res = await apiPost<{ data: any }>(`/api/admin/users/${userId}/permissions`, {
+    const res = await apiPost<{ data: any }>(`/api/admin/users/${encodeURIComponent(String(userId))}/permissions`, {
       permissions: permsArray,
       sidebar_permissions: sidebarPermissions ?? null,
     });
@@ -165,7 +165,7 @@ export async function toggleUserStatusApi(
   userId: string | number
 ): Promise<{ success: boolean; status?: number; error?: string }> {
   try {
-    const res = await apiPatch<{ data: { status: number } }>(`/api/admin/users/${userId}/toggle-status`);
+    const res = await apiPatch<{ data: { status: number } }>(`/api/admin/users/${encodeURIComponent(String(userId))}/toggle-status`);
     return { success: true, status: res?.data?.status };
   } catch (err: any) {
     return { success: false, error: err?.message || "Failed to toggle user status." };
@@ -177,7 +177,7 @@ export async function resetUserPasswordApi(
   newPassword: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    await apiPost(`/api/admin/users/${userId}/reset-password`, {
+    await apiPost(`/api/admin/users/${encodeURIComponent(String(userId))}/reset-password`, {
       new_password: newPassword,
       new_password_confirmation: newPassword,
     });
@@ -189,7 +189,7 @@ export async function resetUserPasswordApi(
 
 export async function deleteUserApi(userId: string | number): Promise<{ success: boolean; error?: string }> {
   try {
-    await apiDelete(`/api/admin/users/${userId}`);
+    await apiDelete(`/api/admin/users/${encodeURIComponent(String(userId))}`);
     return { success: true };
   } catch (err: any) {
     return { success: false, error: err?.message || "Failed to delete user." };
@@ -214,7 +214,7 @@ export async function createRoleApi(role: RoleDefinition): Promise<RoleDefinitio
 }
 
 export async function updateRoleApi(roleId: string | number, role: RoleDefinition): Promise<RoleDefinition> {
-  const res = await apiPut<{ data: any }>(`/api/admin/roles/${roleId}`, {
+  const res = await apiPut<{ data: any }>(`/api/admin/roles/${encodeURIComponent(String(roleId))}`, {
     name: role.code,
     label: role.name,
     description: role.description,
@@ -225,5 +225,5 @@ export async function updateRoleApi(roleId: string | number, role: RoleDefinitio
 }
 
 export async function deleteRoleApi(roleId: string | number): Promise<boolean> {
-  return apiDelete(`/api/admin/roles/${roleId}`);
+  return apiDelete(`/api/admin/roles/${encodeURIComponent(String(roleId))}`);
 }

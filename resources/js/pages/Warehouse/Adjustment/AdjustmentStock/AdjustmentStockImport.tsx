@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import * as XLSX from "xlsx";
+import { loadXlsxModule } from "../../../../utils/xlsxExport";
 import { Badge } from "../../../../components/ui/Badge";
 import { Button } from "../../../../components/ui/Button";
 import { CustomDatePicker } from "../../../../components/ui/CustomDatePicker";
@@ -287,8 +287,9 @@ export function AdjustmentStockImport({ onBack, onImported }: AdjustmentStockImp
     }
 
     const reader = new FileReader();
-    reader.onload = (evt) => {
+    reader.onload = async (evt) => {
       try {
+        const XLSX = await loadXlsxModule();
         const data = evt.target?.result;
         const workbook = XLSX.read(data, { type: "array" });
         const targetSheetName =

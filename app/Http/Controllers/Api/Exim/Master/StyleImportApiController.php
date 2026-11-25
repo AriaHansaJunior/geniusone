@@ -4,11 +4,13 @@ namespace App\Http\Controllers\Api\Exim\Master;
 
 use App\Http\Controllers\Controller;
 use App\Models\Master\Material\Style;
+use App\Support\SpreadsheetParser;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use RuntimeException;
 use Symfony\Component\HttpFoundation\StreamedResponse;
-use ZipArchive;
 
 class StyleImportApiController extends Controller
 {
@@ -17,6 +19,11 @@ class StyleImportApiController extends Controller
      */
     public function import(Request $request): JsonResponse
     {
+        $request->validate([
+            'file' => 'nullable|file|max:5120|mimes:csv,txt,xlsx',
+            'rows' => 'nullable|array',
+        ]);
+
         $rows = [];
 
         // Scenario A: Client sends pre-parsed rows directly as JSON array
@@ -28,9 +35,16 @@ class StyleImportApiController extends Controller
             $extension = strtolower($file->getClientOriginalExtension());
 
             if ($extension === 'csv' || $extension === 'txt') {
-                $rows = $this->parseCsv($file->getRealPath());
+                $rows = SpreadsheetParser::parseCsv($file->getRealPath(), true);
             } elseif ($extension === 'xlsx') {
-                $rows = $this->parseXlsx($file->getRealPath());
+                try {
+                    $rows = SpreadsheetParser::parseXlsx($file->getRealPath(), true);
+                } catch (RuntimeException $e) {
+                    return response()->json([
+                        'status' => 'error',
+                        'message' => $e->getMessage(),
+                    ], 503);
+                }
             } else {
                 return response()->json([
                     'status' => 'error',
@@ -110,10 +124,13 @@ class StyleImportApiController extends Controller
             ]);
         } catch (\Throwable $e) {
             DB::rollBack();
+            Log::error('Style import failed.', [
+                'error' => $e->getMessage(),
+            ]);
 
             return response()->json([
                 'status' => 'error',
-                'message' => 'Failed to import styles: '.$e->getMessage(),
+                'message' => 'Failed to import styles due to an unexpected server error.',
             ], 500);
         }
     }
@@ -141,99 +158,5 @@ class StyleImportApiController extends Controller
             });
             fclose($handle);
         }, 200, $headers);
-    }
-
-    /**
-     * Parse CSV file into keyed associative arrays.
-     */
-    private function parseCsv(string $filePath): array
-    {
-        $rows = [];
-        if (! file_exists($filePath) || ! is_readable($filePath)) {
-            return $rows;
-        }
-
-        if (($handle = fopen($filePath, 'r')) !== false) {
-            $headers = null;
-            while (($data = fgetcsv($handle, 2000, ',')) !== false) {
-                if ($headers === null) {
-                    $headers = array_map('trim', $data);
-
-                    continue;
-                }
-                if (count($data) >= 1 && ! empty(array_filter($data))) {
-                    $row = [];
-                    foreach ($headers as $i => $header) {
-                        $row[$header] = $data[$i] ?? '';
-                    }
-                    $rows[] = $row;
-                }
-            }
-            fclose($handle);
-        }
-
-        return $rows;
-    }
-
-    /**
-     * Parse XLSX file natively using ZipArchive and XML sheet parser.
-     */
-    private function parseXlsx(string $filePath): array
-    {
-        $rows = [];
-        $zip = new ZipArchive;
-
-        if ($zip->open($filePath) !== true) {
-            return $rows;
-        }
-
-        // 1. Read shared strings if available
-        $sharedStrings = [];
-        $sharedStringsXml = $zip->getFromName('xl/sharedStrings.xml');
-        if ($sharedStringsXml) {
-            $xml = simplexml_load_string($sharedStringsXml);
-            if ($xml) {
-                foreach ($xml->si as $si) {
-                    $sharedStrings[] = (string) ($si->t ?? '');
-                }
-            }
-        }
-
-        // 2. Read sheet1.xml
-        $sheetXml = $zip->getFromName('xl/worksheets/sheet1.xml');
-        if ($sheetXml) {
-            $xml = simplexml_load_string($sheetXml);
-            if ($xml && isset($xml->sheetData->row)) {
-                $rawRows = [];
-                foreach ($xml->sheetData->row as $row) {
-                    $cells = [];
-                    foreach ($row->c as $c) {
-                        $cellType = (string) $c['t'];
-                        $val = (string) $c->v;
-                        if ($cellType === 's' && isset($sharedStrings[(int) $val])) {
-                            $val = $sharedStrings[(int) $val];
-                        }
-                        $cells[] = $val;
-                    }
-                    $rawRows[] = $cells;
-                }
-
-                if (count($rawRows) > 1) {
-                    $headers = array_map('strtolower', array_map('trim', $rawRows[0]));
-                    for ($i = 1; $i < count($rawRows); $i++) {
-                        $rowCells = $rawRows[$i];
-                        $assoc = [];
-                        foreach ($headers as $colIdx => $header) {
-                            $assoc[$header] = $rowCells[$colIdx] ?? '';
-                        }
-                        $rows[] = $assoc;
-                    }
-                }
-            }
-        }
-
-        $zip->close();
-
-        return $rows;
     }
 }

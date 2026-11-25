@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from "react";
-import * as XLSX from "xlsx";
+import { loadXlsxModule } from "../../../../utils/xlsxExport";
 import { Button } from "../../../../components/ui/Button";
 import { Icon } from "../../../../components/ui/Icon";
 import { Pagination } from "../../../../components/ui/Pagination";
@@ -309,7 +309,7 @@ const handlePrint = () => {
 };
 
 // Export to Excel (.xlsx) using SheetJS
-const handleExportExcel = () => {
+const handleExportExcel = async () => {
   try {
     if (filteredRecords.length === 0) {
       setNotification({
@@ -366,6 +366,7 @@ const handleExportExcel = () => {
       "",
     ]);
 
+    const XLSX = await loadXlsxModule();
     const worksheet = XLSX.utils.aoa_to_sheet([
       [`STOCK CARD REPORT - ${currentItemInfo.name} (${currentItemInfo.code})`],
       [`Date Range: ${appliedFilters.startDate} to ${appliedFilters.endDate} | Warehouse: ${appliedFilters.warehouse}`],
@@ -538,14 +539,12 @@ return (
         <Button
           type="submit"
           variant="primary"
-          icon="filter"
         >
           Report
         </Button>
         <Button
           type="button"
           variant="secondary"
-          icon="print"
           onClick={handlePrint}
         >
           Print

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { loadXlsxModule } from "../../../utils/xlsxExport";
 import { Icon } from "../../../components/ui/Icon";
 import { Button } from "../../../components/ui/Button";
 import { Badge } from "../../../components/ui/Badge";
@@ -95,6 +96,50 @@ export function PurchaseOrderReportDetail({
     );
   }
 
+  const handlePrintPdf = () => window.print();
+
+  const handleExportXlsx = async () => {
+    const wsData = [
+      ["PR-PO TRACEABILITY REPORT DETAIL", poNumber],
+      ["PR Reference", prNumber],
+      ["BPB Reference", bpbNumber],
+      ["Supplier", supplier],
+      ["Department / Section", `${dept} (${section})`],
+      ["Facility", facility],
+      ["PR Status", statusPr],
+      ["PO Status", statusPo],
+      ["Currency", currency],
+      ["PR Qty", qtyPr],
+      ["PO Qty", qtyPo],
+      ["BPB Qty", qtyBpb],
+      ["Outstanding Qty", outstandingPp],
+      ["Subtotal", subTotal],
+      ["PPN", ppn],
+      ["PPH", pph],
+      ["Customs Doc", `${bcType} / AJU ${ajuNumber} / DN ${dnNumber}`],
+      ["Description", description],
+      [],
+      ["ITEM TRACE"],
+      ["Material Code", "Material Name", "PR Qty", "PO Qty", "BPB Qty", "Outstanding", "Unit Price"],
+      [materialCode, materialName, qtyPr, qtyPo, qtyBpb, outstandingPp, price],
+    ];
+    const XLSX = await loadXlsxModule();
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Traceability Detail");
+    XLSX.writeFile(wb, `Traceability_${docToSlug(poNumber)}.xlsx`);
+  };
+
+  const handleTraceFullChain = () => {
+    if (onNavigateDetail && prNumber && prNumber !== "—") {
+      onNavigateDetail("pr", docToSlug(prNumber));
+      return;
+    }
+    if (onNavigateDetail && poNumber && poNumber !== "—") {
+      onNavigateDetail("po", docToSlug(poNumber));
+    }
+  };
+
   return (
     <div className="full-page-detail">
       {isLoadingDetail && (
@@ -116,10 +161,12 @@ export function PurchaseOrderReportDetail({
           <Badge tone="blue">PO: {statusPo}</Badge>
           <Badge tone="green">PR: {statusPr}</Badge>
           <Badge tone="purple">{facility}</Badge>
-          <Button variant="secondary" icon="print">
+          <Button variant="secondary" onClick={handlePrintPdf}>
             Print PDF
           </Button>
-          <Button variant="excel">Export XLSX</Button>
+          <Button variant="excel" onClick={handleExportXlsx}>
+            Export XLSX
+          </Button>
         </div>
       </div>
 
@@ -138,7 +185,7 @@ export function PurchaseOrderReportDetail({
         </div>
 
         <div style={{ display: "flex", gap: "8px" }}>
-          <Button variant="secondary" icon="file">
+          <Button variant="secondary" onClick={handleTraceFullChain}>
             Trace Full Chain
           </Button>
         </div>

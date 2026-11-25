@@ -19,7 +19,7 @@ export const REFERENCE_MASTER_CONFIGS: Record<
     readEndpoint: "GET /api/procurement/master/pph-types",
     expectedWriteEndpoint: "POST /api/procurement/master/pph-types",
     hasCode: false,
-    hasStatus: true,
+    hasStatus: false,
     hasStatusColumn: false,
     nameLabel: "PPH Type Name",
     namePlaceholder: "e.g. PPh Pasal 23, PPh Pasal 4(2)...",

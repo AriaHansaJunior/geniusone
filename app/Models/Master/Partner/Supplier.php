@@ -8,6 +8,7 @@ use App\Models\Master\Finance\PaymentTerm;
 use App\Models\Master\Finance\RafaksiType;
 use App\Models\Procurement\PurchaseOrder\PurchaseOrder;
 use App\Models\System\Auth\User;
+use App\Models\Warehouse\GateReceiving\ReceiveNote;
 use App\Traits\LogsActivity;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;

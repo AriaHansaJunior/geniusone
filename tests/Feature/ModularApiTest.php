@@ -16,6 +16,16 @@ class ModularApiTest extends TestCase
      */
     public function test_procurement_master_apis(): void
     {
+        $user = User::query()->create([
+            'username' => 'modular-proc-user',
+            'name' => 'Modular Proc User',
+            'email' => 'modular-proc@example.test',
+            'password' => 'test-password',
+            'role' => User::ROLE_ADMIN,
+            'status' => 1,
+        ]);
+        $this->actingAs($user, 'web');
+
         $endpoints = [
             '/api/procurement/master/suppliers',
             '/api/procurement/master/payment-terms',
@@ -39,6 +49,8 @@ class ModularApiTest extends TestCase
             'name' => 'Supplier Test User',
             'email' => 'supplier-test@example.test',
             'password' => 'test-password',
+            'role' => User::ROLE_ADMIN,
+            'status' => 1,
         ]);
         $this->actingAs($user);
 
@@ -87,6 +99,8 @@ class ModularApiTest extends TestCase
             'name' => 'Payment Term User',
             'email' => 'payment-term@example.test',
             'password' => 'test-password',
+            'role' => User::ROLE_ADMIN,
+            'status' => 1,
         ]);
         $this->actingAs($user);
 
@@ -121,6 +135,8 @@ class ModularApiTest extends TestCase
             'name' => 'Delivery Term User',
             'email' => 'delivery-term@example.test',
             'password' => 'test-password',
+            'role' => User::ROLE_ADMIN,
+            'status' => 1,
         ]);
         $this->actingAs($user);
 
@@ -155,6 +171,8 @@ class ModularApiTest extends TestCase
             'name' => 'Additional Cost User',
             'email' => 'additional-cost@example.test',
             'password' => 'test-password',
+            'role' => User::ROLE_ADMIN,
+            'status' => 1,
         ]);
         $this->actingAs($user);
 
@@ -202,6 +220,8 @@ class ModularApiTest extends TestCase
             'name' => 'PPH Test User',
             'email' => 'pph-test@example.test',
             'password' => 'test-password',
+            'role' => User::ROLE_ADMIN,
+            'status' => 1,
         ]);
         $this->actingAs($user);
 
@@ -297,6 +317,16 @@ class ModularApiTest extends TestCase
      */
     public function test_exim_master_apis(): void
     {
+        $user = User::query()->create([
+            'username' => 'modular-exim-user',
+            'name' => 'Modular Exim User',
+            'email' => 'modular-exim@example.test',
+            'password' => 'test-password',
+            'role' => User::ROLE_ADMIN,
+            'status' => 1,
+        ]);
+        $this->actingAs($user, 'web');
+
         $endpoints = [
             '/api/exim/master/units',
             '/api/exim/master/unit-references',
@@ -323,6 +353,16 @@ class ModularApiTest extends TestCase
      */
     public function test_exim_operations_and_warehouse_master_apis(): void
     {
+        $user = User::query()->create([
+            'username' => 'modular-wh-user',
+            'name' => 'Modular WH User',
+            'email' => 'modular-wh@example.test',
+            'password' => 'test-password',
+            'role' => User::ROLE_ADMIN,
+            'status' => 1,
+        ]);
+        $this->actingAs($user, 'web');
+
         $endpoints = [
             '/api/exim/operations/returns',
             '/api/exim/operations/document-histories',
@@ -341,6 +381,16 @@ class ModularApiTest extends TestCase
      */
     public function test_core_transactional_apis(): void
     {
+        $user = User::query()->create([
+            'username' => 'modular-tx-user',
+            'name' => 'Modular Tx User',
+            'email' => 'modular-tx@example.test',
+            'password' => 'test-password',
+            'role' => User::ROLE_ADMIN,
+            'status' => 1,
+        ]);
+        $this->actingAs($user, 'web');
+
         $endpoints = [
             '/api/procurement/pr',
             '/api/procurement/po',

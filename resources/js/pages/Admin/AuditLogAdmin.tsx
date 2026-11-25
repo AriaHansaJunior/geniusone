@@ -331,7 +331,6 @@ export function AuditLogAdmin({ onNavigateUsers }: AuditLogAdminProps) {
               </div>
               <Button
                 variant="secondary"
-                icon="history"
                 onClick={() => fetchAuditLogs()}
                 disabled={isLoading}
                 title="Refresh audit trail"

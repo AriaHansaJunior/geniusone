@@ -2,16 +2,22 @@
 
 namespace App\Services\Warehouse;
 
-use App\Models\Warehouse\GateReceiving\ApprovalRn;
 use App\Models\Warehouse\GateReceiving\ReceiveNote;
-use App\Models\Warehouse\InboundStorage\ApprovalBpb;
 use App\Models\Warehouse\InboundStorage\BpbReceiveMaterial;
-use App\Services\AuditLogger;
-use Illuminate\Support\Facades\DB;
+use App\Services\Workflow\DocumentApprovalWorkflowService;
 use InvalidArgumentException;
 
 class WarehouseApprovalService
 {
+    public function __construct(
+        protected ?DocumentApprovalWorkflowService $workflow = null
+    ) {}
+
+    protected function workflowService(): DocumentApprovalWorkflowService
+    {
+        return $this->workflow ?? app(DocumentApprovalWorkflowService::class);
+    }
+
     /**
      * Approve Receive Note (RN).
      *
@@ -19,51 +25,14 @@ class WarehouseApprovalService
      */
     public function approveRn(int $rnId, int $userId, int $tier = 1, ?string $note = null): ReceiveNote
     {
-        if (! in_array($tier, [1, 2])) {
+        if (! in_array($tier, [1, 2], true)) {
             throw new InvalidArgumentException('RN Approval tier must be 1 or 2.');
         }
 
-        return DB::transaction(function () use ($rnId, $userId, $tier, $note) {
-            $rn = ReceiveNote::findOrFail($rnId);
-            $newStatus = ($tier === 1) ? 'Approved 1' : 'Approved 2';
+        /** @var ReceiveNote $rn */
+        $rn = $this->workflowService()->approve('RN', $rnId, $userId, $tier, $note);
 
-            // Check if already approved at this tier
-            $existing = ApprovalRn::where('receive_note_id', $rn->id)
-                ->where('approval_ke', (string) $tier)
-                ->first();
-
-            if ($existing && $existing->status === 1) {
-                throw new InvalidArgumentException("Receive Note has already been approved at Tier {$tier}.");
-            }
-
-            ApprovalRn::updateOrCreate(
-                [
-                    'receive_note_id' => $rn->id,
-                    'approval_ke' => (string) $tier,
-                ],
-                [
-                    'users_id' => $userId,
-                    'status' => 1, // Approved
-                ]
-            );
-
-            $rn->update([
-                'status' => ($tier === 1) ? 'Waiting for Approve 2' : 'Approved',
-                'updated_by' => $userId,
-            ]);
-
-            AuditLogger::logWorkflow(
-                documentType: 'RN',
-                documentNumber: $rn->rn_number,
-                action: "APPROVAL_{$tier}",
-                fromStatus: 'Pending',
-                toStatus: $newStatus,
-                userId: $userId,
-                extra: ['tier' => $tier, 'note' => $note]
-            );
-
-            return $rn->fresh(['approvals.user', 'supplier', 'purchaseOrders']);
-        });
+        return $rn->fresh(['approvals.user', 'supplier', 'purchaseOrders']);
     }
 
     /**
@@ -71,37 +40,15 @@ class WarehouseApprovalService
      */
     public function rejectRn(int $rnId, int $userId, int $tier = 1, ?string $reason = null): ReceiveNote
     {
-        return DB::transaction(function () use ($rnId, $userId, $tier, $reason) {
-            $rn = ReceiveNote::findOrFail($rnId);
+        $resolvedReason = trim((string) $reason);
+        if (strlen($resolvedReason) < 3) {
+            $resolvedReason = 'Rejected at gate inspection';
+        }
 
-            ApprovalRn::updateOrCreate(
-                [
-                    'receive_note_id' => $rn->id,
-                    'approval_ke' => (string) $tier,
-                ],
-                [
-                    'users_id' => $userId,
-                    'status' => 2, // Rejected
-                ]
-            );
+        /** @var ReceiveNote $rn */
+        $rn = $this->workflowService()->reject('RN', $rnId, $userId, $tier, $resolvedReason);
 
-            $rn->update([
-                'status' => 'Rejected',
-                'updated_by' => $userId,
-            ]);
-
-            AuditLogger::logWorkflow(
-                documentType: 'RN',
-                documentNumber: $rn->rn_number,
-                action: "REJECT_{$tier}",
-                fromStatus: 'Pending',
-                toStatus: 'Rejected',
-                userId: $userId,
-                extra: ['reason' => $reason]
-            );
-
-            return $rn->fresh(['approvals.user', 'supplier']);
-        });
+        return $rn->fresh(['approvals.user', 'supplier']);
     }
 
     /**
@@ -111,63 +58,14 @@ class WarehouseApprovalService
      */
     public function approveBpb(int $bpbId, int $userId, int $tier = 1, ?string $note = null): BpbReceiveMaterial
     {
-        if (! in_array($tier, [1, 2])) {
+        if (! in_array($tier, [1, 2], true)) {
             throw new InvalidArgumentException('BPB Approval tier must be 1 or 2.');
         }
 
-        return DB::transaction(function () use ($bpbId, $userId, $tier, $note) {
-            $bpb = BpbReceiveMaterial::query()->lockForUpdate()->findOrFail($bpbId);
-            $currentStatus = $bpb->status;
+        /** @var BpbReceiveMaterial $bpb */
+        $bpb = $this->workflowService()->approve('BPB', $bpbId, $userId, $tier, $note);
 
-            if ($tier === 1 && in_array($currentStatus, ['Waiting for Approve 2', 'Approved'], true)) {
-                throw new InvalidArgumentException('BPB has already passed Tier 1 approval.');
-            }
-            if ($tier === 2 && $currentStatus !== 'Waiting for Approve 2') {
-                throw new InvalidArgumentException('BPB Tier 2 approval requires Tier 1 approval first.');
-            }
-
-            $newStatus = ($tier === 1) ? 'Approved 1' : 'Approved 2';
-
-            $existing = ApprovalBpb::where('bpb_receive_material_id', $bpb->id)
-                ->where('approval_ke', (string) $tier)
-                ->first();
-
-            if ($existing && (int) $existing->status === 1) {
-                throw new InvalidArgumentException("BPB has already been approved at Tier {$tier}.");
-            }
-
-            ApprovalBpb::updateOrCreate(
-                [
-                    'bpb_receive_material_id' => $bpb->id,
-                    'approval_ke' => (string) $tier,
-                ],
-                [
-                    'users_id' => $userId,
-                    'status' => 1, // Approved
-                ]
-            );
-
-            $bpb->update([
-                'status' => ($tier === 1) ? 'Waiting for Approve 2' : 'Approved',
-                'updated_by' => $userId,
-            ]);
-
-            if ($tier === 2) {
-                app(\App\Services\Workflow\DocumentApprovalWorkflowService::class)->postBpbStockToInventory($bpb, $userId);
-            }
-
-            AuditLogger::logWorkflow(
-                documentType: 'BPB',
-                documentNumber: $bpb->bpb_number,
-                action: "APPROVAL_{$tier}",
-                fromStatus: 'Pending',
-                toStatus: $newStatus,
-                userId: $userId,
-                extra: ['tier' => $tier, 'note' => $note]
-            );
-
-            return $bpb->fresh(['approvals.user', 'mappings.warehouse', 'creator']);
-        });
+        return $bpb->fresh(['approvals.user', 'mappings.warehouse', 'creator']);
     }
 
     /**
@@ -175,36 +73,14 @@ class WarehouseApprovalService
      */
     public function rejectBpb(int $bpbId, int $userId, int $tier = 1, ?string $reason = null): BpbReceiveMaterial
     {
-        return DB::transaction(function () use ($bpbId, $userId, $tier, $reason) {
-            $bpb = BpbReceiveMaterial::findOrFail($bpbId);
+        $resolvedReason = trim((string) $reason);
+        if (strlen($resolvedReason) < 3) {
+            $resolvedReason = 'Rejected at warehouse inspection';
+        }
 
-            ApprovalBpb::updateOrCreate(
-                [
-                    'bpb_receive_material_id' => $bpb->id,
-                    'approval_ke' => (string) $tier,
-                ],
-                [
-                    'users_id' => $userId,
-                    'status' => 2, // Rejected
-                ]
-            );
+        /** @var BpbReceiveMaterial $bpb */
+        $bpb = $this->workflowService()->reject('BPB', $bpbId, $userId, $tier, $resolvedReason);
 
-            $bpb->update([
-                'status' => 'Rejected',
-                'updated_by' => $userId,
-            ]);
-
-            AuditLogger::logWorkflow(
-                documentType: 'BPB',
-                documentNumber: $bpb->bpb_number,
-                action: "REJECT_{$tier}",
-                fromStatus: 'Pending',
-                toStatus: 'Rejected',
-                userId: $userId,
-                extra: ['reason' => $reason]
-            );
-
-            return $bpb->fresh(['approvals.user', 'creator']);
-        });
+        return $bpb->fresh(['approvals.user', 'creator']);
     }
 }

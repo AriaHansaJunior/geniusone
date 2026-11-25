@@ -9,6 +9,7 @@ import { ConfirmDialog } from "../../../components/ui/ConfirmDialog";
 import { MasterDeleteButton } from "../../../components/ui/MasterDeleteButton";
 import { useMasterDelete } from "../../../hooks/useMasterDelete";
 import { useNotification } from "../../../context/NotificationContext";
+import { downloadCsvFile } from "../../../utils/csvExport";
 import type {
   ReferenceMasterConfig,
   ReferenceMasterRecord,
@@ -19,6 +20,7 @@ interface ReferenceMasterIndexProps {
   records: ReferenceMasterRecord[];
   isLoading?: boolean;
   onAddNew: () => void;
+  onToggleStatus?: (id: string) => Promise<void> | void;
   onDelete?: (id: string) => Promise<void> | void;
 }
 
@@ -30,6 +32,7 @@ export function ReferenceMasterIndex({
   records = [],
   isLoading = false,
   onAddNew,
+  onToggleStatus,
   onDelete,
 }: ReferenceMasterIndexProps) {
   const { notifySuccess, notifyError, notifyWarning } = useNotification();
@@ -125,32 +128,19 @@ export function ReferenceMasterIndex({
       headers.push(config.nameLabel);
       if (config.hasStatus) headers.push("Status");
 
-      const csvRows = [headers.join(",")];
-      sortedRecords.forEach((row, idx) => {
+      const rows = sortedRecords.map((row, idx) => {
         const vals: Array<string | number> = [idx + 1];
-        if (config.hasCode) {
-          vals.push(`"${(row.code || "").replace(/"/g, '""')}"`);
-        }
-        vals.push(`"${(row.name || "").replace(/"/g, '""')}"`);
-        if (config.hasStatus) {
-          vals.push(row.status ? "Active" : "Inactive");
-        }
-        csvRows.push(vals.join(","));
+        if (config.hasCode) vals.push(row.code || "");
+        vals.push(row.name || "");
+        if (config.hasStatus) vals.push(row.status ? "Active" : "Inactive");
+        return vals;
       });
 
-      const csvString = "\uFEFF" + csvRows.join("\r\n");
-      const blob = new Blob([csvString], { type: "text/csv;charset=utf-8;" });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.setAttribute("href", url);
-      link.setAttribute(
-        "download",
-        `${config.exportFilePrefix}_${new Date().toISOString().slice(0, 10)}.csv`
+      downloadCsvFile(
+        `${config.exportFilePrefix}_${new Date().toISOString().slice(0, 10)}.csv`,
+        headers,
+        rows
       );
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
 
       notifySuccess("Export Completed", `Exported ${sortedRecords.length} ${config.title.toLowerCase()} record(s).`);
     } catch {
@@ -246,15 +236,13 @@ export function ReferenceMasterIndex({
                           <td className="master-cell-center">
                             <StatusToggle
                               active={item.status !== false}
-                              onToggle={() =>
-                                notifyError(
-                                  "Status Toggle Unavailable",
-                                  `Cannot change status for ${config.singularLabel} "${item.name}": ${config.hasStatusColumn === false
-                                    ? `table \`${config.dbTable}\` has no status column and `
-                                    : `in table \`${config.dbTable}\`: `
-                                  }backend endpoint ${config.expectedWriteEndpoint.replace(/^POST\s+/i, "PATCH ")}/{id}/toggle-status is not yet registered in routes/api.php.`
-                                )
-                              }
+                              onToggle={() => {
+                                if (onToggleStatus) {
+                                  onToggleStatus(item.id);
+                                } else {
+                                  notifyError("Status Toggle Unavailable", `${config.singularLabel} toggle handler is not connected.`);
+                                }
+                              }}
                               ariaLabel={`Toggle status for ${item.name}`}
                             />
                           </td>

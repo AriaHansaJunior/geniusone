@@ -336,15 +336,26 @@ class WarehouseStockFlowTest extends TestCase
 
         $tmpXlsx = tempnam(sys_get_temp_dir(), 'tpl_test_');
         file_put_contents($tmpXlsx, $tplRes->getContent());
-        $zip = new \ZipArchive();
-        $this->assertTrue($zip->open($tmpXlsx) === true);
-        $workbookXml = (string) $zip->getFromName('xl/workbook.xml');
-        $stylesXml = (string) $zip->getFromName('xl/styles.xml');
-        $sharedStringsXml = (string) $zip->getFromName('xl/sharedStrings.xml');
-        $sheet1Xml = (string) $zip->getFromName('xl/worksheets/sheet1.xml');
-        $sheet2Xml = (string) $zip->getFromName('xl/worksheets/sheet2.xml');
-        $sheet3Xml = (string) $zip->getFromName('xl/worksheets/sheet3.xml');
-        $zip->close();
+        if (class_exists(\ZipArchive::class)) {
+            $zip = new \ZipArchive();
+            $this->assertTrue($zip->open($tmpXlsx) === true);
+            $workbookXml = (string) $zip->getFromName('xl/workbook.xml');
+            $stylesXml = (string) $zip->getFromName('xl/styles.xml');
+            $sharedStringsXml = (string) $zip->getFromName('xl/sharedStrings.xml');
+            $sheet1Xml = (string) $zip->getFromName('xl/worksheets/sheet1.xml');
+            $sheet2Xml = (string) $zip->getFromName('xl/worksheets/sheet2.xml');
+            $sheet3Xml = (string) $zip->getFromName('xl/worksheets/sheet3.xml');
+            $zip->close();
+        } else {
+            $entries = \App\Support\SimpleXlsxZip::extractEntries($tmpXlsx);
+            $this->assertArrayHasKey('xl/workbook.xml', $entries);
+            $workbookXml = (string) ($entries['xl/workbook.xml'] ?? '');
+            $stylesXml = (string) ($entries['xl/styles.xml'] ?? '');
+            $sharedStringsXml = (string) ($entries['xl/sharedStrings.xml'] ?? '');
+            $sheet1Xml = (string) ($entries['xl/worksheets/sheet1.xml'] ?? '');
+            $sheet2Xml = (string) ($entries['xl/worksheets/sheet2.xml'] ?? '');
+            $sheet3Xml = (string) ($entries['xl/worksheets/sheet3.xml'] ?? '');
+        }
         @unlink($tmpXlsx);
 
         $this->assertStringContainsString('name="Adjustment_Stock"', $workbookXml);

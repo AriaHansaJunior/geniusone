@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { downloadCsvFile } from "../../../../utils/csvExport";
 import { Button } from "../../../../components/ui/Button";
 import { SearchField } from "../../../../components/ui/SearchField";
 import { Icon } from "../../../../components/ui/Icon";
@@ -218,10 +219,8 @@ export function ItemIndex({
     try {
       const visibleCols = columns.filter((c) => c.visible);
       const headers = ["No", ...visibleCols.map((c) => c.label)];
-      const csvRows = [headers.join(",")];
-
-      sortedRecords.forEach((row, index) => {
-        const values: any[] = [index + 1];
+      const rows = sortedRecords.map((row, index) => {
+        const values: Array<string | number> = [index + 1];
         visibleCols.forEach((col) => {
           let val = "";
           if (col.key === "smallestUnit") {
@@ -233,24 +232,16 @@ export function ItemIndex({
           } else {
             val = String((row as any)[col.key] ?? "-");
           }
-          values.push(`"${val.replace(/"/g, '""')}"`);
+          values.push(val);
         });
-        csvRows.push(values.join(","));
+        return values;
       });
 
-      const csvString = "\uFEFF" + csvRows.join("\r\n");
-      const blob = new Blob([csvString], { type: "text/csv;charset=utf-8;" });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.setAttribute("href", url);
-      link.setAttribute(
-        "download",
-        `Master_Item_Export_${new Date().toISOString().slice(0, 10)}.csv`
+      downloadCsvFile(
+        `Master_Item_Export_${new Date().toISOString().slice(0, 10)}.csv`,
+        headers,
+        rows
       );
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
 
       setExportNotice(`Exported ${sortedRecords.length} item(s) to CSV.`);
       setTimeout(() => setExportNotice(null), 4000);

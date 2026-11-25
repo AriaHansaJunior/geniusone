@@ -397,7 +397,7 @@
 }
 
 /* Responsive Dashboard (< 768px and Small Mobile 320px-480px) */
-@media (max-width: 768px) {
+@media (max-width: 767px) {
   .dashboard-rate-card__header {
     padding: 12px 14px;
     flex-direction: column;

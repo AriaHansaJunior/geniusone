@@ -2,6 +2,7 @@
 
 namespace App\Models\Master\Material;
 
+use App\Models\Master\Organization\Department;
 use App\Traits\LogsActivity;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;

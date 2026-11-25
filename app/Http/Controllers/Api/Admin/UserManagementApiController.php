@@ -28,6 +28,7 @@ class UserManagementApiController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
+        $this->requireSuperAdmin($request);
         $filters = [
             'search' => $request->query('search'),
             'role' => $request->query('role'),
@@ -56,6 +57,7 @@ class UserManagementApiController extends Controller
      */
     public function store(Request $request): JsonResponse
     {
+        $this->requireSuperAdmin($request);
         if ($request->has('department_id') && ! $request->has('departments_id')) {
             $request->merge(['departments_id' => $request->input('department_id')]);
         }
@@ -90,8 +92,9 @@ class UserManagementApiController extends Controller
      * Show single user details.
      * GET /api/v1/admin/users/{id}
      */
-    public function show(int $id): JsonResponse
+    public function show(Request $request, int $id): JsonResponse
     {
+        $this->requireSuperAdmin($request);
         $user = User::with(['department', 'roleModel', 'directPermissions'])->findOrFail($id);
 
         return response()->json([
@@ -123,6 +126,7 @@ class UserManagementApiController extends Controller
      */
     public function update(Request $request, int $id): JsonResponse
     {
+        $this->requireSuperAdmin($request);
         $user = User::findOrFail($id);
 
         if ($request->has('department_id') && ! $request->has('departments_id')) {
@@ -161,6 +165,7 @@ class UserManagementApiController extends Controller
      */
     public function updatePermissions(Request $request, int $id): JsonResponse
     {
+        $this->requireSuperAdmin($request);
         $validated = $request->validate([
             'permissions' => 'nullable|array',
             'sidebar_permissions' => 'nullable|array',
@@ -192,7 +197,8 @@ class UserManagementApiController extends Controller
      */
     public function toggleStatus(Request $request, int $id): JsonResponse
     {
-        $actorId = $this->requireActorId($request);
+        $actor = $this->requireSuperAdmin($request);
+        $actorId = (int) $actor->id;
         $user = $this->userService->toggleStatus($id, $actorId);
 
         $statusLabel = $user->status === 1 ? 'activated' : 'deactivated';
@@ -214,11 +220,12 @@ class UserManagementApiController extends Controller
      */
     public function resetPassword(Request $request, int $id): JsonResponse
     {
+        $actor = $this->requireSuperAdmin($request);
         $validated = $request->validate([
             'password' => 'required|string|min:6',
         ]);
 
-        $actorId = $this->requireActorId($request);
+        $actorId = (int) $actor->id;
         $this->userService->resetPassword($id, $validated['password'], $actorId);
 
         return response()->json([
@@ -233,7 +240,8 @@ class UserManagementApiController extends Controller
      */
     public function destroy(Request $request, int $id): JsonResponse
     {
-        $actorId = $this->requireActorId($request);
+        $actor = $this->requireSuperAdmin($request);
+        $actorId = (int) $actor->id;
         $this->userService->deleteUser($id, $actorId);
 
         return response()->json([

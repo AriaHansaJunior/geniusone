@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { loadXlsxModule } from "../../../utils/xlsxExport";
 import { Icon } from "../../../components/ui/Icon";
 import { Button } from "../../../components/ui/Button";
 import { Badge } from "../../../components/ui/Badge";
@@ -158,6 +159,52 @@ export function PurchaseOrderDetail({
     });
     setApprovalState((prev) => ({ ...prev, history: newHistory }));
     window.print();
+  };
+
+  const handleExportXlsx = async () => {
+    const headers = ["No", "Item Code", "Item Name", "PR Ref", "Unit", "Order Qty", "Unit Price", "Discount", "Subtotal", "Currency", "Remark"];
+    const itemRows = poItems.map((it: any, idx: number) => [
+      idx + 1,
+      it.itemCode || it.code || "-",
+      it.itemName || it.name || "-",
+      it.prNumber || prNumber,
+      it.unit || "PCE",
+      Number(it.orderQty ?? it.quantity ?? it.qty ?? 0),
+      Number(it.priceRp ?? it.price ?? 0),
+      Number(it.discountRp ?? it.discount ?? 0),
+      Number(it.subtotalRp ?? it.subtotal ?? 0),
+      currency,
+      it.remark || "",
+    ]);
+    const sheetRows: (string | number)[][] = [
+      ["PURCHASE ORDER DETAIL", docNumber],
+      ["Supplier", supplierName],
+      ["Order Date", String(dateStr)],
+      ["Due Date", String(dueDate)],
+      ["Payment Term", paymentTerm],
+      ["Payment Method", paymentMethod],
+      ["Facility", facility],
+      ["Status", approvalState.status],
+      ["Grand Total", displayOrderTotal],
+      [],
+      headers,
+      ...itemRows,
+    ];
+    if (localOtherCosts.length > 0) {
+      sheetRows.push([], ["ADDITIONAL COSTS"], ["Cost Name", "Amount", "Note"]);
+      localOtherCosts.forEach((c: any) => {
+        sheetRows.push([
+          c.name || c.costName || "Cost",
+          Number(c.value ?? c.amount ?? 0),
+          c.note || "",
+        ]);
+      });
+    }
+    const XLSX = await loadXlsxModule();
+    const ws = XLSX.utils.aoa_to_sheet(sheetRows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "PO Detail");
+    XLSX.writeFile(wb, `PO_${docToSlug(docNumber)}.xlsx`);
   };
 
   const handleRecordRevision = async () => {
@@ -625,10 +672,12 @@ export function PurchaseOrderDetail({
           <Badge tone="gray">
             {currency} · Rate {rate}
           </Badge>
-          <Button variant="secondary" icon="print" onClick={handlePrintPdf}>
+          <Button variant="secondary" onClick={handlePrintPdf}>
             Print PDF
           </Button>
-          <Button variant="excel">Export XLSX</Button>
+          <Button variant="excel" onClick={handleExportXlsx}>
+            Export XLSX
+          </Button>
         </div>
       </div>
 
@@ -1050,7 +1099,7 @@ export function PurchaseOrderDetail({
                 Additional Operational & Logistics Costs
               </div>
               {!isAddingCost && (
-                <Button variant="secondary" icon="plus" onClick={() => setIsAddingCost(true)}>
+                <Button variant="secondary" onClick={() => setIsAddingCost(true)}>
                   Add Additional Cost
                 </Button>
               )}

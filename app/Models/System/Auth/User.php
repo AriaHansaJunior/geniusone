@@ -192,6 +192,25 @@ class User extends Authenticatable
     /**
      * Check if user has a specific granular permission.
      */
+    /** @var array<string, bool>|null */
+    protected ?array $cachedDirectPermissionOverrides = null;
+
+    /** @var array<int, string>|null */
+    protected ?array $cachedEffectivePermissionsList = null;
+
+    protected ?string $cachedPermissionForRole = null;
+
+    /** @var array<string, bool> */
+    protected array $cachedPermissionResults = [];
+
+    public function clearPermissionCache(): void
+    {
+        $this->cachedDirectPermissionOverrides = null;
+        $this->cachedEffectivePermissionsList = null;
+        $this->cachedPermissionForRole = null;
+        $this->cachedPermissionResults = [];
+    }
+
     public function hasPermission(string $permission): bool
     {
         if ($this->isSuperAdmin()) {
@@ -202,52 +221,58 @@ class User extends Authenticatable
             return false;
         }
 
-        // 1. Check direct user-specific permission override in user_has_permissions
+        if ($this->cachedPermissionForRole !== $this->role) {
+            $this->cachedEffectivePermissionsList = null;
+            $this->cachedPermissionResults = [];
+            $this->cachedPermissionForRole = $this->role;
+        }
+
+        if (array_key_exists($permission, $this->cachedPermissionResults)) {
+            return $this->cachedPermissionResults[$permission];
+        }
+
+        // 1. Check direct user-specific permission override in user_has_permissions (cached per instance)
         try {
-            $direct = $this->directPermissions()->where('name', $permission)->first();
-            if ($direct !== null) {
-                return (bool) $direct->pivot->is_granted;
+            if ($this->cachedDirectPermissionOverrides === null) {
+                $directs = $this->relationLoaded('directPermissions')
+                    ? $this->getRelation('directPermissions')
+                    : $this->directPermissions()->get();
+                $overrides = [];
+                foreach ($directs as $dp) {
+                    $overrides[$dp->name] = (bool) $dp->pivot->is_granted;
+                }
+                $this->cachedDirectPermissionOverrides = $overrides;
+            }
+
+            if (array_key_exists($permission, $this->cachedDirectPermissionOverrides)) {
+                return $this->cachedPermissionResults[$permission] = $this->cachedDirectPermissionOverrides[$permission];
             }
         } catch (\Throwable $e) {
-            // Ignore if DB not yet loaded
+            \Illuminate\Support\Facades\Log::warning('Failed loading direct permission overrides; failing closed for override.', [
+                'user_id' => $this->id,
+                'permission' => $permission,
+                'error' => $e->getMessage(),
+            ]);
+
+            return false;
         }
 
-        // 2. Check Role model permissions from DB
-        try {
-            $roleModel = Role::where('name', $this->role)->with('permissions')->first();
-            if ($roleModel) {
-                if ($roleModel->permissions->contains('name', '*')) {
-                    return true;
-                }
-                if ($roleModel->permissions->contains('name', $permission)) {
-                    return true;
-                }
-            }
-        } catch (\Throwable $e) {
-            // Ignore if DB not yet loaded
-        }
-
-        // 3. Fallback to hardcoded matrix
-        $permissions = self::ROLE_PERMISSIONS[$this->role] ?? [];
-        if (in_array('*', $permissions, true)) {
-            return true;
-        }
-
-        // Match exact or wildcard (e.g. pr.*)
-        if (in_array($permission, $permissions, true)) {
-            return true;
+        // 2. Evaluate against cached effective permissions (DB Role + direct grants or static fallback)
+        $effective = $this->getAllPermissions();
+        if (in_array('*', $effective, true) || in_array($permission, $effective, true)) {
+            return $this->cachedPermissionResults[$permission] = true;
         }
 
         $parts = explode('.', $permission);
-        if (count($parts) === 2 && in_array("{$parts[0]}.*", $permissions, true)) {
-            return true;
+        if (count($parts) === 2 && in_array("{$parts[0]}.*", $effective, true)) {
+            return $this->cachedPermissionResults[$permission] = true;
         }
 
-        return false;
+        return $this->cachedPermissionResults[$permission] = false;
     }
 
     /**
-     * Get all effective permissions for the user (role + direct overrides).
+     * Get all effective permissions for the user (role + direct overrides), memoized per request lifecycle.
      *
      * @return array<string>
      */
@@ -255,6 +280,10 @@ class User extends Authenticatable
     {
         if ($this->isSuperAdmin()) {
             return ['*'];
+        }
+
+        if ($this->cachedPermissionForRole === $this->role && $this->cachedEffectivePermissionsList !== null) {
+            return $this->cachedEffectivePermissionsList;
         }
 
         $perms = collect();
@@ -266,13 +295,17 @@ class User extends Authenticatable
             if ($roleModel) {
                 $roleModel->loadMissing('permissions');
                 if ($roleModel->permissions->contains('name', '*')) {
-                    return ['*'];
+                    $this->cachedPermissionForRole = $this->role;
+
+                    return $this->cachedEffectivePermissionsList = ['*'];
                 }
                 $perms = $perms->merge($roleModel->permissions->pluck('name'));
             } else {
                 $constantPerms = self::ROLE_PERMISSIONS[$this->role] ?? [];
                 if (in_array('*', $constantPerms, true)) {
-                    return ['*'];
+                    $this->cachedPermissionForRole = $this->role;
+
+                    return $this->cachedEffectivePermissionsList = ['*'];
                 }
                 $perms = $perms->merge($constantPerms);
             }
@@ -288,10 +321,18 @@ class User extends Authenticatable
                 }
             }
         } catch (\Throwable $e) {
-            return self::ROLE_PERMISSIONS[$this->role] ?? ['*'];
+            \Illuminate\Support\Facades\Log::warning('Failed to resolve user permissions; failing closed.', [
+                'user_id' => $this->id,
+                'role' => $this->role,
+                'error' => $e->getMessage(),
+            ]);
+
+            return [];
         }
 
-        return $perms->unique()->values()->all();
+        $this->cachedPermissionForRole = $this->role;
+
+        return $this->cachedEffectivePermissionsList = $perms->unique()->values()->all();
     }
 
     /**

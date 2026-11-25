@@ -181,7 +181,7 @@ export function ReceiveNoteReturnDetail({
               <Icon name="lock" size={12} style={{ marginRight: "3px" }} /> Locked
             </span>
           )}
-          <Button variant="secondary" icon="print" onClick={() => handlePrint("po")}>
+          <Button variant="secondary" onClick={() => handlePrint("po")}>
             Print Document
           </Button>
         </div>

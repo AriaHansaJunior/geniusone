@@ -28,7 +28,7 @@ export function NotFoundPage({ path, onGoHome }: NotFoundPageProps) {
           )}
         </p>
         <div className="notfound-actions">
-          <Button variant="primary" icon="home" onClick={onGoHome}>
+          <Button variant="primary" onClick={onGoHome}>
             Back to Dashboard
           </Button>
         </div>

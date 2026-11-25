@@ -54,56 +54,76 @@ use App\Models\Warehouse\RequestMaterial\RequestMaterial;
 use App\Models\Warehouse\RequestMaterial\TypeOfRequest;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 class SystemContextApiController extends Controller
 {
+    public const CONTEXT_CACHE_KEY = 'geniusone:system:context:v1';
+
+    public const LOOKUPS_CACHE_KEY = 'geniusone:master:lookups:v1';
+
+    public static function forgetContextCache(): void
+    {
+        Cache::forget(self::CONTEXT_CACHE_KEY);
+    }
+
+    public static function forgetLookupsCache(): void
+    {
+        Cache::forget(self::LOOKUPS_CACHE_KEY);
+    }
+
+    public static function forgetAllCaches(): void
+    {
+        self::forgetContextCache();
+        self::forgetLookupsCache();
+    }
+
     /**
      * Live DB system branding settings, document prefixes, and dynamic menu counts.
      * GET /api/system/context
      */
     public function context(): JsonResponse
     {
-        $settings = SystemSetting::mapAll();
+        $payload = Cache::remember(self::CONTEXT_CACHE_KEY, now()->addSeconds(30), function (): array {
+            $settings = SystemSetting::mapAll();
 
-        $pendingPr = PurchaseRequisition::whereIn('status', ['Waiting for Approve 1', 'Waiting for Approve 2'])->count();
-        $pendingPo = PurchaseOrder::whereIn('status', ['Waiting for Approve 1', 'Waiting for Approve 2'])->count();
-        $pendingRn = ReceiveNote::whereIn('status', ['Waiting for Approve 1', 'Waiting for Approve 2'])->count();
-        $pendingBpb = BpbReceiveMaterial::whereIn('status', ['Waiting for Approve 1', 'Waiting for Approve 2'])->count();
-        $pendingRm = RequestMaterial::whereIn('status', ['Waiting for Approve 1', 'Waiting for Approve 2'])->count();
-        $pendingRet = ReceiveNoteReturn::whereIn('approval_status', ['Waiting for Approve 1', 'Waiting for Approve 2'])->count();
+            $pendingPr = PurchaseRequisition::whereIn('status', ['Waiting for Approve 1', 'Waiting for Approve 2'])->count();
+            $pendingPo = PurchaseOrder::whereIn('status', ['Waiting for Approve 1', 'Waiting for Approve 2'])->count();
+            $pendingRn = ReceiveNote::whereIn('status', ['Waiting for Approve 1', 'Waiting for Approve 2'])->count();
+            $pendingBpb = BpbReceiveMaterial::whereIn('status', ['Waiting for Approve 1', 'Waiting for Approve 2'])->count();
+            $pendingRm = RequestMaterial::whereIn('status', ['Waiting for Approve 1', 'Waiting for Approve 2'])->count();
+            $pendingRet = ReceiveNoteReturn::whereIn('approval_status', ['Waiting for Approve 1', 'Waiting for Approve 2'])->count();
 
-        $reportCount = PurchaseRequisition::count()
-            + PurchaseOrder::count()
-            + ReceiveNote::count()
-            + BpbReceiveMaterial::count();
+            $reportCount = PurchaseRequisition::count()
+                + PurchaseOrder::count()
+                + ReceiveNote::count()
+                + BpbReceiveMaterial::count();
 
-        // Count active stock buffer notifications currently violated
-        $stockByItem = DB::table('warehouse_stocks')
-            ->select('items_id', DB::raw('SUM(quantity) as total_qty'))
-            ->groupBy('items_id')
-            ->pluck('total_qty', 'items_id');
+            // Count active stock buffer notifications currently violated
+            $stockByItem = DB::table('warehouse_stocks')
+                ->select('items_id', DB::raw('SUM(quantity) as total_qty'))
+                ->groupBy('items_id')
+                ->pluck('total_qty', 'items_id');
 
-        $triggeredAlerts = 0;
-        foreach (StockNotification::with('item:id,stock')->where('status', 1)->get() as $rule) {
-            $currentQty = $rule->items_id !== null
-                ? (float) ($stockByItem[$rule->items_id] ?? $rule->item?->stock ?? 0)
-                : 0.0;
-            $buffer = (float) $rule->buffer_quantity;
-            $cond = (string) $rule->trigger_condition;
-            $isHit = match ($cond) {
-                'Stock < Buffer' => $currentQty < $buffer,
-                'Stock == 0' => $currentQty <= 0,
-                default => $currentQty <= $buffer,
-            };
-            if ($isHit) {
-                $triggeredAlerts++;
+            $triggeredAlerts = 0;
+            foreach (StockNotification::with('item:id,stock')->where('status', 1)->get() as $rule) {
+                $currentQty = $rule->items_id !== null
+                    ? (float) ($stockByItem[$rule->items_id] ?? $rule->item?->stock ?? 0)
+                    : 0.0;
+                $buffer = (float) $rule->buffer_quantity;
+                $cond = (string) $rule->trigger_condition;
+                $isHit = match ($cond) {
+                    'Stock < Buffer' => $currentQty < $buffer,
+                    'Stock == 0' => $currentQty <= 0,
+                    default => $currentQty <= $buffer,
+                };
+                if ($isHit) {
+                    $triggeredAlerts++;
+                }
             }
-        }
 
-        return response()->json([
-            'status' => 'success',
-            'data' => [
+            return [
                 'settings' => $settings,
                 'counts' => [
                     'pr_total' => PurchaseRequisition::count(),
@@ -115,7 +135,12 @@ class SystemContextApiController extends Controller
                     'active_stock_alerts' => $triggeredAlerts,
                     'report_count' => $reportCount,
                 ],
-            ],
+            ];
+        });
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $payload,
         ]);
     }
 
@@ -140,6 +165,7 @@ class SystemContextApiController extends Controller
      */
     public function updateSettings(Request $request): JsonResponse
     {
+        $this->requireSuperAdmin($request);
         $this->requireActorId($request);
 
         $validated = $request->validate([
@@ -163,6 +189,8 @@ class SystemContextApiController extends Controller
                 );
             }
         }
+
+        self::forgetAllCaches();
 
         return response()->json([
             'status' => 'success',
@@ -197,9 +225,8 @@ class SystemContextApiController extends Controller
             ]);
         }
 
-        return response()->json([
-            'status' => 'success',
-            'data' => [
+        $payload = Cache::remember(self::LOOKUPS_CACHE_KEY, now()->addMinutes(5), function () use ($referenceOptions): array {
+            return [
                 'reference_options' => $referenceOptions,
                 'departments' => Department::orderBy('name')->get(['id', 'name', 'status']),
                 'sections' => Section::orderBy('name')->get(['id', 'name', 'status']),
@@ -241,7 +268,12 @@ class SystemContextApiController extends Controller
                 'types_rates_cukai' => TypeRateCukai::orderBy('name')->get(['id', 'name', 'status']),
                 'customs_reports' => CustomsReport::orderBy('name')->get(['id', 'name', 'status']),
                 'additional_cost_types' => AdditionalCostType::orderBy('name')->get(['id', 'code', 'name', 'status']),
-            ],
+            ];
+        });
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $payload,
         ]);
     }
 }

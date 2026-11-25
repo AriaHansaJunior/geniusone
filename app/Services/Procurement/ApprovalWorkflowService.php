@@ -2,67 +2,35 @@
 
 namespace App\Services\Procurement;
 
-use App\Models\Procurement\PurchaseOrder\ApprovalPo;
 use App\Models\Procurement\PurchaseOrder\PurchaseOrder;
-use App\Models\Procurement\PurchaseRequest\ApprovalPr;
 use App\Models\Procurement\PurchaseRequest\PurchaseRequisition;
-use App\Services\AuditLogger;
-use Illuminate\Support\Facades\DB;
+use App\Services\Workflow\DocumentApprovalWorkflowService;
 use InvalidArgumentException;
 
 class ApprovalWorkflowService
 {
+    public function __construct(
+        protected ?DocumentApprovalWorkflowService $workflow = null
+    ) {}
+
+    protected function workflowService(): DocumentApprovalWorkflowService
+    {
+        return $this->workflow ?? app(DocumentApprovalWorkflowService::class);
+    }
+
     /**
      * Approve Purchase Requisition (Tier 1 or Tier 2).
      */
     public function approvePr(int $prId, int $userId, int $tier = 1, ?string $note = null): PurchaseRequisition
     {
-        if (! in_array($tier, [1, 2])) {
+        if (! in_array($tier, [1, 2], true)) {
             throw new InvalidArgumentException('PR Approval tier must be 1 or 2.');
         }
 
-        return DB::transaction(function () use ($prId, $userId, $tier, $note) {
-            $pr = PurchaseRequisition::findOrFail($prId);
-            $previousStatus = $pr->status;
-            $newStatus = ($tier === 1) ? 'Approved 1' : 'Approved 2';
+        /** @var PurchaseRequisition $pr */
+        $pr = $this->workflowService()->approve('PR', $prId, $userId, $tier, $note);
 
-            // Check if already approved at this tier
-            $existing = ApprovalPr::where('purchase_requisitions_id', $pr->id)
-                ->where('approval_ke', (string) $tier)
-                ->first();
-
-            if ($existing && $existing->status === 1) {
-                throw new InvalidArgumentException("PR has already been approved at Tier {$tier}.");
-            }
-
-            ApprovalPr::updateOrCreate(
-                [
-                    'purchase_requisitions_id' => $pr->id,
-                    'approval_ke' => (string) $tier,
-                ],
-                [
-                    'users_id' => $userId,
-                    'status' => 1,
-                ]
-            );
-
-            $pr->update([
-                'status' => $newStatus,
-                'updated_by' => $userId,
-            ]);
-
-            AuditLogger::logWorkflow(
-                documentType: 'PR',
-                documentNumber: $pr->pr_number,
-                action: "APPROVAL_{$tier}",
-                fromStatus: $previousStatus,
-                toStatus: $newStatus,
-                userId: $userId,
-                extra: ['tier' => $tier, 'note' => $note]
-            );
-
-            return $pr->fresh(['approvals.user']);
-        });
+        return $pr->fresh(['approvals.user']);
     }
 
     /**
@@ -70,38 +38,15 @@ class ApprovalWorkflowService
      */
     public function rejectPr(int $prId, int $userId, int $tier = 1, ?string $reason = null): PurchaseRequisition
     {
-        return DB::transaction(function () use ($prId, $userId, $tier, $reason) {
-            $pr = PurchaseRequisition::findOrFail($prId);
-            $previousStatus = $pr->status;
+        $resolvedReason = trim((string) $reason);
+        if (strlen($resolvedReason) < 3) {
+            $resolvedReason = 'Rejected by approver';
+        }
 
-            ApprovalPr::updateOrCreate(
-                [
-                    'purchase_requisitions_id' => $pr->id,
-                    'approval_ke' => (string) $tier,
-                ],
-                [
-                    'users_id' => $userId,
-                    'status' => 2, // Rejected status code
-                ]
-            );
+        /** @var PurchaseRequisition $pr */
+        $pr = $this->workflowService()->reject('PR', $prId, $userId, $tier, $resolvedReason);
 
-            $pr->update([
-                'status' => 'Rejected',
-                'updated_by' => $userId,
-            ]);
-
-            AuditLogger::logWorkflow(
-                documentType: 'PR',
-                documentNumber: $pr->pr_number,
-                action: "REJECT_{$tier}",
-                fromStatus: $previousStatus,
-                toStatus: 'Rejected',
-                userId: $userId,
-                extra: ['reason' => $reason]
-            );
-
-            return $pr->fresh(['approvals.user']);
-        });
+        return $pr->fresh(['approvals.user']);
     }
 
     /**
@@ -109,43 +54,14 @@ class ApprovalWorkflowService
      */
     public function approvePo(int $poId, int $userId, int $tier = 1, ?string $note = null): PurchaseOrder
     {
-        if (! in_array($tier, [1, 2])) {
+        if (! in_array($tier, [1, 2], true)) {
             throw new InvalidArgumentException('PO Approval tier must be 1 or 2.');
         }
 
-        return DB::transaction(function () use ($poId, $userId, $tier, $note) {
-            $po = PurchaseOrder::findOrFail($poId);
-            $previousStatus = $po->status ?? 'Waiting for Approve 1';
-            $newStatus = ($tier === 1) ? 'Waiting for Approve 2' : 'Approved';
+        /** @var PurchaseOrder $po */
+        $po = $this->workflowService()->approve('PO', $poId, $userId, $tier, $note);
 
-            ApprovalPo::updateOrCreate(
-                [
-                    'purchase_order_id' => $po->id,
-                    'approval_ke' => (string) $tier,
-                ],
-                [
-                    'users_id' => $userId,
-                    'status' => 1,
-                ]
-            );
-
-            $po->update([
-                'status' => $newStatus,
-                'updated_by' => $userId,
-            ]);
-
-            AuditLogger::logWorkflow(
-                documentType: 'PO',
-                documentNumber: $po->po_number,
-                action: "APPROVAL_{$tier}",
-                fromStatus: $previousStatus,
-                toStatus: $newStatus,
-                userId: $userId,
-                extra: ['tier' => $tier, 'note' => $note]
-            );
-
-            return $po->fresh(['approvals.user']);
-        });
+        return $po->fresh(['approvals.user']);
     }
 
     /**
@@ -153,37 +69,14 @@ class ApprovalWorkflowService
      */
     public function rejectPo(int $poId, int $userId, int $tier = 1, ?string $reason = null): PurchaseOrder
     {
-        return DB::transaction(function () use ($poId, $userId, $tier, $reason) {
-            $po = PurchaseOrder::findOrFail($poId);
+        $resolvedReason = trim((string) $reason);
+        if (strlen($resolvedReason) < 3) {
+            $resolvedReason = 'Rejected by approver';
+        }
 
-            ApprovalPo::updateOrCreate(
-                [
-                    'purchase_order_id' => $po->id,
-                    'approval_ke' => (string) $tier,
-                ],
-                [
-                    'users_id' => $userId,
-                    'status' => 2,
-                ]
-            );
+        /** @var PurchaseOrder $po */
+        $po = $this->workflowService()->reject('PO', $poId, $userId, $tier, $resolvedReason);
 
-            $po->update([
-                'status' => 'Rejected',
-                'rejection_note' => $reason,
-                'updated_by' => $userId,
-            ]);
-
-            AuditLogger::logWorkflow(
-                documentType: 'PO',
-                documentNumber: $po->po_number,
-                action: "REJECT_{$tier}",
-                fromStatus: 'Under Review',
-                toStatus: 'Rejected',
-                userId: $userId,
-                extra: ['reason' => $reason]
-            );
-
-            return $po->fresh(['approvals.user']);
-        });
+        return $po->fresh(['approvals.user']);
     }
 }

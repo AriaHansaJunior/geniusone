@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
-import * as XLSX from "xlsx";
+import { loadXlsxModule } from "../../../utils/xlsxExport";
 import { Button } from "../../../components/ui/Button";
 import { SearchField } from "../../../components/ui/SearchField";
 import { DataTable } from "../../../components/ui/DataTable";
 import { FilterPanel } from "../../../components/common/FilterPanel";
 import { listColumns } from "../../../config/listColumns";
 import { fetchList } from "../../../data/api";
+import { useNotification } from "../../../context/NotificationContext";
 import type { TableRow } from "../../../types";
 
 interface WarehouseProps {
@@ -14,6 +15,7 @@ interface WarehouseProps {
 }
 
 export function Warehouse({ onDetail, onCreate }: WarehouseProps) {
+  const { notifyWarning } = useNotification();
   const [search, setSearch] = useState("");
   const columns = listColumns.warehouse;
   const [rows, setRows] = useState<TableRow[]>([]);
@@ -64,9 +66,9 @@ export function Warehouse({ onDetail, onCreate }: WarehouseProps) {
     });
   }, [rows, search, whFilters]);
 
-  const handleExportXLSX = () => {
+  const handleExportXLSX = async () => {
     if (filtered.length === 0) {
-      alert("No receive material records to export.");
+      notifyWarning("Nothing to Export", "No receive material records to export.");
       return;
     }
     const headers = [
@@ -95,6 +97,7 @@ export function Warehouse({ onDetail, onCreate }: WarehouseProps) {
       typeof r._rawCreatedBy === "string" ? r._rawCreatedBy : (typeof r.created === "string" ? r.created : ""),
     ]);
 
+    const XLSX = await loadXlsxModule();
     const ws = XLSX.utils.aoa_to_sheet([headers, ...dataRows]);
     ws["!cols"] = [
       { wch: 6 },
@@ -149,9 +152,6 @@ export function Warehouse({ onDetail, onCreate }: WarehouseProps) {
 
         <div className="filter-actions">
           <SearchField value={search} onChange={setSearch} />
-          <Button variant="secondary" icon="filter">
-            More filters
-          </Button>
           <Button onClick={handleApplyFilters}>Apply filters</Button>
         </div>
       </section>

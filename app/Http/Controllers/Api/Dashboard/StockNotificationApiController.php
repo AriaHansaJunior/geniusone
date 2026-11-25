@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\Dashboard;
 
+use App\Http\Controllers\Api\Common\SystemContextApiController;
 use App\Http\Controllers\Controller;
 use App\Models\Inventory\StockNotification;
 use App\Models\Master\Material\Item;
@@ -41,11 +42,19 @@ class StockNotificationApiController extends Controller
             ->groupBy('items_id')
             ->pluck('total_qty', 'items_id');
 
-        $rows = $query->get()->map(fn (StockNotification $row) => $this->transformRow($row, $stockByItem));
+        $perPage = min(max((int) $request->query('per_page', 100), 1), 500);
+        $paginated = $query->paginate($perPage);
+        $rows = $paginated->getCollection()->map(fn (StockNotification $row) => $this->transformRow($row, $stockByItem));
 
         return response()->json([
             'status' => 'success',
             'data' => $rows,
+            'meta' => [
+                'current_page' => $paginated->currentPage(),
+                'last_page' => $paginated->lastPage(),
+                'per_page' => $paginated->perPage(),
+                'total' => $paginated->total(),
+            ],
         ]);
     }
 
@@ -140,6 +149,7 @@ class StockNotificationApiController extends Controller
         }
         $record->updated_by = $actorId;
         $record->save();
+        SystemContextApiController::forgetContextCache();
 
         return response()->json([
             'status' => 'success',
@@ -155,6 +165,7 @@ class StockNotificationApiController extends Controller
         $record->status = (int) $record->status === 1 ? 0 : 1;
         $record->updated_by = $actorId;
         $record->save();
+        SystemContextApiController::forgetContextCache();
 
         return response()->json([
             'status' => 'success',
@@ -168,6 +179,7 @@ class StockNotificationApiController extends Controller
         $this->requireActorId($request);
         $record = StockNotification::findOrFail($id);
         $record->delete();
+        SystemContextApiController::forgetContextCache();
 
         return response()->json([
             'status' => 'success',

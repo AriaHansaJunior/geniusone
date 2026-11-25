@@ -578,9 +578,40 @@
   background: #ffffff;
 }
 
-@media (max-width: 768px) {
-  .perm-workflow-body {
+@media (max-width: 767px) {
+  .perm-dialog-card,
+  .dialog-card--profile,
+  .perm-dialog-card--profile {
+    width: calc(100vw - 16px) !important;
+    max-width: calc(100vw - 16px) !important;
+    max-height: 92vh;
+  }
+  .perm-modal-tabs {
+    padding: 0 12px;
+    overflow-x: auto;
+  }
+  .perm-modal-tab {
+    padding: 10px 12px;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+  .perm-modal-body {
+    padding: 12px 14px;
+  }
+  .perm-section-grid,
+  .perm-workflow-body,
+  .perm-group-box__items {
     grid-template-columns: 1fr;
+  }
+  .perm-modal-footer {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    padding: 12px 14px;
+  }
+  .perm-modal-footer__actions {
+    width: 100%;
+    justify-content: flex-end;
   }
 }
 

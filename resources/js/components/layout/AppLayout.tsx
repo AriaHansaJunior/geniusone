@@ -6,6 +6,7 @@ import { Footer } from "./Footer";
 import { Button } from "../ui/Button";
 import { Icon } from "../ui/Icon";
 import { pageMeta } from "../../config/pageMeta";
+import { clearApiCache } from "../../data/api";
 import type { PageKey, SettingsTab } from "../../types";
 
 interface AppLayoutProps {
@@ -136,13 +137,12 @@ export function AppLayout({
               </div>
               {(activePage === "pr" || activePage === "po" || activePage === "report" || activePage === "warehouse") && (
                 <div className="page-header__actions">
-                  <Button variant="outline" icon="print" onClick={() => window.print()}>
+                  <Button variant="outline" onClick={() => window.print()}>
                     Print view
                   </Button>
                   <div ref={actionsRef} style={{ position: "relative", display: "inline-block" }}>
                     <Button
                       variant="outline"
-                      icon="more"
                       onClick={() => setIsActionsOpen((prev) => !prev)}
                     >
                       Actions
@@ -192,11 +192,13 @@ export function AppLayout({
                           type="button"
                           onClick={() => {
                             setIsActionsOpen(false);
-                            const excelBtn = document.querySelector(".table-panel__heading .btn--excel") as HTMLButtonElement | null;
+                            const excelBtn = document.querySelector(
+                              ".table-panel__heading .button--excel, .panel .button--excel, .dh-filter-item .button--excel"
+                            ) as HTMLButtonElement | null;
                             if (excelBtn) {
                               excelBtn.click();
                             } else {
-                              window.location.reload();
+                              window.dispatchEvent(new CustomEvent("geniusone_export_excel"));
                             }
                           }}
                           style={{
@@ -223,7 +225,8 @@ export function AppLayout({
                           type="button"
                           onClick={() => {
                             setIsActionsOpen(false);
-                            window.location.reload();
+                            clearApiCache();
+                            window.dispatchEvent(new CustomEvent("geniusone_refresh_view"));
                           }}
                           style={{
                             width: "100%",

@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from "react";
-import * as XLSX from "xlsx";
+import { loadXlsxModule } from "../../../../utils/xlsxExport";
 import { Button } from "../../../../components/ui/Button";
 import { SearchField } from "../../../../components/ui/SearchField";
 import { Icon } from "../../../../components/ui/Icon";
@@ -150,7 +150,7 @@ export function RequestMaterialIndex({
   }, [filteredRecords, safeCurrentPage, pageSize]);
 
   // Export to Excel (.xlsx) using SheetJS
-  const handleExportExcel = () => {
+  const handleExportExcel = async () => {
     try {
       if (filteredRecords.length === 0) {
         setNotification({
@@ -195,6 +195,7 @@ export function RequestMaterialIndex({
         r.lastUpdatedDate,
       ]);
 
+      const XLSX = await loadXlsxModule();
       const worksheet = XLSX.utils.aoa_to_sheet([
         ["REQUEST MATERIAL LISTING"],
         [`Export Date: ${new Date().toISOString().slice(0, 10)}`],

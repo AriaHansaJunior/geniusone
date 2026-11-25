@@ -250,7 +250,7 @@
   font-size: 11.5px;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 767px) {
   .po-report-filters {
     padding: 14px 16px;
   }

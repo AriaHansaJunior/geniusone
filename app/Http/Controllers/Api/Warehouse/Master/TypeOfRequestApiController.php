@@ -28,11 +28,19 @@ class TypeOfRequestApiController extends Controller
             $query->where('status', ($st === 'active' || $st === '1') ? 1 : 0);
         }
 
-        $rows = $query->get()->map(fn (TypeOfRequest $row) => $this->transform($row));
+        $perPage = min(max((int) $request->query('per_page', 100), 1), 500);
+        $paginated = $query->paginate($perPage);
+        $rows = $paginated->getCollection()->map(fn (TypeOfRequest $row) => $this->transform($row));
 
         return response()->json([
             'status' => 'success',
             'data' => $rows,
+            'meta' => [
+                'current_page' => $paginated->currentPage(),
+                'last_page' => $paginated->lastPage(),
+                'per_page' => $paginated->perPage(),
+                'total' => $paginated->total(),
+            ],
         ]);
     }
 
@@ -57,6 +65,8 @@ class TypeOfRequestApiController extends Controller
             'created_by' => $actorId,
             'updated_by' => $actorId,
         ]);
+
+        \App\Http\Controllers\Api\Common\SystemContextApiController::forgetLookupsCache();
 
         return response()->json([
             'status' => 'success',
@@ -97,6 +107,8 @@ class TypeOfRequestApiController extends Controller
         $record->updated_by = $actorId;
         $record->save();
 
+        \App\Http\Controllers\Api\Common\SystemContextApiController::forgetLookupsCache();
+
         return response()->json([
             'status' => 'success',
             'message' => 'Type of Request updated.',
@@ -112,6 +124,8 @@ class TypeOfRequestApiController extends Controller
         $record->updated_by = $actorId;
         $record->save();
 
+        \App\Http\Controllers\Api\Common\SystemContextApiController::forgetLookupsCache();
+
         return response()->json([
             'status' => 'success',
             'message' => 'Type of Request status updated.',
@@ -124,6 +138,8 @@ class TypeOfRequestApiController extends Controller
         $this->requireActorId($request);
         $record = TypeOfRequest::findOrFail($id);
         $record->delete();
+
+        \App\Http\Controllers\Api\Common\SystemContextApiController::forgetLookupsCache();
 
         return response()->json([
             'status' => 'success',

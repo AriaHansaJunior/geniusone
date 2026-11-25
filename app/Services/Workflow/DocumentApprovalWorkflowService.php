@@ -2,6 +2,7 @@
 
 namespace App\Services\Workflow;
 
+use App\Http\Controllers\Api\Common\SystemContextApiController;
 use App\Http\Controllers\Api\Exim\Operations\DocumentHistoryApiController;
 use App\Models\Master\Material\Item;
 use App\Models\Procurement\PurchaseOrder\ApprovalPo;
@@ -132,7 +133,7 @@ class DocumentApprovalWorkflowService
             throw new InvalidArgumentException("User does not have permission '{$permKey}' to approve {$normKey} Stage {$tier}.");
         }
 
-        return DB::transaction(function () use ($module, $normKey, $id, $user, $tier, $note) {
+        $result = DB::transaction(function () use ($module, $normKey, $id, $user, $tier, $note) {
             $doc = $this->resolveDocument($module, $id);
             $doc = $doc->newQuery()
                 ->whereKey($doc->getKey())
@@ -217,6 +218,10 @@ class DocumentApprovalWorkflowService
 
             return $doc->fresh();
         });
+
+        SystemContextApiController::forgetContextCache();
+
+        return $result;
     }
 
     /**
@@ -245,7 +250,7 @@ class DocumentApprovalWorkflowService
             throw new InvalidArgumentException("User does not have permission '{$permKey}' to unapprove {$normKey} Stage {$tier}.");
         }
 
-        return DB::transaction(function () use ($module, $normKey, $id, $user, $tier, $reason) {
+        $result = DB::transaction(function () use ($module, $normKey, $id, $user, $tier, $reason) {
             $doc = $this->resolveDocument($module, $id);
             if ($doc instanceof BpbReceiveMaterial) {
                 $normKey = 'BPB';
@@ -253,6 +258,17 @@ class DocumentApprovalWorkflowService
                 $normKey = 'RN';
             }
             $currentStatus = $this->getDocumentStatus($doc);
+
+            if ($tier === 1) {
+                if ($this->isApprovedStatus($currentStatus)) {
+                    throw new InvalidArgumentException("Cannot UnApprove {$normKey} Stage 1 while Stage 2 Final Approval is active. UnApprove Stage 2 first.");
+                }
+                if (! in_array($currentStatus, [self::STATUS_WAITING_2, 'Approved 1'], true)) {
+                    throw new InvalidArgumentException("Cannot UnApprove {$normKey} Stage 1 in current status '{$currentStatus}'.");
+                }
+            } elseif (! $this->isApprovedStatus($currentStatus)) {
+                throw new InvalidArgumentException("Cannot UnApprove {$normKey} Stage 2 in current status '{$currentStatus}'.");
+            }
 
             // BE-05: Verify Downstream Dependencies before allowing UnApprove
             $this->assertNoDownstreamDependency($normKey, $doc);
@@ -334,6 +350,10 @@ class DocumentApprovalWorkflowService
 
             return $doc->fresh();
         });
+
+        SystemContextApiController::forgetContextCache();
+
+        return $result;
     }
 
     /**
@@ -364,7 +384,7 @@ class DocumentApprovalWorkflowService
             throw new InvalidArgumentException("User does not have authority to reject {$normKey} Stage {$tier}.");
         }
 
-        return DB::transaction(function () use ($module, $normKey, $id, $user, $tier, $reason) {
+        $result = DB::transaction(function () use ($module, $normKey, $id, $user, $tier, $reason) {
             $doc = $this->resolveDocument($module, $id);
             if ($doc instanceof BpbReceiveMaterial) {
                 $normKey = 'BPB';
@@ -412,6 +432,10 @@ class DocumentApprovalWorkflowService
 
             return $doc->fresh();
         });
+
+        SystemContextApiController::forgetContextCache();
+
+        return $result;
     }
 
     /**
@@ -422,7 +446,7 @@ class DocumentApprovalWorkflowService
         $user = User::findOrFail($userId);
         $normKey = $this->normalizeModuleKey($module);
 
-        return DB::transaction(function () use ($module, $normKey, $id, $user, $note) {
+        $result = DB::transaction(function () use ($module, $normKey, $id, $user, $note) {
             $doc = $this->resolveDocument($module, $id);
             if ($doc instanceof BpbReceiveMaterial) {
                 $normKey = 'BPB';
@@ -457,6 +481,10 @@ class DocumentApprovalWorkflowService
 
             return $doc->fresh();
         });
+
+        SystemContextApiController::forgetContextCache();
+
+        return $result;
     }
 
     /**

@@ -596,7 +596,7 @@
   }
 }
 
-@media (max-width: 768px) {
+@media (max-width: 767px) {
   .tsr-filter-grid,
   .tsr-form-grid-3,
   .tsr-form-grid-2 {
@@ -842,7 +842,7 @@
   gap: 8px;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 767px) {
   .tsr-filter-search-box,
   .tsr-filter-date-box {
     width: 100%;
@@ -976,7 +976,7 @@
   opacity: 0.6;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 767px) {
   .tsr-filter-search-wrap,
   .tsr-filter-dates-group,
   .tsr-filter-date-item {

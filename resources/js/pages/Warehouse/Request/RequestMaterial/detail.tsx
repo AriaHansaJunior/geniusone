@@ -118,7 +118,7 @@ export function RequestMaterialDetail({
           <p style={{ margin: 0, color: "var(--muted)", maxWidth: "440px", fontSize: "13px" }}>
             The requested material requisition ID "<strong>{id}</strong>" could not be located in the current system records.
           </p>
-          <Button variant="primary" icon="arrowLeft" onClick={onBack} style={{ marginTop: "8px" }}>
+          <Button variant="primary" onClick={onBack} style={{ marginTop: "8px" }}>
             Return to Listing
           </Button>
         </div>
@@ -183,7 +183,7 @@ export function RequestMaterialDetail({
               <Icon name="lock" size={12} style={{ marginRight: "3px" }} /> Locked
             </Badge>
           )}
-          <Button variant="secondary" icon="print" onClick={handlePrint}>
+          <Button variant="secondary" onClick={handlePrint}>
             Print PDF
           </Button>
         </div>

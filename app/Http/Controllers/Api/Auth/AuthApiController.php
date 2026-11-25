@@ -40,7 +40,7 @@ class AuthApiController extends Controller
 
             return response()->json([
                 'status' => 'error',
-                'message' => 'User account not found with the provided credentials.',
+                'message' => 'Invalid username or password.',
             ], 401);
         }
 
@@ -74,7 +74,11 @@ class AuthApiController extends Controller
         }
 
         // Establish real authenticated session
-        Auth::login($user, true);
+        // Establish session for same-origin stateful API tests & web routes without overwriting API token hash
+        Auth::login($user, false);
+        if ($request->hasSession()) {
+            $request->session()->regenerate();
+        }
         if ($request->hasSession()) {
             $request->session()->regenerate();
         }
@@ -87,10 +91,9 @@ class AuthApiController extends Controller
             'ip' => $request->ip(),
         ]);
 
-        // Generate stateless API Bearer token
+        // Generate stateless API Bearer token (store SHA-256 hash server-side)
         $token = Str::random(60);
-        Cache::put("api_token:{$token}", $user->id, now()->addDays(30));
-        $user->forceFill(['remember_token' => $token])->save();
+        \App\Support\ApiTokenResolver::storeIssuedToken($user, $token);
 
         $user->load(['department:id,name', 'roleModel.permissions', 'directPermissions']);
         $roleCode = $user->role ?: ($user->roleModel?->name ?? User::ROLE_VIEWER);
@@ -126,22 +129,22 @@ class AuthApiController extends Controller
      */
     public function logout(Request $request): JsonResponse
     {
-        $token = $request->bearerToken() ?: $request->header('X-Auth-Token');
-        if ($token) {
-            Cache::forget("api_token:{$token}");
-        }
-
         $user = $request->user() ?: Auth::user();
+        \App\Support\ApiTokenResolver::revokeRequestToken($request, $user);
+
         if ($user) {
             AuditLogger::logAuth('LOGOUT', $user->id, [
                 'username' => $user->username,
                 'name' => $user->name,
                 'ip' => $request->ip(),
             ]);
-            $user->forceFill(['remember_token' => null])->save();
         }
 
         Auth::logout();
+        if ($request->hasSession()) {
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+        }
 
         if ($request->hasSession()) {
             $request->session()->invalidate();

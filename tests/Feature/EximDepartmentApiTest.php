@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\System\Auth\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -11,6 +12,16 @@ class EximDepartmentApiTest extends TestCase
 
     public function test_department_can_be_created_with_a_unit_from_the_units_table(): void
     {
+        $user = User::query()->create([
+            'username' => 'dept-test-user',
+            'name' => 'Dept Test User',
+            'email' => 'dept-test@example.test',
+            'password' => 'test-password',
+            'role' => User::ROLE_ADMIN,
+            'status' => 1,
+        ]);
+        $this->actingAs($user, 'web');
+
         $unitResponse = $this->postJson('/api/exim/master/units', [
             'name' => 'Operations',
             'status' => 1,

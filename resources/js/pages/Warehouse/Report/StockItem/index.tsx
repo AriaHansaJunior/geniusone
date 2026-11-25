@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from "react";
-import * as XLSX from "xlsx";
+import { loadXlsxModule } from "../../../../utils/xlsxExport";
 import { Button } from "../../../../components/ui/Button";
 import { SearchField } from "../../../../components/ui/SearchField";
 import { Icon } from "../../../../components/ui/Icon";
@@ -212,7 +212,7 @@ const paginatedRecords = useMemo(() => {
 }, [filteredRecords, safeCurrentPage, pageSize]);
 
 // Export to Excel (.xlsx) using SheetJS
-const handleExportExcel = () => {
+const handleExportExcel = async () => {
   try {
     if (filteredRecords.length === 0) {
       setNotification({
@@ -258,6 +258,7 @@ const handleExportExcel = () => {
       ];
     });
 
+    const XLSX = await loadXlsxModule();
     const worksheet = XLSX.utils.aoa_to_sheet([
       [`WAREHOUSE STOCK REPORT - ${date}`],
       [`Stock Status: ${stockStatus} | Facility: ${facility}`],

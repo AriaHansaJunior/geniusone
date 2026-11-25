@@ -20,10 +20,11 @@ export function resolveViewStateFromPath(pathname: string, defaultPage: PageKey 
     return { type: "login" };
   }
 
-  // Authentication gate: if unauthenticated, strictly direct to Login page!
+  // Authentication gate: require both persisted user metadata and active token in sessionStorage
   const isAuth =
     typeof window !== "undefined" &&
-    Boolean(sessionStorage.getItem("geniusone_user") || localStorage.getItem("geniusone_user"));
+    Boolean(sessionStorage.getItem("geniusone_user")) &&
+    Boolean(sessionStorage.getItem("geniusone_token"));
 
   if (!isAuth) {
     return { type: "login" };

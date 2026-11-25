@@ -51,13 +51,18 @@ class ExchangeRateApiController extends Controller
             }
         }
 
-        $rows = $query->get()->map(fn (ExchangeRate $er) => $this->transformRow($er, $valutaNames));
+        $perPage = min(max((int) $request->query('per_page', 100), 1), 500);
+        $paginated = $query->paginate($perPage);
+        $rows = $paginated->getCollection()->map(fn (ExchangeRate $er) => $this->transformRow($er, $valutaNames));
 
         return response()->json([
             'status' => 'success',
             'data' => $rows,
             'meta' => [
-                'total' => $rows->count(),
+                'current_page' => $paginated->currentPage(),
+                'last_page' => $paginated->lastPage(),
+                'per_page' => $paginated->perPage(),
+                'total' => $paginated->total(),
                 'start_date' => $startDate,
                 'end_date' => $endDate,
             ],

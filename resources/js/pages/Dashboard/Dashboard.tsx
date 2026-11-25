@@ -203,10 +203,10 @@ export function Dashboard({
           });
         }
       })
-      .catch(() => {
+      .catch((err) => {
         setNotification({
-          type: "info",
-          message: "Benchmark exchange rates refreshed.",
+          type: "warning",
+          message: err?.message || "Failed to refresh exchange rate feed from server.",
         });
       })
       .finally(() => {

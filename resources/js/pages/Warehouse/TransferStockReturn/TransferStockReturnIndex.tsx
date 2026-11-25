@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback } from "react";
-import * as XLSX from "xlsx";
+import { loadXlsxModule } from "../../../utils/xlsxExport";
 import { Button } from "../../../components/ui/Button";
 import { SearchField } from "../../../components/ui/SearchField";
 import { Pagination } from "../../../components/ui/Pagination";
@@ -293,7 +293,7 @@ export function TransferStockReturnIndex({
   };
 
   // Export to Excel (.xlsx)
-  const handleExportExcel = () => {
+  const handleExportExcel = async () => {
     if (sortedRecords.length === 0) {
       setNotification({
         type: "warning",
@@ -304,6 +304,7 @@ export function TransferStockReturnIndex({
     }
 
     try {
+      const XLSX = await loadXlsxModule();
       const exportData = sortedRecords.map((r, idx) => ({
         No: idx + 1,
         "Mutation Code": r.mutationCode,

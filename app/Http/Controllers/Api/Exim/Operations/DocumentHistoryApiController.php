@@ -32,7 +32,7 @@ class DocumentHistoryApiController extends Controller
             $query->where('mutation_type', $mutationType);
         }
 
-        $perPage = (int) $request->query('per_page', 10);
+        $perPage = min(max((int) $request->query('per_page', 10), 1), 500);
         $records = $query->latest('id')->paginate($perPage);
 
         return response()->json([

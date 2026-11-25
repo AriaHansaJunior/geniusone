@@ -179,7 +179,18 @@ export function Header({
         <div
           className="brand__mark"
           onClick={collapsed ? onToggleCollapse : undefined}
+          onKeyDown={
+            collapsed
+              ? (e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    onToggleCollapse?.();
+                  }
+                }
+              : undefined
+          }
           title={collapsed ? "Expand sidebar" : undefined}
+          aria-label={collapsed ? "Expand sidebar" : undefined}
           role={collapsed ? "button" : undefined}
           tabIndex={collapsed ? 0 : undefined}
         >

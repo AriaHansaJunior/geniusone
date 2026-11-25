@@ -119,6 +119,28 @@ Route::get('/procurement/payment-term/add', fn () => view('app', ['page' => 'pay
 Route::get('/procurement/purchase-master/payment-term/create', fn () => view('app', ['page' => 'payment-term-create']));
 Route::get('/procurement/purchase-master/payment-term/add', fn () => view('app', ['page' => 'payment-term-create']));
 
+Route::get('/avatars/{filename}', function (string $filename) {
+    $safeName = basename($filename);
+    $disk = \Illuminate\Support\Facades\Storage::disk('public');
+    $storageRelPath = 'avatars/'.$safeName;
+
+    if (! $disk->exists($storageRelPath)) {
+        abort(404);
+    }
+
+    $fullPath = $disk->path($storageRelPath);
+    $mime = @mime_content_type($fullPath) ?: 'application/octet-stream';
+    if (! str_starts_with($mime, 'image/')) {
+        abort(404);
+    }
+
+    return response()->file($fullPath, [
+        'Content-Type' => $mime,
+        'X-Content-Type-Options' => 'nosniff',
+        'Cache-Control' => 'private, max-age=86400',
+    ]);
+})->where('filename', '^avatar_\d+_[A-Za-z0-9-]+\.(jpg|jpeg|png|webp)$');
+
 Route::get('/procurement/purchase-category', fn () => view('app', ['page' => 'purchase-category']))->name('procurement.purchase-category');
 Route::get('/procurement/purchase-master/purchase-category', fn () => view('app', ['page' => 'purchase-category']));
 Route::get('/procurement/purchase-category/create', fn () => view('app', ['page' => 'purchase-category-create']))->name('procurement.purchase-category.create');

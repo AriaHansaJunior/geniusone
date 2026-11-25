@@ -34,7 +34,7 @@ export function isValidAuthToken(token: string | null | undefined): token is str
 export function getAuthToken(): string | null {
   if (typeof window === "undefined") return null;
   try {
-    const raw = sessionStorage.getItem("geniusone_token") || localStorage.getItem("geniusone_token");
+    const raw = sessionStorage.getItem("geniusone_token");
     return isValidAuthToken(raw) ? raw : null;
   } catch {
     return null;

@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from "react";
+import { downloadCsvFile } from "../../../../utils/csvExport";
 import { Button } from "../../../../components/ui/Button";
 import { SearchField } from "../../../../components/ui/SearchField";
 import { Pagination } from "../../../../components/ui/Pagination";
@@ -125,32 +126,19 @@ export function UnitReferenceIndex({
 
     try {
       const headers = ["No", "Code", "Unit Name", "Description", "Status"];
-      const csvRows = [headers.join(",")];
+      const rows = sortedRecords.map((row, idx) => [
+        idx + 1,
+        row.code || "",
+        row.name || "",
+        row.description || "",
+        row.status ? "Active" : "Inactive",
+      ]);
 
-      sortedRecords.forEach((row, idx) => {
-        const vals = [
-          idx + 1,
-          `"${(row.code || "").replace(/"/g, '""')}"`,
-          `"${(row.name || "").replace(/"/g, '""')}"`,
-          `"${(row.description || "").replace(/"/g, '""')}"`,
-          row.status ? "Active" : "Inactive",
-        ];
-        csvRows.push(vals.join(","));
-      });
-
-      const csvString = "\uFEFF" + csvRows.join("\r\n");
-      const blob = new Blob([csvString], { type: "text/csv;charset=utf-8;" });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.setAttribute("href", url);
-      link.setAttribute(
-        "download",
-        `Master_Unit_Reference_Export_${new Date().toISOString().slice(0, 10)}.csv`
+      downloadCsvFile(
+        `Master_Unit_Reference_Export_${new Date().toISOString().slice(0, 10)}.csv`,
+        headers,
+        rows
       );
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
 
       notifySuccess("Export Completed", `Exported ${sortedRecords.length} unit reference record(s).`);
     } catch {

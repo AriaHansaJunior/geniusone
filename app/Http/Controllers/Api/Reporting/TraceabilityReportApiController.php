@@ -58,6 +58,8 @@ class TraceabilityReportApiController extends Controller
 
         $viewModel = PrPoTraceabilityViewModel::create($matrix, $summary);
 
+        $perPage = min(max((int) $request->query('per_page', 100), 1), 500);
+        $page = max((int) $request->query('page', 1), 1);
         $stats = [
             ['Total PO Transactions', (string) ($summary['po']['total'] ?? 0), 'PO documents recorded'],
             ['Gate Fulfillment Rate', ($summary['warehouse']['fulfillment_rate_percent'] ?? 0).'%', 'Based on RN net weight'],
@@ -120,11 +122,21 @@ class TraceabilityReportApiController extends Controller
             ];
         })->values();
 
+        $totalRows = $rows->count();
+        $lastPage = max(1, (int) ceil($totalRows / $perPage));
+        $pagedRows = $rows->slice(($page - 1) * $perPage, $perPage)->values();
+
         return response()->json([
             'status' => 'success',
             'stats' => $stats,
-            'rows' => $rows,
+            'rows' => $pagedRows,
             'data' => $viewModel->toArray(),
+            'meta' => [
+                'current_page' => $page,
+                'last_page' => $lastPage,
+                'per_page' => $perPage,
+                'total' => $totalRows,
+            ],
         ]);
     }
 
@@ -295,15 +307,27 @@ class TraceabilityReportApiController extends Controller
             });
         }
 
+        $perPage = min(max((int) $request->query('per_page', 100), 1), 500);
+        $page = max((int) $request->query('page', 1), 1);
+        $totalRows = $rows->count();
+        $lastPage = max(1, (int) ceil($totalRows / $perPage));
+        $pagedRows = $rows->slice(($page - 1) * $perPage, $perPage)->values();
+
         return response()->json([
             'status' => 'success',
             'stats' => [
-                ['Total PRs', (string) $rows->count(), 'Filtered requisition records'],
+                ['Total PRs', (string) $totalRows, 'Filtered requisition records'],
                 ['Ordered / Complete', (string) $rows->where('status', 'Ordered')->count(), 'Converted to PO'],
                 ['Outstanding', (string) $rows->where('status', 'Outstanding')->count(), 'Approved & awaiting PO'],
                 ['Total Line Items', (string) $rows->sum('totalItem'), 'Across all PRs'],
             ],
-            'rows' => $rows->values(),
+            'rows' => $pagedRows,
+            'meta' => [
+                'current_page' => $page,
+                'last_page' => $lastPage,
+                'per_page' => $perPage,
+                'total' => $totalRows,
+            ],
         ]);
     }
 
@@ -353,7 +377,19 @@ class TraceabilityReportApiController extends Controller
             $query->whereDate('created_at', '<=', $request->date_to);
         }
 
-        $records = $query->orderBy('id', 'desc')->get();
+        $totalPoCount = (clone $query)->count();
+        $approvedPoCount = (clone $query)->whereIn('status', ['Approved', 'Approved 2', 'Completed'])->count();
+        $pendingPoCount = (clone $query)->whereIn('status', ['Waiting for Approve 1', 'Waiting for Approve 2', 'Approved 1', 'Draft'])->count();
+        $grandValueSum = 0.0;
+        (clone $query)->with(['items.pph', 'items.ppn', 'additionalCosts'])
+            ->orderBy('id', 'desc')
+            ->chunk(200, function ($chunk) use (&$grandValueSum) {
+                $grandValueSum += $chunk->sum(fn ($r) => (float) $r->grand_total);
+            });
+
+        $perPage = min(max((int) $request->query('per_page', 100), 1), 500);
+        $paginated = $query->orderBy('id', 'desc')->paginate($perPage);
+        $records = $paginated->getCollection();
 
         // Preload net received quantity per PO item from RN & BPB links
         $receivedByPoItem = DB::table('purchase_order_has_receive_note as porn')
@@ -362,7 +398,7 @@ class TraceabilityReportApiController extends Controller
             ->where(function ($q) {
                 $q->whereNull('rn.id')->orWhere('rn.status', '!=', 'Rejected');
             })
-            ->selectRaw('porn.po_has_items_id, SUM(GREATEST(0, porn.quantity - COALESCE(porn.rafaksi, 0))) as received_qty')
+            ->selectRaw('porn.po_has_items_id, SUM(CASE WHEN (porn.quantity - COALESCE(porn.rafaksi, 0)) > 0 THEN (porn.quantity - COALESCE(porn.rafaksi, 0)) ELSE 0 END) as received_qty')
             ->groupBy('porn.po_has_items_id')
             ->pluck('received_qty', 'po_has_items_id');
 
@@ -450,12 +486,18 @@ class TraceabilityReportApiController extends Controller
         return response()->json([
             'status' => 'success',
             'stats' => [
-                ['Total POs', (string) $rows->count(), 'Filtered PO records'],
-                ['Approved', (string) $rows->whereIn('status', ['Approved', 'Approved 2', 'Completed'])->count(), 'Ready / received'],
-                ['Pending Approval', (string) $rows->whereIn('status', ['Waiting for Approve 1', 'Waiting for Approve 2', 'Approved 1', 'Draft'])->count(), 'Awaiting authorization'],
-                ['Total Grand Value', 'IDR '.number_format((float) $rows->sum('grandTotal'), 2), 'Gross sum'],
+                ['Total POs', (string) $totalPoCount, 'Filtered PO records'],
+                ['Approved', (string) $approvedPoCount, 'Ready / received'],
+                ['Pending Approval', (string) $pendingPoCount, 'Awaiting authorization'],
+                ['Total Grand Value', 'IDR '.number_format($grandValueSum, 2), 'Gross sum'],
             ],
             'rows' => $rows->values(),
+            'meta' => [
+                'current_page' => $paginated->currentPage(),
+                'last_page' => $paginated->lastPage(),
+                'per_page' => $paginated->perPage(),
+                'total' => $paginated->total(),
+            ],
         ]);
     }
 
@@ -464,15 +506,15 @@ class TraceabilityReportApiController extends Controller
      */
     public function show(Request $request, string $code)
     {
-        $rawCode = str_replace('-', '/', $code);
+        $rawCode = \App\Support\DocumentCodeHelper::hyphenToSlash($code);
         $matrix = GeniusOneBackend::traceability()->getTraceabilityMatrix();
 
         $matched = $matrix->first(function ($r) use ($code, $rawCode) {
-            $poSlug = str_replace(['/', ' '], ['-', '_'], $r['po_number']);
+            $poSlug = \App\Support\DocumentCodeHelper::toSlug((string) $r['po_number']);
             $firstPr = ! empty($r['linked_prs']) ? $r['linked_prs'][0]['pr_number'] : '';
-            $prSlug = str_replace(['/', ' '], ['-', '_'], $firstPr);
+            $prSlug = \App\Support\DocumentCodeHelper::toSlug((string) $firstPr);
             $combined = "{$firstPr} / {$r['po_number']}";
-            $combSlug = str_replace(['/', ' '], ['-', '_'], $combined);
+            $combSlug = \App\Support\DocumentCodeHelper::toSlug($combined);
 
             return strcasecmp($r['po_number'], $code) === 0
                 || strcasecmp($r['po_number'], $rawCode) === 0

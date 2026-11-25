@@ -4,12 +4,13 @@ import { Icon } from "../../../components/ui/Icon";
 import { CustomSelect } from "../../../components/ui/CustomSelect";
 import { LoadingBuffer } from "../../../components/ui/LoadingBuffer";
 import { fetchMasterItems } from "../../../data/masterApi";
+import { useAuthPermission } from "../../../context/AuthPermissionContext";
 import type { StockNotificationRecord } from "./stock-notification-types";
 
 interface StockNotificationFormProps {
   initialRecord?: StockNotificationRecord | null;
   onBack: () => void;
-  onSave: (record: StockNotificationRecord, isEdit: boolean) => void;
+  onSave: (record: StockNotificationRecord, isEdit: boolean) => Promise<void> | void;
 }
 
 export function StockNotificationForm({
@@ -17,7 +18,9 @@ export function StockNotificationForm({
   onBack,
   onSave,
 }: StockNotificationFormProps) {
+  const { currentUser } = useAuthPermission();
   const isEdit = !!initialRecord;
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [predefinedItems, setPredefinedItems] = useState<
     Array<{ code: string; name: string; category: string; unit: string; stock: number }>
   >([]);
@@ -91,8 +94,9 @@ export function StockNotificationForm({
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
 
     if (!itemCode.trim()) {
       setError("Item Code is required. Please select an item or enter code.");
@@ -111,6 +115,7 @@ export function StockNotificationForm({
     }
 
     setError(null);
+    const actorName = currentUser?.name || "System User";
 
     const record: StockNotificationRecord = {
       id: initialRecord ? initialRecord.id : `notif-${Date.now()}`,
@@ -126,12 +131,17 @@ export function StockNotificationForm({
       status,
       notes: notes.trim(),
       createdAt: initialRecord?.createdAt || new Date().toISOString().replace("T", " ").substring(0, 19),
-      createdBy: initialRecord?.createdBy || "ADMINISTRATOR",
+      createdBy: initialRecord?.createdBy || actorName,
       updatedAt: new Date().toISOString().replace("T", " ").substring(0, 19),
-      updatedBy: "ADMINISTRATOR",
+      updatedBy: actorName,
     };
 
-    onSave(record, isEdit);
+    setIsSubmitting(true);
+    try {
+      await onSave(record, isEdit);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const isCatalogMatched = Boolean(
@@ -374,10 +384,10 @@ export function StockNotificationForm({
 
         {/* Form Actions */}
         <div className="master-form-actions">
-          <Button type="button" variant="ghost" onClick={onBack}>
+          <Button type="button" variant="ghost" onClick={onBack} disabled={isSubmitting}>
             Cancel
           </Button>
-          <Button type="submit" variant="primary">
+          <Button type="submit" variant="primary" loading={isSubmitting} disabled={isSubmitting}>
             Save
           </Button>
         </div>

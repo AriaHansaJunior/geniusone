@@ -62,14 +62,16 @@ class PurchaseOrderApiController extends Controller
             });
         }
 
-        $records = $query->orderBy('id', 'desc')->get();
-
-        // Calculate Summary Cards
-        $totalCount = $records->count();
-        $approved1Count = $records->filter(fn ($r) => $r->status === 'Approved 1')->count();
-        $approved2Count = $records->filter(fn ($r) => in_array($r->status, ['Approved 2', 'Completed']))->count();
-        $readyDraftCount = $records->filter(fn ($r) => in_array($r->status, ['Draft', 'Ready']))->count();
-        $grandTotalValue = $records->sum(fn ($r) => $r->grand_total);
+        // Compute summary cards across all filtered PO records in bounded chunks
+        $totalCount = (clone $query)->count();
+        $approved1Count = (clone $query)->where('status', 'Approved 1')->count();
+        $approved2Count = (clone $query)->whereIn('status', ['Approved 2', 'Completed'])->count();
+        $grandTotalValue = 0.0;
+        (clone $query)->with(['items.pph', 'items.ppn', 'additionalCosts'])
+            ->orderBy('id', 'desc')
+            ->chunk(200, function ($chunk) use (&$grandTotalValue) {
+                $grandTotalValue += $chunk->sum(fn ($r) => $r->grand_total);
+            });
 
         $stats = [
             ['Total POs', (string) $totalCount, 'Generated procurement orders'],
@@ -78,22 +80,36 @@ class PurchaseOrderApiController extends Controller
             ['Total Order Value', 'IDR '.number_format($grandTotalValue, 0), 'Across all line items'],
         ];
 
+        $perPage = min(max((int) $request->query('per_page', 100), 1), 500);
+        $paginated = $query->orderBy('id', 'desc')->paginate($perPage);
+        $offset = ($paginated->currentPage() - 1) * $paginated->perPage();
+
         // Format rows for Frontend Table
-        $rows = $records->values()->map(function ($po, $idx) {
-            return $this->formatPoRow($po, $idx + 1);
+        $rows = $paginated->getCollection()->values()->map(function ($po, $idx) use ($offset) {
+            return $this->formatPoRow($po, $offset + $idx + 1);
         })->toArray();
+
+        $meta = [
+            'current_page' => $paginated->currentPage(),
+            'last_page' => $paginated->lastPage(),
+            'per_page' => $paginated->perPage(),
+            'total' => $paginated->total(),
+        ];
 
         if ($request->expectsJson() || $request->is('api/*') || $request->query('format') === 'json') {
             return response()->json([
                 'status' => 'success',
                 'stats' => $stats,
                 'rows' => $rows,
+                'meta' => $meta,
             ]);
         }
 
-        return view('app', [
+        return view('app', auth()->check() ? [
             'page' => 'po',
             'initialData' => ['stats' => $stats, 'rows' => $rows],
+        ] : [
+            'page' => 'po',
         ]);
     }
 
@@ -102,8 +118,8 @@ class PurchaseOrderApiController extends Controller
      */
     private function findPoByIdentifier(string $code, array $relations = []): ?PurchaseOrder
     {
-        $decodedCode = urldecode($code);
-        $rawCode = str_replace('-', '/', $decodedCode);
+        $decodedCode = \App\Support\DocumentCodeHelper::decode($code);
+        $rawCode = \App\Support\DocumentCodeHelper::hyphenToSlash($decodedCode);
         $cleanCode = preg_replace('/[^A-Za-z0-9]/', '', $decodedCode);
 
         $numericId = null;
@@ -172,10 +188,13 @@ class PurchaseOrderApiController extends Controller
             ]);
         }
 
-        return view('app', [
+        return view('app', auth()->check() ? [
             'page' => 'po-detail',
             'code' => $code,
             'initialData' => ['item' => $detailRow],
+        ] : [
+            'page' => 'po-detail',
+            'code' => $code,
         ]);
     }
 
@@ -779,7 +798,13 @@ class PurchaseOrderApiController extends Controller
         $poModel = $this->findPoRecord((string) $id);
         $resolvedId = $poModel ? $poModel->id : (int) $id;
 
-        $po = GeniusOneBackend::procurement()->approvePo($resolvedId, $userId, $tier, $note);
+        try {
+            $po = GeniusOneBackend::procurement()->approvePo($resolvedId, $userId, $tier, $note);
+        } catch (InvalidArgumentException $e) {
+            $status = str_contains($e->getMessage(), 'authority') ? 403 : 422;
+
+            return response()->json(['status' => 'error', 'message' => $e->getMessage()], $status);
+        }
 
         return response()->json([
             'status' => 'success',
@@ -800,7 +825,13 @@ class PurchaseOrderApiController extends Controller
         $poModel = $this->findPoRecord((string) $id);
         $resolvedId = $poModel ? $poModel->id : (int) $id;
 
-        $po = GeniusOneBackend::procurement()->rejectPo($resolvedId, $userId, $tier, $reason);
+        try {
+            $po = GeniusOneBackend::procurement()->rejectPo($resolvedId, $userId, $tier, $reason);
+        } catch (InvalidArgumentException $e) {
+            $status = str_contains($e->getMessage(), 'authority') ? 403 : 422;
+
+            return response()->json(['status' => 'error', 'message' => $e->getMessage()], $status);
+        }
 
         return response()->json([
             'status' => 'success',
@@ -824,7 +855,7 @@ class PurchaseOrderApiController extends Controller
             }
         }
 
-        $rawCode = str_replace('-', '/', $codeOrId);
+        $rawCode = \App\Support\DocumentCodeHelper::hyphenToSlash($codeOrId);
         $cleanCode = preg_replace('/[^A-Za-z0-9]/', '', $codeOrId);
 
         return PurchaseOrder::where('po_number', $codeOrId)
@@ -995,7 +1026,7 @@ class PurchaseOrderApiController extends Controller
         $supplierModel = Supplier::find($supId);
         $rawFacInput = $request->input('facility_status') ?? $request->input('statusFacility');
         $headerData = [
-            'po_number' => $existingPo?->po_number ?? ($request->input('po_number') ?? DocumentNumberGenerator::generatePoNumber()),
+            'po_number' => $existingPo?->po_number ?? ($request->input('po_number') ?: null),
             'po_types_id' => $poTypeId,
             'supliers_id' => $supId,
             'date' => $request->input('date') ?? $existingPo?->date ?? now()->format('Y-m-d'),

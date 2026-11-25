@@ -121,7 +121,14 @@ export function RequestMaterialCreate({
           setTotalItemStockMap(totals);
         }
       })
-      .catch(() => { })
+      .catch((err) => {
+        if (!cancelled) {
+          setNotification({
+            type: "error",
+            message: err?.message || "Failed to load Request Material lookup data from server.",
+          });
+        }
+      })
       .finally(() => {
         if (!cancelled) setLoadingLookups(false);
       });
@@ -999,7 +1006,6 @@ export function RequestMaterialCreate({
             <Button
               type="button"
               variant="secondary"
-              icon="upload"
               onClick={() => setIsPickerOpen(true)}
             >
               Upload item base on Item Material

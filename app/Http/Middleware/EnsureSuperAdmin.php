@@ -23,13 +23,9 @@ class EnsureSuperAdmin
         }
 
         if (! $user) {
-            $token = $request->bearerToken() ?: $request->header('X-Auth-Token');
-            if ($token) {
-                $userId = Cache::get("api_token:{$token}")
-                    ?: User::where('remember_token', $token)->value('id');
-                if ($userId) {
-                    $user = User::find($userId);
-                }
+            $user = \App\Support\ApiTokenResolver::resolveUserFromRequest($request);
+            if ($user) {
+                $request->setUserResolver(fn () => $user);
             }
         }
 

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import * as XLSX from "xlsx";
+import { loadXlsxModule } from "../../../utils/xlsxExport";
 import { Icon } from "../../../components/ui/Icon";
 import { Button } from "../../../components/ui/Button";
 import { Badge } from "../../../components/ui/Badge";
@@ -251,7 +251,7 @@ export function WarehouseDetail({
     return dynamicEntries.length > 0 ? dynamicEntries : fallbackEntries;
   })();
 
-  const handleExportXlsx = () => {
+  const handleExportXlsx = async () => {
     const headers = [
       "No",
       "BPB Number",
@@ -282,6 +282,7 @@ export function WarehouseDetail({
       it.location || location,
       it.purpose || it.remark || remark,
     ]);
+    const XLSX = await loadXlsxModule();
     const ws = XLSX.utils.aoa_to_sheet([headers, ...dataRows]);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "BPB Detail");
@@ -369,7 +370,7 @@ export function WarehouseDetail({
           <Badge tone="cyan">{bcType}</Badge>
           <Badge tone="blue">No Pen: {noPen}</Badge>
           <Badge tone="purple">{location}</Badge>
-          <Button variant="secondary" icon="print" onClick={handlePrintPdf}>
+          <Button variant="secondary" onClick={handlePrintPdf}>
             Print PDF
           </Button>
           <Button variant="excel" onClick={handleExportXlsx}>
@@ -393,7 +394,7 @@ export function WarehouseDetail({
         </div>
 
         <div style={{ display: "flex", gap: "8px" }}>
-          <Button variant="secondary" icon="file" onClick={handleExportXlsx}>
+          <Button variant="secondary" onClick={handleExportXlsx}>
             Download Delivery Note
           </Button>
         </div>

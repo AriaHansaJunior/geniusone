@@ -33,6 +33,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'active' => EnsureUserIsActive::class,
             'role' => EnsureUserRole::class,
             'permission' => EnsureUserPermission::class,
+            'superadmin' => \App\Http\Middleware\EnsureSuperAdmin::class,
             'ui.theme' => ResolveUiTheme::class,
         ]);
     })

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import * as XLSX from "xlsx";
+import { loadXlsxModule } from "../../../utils/xlsxExport";
 import { Button } from "../../../components/ui/Button";
 import { SearchField } from "../../../components/ui/SearchField";
 import { DataTable } from "../../../components/ui/DataTable";
@@ -8,6 +8,7 @@ import { FilterPanel } from "../../../components/common/FilterPanel";
 import { listColumns } from "../../../config/listColumns";
 import { fetchList } from "../../../data/api";
 import { isPrItemClosed } from "../../../services/approvalApi";
+import { useNotification } from "../../../context/NotificationContext";
 import type { TableRow } from "../../../types";
 
 interface PurchaseRequisitionProps {
@@ -298,9 +299,11 @@ export function PurchaseRequisition({ onDetail, onCreate }: PurchaseRequisitionP
     });
   }, [computedRows, appliedSearch, appliedFilters]);
 
-  const handleExportXLSX = () => {
+  const { notifyWarning } = useNotification();
+
+  const handleExportXLSX = async () => {
     if (filtered.length === 0) {
-      alert("No PR records to export.");
+      notifyWarning("Nothing to Export", "No PR records to export.");
       return;
     }
     const headers = [
@@ -331,6 +334,7 @@ export function PurchaseRequisition({ onDetail, onCreate }: PurchaseRequisitionP
       typeof r._rawCreatedBy === "string" ? r._rawCreatedBy : (typeof r.createdBy === "string" ? r.createdBy : ""),
     ]);
 
+    const XLSX = await loadXlsxModule();
     const ws = XLSX.utils.aoa_to_sheet([headers, ...dataRows]);
     ws["!cols"] = [
       { wch: 6 },
@@ -501,7 +505,6 @@ export function PurchaseRequisition({ onDetail, onCreate }: PurchaseRequisitionP
           />
           <Button
             variant="secondary"
-            icon="filter"
             onClick={() => setShowMoreFilters((prev) => !prev)}
           >
             {showMoreFilters ? "Hide extra filters" : "More filters"}

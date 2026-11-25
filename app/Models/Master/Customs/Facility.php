@@ -2,6 +2,7 @@
 
 namespace App\Models\Master\Customs;
 
+use App\Models\Master\Material\Item;
 use App\Traits\LogsActivity;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
