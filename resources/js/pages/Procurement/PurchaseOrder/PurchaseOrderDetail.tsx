@@ -767,12 +767,18 @@ export function PurchaseOrderDetail({
           <div className="detail-header-card__title-row">
             <h2 className="detail-header-card__title">{docNumber}</h2>
             <ApprovalStatusBadge status={approvalState.status} />
-            <Badge tone={isHeaderNonFac ? "gray" : "purple"}>
-              {isHeaderNonFac ? "NON FASILITAS" : "FASILITAS"}
-            </Badge>
-            <Badge tone={isKawasanBerikat ? "purple" : "gray"}>
-              {isKawasanBerikat ? "Kawasan Berikat (Via RN)" : "Non-Kawasan Berikat (Direct BPB)"}
-            </Badge>
+            {isServiceOrder ? (
+              <Badge tone="purple">SERVICE (JASA)</Badge>
+            ) : (
+              <>
+                <Badge tone={isHeaderNonFac ? "gray" : "purple"}>
+                  {isHeaderNonFac ? "NON FASILITAS" : "FASILITAS"}
+                </Badge>
+                <Badge tone={isKawasanBerikat ? "purple" : "gray"}>
+                  {isKawasanBerikat ? "Kawasan Berikat (Via RN)" : "Non-Kawasan Berikat (Direct BPB)"}
+                </Badge>
+              </>
+            )}
           </div>
           <span className="detail-header-card__meta">
             Supplier: <strong>{supplierName}</strong> · Total Value: <strong>{displayOrderTotal}</strong> · Order Date: <strong>{dateStr}</strong>

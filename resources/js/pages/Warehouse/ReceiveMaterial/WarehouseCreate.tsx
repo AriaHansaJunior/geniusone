@@ -37,6 +37,41 @@ interface WarehouseCreateProps {
   onSaved: (newBpb?: any) => void;
 }
 
+const getSafeDocString = (val: any): string => {
+  if (val === null || val === undefined) return "";
+  if (typeof val === "string") return val;
+  if (typeof val === "number" || typeof val === "boolean") return String(val);
+  if (typeof val === "object") {
+    if (val.props) {
+      if (typeof val.props.children === "string") return val.props.children;
+      if (typeof val.props.children === "number") return String(val.props.children);
+      if (Array.isArray(val.props.children)) {
+        for (const child of val.props.children) {
+          const res = getSafeDocString(child);
+          if (res) return res;
+        }
+      } else if (val.props.children) {
+        return getSafeDocString(val.props.children);
+      }
+    }
+    try {
+      const str = String(val);
+      if (str && str !== "[object Object]") return str;
+    } catch (_) { }
+  }
+  return "";
+};
+
+const getPoItemsList = (poObj: any): any[] => {
+  if (poObj?._items && Array.isArray(poObj._items) && poObj._items.length > 0) {
+    return poObj._items;
+  }
+  if (poObj?.items && Array.isArray(poObj.items) && poObj.items.length > 0) {
+    return poObj.items;
+  }
+  return [];
+};
+
 export function WarehouseCreate({
   initialPoNumber,
   initialRnNumber,
@@ -104,42 +139,6 @@ export function WarehouseCreate({
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [notification, setNotification] = useState<{ type: "success" | "error" | "warning"; message: string } | null>(null);
-
-  // Extract items list from PO object
-  const getPoItemsList = (poObj: any): any[] => {
-    if (poObj?._items && Array.isArray(poObj._items) && poObj._items.length > 0) {
-      return poObj._items;
-    }
-    if (poObj?.items && Array.isArray(poObj.items) && poObj.items.length > 0) {
-      return poObj.items;
-    }
-    return [];
-  };
-
-  const getSafeDocString = (val: any): string => {
-    if (val === null || val === undefined) return "";
-    if (typeof val === "string") return val;
-    if (typeof val === "number" || typeof val === "boolean") return String(val);
-    if (typeof val === "object") {
-      if (val.props) {
-        if (typeof val.props.children === "string") return val.props.children;
-        if (typeof val.props.children === "number") return String(val.props.children);
-        if (Array.isArray(val.props.children)) {
-          for (const child of val.props.children) {
-            const res = getSafeDocString(child);
-            if (res) return res;
-          }
-        } else if (val.props.children) {
-          return getSafeDocString(val.props.children);
-        }
-      }
-      try {
-        const str = String(val);
-        if (str && str !== "[object Object]") return str;
-      } catch (_) { }
-    }
-    return "";
-  };
 
   // Helper to detect if an RN has already been received into an existing BPB (Double BPB Prevention)
   const findExistingBpbForRn = (rnNum: string): { bpbNumber: string; date?: string; status?: string } | null => {
@@ -1171,6 +1170,11 @@ export function WarehouseCreate({
                   if (val === "Service (Jasa)") {
                     setSourceType("PO");
                     setRnNumber("");
+                  } else {
+                    const defaultWh = warehouses[0]?.name || "Gudang Sparepart";
+                    setItems((prev) =>
+                      prev.map((row) => (row.location ? row : { ...row, location: defaultWh }))
+                    );
                   }
                 }}
                 options={[

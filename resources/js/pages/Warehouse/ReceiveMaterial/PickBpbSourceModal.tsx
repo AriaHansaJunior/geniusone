@@ -55,6 +55,11 @@ const getSafeStr = (val: any): string => {
 };
 
 export const isPoKawasanBerikat = (po: any): boolean => {
+  const isServicePo =
+    Boolean(po?.is_service) ||
+    String(po?.order_category || "").toUpperCase() === "SERVICE" ||
+    /service|jasa|srv/i.test(String(po?.poType || ""));
+  if (isServicePo) return false;
   const rawKb = po?.is_kawasan_berikat ?? po?.isKawasanBerikat;
   if (rawKb !== undefined && rawKb !== null) return Boolean(rawKb);
   const rawItems = po?.items || po?._items || [];
