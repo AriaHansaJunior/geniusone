@@ -27,12 +27,14 @@ interface PurchaseOrderDetailProps {
   code: string;
   onBack: () => void;
   onNavigateDetail?: (type: "pr" | "po" | "report" | "warehouse", code: string) => void;
+  onOpenCloseService?: (code: string) => void;
 }
 
 export function PurchaseOrderDetail({
   code,
   onBack,
   onNavigateDetail,
+  onOpenCloseService,
 }: PurchaseOrderDetailProps) {
   const { notifyError } = useNotification();
   const [activeTab, setActiveTab] = useState<"material" | "otherCosts">("material");
@@ -146,6 +148,13 @@ export function PurchaseOrderDetail({
   const { currentUser } = useAuthPermission();
   const { isDefaultTheme } = useTheme();
   const isApproved = approvalState.status === "APPROVED";
+  const isClosed = String(row.status || row._rawStatus || "").toLowerCase() === "closed";
+  const isServiceOrder =
+    Boolean(row.is_service) ||
+    String(row.order_category || "").toUpperCase() === "SERVICE" ||
+    String(row.poType || "").toLowerCase().includes("service") ||
+    String(row.poType || "").toLowerCase().includes("jasa");
+  const serviceClosures = Array.isArray(row.service_closures) ? row.service_closures : [];
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
 
   const handlePrintPdf = () => {
@@ -681,6 +690,9 @@ export function PurchaseOrderDetail({
           onBack={onBack}
           onNavigateDetail={onNavigateDetail}
           onPrintPdf={handlePrintPdf}
+          isServiceOrder={isServiceOrder}
+          isClosed={isClosed}
+          onOpenCloseService={onOpenCloseService}
           isAddingCost={isAddingCost}
           setIsAddingCost={setIsAddingCost}
           costName={costName}
@@ -720,15 +732,25 @@ export function PurchaseOrderDetail({
         </div>
 
         <div className="detail-top-bar__right">
-          <Badge tone={isHeaderNonFac ? "gray" : "purple"}>
-            {isHeaderNonFac ? "NON FASILITAS" : "FASILITAS"}
-          </Badge>
-          <Badge tone={isKawasanBerikat ? "purple" : "gray"}>
-            {isKawasanBerikat ? "Kawasan Berikat (Via RN)" : "Non-Kawasan Berikat (Direct BPB)"}
-          </Badge>
+          {isServiceOrder && <Badge tone="purple">SERVICE (JASA)</Badge>}
+          {!isServiceOrder && (
+            <>
+              <Badge tone={isHeaderNonFac ? "gray" : "purple"}>
+                {isHeaderNonFac ? "NON FASILITAS" : "FASILITAS"}
+              </Badge>
+              <Badge tone={isKawasanBerikat ? "purple" : "gray"}>
+                {isKawasanBerikat ? "Kawasan Berikat (Via RN)" : "Non-Kawasan Berikat (Direct BPB)"}
+              </Badge>
+            </>
+          )}
           <Badge tone="gray">
             {currency} · Rate {rate}
           </Badge>
+          {isServiceOrder && isApproved && !isClosed && onOpenCloseService && (
+            <Button variant="primary" onClick={() => onOpenCloseService(docNumber)}>
+              Close via Berita Acara
+            </Button>
+          )}
           <Button variant="secondary" onClick={handlePrintPdf}>
             Print PDF
           </Button>
@@ -778,6 +800,36 @@ export function PurchaseOrderDetail({
           }}
         />
       </div>
+
+      {isServiceOrder && (serviceClosures.length > 0 || isClosed) && (
+        <div className="po-service-close-card">
+          <div>
+            <span className="eyebrow">SERVICE CLOSURE VERIFICATION</span>
+            <h3 className="table-panel__title">Berita Acara Closure History</h3>
+          </div>
+          <div className="po-service-closures-list">
+            {serviceClosures.map((closure: any) => (
+              <div key={closure.id || closure.berita_acara_number} className="po-service-closure-card">
+                <div className="po-service-closure-card__top">
+                  <strong>{closure.berita_acara_number}</strong>
+                  <Badge tone="green">
+                    {closure.completion_percentage ?? 100}% · {closure.status || "Closed"}
+                  </Badge>
+                </div>
+                <div className="po-service-closure-card__meta">
+                  Date: {closure.berita_acara_date || "—"}
+                  {closure.verified_by_name ? ` · Verified by: ${closure.verified_by_name}` : ""}
+                </div>
+                {(closure.service_description || closure.notes) && (
+                  <p className="po-service-closure-card__desc">
+                    {closure.service_description || closure.notes}
+                  </p>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* 6-Column Hero Summary KPI Grid */}
       <div className="detail-kpi-grid">

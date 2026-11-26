@@ -298,7 +298,13 @@ export function PickBpbSourceModal({
 
   const handleConfirm = () => {
     if (!selectedDocNumber || !selectedDocRecord) return;
-    const defaultWh = warehouses[0]?.name || "Gudang Sparepart";
+    const isServiceSource =
+      sourceType === "PO" &&
+      (Boolean(selectedDocRecord?.is_service) ||
+        String(selectedDocRecord?.order_category || "").toUpperCase() === "SERVICE" ||
+        String(selectedDocRecord?.poType || "").toLowerCase().includes("service") ||
+        String(selectedDocRecord?.poType || "").toLowerCase().includes("jasa"));
+    const defaultWh = isServiceSource ? "" : warehouses[0]?.name || "Gudang Sparepart";
     const chosen = selectableItems
       .filter((it) => selectedKeys.has(it.key))
       .map((it, idx): BPBItemRow => ({

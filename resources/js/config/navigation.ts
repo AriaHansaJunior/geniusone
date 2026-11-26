@@ -143,7 +143,7 @@ export const navigationConfig: NavSection[] = [
         id: "warehouse-operasional",
         label: "Operasional",
         items: [
-          { id: "wh-req-material", label: "Receive Material", path: "/warehouse/request/request-material" },
+          { id: "wh-req-material", label: "Request Material", path: "/warehouse/request/request-material" },
           { id: "transfer-stock-return", label: "Transfer Stock Return", path: "/warehouse/incoming/transfer-stock-return" },
         ],
       },
@@ -191,10 +191,9 @@ export const navigationConfig: NavSection[] = [
       },
       {
         id: "warehouse-move-location",
-        label: "Move Location",
+        label: "Stock Transfer",
         isDirectLeaf: true,
-        isPlaceholder: true,
-        path: "/warehouse/move-location",
+        path: "/warehouse/stock-transfers",
         items: [],
       },
       {
@@ -293,7 +292,7 @@ export const ALL_SIDEBAR_MENU_ITEMS: SidebarMenuItemDescriptor[] = [
   { id: "wh-adj-stock", label: "Adjustment Stock", section: "Warehouse", group: "Adjustment" },
 
   // Warehouse - Operasional
-  { id: "wh-req-material", label: "Receive Material", section: "Warehouse", group: "Operasional" },
+  { id: "wh-req-material", label: "Request Material", section: "Warehouse", group: "Operasional" },
   { id: "transfer-stock-return", label: "Transfer Stock Return", section: "Warehouse", group: "Operasional" },
 
   // Warehouse - Incoming
@@ -313,8 +312,8 @@ export const ALL_SIDEBAR_MENU_ITEMS: SidebarMenuItemDescriptor[] = [
   { id: "wh-req-weight-note-fg", label: "Weight Note Multiple FG", section: "Warehouse", group: "Request" },
   { id: "wh-req-shipping", label: "Shipping Instruction", section: "Warehouse", group: "Request" },
 
-  // Warehouse - Move Location
-  { id: "warehouse-move-location", label: "Move Location", section: "Warehouse", group: "Move Location" },
+  // Warehouse - Stock Transfer
+  { id: "warehouse-move-location", label: "Stock Transfer", section: "Warehouse", group: "Stock Transfer" },
 
   // Warehouse - Report
   { id: "wh-rep-receive-material", label: "Receive Material", section: "Warehouse", group: "Report" },

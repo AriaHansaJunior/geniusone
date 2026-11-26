@@ -154,6 +154,7 @@ export type ViewState =
   | { type: "list"; page: PageKey }
   | { type: "pr-detail"; code: string }
   | { type: "po-detail"; code: string }
+  | { type: "po-close-service"; code: string }
   | { type: "pr-create" }
   | { type: "po-create"; prNumber?: string }
   | { type: "report-detail"; code: string }
@@ -229,6 +230,8 @@ export type ViewState =
   | { type: "wh-adj-stock-create" }
   | { type: "wh-adj-stock-import" }
   | { type: "wh-adj-stock-detail"; code: string }
+  | { type: "wh-stock-transfer-create" }
+  | { type: "wh-stock-transfer-detail"; code: string }
   | { type: "edit-profile" }
   | { type: "settings"; tab: SettingsTab }
   | { type: "login" }

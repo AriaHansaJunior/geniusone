@@ -318,7 +318,7 @@ export const pageMeta: Record<PageKey, PageMeta> = {
   // Warehouse Operasional
   "wh-req-material": {
     eyebrow: "WAREHOUSE OPERASIONAL",
-    title: "Receive Material",
+    title: "Request Material",
     description: "Internal departmental requisitions for stock issue.",
   },
   "wh-req-weight-note-fg": {
@@ -333,8 +333,8 @@ export const pageMeta: Record<PageKey, PageMeta> = {
   },
   "warehouse-move-location": {
     eyebrow: "WAREHOUSE OPERATIONS",
-    title: "Move Location",
-    description: "Internal bin-to-bin and rack transfer movements within facilities.",
+    title: "Warehouse Stock Transfer",
+    description: "Transfer available inventory stock directly between source and destination warehouses.",
   },
   // Warehouse Report
   "wh-rep-receive-material": {

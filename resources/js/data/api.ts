@@ -434,6 +434,9 @@ export async function downloadAuthenticatedFile(
     deliveryTerm?: string;
     latest_delivery?: string;
     service_subkon?: boolean;
+    order_category?: "GOODS" | "SERVICE";
+    is_service?: boolean;
+    is_kawasan_berikat?: boolean;
     facility_status?: string;
     remark?: string;
     items: Array<{
@@ -461,6 +464,24 @@ export async function downloadAuthenticatedFile(
     }>;
   }): Promise<{ status: string; message?: string; data?: any } | null> {
     return apiPost("/api/procurement/po", payload);
+  }
+
+  /**
+   * Close an Approved Service Purchase Order (PO Jasa) using Berita Acara verification.
+   */
+  export async function closePurchaseOrderServiceApi(
+    poIdOrCode: string | number,
+    payload: FormData
+  ): Promise<{ status: string; message?: string; data?: any }> {
+    const res = await apiFetch(
+      `/api/procurement/po/${encodeURIComponent(String(poIdOrCode))}/close-service`,
+      {
+        method: "POST",
+        body: payload,
+      }
+    );
+    if (!res.ok) throw await parseError(res);
+    return res.json();
   }
 
   /**

@@ -15,6 +15,7 @@ import type { TransferStockReturnRecord, TransferStockReturnStatus } from "../pa
 import type { StockAdjustmentRecord } from "../pages/Warehouse/Adjustment/AdjustmentStock/adjustment-stock-types";
 import type { WarehouseStockRecord } from "../pages/Warehouse/Report/StockItem/stock-item-types";
 import type { StockCardRecord } from "../pages/Warehouse/Report/StockCard/stock-card-types";
+import type { WarehouseStockTransferRecord } from "../pages/Warehouse/StockTransfer/warehouse-stock-transfer-types";
 import type { PoReportRecord } from "../pages/Procurement/Reports/po-report-types";
 import type { PrReportRecord } from "../pages/Procurement/Reports/pr-report-types";
 
@@ -1085,4 +1086,212 @@ export async function fetchUserProfileApi(): Promise<any> {
 export async function updateUserProfileApi(payload: Record<string, any>): Promise<any> {
   const res = await apiPut<{ data: any }>("/api/user/profile", payload);
   return res?.data ?? null;
+}
+
+// =========================================================================
+// 10. DASHBOARD ROLE-BASED ANALYTICS & DOCUMENT TRACKING
+// =========================================================================
+
+export interface DashboardModuleAggregation {
+  module: string;
+  total: number;
+  completed: number;
+  incomplete: number;
+  completion_rate: number;
+}
+
+export interface DashboardCompletionAggregation {
+  scope: "role_modules" | "own_documents" | string;
+  role: string;
+  accessible_modules: string[];
+  total: number;
+  completed: number;
+  incomplete: number;
+  completion_rate: number;
+  by_module: DashboardModuleAggregation[];
+}
+
+export interface DashboardDownstreamDocument {
+  document_type: string;
+  document_id: number;
+  document_number: string;
+  status: string;
+}
+
+export interface DashboardTrackedDocument {
+  document_id: number;
+  document_number: string;
+  document_type: string;
+  order_category?: "GOODS" | "SERVICE";
+  bpb_category?: "GOODS" | "SERVICE";
+  created_at: string | null;
+  status: string;
+  workflow_stage: string;
+  is_completed: boolean;
+  downstream_documents: DashboardDownstreamDocument[];
+}
+
+export interface DashboardOverviewData {
+  user: {
+    id: number;
+    name: string;
+    role: string;
+    departments_id?: number | null;
+  };
+  accessible_modules: string[];
+  completion_aggregation: DashboardCompletionAggregation;
+  recent_tracking: DashboardTrackedDocument[];
+  tracking_total: number;
+  stock_notifications_enabled_count: number | null;
+}
+
+export async function fetchDashboardOverviewApi(): Promise<DashboardOverviewData | null> {
+  const res = await apiGet<{ status: string; data: DashboardOverviewData }>("/api/dashboard/overview");
+  return res?.data ?? null;
+}
+
+export async function fetchDashboardSummaryApi(
+  modules?: string[]
+): Promise<DashboardCompletionAggregation | null> {
+  const params = modules && modules.length > 0 ? { modules: modules.join(",") } : undefined;
+  const res = await apiGet<{ status: string; data: DashboardCompletionAggregation }>("/api/dashboard/summary", params);
+  return res?.data ?? null;
+}
+
+export async function fetchDashboardTrackingApi(params?: {
+  document_type?: string;
+  status?: string;
+  search?: string;
+  scope?: string;
+  page?: number;
+  per_page?: number;
+}): Promise<{ rows: DashboardTrackedDocument[]; meta: { current_page: number; last_page: number; per_page: number; total: number; scope: string } }> {
+  const res = await apiGet<{ rows: DashboardTrackedDocument[]; meta: any }>("/api/dashboard/tracking", params);
+  return {
+    rows: Array.isArray(res?.rows) ? res.rows : [],
+    meta: res?.meta ?? { current_page: 1, last_page: 1, per_page: 10, total: 0, scope: "user" },
+  };
+}
+
+// =========================================================================
+// 11. WAREHOUSE INTER-WAREHOUSE STOCK TRANSFERS
+// =========================================================================
+
+function mapWarehouseStockTransferRow(r: any): WarehouseStockTransferRecord {
+  return {
+    id: Number(r.id),
+    transferNumber: String(r.transfer_number || ""),
+    sourceWarehouseId: Number(r.source_warehouse_id || 0),
+    sourceWarehouseName: String(r.source_warehouse_name || ""),
+    sourceWarehouseCode: r.source_warehouse_code ? String(r.source_warehouse_code) : undefined,
+    destinationWarehouseId: Number(r.destination_warehouse_id || 0),
+    destinationWarehouseName: String(r.destination_warehouse_name || ""),
+    destinationWarehouseCode: r.destination_warehouse_code ? String(r.destination_warehouse_code) : undefined,
+    sourceCoordinateId: r.source_coordinate_id ? Number(r.source_coordinate_id) : null,
+    sourceCoordinateName: r.source_coordinate_name ? String(r.source_coordinate_name) : null,
+    destinationCoordinateId: r.destination_coordinate_id ? Number(r.destination_coordinate_id) : null,
+    destinationCoordinateName: r.destination_coordinate_name ? String(r.destination_coordinate_name) : null,
+    transferDate: String(r.transfer_date || ""),
+    referenceCode: r.reference_code ? String(r.reference_code) : "",
+    idempotencyKey: r.idempotency_key ? String(r.idempotency_key) : undefined,
+    status: (r.status || "Draft") as WarehouseStockTransferRecord["status"],
+    note: r.note ? String(r.note) : "",
+    creatorId: r.creator_id ? Number(r.creator_id) : null,
+    creatorName: r.creator_name ? String(r.creator_name) : "—",
+    postedByName: r.posted_by_name ? String(r.posted_by_name) : undefined,
+    postedAt: r.posted_at ? String(r.posted_at) : null,
+    createdAt: r.created_at ? String(r.created_at) : null,
+    items: Array.isArray(r.items)
+      ? r.items.map((it: any) => ({
+          id: it.id ? Number(it.id) : undefined,
+          items_id: Number(it.items_id),
+          itemCode: String(it.item_code || ""),
+          itemName: String(it.item_name || ""),
+          quantity: Number(it.quantity || 0),
+          unit: String(it.unit || "PCE"),
+          lotNumber: it.lot_number ? String(it.lot_number) : undefined,
+          remark: it.remark ? String(it.remark) : undefined,
+        }))
+      : [],
+  };
+}
+
+export async function fetchWarehouseStockTransfersApi(params?: {
+  search?: string;
+  status?: string;
+  source_warehouse_id?: number | string;
+  destination_warehouse_id?: number | string;
+  per_page?: number;
+}): Promise<WarehouseStockTransferRecord[]> {
+  const res = await apiGet<{ rows?: any[] }>("/api/warehouse/stock-transfers", {
+    per_page: 200,
+    ...(params || {}),
+  });
+  return Array.isArray(res?.rows) ? res.rows.map(mapWarehouseStockTransferRow) : [];
+}
+
+export async function fetchWarehouseStockTransferDetailApi(
+  code: string
+): Promise<WarehouseStockTransferRecord | null> {
+  const cleanCode = encodeURIComponent(String(code).trim());
+  const res = await apiGet<{ data?: any }>(`/api/warehouse/stock-transfers/${cleanCode}`);
+  return res?.data ? mapWarehouseStockTransferRow(res.data) : null;
+}
+
+export async function createWarehouseStockTransferApi(payload: {
+  source_warehouse_id: number;
+  destination_warehouse_id: number;
+  source_coordinate_id?: number | null;
+  destination_coordinate_id?: number | null;
+  source_coordinate_name?: string | null;
+  destination_coordinate_name?: string | null;
+  transfer_date: string;
+  reference_code?: string;
+  idempotency_key?: string;
+  note?: string;
+  auto_post?: boolean;
+  items: Array<{
+    items_id: number;
+    quantity: number;
+    unit?: string;
+    lot_number?: string;
+    remark?: string;
+  }>;
+}): Promise<{ data: WarehouseStockTransferRecord; message?: string; idempotent_replay?: boolean }> {
+  const res = await apiPost<{ data: any; message?: string; idempotent_replay?: boolean }>(
+    "/api/warehouse/stock-transfers",
+    payload
+  );
+  return {
+    data: mapWarehouseStockTransferRow(res.data),
+    message: res.message,
+    idempotent_replay: res.idempotent_replay,
+  };
+}
+
+export async function postWarehouseStockTransferApi(
+  id: number | string
+): Promise<{ data: WarehouseStockTransferRecord; message?: string }> {
+  const res = await apiPost<{ data: any; message?: string }>(
+    `/api/warehouse/stock-transfers/${encodeURIComponent(String(id))}/post`,
+    {}
+  );
+  return {
+    data: mapWarehouseStockTransferRow(res.data),
+    message: res.message,
+  };
+}
+
+export async function cancelWarehouseStockTransferApi(
+  id: number | string,
+  reason?: string
+): Promise<{ data: WarehouseStockTransferRecord; message?: string }> {
+  const res = await apiPost<{ data: any; message?: string }>(
+    `/api/warehouse/stock-transfers/${encodeURIComponent(String(id))}/cancel`,
+    { reason }
+  );
+  return {
+    data: mapWarehouseStockTransferRow(res.data),
+    message: res.message,
+  };
 }

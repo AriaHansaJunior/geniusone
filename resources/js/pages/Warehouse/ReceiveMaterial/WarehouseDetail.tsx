@@ -386,6 +386,9 @@ export function WarehouseDetail({
             <h2 className="detail-header-card__title">{docNumber}</h2>
             <ApprovalStatusBadge status={approvalState.status} />
             <Badge tone="purple">{bpbType}</Badge>
+            {(row.is_service || String(row.bpb_category || "").toUpperCase() === "SERVICE") && (
+              <Badge tone="gray">Service (No Warehouse Allocation)</Badge>
+            )}
           </div>
           <span className="detail-header-card__meta">
             Supplier: <strong>{supplierName}</strong> · Receipt: <strong>{rnNumber}</strong> · Receive Date: <strong>{receiveDate}</strong>

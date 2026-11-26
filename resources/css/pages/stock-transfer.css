@@ -1,0 +1,201 @@
+/* ==========================================================================
+   WAREHOUSE STOCK TRANSFER BETWEEN WAREHOUSES
+   External CSS — sidebar-safe min-width: 0 & responsive table wrappers
+   ========================================================================== */
+
+.wst-page,
+.wst-form-page,
+.wst-detail-page {
+  width: 100%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.wst-card {
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.08), 0 2px 6px -1px rgba(15, 23, 42, 0.04);
+  padding: 18px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+
+.wst-table-card {
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.08), 0 2px 6px -1px rgba(15, 23, 42, 0.04);
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.wst-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.wst-filter-grid {
+  display: grid;
+  grid-template-columns: minmax(200px, 1.5fr) repeat(3, minmax(150px, 1fr));
+  gap: 12px;
+  align-items: end;
+}
+
+.wst-form-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(210px, 1fr));
+  gap: 14px;
+}
+
+.wst-form-span-full {
+  grid-column: 1 / -1;
+}
+
+.wst-items-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--line);
+  background: #f8fafc;
+}
+
+.wst-items-title {
+  margin: 0;
+  font-size: 13.5px;
+  font-weight: 800;
+  color: var(--ink);
+}
+
+.wst-form-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.wst-banner {
+  padding: 11px 15px;
+  border-radius: var(--radius-sm);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.wst-banner--error {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #b91c1c;
+}
+
+.wst-banner--info {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1e40af;
+}
+
+.wst-link-btn {
+  border: none;
+  background: transparent;
+  padding: 0;
+  color: var(--blue-700);
+  font-weight: 700;
+  font-size: 12.5px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.wst-link-btn:hover {
+  text-decoration: underline;
+}
+
+.wst-qty-input {
+  width: 110px;
+  text-align: right;
+}
+
+.wst-col-no {
+  width: 50px;
+  text-align: center;
+}
+
+.wst-col-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.wst-col-action {
+  width: 130px;
+  text-align: center;
+}
+
+.wst-row-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.wst-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 14px;
+}
+
+.wst-meta-item {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: #f8fafc;
+}
+
+.wst-meta-item__label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.wst-meta-item__value {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.wst-empty {
+  padding: 28px 16px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 12.5px;
+}
+
+@media (max-width: 1024px) {
+  .wst-filter-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .wst-form-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .wst-filter-grid,
+  .wst-form-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

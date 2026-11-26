@@ -9,6 +9,7 @@ import { CustomSelect } from "../../components/ui/CustomSelect";
 import { apiFetch } from "../../data/api";
 import { fetchMasterCurrencies } from "../../data/masterApi";
 import { DashboardRateChart } from "./DashboardRateChart";
+import { DashboardDocumentAnalytics } from "./DashboardDocumentAnalytics";
 import { DashboardStockAlert, type StockAlertSummary } from "./DashboardStockAlert";
 import { DashboardPendingApprovals } from "./DashboardPendingApprovals";
 import { ErrorBoundary } from "../../components/ui/ErrorBoundary";
@@ -31,6 +32,7 @@ interface DashboardProps {
   onNavigateReceiveNoteDetail?: (rnNumber: string) => void;
   onNavigateRequestMaterialDetail?: (id: string) => void;
   onNavigateTransferStockReturnDetail?: (code: string) => void;
+  onNavigateStockTransferDetail?: (code: string) => void;
   receiveNoteRecords?: ReceiveNoteRecord[];
   requestMaterialRecords?: RequestMaterialRecord[];
   onReceiveNotesUpdate?: React.Dispatch<React.SetStateAction<ReceiveNoteRecord[]>>;
@@ -73,6 +75,7 @@ export function Dashboard({
   onNavigateReceiveNoteDetail,
   onNavigateRequestMaterialDetail,
   onNavigateTransferStockReturnDetail,
+  onNavigateStockTransferDetail,
   receiveNoteRecords,
   requestMaterialRecords,
   onReceiveNotesUpdate,
@@ -377,6 +380,14 @@ export function Dashboard({
   return (
     <div className="dashboard-view">
       {/* Top Low-Stock Buffer Notification Banner */}
+      <DashboardDocumentAnalytics
+        onNavigateDetail={onNavigateDetail}
+        onNavigateReceiveNoteDetail={onNavigateReceiveNoteDetail}
+        onNavigateRequestMaterialDetail={onNavigateRequestMaterialDetail}
+        onNavigateTransferStockReturnDetail={onNavigateTransferStockReturnDetail}
+        onNavigateStockTransferDetail={onNavigateStockTransferDetail}
+      />
+
       {stockAlertSummary.totalTriggered > 0 && (
         <div
           className={`dashboard-low-stock-notice ${stockAlertSummary.criticalCount > 0 ? "dashboard-low-stock-notice--critical" : ""

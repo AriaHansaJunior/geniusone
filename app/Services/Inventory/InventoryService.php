@@ -222,8 +222,15 @@ class InventoryService
 
                 $stocks = $stockQuery->get();
 
-                // Bootstrap warehouse_stocks from item_warehouse pivot if only pivot existed beforehand
-                if ($stocks->isEmpty() && Schema::hasTable('item_warehouse')) {
+                // Bootstrap warehouse_stocks from item_warehouse pivot ONLY if no rows exist for this item+warehouse
+                if (
+                    $stocks->isEmpty()
+                    && Schema::hasTable('item_warehouse')
+                    && ! DB::table('warehouse_stocks')
+                        ->where('items_id', $item->id)
+                        ->where('warehouses_id', $warehouseId)
+                        ->exists()
+                ) {
                     $pivotQty = DB::table('item_warehouse')
                         ->where('items_id', $item->id)
                         ->where('warehouses_id', $warehouseId)

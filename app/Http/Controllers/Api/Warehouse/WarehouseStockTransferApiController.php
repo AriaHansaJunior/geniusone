@@ -68,6 +68,8 @@ class WarehouseStockTransferApiController extends Controller
             'destination_warehouse_id' => 'required|integer|exists:warehouses,id',
             'source_coordinate_id' => 'nullable|integer|exists:warehouse_coordinates,id',
             'destination_coordinate_id' => 'nullable|integer|exists:warehouse_coordinates,id',
+            'source_coordinate_name' => 'nullable|string|max:100',
+            'destination_coordinate_name' => 'nullable|string|max:100',
             'transfer_date' => 'nullable|date',
             'reference_code' => 'nullable|string|max:100',
             'idempotency_key' => 'nullable|string|max:100',

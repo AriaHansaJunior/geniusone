@@ -94,6 +94,10 @@ import {
   AdjustmentStockForm,
   AdjustmentStockImport,
   AdjustmentStockDetail,
+  PurchaseOrderServiceCloseForm,
+  WarehouseStockTransferIndex,
+  WarehouseStockTransferForm,
+  WarehouseStockTransferDetail,
   UserPermissionAdmin,
   AuditLogAdmin,
   ReferenceMasterIndex,
@@ -194,6 +198,9 @@ export interface AppViewRendererProps {
   handleNavigateAdjustmentStockCreate: () => void;
   handleNavigateAdjustmentStockImport: () => void;
   handleNavigateAdjustmentStockDetail: (code: string) => void;
+  handleNavigatePoCloseService: (code: string) => void;
+  handleNavigateStockTransferCreate: () => void;
+  handleNavigateStockTransferDetail: (code: string) => void;
   handleNavigateReferenceCreate: (page: ReferenceMasterPageKey) => void;
   handleSavedReferenceMaster: (key: ReferenceMasterPageKey, record: ReferenceMasterRecord) => void;
   handleToggleReferenceMasterStatus: (key: ReferenceMasterPageKey, id: string) => Promise<void> | void;
@@ -433,6 +440,9 @@ export function AppViewRenderer({
   handleNavigateAdjustmentStockCreate,
   handleNavigateAdjustmentStockImport,
   handleNavigateAdjustmentStockDetail,
+  handleNavigatePoCloseService,
+  handleNavigateStockTransferCreate,
+  handleNavigateStockTransferDetail,
   handleNavigateReferenceCreate,
   handleSavedReferenceMaster,
   handleToggleReferenceMasterStatus,
@@ -666,6 +676,7 @@ export function AppViewRenderer({
           onNavigateReceiveNoteDetail={handleNavigateReceiveNoteDetail}
           onNavigateRequestMaterialDetail={handleNavigateRequestMaterialDetail}
           onNavigateTransferStockReturnDetail={handleNavigateTransferStockReturnDetail}
+          onNavigateStockTransferDetail={handleNavigateStockTransferDetail}
           receiveNoteRecords={receiveNoteRecords}
           requestMaterialRecords={requestMaterialRecords}
           onReceiveNotesUpdate={setReceiveNoteRecords}
@@ -1132,6 +1143,13 @@ export function AppViewRenderer({
         />
       )}
 
+      {viewState.type === "list" && viewState.page === "warehouse-move-location" && (
+        <WarehouseStockTransferIndex
+          onAddNew={handleNavigateStockTransferCreate}
+          onOpenDetail={handleNavigateStockTransferDetail}
+        />
+      )}
+
       {/* Read-Backed Reference Master Listings */}
       {viewState.type === "list" &&
         viewState.page in REFERENCE_MASTER_CONFIGS && (() => {
@@ -1192,6 +1210,7 @@ export function AppViewRenderer({
         viewState.page !== "wh-type-of-request" &&
         viewState.page !== "wh-destination-location" &&
         viewState.page !== "wh-adj-stock" &&
+        viewState.page !== "warehouse-move-location" &&
         viewState.page !== "country" &&
         viewState.page !== "account" &&
         viewState.page !== "job-number" &&
@@ -1220,6 +1239,7 @@ export function AppViewRenderer({
           code={viewState.code}
           onBack={() => handleNavigateList("po", "/procurement/transactions/purchase-order")}
           onNavigateDetail={handleNavigateDetail}
+          onOpenCloseService={handleNavigatePoCloseService}
         />
       )}
 
@@ -1974,6 +1994,30 @@ export function AppViewRenderer({
           onBack={() =>
             handleNavigateList("wh-adj-stock", "/warehouse/adjustment/adjustment-stock")
           }
+        />
+      )}
+
+      {/* Dedicated Service PO Closing via Berita Acara */}
+      {viewState.type === "po-close-service" && (
+        <PurchaseOrderServiceCloseForm
+          code={viewState.code}
+          onCancel={() => handleNavigateDetail("po", viewState.code)}
+          onClosed={(poCode) => handleNavigateDetail("po", poCode)}
+        />
+      )}
+
+      {/* Dedicated Warehouse Stock Transfer (Between Warehouses) */}
+      {viewState.type === "wh-stock-transfer-create" && (
+        <WarehouseStockTransferForm
+          onCancel={() => handleNavigateList("warehouse-move-location", "/warehouse/stock-transfers")}
+          onSaved={() => handleNavigateList("warehouse-move-location", "/warehouse/stock-transfers")}
+        />
+      )}
+
+      {viewState.type === "wh-stock-transfer-detail" && (
+        <WarehouseStockTransferDetail
+          code={viewState.code}
+          onBack={() => handleNavigateList("warehouse-move-location", "/warehouse/stock-transfers")}
         />
       )}
 

@@ -573,6 +573,13 @@ export function resolveViewStateFromPath(pathname: string, defaultPage: PageKey 
     return { type: "pr-detail", code: decodeURIComponent(prDetailMatch[1]) };
   }
 
+  const poCloseServiceMatch = cleanPath.match(
+    /^\/(?:procurement\/transactions\/purchase-order|po|purchase-order|purchase-orders)\/close-service\/(.+)$/
+  );
+  if (poCloseServiceMatch) {
+    return { type: "po-close-service", code: decodeURIComponent(poCloseServiceMatch[1]) };
+  }
+
   const poDetailMatch = cleanPath.match(
     /^\/(?:procurement\/transactions\/purchase-order|po|purchase-order|purchase-orders)\/details?\/(.+)$/
   );
@@ -775,6 +782,22 @@ export function resolveViewStateFromPath(pathname: string, defaultPage: PageKey 
   if (cleanPath === "/warehouse/adjustment/adjustment-stock") {
     return { type: "list", page: "wh-adj-stock" };
   }
+  if (
+    cleanPath === "/warehouse/stock-transfers/create" ||
+    cleanPath === "/warehouse/stock-transfers/add" ||
+    cleanPath === "/warehouse/move-location/create"
+  ) {
+    return { type: "wh-stock-transfer-create" };
+  }
+  const stockTransferDetailMatch = cleanPath.match(
+    /^\/(?:warehouse\/stock-transfers|warehouse\/move-location)\/details?\/(.+)$/
+  );
+  if (stockTransferDetailMatch) {
+    return { type: "wh-stock-transfer-detail", code: decodeURIComponent(stockTransferDetailMatch[1]) };
+  }
+  if (cleanPath === "/warehouse/stock-transfers" || cleanPath === "/warehouse/move-location") {
+    return { type: "list", page: "warehouse-move-location" };
+  }
   if (cleanPath === "/warehouse/adjustment/adjustment-production") {
     return { type: "list", page: "wh-adj-prod" };
   }
@@ -849,6 +872,7 @@ export function resolveInitialViewState(initialPage = "dashboard", initialCode =
   if (initialPage === "pr-detail") return { type: "pr-detail", code: initialCode || "" };
   if (initialPage === "pr-create") return { type: "pr-create" };
   if (initialPage === "po-detail") return { type: "po-detail", code: initialCode || "" };
+  if (initialPage === "po-close-service") return { type: "po-close-service", code: initialCode || "" };
   if (initialPage === "po-create") return { type: "po-create" };
   if (initialPage === "report-detail") return { type: "report-detail", code: initialCode || "" };
   if (initialPage === "warehouse-detail") return { type: "warehouse-detail", code: initialCode || "" };
@@ -873,6 +897,8 @@ export function resolveInitialViewState(initialPage = "dashboard", initialCode =
   if (initialPage === "wh-adj-stock-create") return { type: "wh-adj-stock-create" };
   if (initialPage === "wh-adj-stock-import") return { type: "wh-adj-stock-import" };
   if (initialPage === "wh-adj-stock-detail") return { type: "wh-adj-stock-detail", code: initialCode || "" };
+  if (initialPage === "wh-stock-transfer-create") return { type: "wh-stock-transfer-create" };
+  if (initialPage === "wh-stock-transfer-detail") return { type: "wh-stock-transfer-detail", code: initialCode || "" };
   if (initialPage in pageMeta) return { type: "list", page: initialPage as PageKey };
   return { type: "dashboard" };
 }
@@ -882,7 +908,7 @@ export function resolveActiveSidebarPage(viewState: ViewState): PageKey | null {
   if (viewState.type === "settings") return "settings";
   if (viewState.type === "list") return viewState.page;
   if (viewState.type === "pr-detail" || viewState.type === "pr-create") return "pr";
-  if (viewState.type === "po-detail" || viewState.type === "po-create") return "po";
+  if (viewState.type === "po-detail" || viewState.type === "po-create" || viewState.type === "po-close-service") return "po";
   if (viewState.type === "report-detail") return "report";
   if (viewState.type === "warehouse-detail" || viewState.type === "warehouse-create") return "warehouse";
   if (viewState.type === "supplier-create" || viewState.type === "supplier-edit") return "supplier";
@@ -929,6 +955,12 @@ export function resolveActiveSidebarPage(viewState: ViewState): PageKey | null {
     viewState.type === "wh-adj-stock-detail"
   ) {
     return "wh-adj-stock";
+  }
+  if (
+    viewState.type === "wh-stock-transfer-create" ||
+    viewState.type === "wh-stock-transfer-detail"
+  ) {
+    return "warehouse-move-location";
   }
   return null;
 }

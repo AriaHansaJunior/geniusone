@@ -169,7 +169,7 @@ export function RequestMaterialDetail({
             <span>/</span>
             <a onClick={onBack}>Operasional</a>
             <span>/</span>
-            <a onClick={onBack}>Receive Material</a>
+            <a onClick={onBack}>Request Material</a>
             <span>/</span>
             <span className="current">{record.requestCode}</span>
           </div>
@@ -199,7 +199,7 @@ export function RequestMaterialDetail({
             <Badge tone="purple">{record.department}</Badge>
           </div>
           <span className="detail-header-card__meta">
-            Request Date: <strong>{record.requestDate}</strong> · Department: <strong>{record.department || "—"}</strong> · Project Type: <strong>{record.projectType || "—"}</strong>
+            Request Date: <strong>{record.requestDate}</strong> · Department: <strong>{record.department || "—"}</strong> · Destination: <strong>{record.destinationLocation || "—"}</strong>
           </span>
         </div>
       </div>
@@ -263,16 +263,6 @@ export function RequestMaterialDetail({
               <span style={{ fontSize: "12px", color: "var(--muted)", fontWeight: 600 }}>Department</span>
               <span style={{ fontSize: "12.5px", fontWeight: 700 }} className="cell-dept">{record.department || "—"}</span>
             </div>
-
-            <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px dashed var(--line)", paddingBottom: "6px" }}>
-              <span style={{ fontSize: "12px", color: "var(--muted)", fontWeight: 600 }}>SO Number</span>
-              <span style={{ fontSize: "12.5px" }}>{record.soNumber || "—"}</span>
-            </div>
-
-            <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px dashed var(--line)", paddingBottom: "6px" }}>
-              <span style={{ fontSize: "12px", color: "var(--muted)", fontWeight: 600 }}>PO Buyer</span>
-              <span style={{ fontSize: "12.5px" }}>{record.poBuyer || "—"}</span>
-            </div>
           </div>
 
           {/* Column 2 */}
@@ -285,11 +275,6 @@ export function RequestMaterialDetail({
             <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px dashed var(--line)", paddingBottom: "6px" }}>
               <span style={{ fontSize: "12px", color: "var(--muted)", fontWeight: 600 }}>Destination Location</span>
               <span style={{ fontSize: "12.5px", fontWeight: 600 }}>{record.destinationLocation || "—"}</span>
-            </div>
-
-            <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px dashed var(--line)", paddingBottom: "6px" }}>
-              <span style={{ fontSize: "12px", color: "var(--muted)", fontWeight: 600 }}>Project Type</span>
-              <span style={{ fontSize: "12.5px", fontWeight: 600 }}>{record.projectType || "—"}</span>
             </div>
 
             <div style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px dashed var(--line)", paddingBottom: "6px" }}>

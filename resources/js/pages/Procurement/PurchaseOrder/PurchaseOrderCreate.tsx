@@ -135,6 +135,14 @@ export function PurchaseOrderCreate({
   const [discountOverallPercent, setDiscountOverallPercent] = useState<number>(0);
   const [isPpnActive, setIsPpnActive] = useState<boolean>(true);
   const [isKawasanBerikat, setIsKawasanBerikat] = useState<boolean>(true);
+  const isServiceOrder = /service|jasa|srv/i.test(poType);
+
+  React.useEffect(() => {
+    if (isServiceOrder) {
+      setStatusFacility("Non Facility");
+      setIsKawasanBerikat(false);
+    }
+  }, [isServiceOrder]);
 
   // Dialog States
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
@@ -1133,8 +1141,10 @@ const handleConfirmSubmit = async () => {
       deliveryTerm,
       latest_delivery: latestDelivery,
       service_subkon: isSubkon,
-      facility_status: statusFacility === "Non Facility" ? "NON FASILITAS" : "FASILITAS",
-      is_kawasan_berikat: isKawasanBerikat,
+      order_category: isServiceOrder ? ("SERVICE" as const) : ("GOODS" as const),
+      is_service: isServiceOrder,
+      facility_status: isServiceOrder || statusFacility === "Non Facility" ? "NON FASILITAS" : "FASILITAS",
+      is_kawasan_berikat: isServiceOrder ? false : isKawasanBerikat,
       remark: remarkPo,
       items: items.map((it) => {
         const hasDiscount = it.discountType && it.discountType !== "none";
@@ -1535,14 +1545,19 @@ return (
             </label>
             <CustomSelect
               id="poFacilityStatus"
-              value={statusFacility}
-              disabled={items.length > 0}
+              value={isServiceOrder ? "Non Facility" : statusFacility}
+              disabled={isServiceOrder || items.length > 0}
               onChange={(val) => handleFacilityStatusChange(val as "Facility" | "Non Facility")}
               options={[
                 { value: "Facility", label: "Fasilitas" },
                 { value: "Non Facility", label: "Non Fasilitas" },
               ]}
             />
+            {isServiceOrder && (
+              <span className="po-facility-note">
+                Service PO does not allocate warehouse or Kawasan Berikat.
+              </span>
+            )}
           </div>
 
           <div className="master-form-group">

@@ -49,6 +49,8 @@ class WarehouseStockTransferService
         $destinationWarehouseId = (int) ($payload['destination_warehouse_id'] ?? 0);
         $sourceCoordinateId = ! empty($payload['source_coordinate_id']) ? (int) $payload['source_coordinate_id'] : null;
         $destinationCoordinateId = ! empty($payload['destination_coordinate_id']) ? (int) $payload['destination_coordinate_id'] : null;
+        $sourceCoordinateName = ! empty($payload['source_coordinate_name']) ? trim((string) $payload['source_coordinate_name']) : null;
+        $destinationCoordinateName = ! empty($payload['destination_coordinate_name']) ? trim((string) $payload['destination_coordinate_name']) : null;
 
         if ($sourceWarehouseId <= 0 || $destinationWarehouseId <= 0) {
             throw ValidationException::withMessages([
@@ -76,23 +78,18 @@ class WarehouseStockTransferService
             ]);
         }
 
-        if ($sourceCoordinateId !== null) {
-            $srcCoord = WarehouseCoordinate::find($sourceCoordinateId);
-            if (! $srcCoord || (int) $srcCoord->warehouses_id !== $sourceWarehouseId) {
-                throw ValidationException::withMessages([
-                    'source_coordinate_id' => ['Source coordinate does not belong to the selected source warehouse.'],
-                ]);
-            }
-        }
-
-        if ($destinationCoordinateId !== null) {
-            $dstCoord = WarehouseCoordinate::find($destinationCoordinateId);
-            if (! $dstCoord || (int) $dstCoord->warehouses_id !== $destinationWarehouseId) {
-                throw ValidationException::withMessages([
-                    'destination_coordinate_id' => ['Destination coordinate does not belong to the selected destination warehouse.'],
-                ]);
-            }
-        }
+        $sourceCoordinateId = $this->resolveCoordinateId(
+            $sourceWarehouseId,
+            $sourceCoordinateId,
+            $sourceCoordinateName,
+            'source_coordinate_id'
+        );
+        $destinationCoordinateId = $this->resolveCoordinateId(
+            $destinationWarehouseId,
+            $destinationCoordinateId,
+            $destinationCoordinateName,
+            'destination_coordinate_id'
+        );
 
         $rawItems = $payload['items'] ?? [];
         if (empty($rawItems) && ! empty($payload['items_id'])) {
@@ -329,6 +326,18 @@ class WarehouseStockTransferService
             $lotNote = $line->lot_number ? " [Lot: {$line->lot_number}]" : '';
             $itemModel = $line->item ?? Item::findOrFail((int) $line->items_id);
 
+            $effectiveSourceCoordinateId = null;
+            if ($transfer->source_coordinate_id) {
+                $coordHasStock = WarehouseStock::where('items_id', $itemModel->id)
+                    ->where('warehouses_id', (int) $transfer->source_warehouse_id)
+                    ->where('warehouse_coordinates_id', (int) $transfer->source_coordinate_id)
+                    ->whereRaw('quantity - allocated_quantity >= ?', [$qty])
+                    ->exists();
+                if ($coordHasStock) {
+                    $effectiveSourceCoordinateId = (int) $transfer->source_coordinate_id;
+                }
+            }
+
             $this->inventoryService->recordStockMovement(
                 item: $itemModel,
                 warehouseId: (int) $transfer->source_warehouse_id,
@@ -338,8 +347,8 @@ class WarehouseStockTransferService
                 referenceNumber: $transfer->transfer_number,
                 userId: $actorId,
                 notes: "Inter-warehouse transfer OUT to {$dstName}{$lotNote}",
-                coordinateId: $transfer->source_coordinate_id ? (int) $transfer->source_coordinate_id : null,
-                coordinateName: $srcCoordName
+                coordinateId: $effectiveSourceCoordinateId,
+                coordinateName: $effectiveSourceCoordinateId ? $srcCoordName : null
             );
 
             $this->inventoryService->recordStockMovement(
@@ -459,6 +468,47 @@ class WarehouseStockTransferService
         }
 
         return $normalized;
+    }
+
+    private function resolveCoordinateId(
+        int $warehouseId,
+        ?int $coordinateId,
+        ?string $coordinateName,
+        string $errorField
+    ): ?int {
+        if ($coordinateId !== null) {
+            $coord = WarehouseCoordinate::find($coordinateId);
+            if (! $coord || (int) $coord->warehouses_id !== $warehouseId) {
+                $label = $errorField === 'source_coordinate_id' ? 'Source coordinate' : 'Destination coordinate';
+                throw ValidationException::withMessages([
+                    $errorField => ["{$label} does not belong to the selected warehouse."],
+                ]);
+            }
+
+            return $coord->id;
+        }
+
+        if ($coordinateName === null || $coordinateName === '') {
+            return null;
+        }
+
+        $existing = WarehouseCoordinate::where('warehouses_id', $warehouseId)
+            ->whereRaw('LOWER(name) = ?', [strtolower($coordinateName)])
+            ->first();
+        if ($existing) {
+            return $existing->id;
+        }
+
+        $created = WarehouseCoordinate::create([
+            'warehouses_id' => $warehouseId,
+            'code' => strtoupper(substr(preg_replace('/[^A-Za-z0-9\-]+/', '-', $coordinateName) ?? $coordinateName, 0, 45)),
+            'name' => $coordinateName,
+            'status' => 1,
+        ]);
+
+        SystemContextApiController::forgetLookupsCache();
+
+        return $created->id;
     }
 
     public function defaultRelations(): array

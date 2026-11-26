@@ -57,6 +57,9 @@ interface PurchaseOrderDefaultDetailProps {
   onBack: () => void;
   onNavigateDetail?: (type: "pr" | "po" | "report" | "warehouse", code: string) => void;
   onPrintPdf: () => void;
+  isServiceOrder?: boolean;
+  isClosed?: boolean;
+  onOpenCloseService?: (code: string) => void;
   isAddingCost: boolean;
   setIsAddingCost: React.Dispatch<React.SetStateAction<boolean>>;
   costName: string;
@@ -113,6 +116,9 @@ export function PurchaseOrderDefaultDetail({
   onBack,
   onNavigateDetail,
   onPrintPdf,
+  isServiceOrder = false,
+  isClosed = false,
+  onOpenCloseService,
   isAddingCost,
   setIsAddingCost,
   costName,
@@ -238,12 +244,27 @@ export function PurchaseOrderDefaultDetail({
       toolbarLeft={
         <>
           <ApprovalStatusBadge status={approvalState.status} />
-          <Badge tone={isHeaderNonFac ? "gray" : "purple"}>
-            {isHeaderNonFac ? "NON FASILITAS" : "FASILITAS"}
-          </Badge>
-          <Badge tone={isKawasanBerikat ? "purple" : "gray"}>
-            {isKawasanBerikat ? "Kawasan Berikat (Via RN)" : "Direct BPB"}
-          </Badge>
+          {isServiceOrder && <Badge tone="purple">SERVICE (JASA)</Badge>}
+          {!isServiceOrder && (
+            <>
+              <Badge tone={isHeaderNonFac ? "gray" : "purple"}>
+                {isHeaderNonFac ? "NON FASILITAS" : "FASILITAS"}
+              </Badge>
+              <Badge tone={isKawasanBerikat ? "purple" : "gray"}>
+                {isKawasanBerikat ? "Kawasan Berikat (Via RN)" : "Direct BPB"}
+              </Badge>
+            </>
+          )}
+          {isServiceOrder && isApproved && !isClosed && onOpenCloseService && (
+            <Button
+              type="button"
+              variant="primary"
+              size="sm"
+              onClick={() => onOpenCloseService(docNumber)}
+            >
+              Close via Berita Acara
+            </Button>
+          )}
           <Button type="button" variant="secondary" size="sm" onClick={onPrintPdf}>
             Print PDF
           </Button>

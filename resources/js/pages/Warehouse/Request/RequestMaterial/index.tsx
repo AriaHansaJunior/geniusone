@@ -17,7 +17,6 @@ import {
   requestMaterialDestinationsList,
   requestMaterialApprovalsList,
   requestMaterialDepartmentsList,
-  requestMaterialProjectTypesList,
   initialRequestMaterialRecords,
 } from "./request-material-data";
 import type { RequestMaterialRecord } from "./request-material-types";
@@ -43,7 +42,6 @@ export function RequestMaterialIndex({
   const [destinationLocation, setDestinationLocation] = useState("All Destinations");
   const [approval, setApproval] = useState("All Approvals");
   const [department, setDepartment] = useState("All Departments");
-  const [projectType, setProjectType] = useState("All Projects");
 
   const [pageSize, setPageSize] = useState<number>(25);
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -118,10 +116,6 @@ export function RequestMaterialIndex({
       if (department !== "All Departments" && rec.department !== department) {
         return false;
       }
-      // Project Type
-      if (projectType !== "All Projects" && rec.projectType !== projectType) {
-        return false;
-      }
       return true;
     });
   }, [
@@ -134,7 +128,6 @@ export function RequestMaterialIndex({
     destinationLocation,
     approval,
     department,
-    projectType,
   ]);
 
   // Pagination calculation
@@ -169,7 +162,6 @@ export function RequestMaterialIndex({
         "Request Note",
         "Total Items",
         "Approval",
-        "Project Type",
         "Created Date",
         "Last Updated Date",
       ];
@@ -184,7 +176,6 @@ export function RequestMaterialIndex({
         r.requestNote,
         r.totalItems,
         r.approval,
-        r.projectType,
         r.createdDate,
         r.lastUpdatedDate,
       ]);
@@ -438,20 +429,6 @@ export function RequestMaterialIndex({
               options={requestMaterialDepartmentsList}
             />
           </div>
-
-          {/* Project Type */}
-          <div className="master-form-group">
-            <label className="master-form-label">Project Type</label>
-            <CustomSelect
-              searchable
-              value={projectType}
-              onChange={(val) => {
-                setProjectType(val);
-                setCurrentPage(1);
-              }}
-              options={requestMaterialProjectTypesList}
-            />
-          </div>
         </div>
       </div>
 
@@ -471,7 +448,6 @@ export function RequestMaterialIndex({
                   <th style={{ minWidth: "200px" }}>Request Note</th>
                   <th style={{ minWidth: "80px", textAlign: "center" }}>Total Items</th>
                   <th style={{ minWidth: "110px", textAlign: "center" }}>Approval</th>
-                  <th style={{ minWidth: "140px" }}>Project Type</th>
                   <th style={{ minWidth: "130px" }}>Created Date</th>
                   <th style={{ minWidth: "130px" }}>Last Updated Date</th>
                 </tr>
@@ -479,7 +455,7 @@ export function RequestMaterialIndex({
               <tbody>
                 {isLoading && paginatedRecords.length === 0 ? (
                   <TableLoadingRow
-                    colSpan={12}
+                    colSpan={11}
                     label="Loading Material Requests..."
                     sublabel="Retrieving request material records & approval statuses..."
                   />
@@ -540,7 +516,6 @@ export function RequestMaterialIndex({
                             }
                           />
                         </td>
-                        <td>{item.projectType}</td>
                         <td style={{ fontSize: "11px", color: "var(--muted)" }}>
                           {item.createdDate}
                         </td>
@@ -552,7 +527,7 @@ export function RequestMaterialIndex({
                   })
                 ) : (
                   <tr>
-                    <td colSpan={12} style={{ textAlign: "center", padding: "40px 16px" }}>
+                    <td colSpan={11} style={{ textAlign: "center", padding: "40px 16px" }}>
                       <div className="empty">
                         <div className="empty__icon">
                           <Icon name="search" />

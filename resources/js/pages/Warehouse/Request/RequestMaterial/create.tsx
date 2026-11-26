@@ -8,7 +8,6 @@ import { LoadingBuffer } from "../../../../components/ui/LoadingBuffer";
 import {
   requestMaterialTypesList,
   requestMaterialDestinationsList,
-  requestMaterialProjectTypesList,
 } from "./request-material-data";
 import { ItemPickerModal } from "./ItemPickerModal";
 import { useAuthPermission } from "../../../../context/AuthPermissionContext";
@@ -71,7 +70,6 @@ export function RequestMaterialCreate({
   const [isInternalWarehouse, setIsInternalWarehouse] = useState(false);
   const [destinationLocation, setDestinationLocation] = useState("");
   const [destinationLocationId, setDestinationLocationId] = useState<number | undefined>();
-  const [projectType, setProjectType] = useState("");
   const [requestNote, setRequestNote] = useState("");
 
   const userDepartmentId = currentUser?.department_id ?? currentUser?.departments_id ?? undefined;
@@ -186,7 +184,6 @@ export function RequestMaterialCreate({
     requestDate.trim() !== "" ||
     warehouseDestination.trim() !== "" ||
     destinationLocation.trim() !== "" ||
-    projectType.trim() !== "" ||
     requestNote.trim() !== "" ||
     items.length > 0
   );
@@ -353,10 +350,6 @@ export function RequestMaterialCreate({
       errors.destinationLocation = "Destination Location is required.";
     }
 
-    if (!projectType.trim()) {
-      errors.projectType = "Project Type is required.";
-    }
-
     if (items.length === 0) {
       errors.items = "Please add at least one material item to this requisition.";
     } else {
@@ -420,7 +413,7 @@ export function RequestMaterialCreate({
         requestNote: requestNote.trim() || "Material request created via GeniusOne portal.",
         totalItems: items.length,
         approval: "Draft",
-        projectType,
+        projectType: "",
         createdDate: formattedDate,
         lastUpdatedDate: formattedDate,
         createdBy: currentUser?.name || "System User",
@@ -654,46 +647,6 @@ export function RequestMaterialCreate({
               >
                 <Icon name="alertTriangle" size={12} />
                 {formErrors.department}
-              </span>
-            )}
-          </div>
-
-          {/* Project Type (Required) */}
-          <div className="master-form-group">
-            <label className="master-form-label">
-              Project Type <span className="required-asterisk">*</span>
-            </label>
-            <CustomSelect
-              searchable
-              required
-              invalid={Boolean(formErrors.projectType)}
-              value={projectType}
-              onChange={(val) => {
-                setProjectType(val);
-                clearFieldError("projectType");
-              }}
-              placeholder="-- Select Project Type --"
-              options={[
-                { value: "", label: "-- Select Project Type --" },
-                ...requestMaterialProjectTypesList
-                  .filter((p) => p !== "All Projects")
-                  .map((p) => ({ value: p, label: p })),
-              ]}
-            />
-            {formErrors.projectType && (
-              <span
-                style={{
-                  color: "#dc2626",
-                  fontSize: "11px",
-                  fontWeight: 600,
-                  marginTop: "4px",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "4px",
-                }}
-              >
-                <Icon name="alertTriangle" size={12} />
-                {formErrors.projectType}
               </span>
             )}
           </div>

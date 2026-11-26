@@ -614,3 +614,232 @@
   background: #fef3c7;
   border-color: #f59e0b;
 }
+
+/* Role-Based Document Completion & Tracking Analytics */
+.dashboard-analytics-grid {
+  display: grid;
+  grid-template-columns: minmax(290px, 370px) minmax(0, 1fr);
+  gap: 16px;
+  width: 100%;
+  min-width: 0;
+}
+
+.dashboard-pie-card,
+.dashboard-tracking-card {
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.08), 0 2px 6px -1px rgba(15, 23, 42, 0.04);
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.dashboard-analytics-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--line);
+  background: #f8fafc;
+}
+
+.dashboard-analytics-card__title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--ink);
+}
+
+.dashboard-analytics-card__badges {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.dashboard-pie-card__body {
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.dashboard-pie-wrap {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+
+.dashboard-pie-svg {
+  width: 132px;
+  height: 132px;
+  flex-shrink: 0;
+}
+
+.dashboard-pie-center-pct {
+  font-size: 20px;
+  font-weight: 800;
+  fill: var(--ink);
+}
+
+.dashboard-pie-center-label {
+  font-size: 10px;
+  font-weight: 700;
+  fill: var(--muted);
+}
+
+.dashboard-pie-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+  min-width: 120px;
+}
+
+.dashboard-pie-metric {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12.5px;
+  color: var(--ink-soft);
+}
+
+.dashboard-pie-metric strong {
+  color: var(--ink);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.dashboard-pie-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  margin-right: 6px;
+}
+
+.dashboard-pie-dot--done {
+  background: #16a34a;
+}
+
+.dashboard-pie-dot--pending {
+  background: #f59e0b;
+}
+
+.dashboard-pie-dot--total {
+  background: var(--blue-600);
+}
+
+.dashboard-module-breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-top: 1px dashed var(--line);
+  padding-top: 12px;
+}
+
+.dashboard-module-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--line);
+  background: #f8fafc;
+  cursor: pointer;
+  font-size: 12px;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.dashboard-module-row:hover,
+.dashboard-module-row--active {
+  border-color: var(--blue-600);
+  background: var(--blue-50);
+}
+
+.dashboard-module-row__name {
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.dashboard-module-row__stats {
+  font-weight: 600;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.dashboard-tracking-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--line);
+}
+
+.dashboard-tracking-filter-select {
+  min-width: 145px;
+}
+
+.dashboard-tracking-search {
+  flex: 1;
+  min-width: 180px;
+}
+
+.dashboard-downstream-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.dashboard-downstream-btn {
+  border: 1px solid var(--line);
+  background: #f8fafc;
+  color: var(--blue-700);
+  border-radius: var(--radius-xs);
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.dashboard-downstream-btn:hover {
+  background: var(--blue-50);
+  border-color: var(--blue-600);
+}
+
+.dashboard-doc-link-btn {
+  border: none;
+  background: transparent;
+  padding: 0;
+  color: var(--blue-700);
+  font-weight: 700;
+  font-size: 12.5px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.dashboard-doc-link-btn:hover {
+  text-decoration: underline;
+}
+
+.dashboard-analytics-empty {
+  padding: 28px 16px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 12.5px;
+}
+
+@media (max-width: 1024px) {
+  .dashboard-analytics-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

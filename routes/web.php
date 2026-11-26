@@ -71,6 +71,8 @@ Route::get('/po/detail/{code}', [PurchaseOrderController::class, 'show'])->where
 Route::get('/po/details/{code}', [PurchaseOrderController::class, 'show'])->where('code', '.*');
 Route::get('/procurement/transactions/purchase-order/detail/{code}', [PurchaseOrderController::class, 'show'])->where('code', '.*');
 Route::get('/procurement/transactions/purchase-order/details/{code}', [PurchaseOrderController::class, 'show'])->where('code', '.*');
+Route::get('/po/close-service/{code}', fn ($code) => view('app', ['page' => 'po-close-service', 'code' => $code]))->where('code', '.*');
+Route::get('/procurement/transactions/purchase-order/close-service/{code}', fn ($code) => view('app', ['page' => 'po-close-service', 'code' => $code]))->where('code', '.*');
 
 // Combined PR-PO Report
 Route::get('/report', [ReportController::class, 'index'])->name('report.index');
@@ -408,8 +410,11 @@ Route::get('/warehouse/request/request-material/{id}', fn ($id) => view('app', [
 Route::get('/warehouse/request/weight-note-multiple-fg', fn () => view('app', ['page' => 'wh-req-weight-note-fg']));
 Route::get('/warehouse/request/shipping-instruction', fn () => view('app', ['page' => 'wh-req-shipping']));
 
-// Warehouse Move Location Route
+// Warehouse Stock Transfer (Between Warehouses) & Move Location Routes
 Route::get('/warehouse/move-location', fn () => view('app', ['page' => 'warehouse-move-location']));
+Route::get('/warehouse/stock-transfers', fn () => view('app', ['page' => 'warehouse-move-location']));
+Route::get('/warehouse/stock-transfers/create', fn () => view('app', ['page' => 'wh-stock-transfer-create']));
+Route::get('/warehouse/stock-transfers/detail/{code}', fn ($code) => view('app', ['page' => 'wh-stock-transfer-detail', 'code' => $code]))->where('code', '.*');
 
 // Warehouse Report Routes
 Route::get('/warehouse/report/receive-material', fn () => view('app', ['page' => 'wh-rep-receive-material']));

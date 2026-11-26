@@ -10,6 +10,9 @@ use App\Models\Warehouse\Facility\WarehouseType;
 use App\Support\DocumentCodeHelper;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 
 class WarehouseMasterApiController extends Controller
 {
@@ -184,7 +187,46 @@ class WarehouseMasterApiController extends Controller
     public function listCoordinates(string|int $warehouseId): JsonResponse
     {
         $warehouse = $this->resolveWarehouse($warehouseId);
-        $coordinates = WarehouseCoordinate::where('warehouses_id', $warehouse->id)->get();
+
+        if (Schema::hasTable('warehouse_stocks')) {
+            $stockCoordNames = DB::table('warehouse_stocks')
+                ->where('warehouses_id', $warehouse->id)
+                ->whereNotNull('coordinate_name')
+                ->pluck('coordinate_name')
+                ->map(fn ($name) => trim((string) $name))
+                ->filter(fn ($name) => $name !== '' && $name !== '-' && $name !== '—')
+                ->unique()
+                ->values();
+
+            if ($stockCoordNames->isNotEmpty()) {
+                $existingNames = WarehouseCoordinate::where('warehouses_id', $warehouse->id)
+                    ->pluck('name')
+                    ->map(fn ($name) => strtolower(trim((string) $name)))
+                    ->all();
+
+                $createdAny = false;
+                foreach ($stockCoordNames as $coordName) {
+                    if (! in_array(strtolower($coordName), $existingNames, true)) {
+                        WarehouseCoordinate::create([
+                            'warehouses_id' => $warehouse->id,
+                            'code' => Str::upper(Str::limit(Str::slug($coordName, '-'), 45, '')),
+                            'name' => $coordName,
+                            'status' => 1,
+                        ]);
+                        $existingNames[] = strtolower($coordName);
+                        $createdAny = true;
+                    }
+                }
+
+                if ($createdAny) {
+                    SystemContextApiController::forgetLookupsCache();
+                }
+            }
+        }
+
+        $coordinates = WarehouseCoordinate::where('warehouses_id', $warehouse->id)
+            ->orderBy('name')
+            ->get();
 
         return response()->json(['data' => $coordinates]);
     }

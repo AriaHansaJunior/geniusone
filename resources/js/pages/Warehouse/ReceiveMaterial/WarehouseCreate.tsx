@@ -72,6 +72,28 @@ export function WarehouseCreate({
   const [regDate, setRegDate] = useState(today);
   const [remark, setRemark] = useState("");
 
+  const selectedDirectPo = useMemo(() => {
+    const target = (poNumberHeader || "").trim();
+    if (!target) return null;
+    return (
+      approvedPos.find((p) => {
+        const num =
+          getSafeDocString(p._rawNumber) ||
+          getSafeDocString(p._rawPo) ||
+          getSafeDocString(p.poNumber) ||
+          getSafeDocString(p.po_number);
+        return num === target;
+      }) || null
+    );
+  }, [approvedPos, poNumberHeader]);
+
+  const isServiceBpb =
+    bpbType === "Service (Jasa)" ||
+    Boolean(selectedDirectPo?.is_service) ||
+    String(selectedDirectPo?.order_category || "").toUpperCase() === "SERVICE" ||
+    String(selectedDirectPo?.poType || "").toLowerCase().includes("service") ||
+    String(selectedDirectPo?.poType || "").toLowerCase().includes("jasa");
+
   // Items State — populated from selected RN or Direct Non-Berikat PO
   const [items, setItems] = useState<BPBItemRow[]>([]);
 
@@ -180,8 +202,13 @@ export function WarehouseCreate({
   const populateFromPo = (poObj: any) => {
     if (!poObj) return;
     const poNum = poObj._rawNumber || poObj._rawPo || poObj.poNumber || poObj.po_number || "";
+    const poIsService =
+      Boolean(poObj.is_service) ||
+      String(poObj.order_category || "").toUpperCase() === "SERVICE" ||
+      String(poObj.poType || "").toLowerCase().includes("service") ||
+      String(poObj.poType || "").toLowerCase().includes("jasa");
 
-    if (isPoKawasanBerikat(poObj)) {
+    if (!poIsService && isPoKawasanBerikat(poObj)) {
       setNotification({
         type: "error",
         message: `Purchase Order ${poNum} is a Kawasan Berikat PO and must go through Receive Note (RN) first before Receive Material (BPB).`,
@@ -190,6 +217,10 @@ export function WarehouseCreate({
       setPoNumberHeader("");
       setItems([]);
       return;
+    }
+
+    if (poIsService) {
+      setBpbType("Service (Jasa)");
     }
 
     const prNum = poObj._rawPr || poObj.prNumber || "—";
@@ -663,10 +694,18 @@ export function WarehouseCreate({
       return;
     }
 
-    // PO Source Mode (Non-Kawasan Berikat Direct PO)
+    // PO Source Mode (Non-Kawasan Berikat Direct PO or Service PO)
+    const poIsService =
+      Boolean(sourceRecord?.is_service) ||
+      String(sourceRecord?.order_category || "").toUpperCase() === "SERVICE" ||
+      String(sourceRecord?.poType || "").toLowerCase().includes("service") ||
+      String(sourceRecord?.poType || "").toLowerCase().includes("jasa");
     const rawSup = String(sourceRecord?._rawSupplier || sourceRecord?.supplier || "").replace(/^\[[^\]]+\]\s*/, "").trim();
     const isSwitchingToPo = sourceType !== "PO" || poNumberHeader !== pickedNumber;
     setSourceType("PO");
+    if (poIsService) {
+      setBpbType("Service (Jasa)");
+    }
     setRnNumber("");
     setPoNumberHeader(pickedNumber);
     if (rawSup) setSupplier(rawSup);
@@ -824,10 +863,12 @@ export function WarehouseCreate({
 
     try {
       const payload = {
-        source_type: sourceType,
-        rn_number: sourceType === "RN" ? rnNumber.trim() : "",
+        source_type: isServiceBpb ? "PO" : sourceType,
+        rn_number: !isServiceBpb && sourceType === "RN" ? rnNumber.trim() : "",
         po_number: poNumberHeader || items[0]?.poNumber || "",
         bpb_type: bpbType,
+        bpb_category: isServiceBpb ? "SERVICE" : "GOODS",
+        is_service: isServiceBpb,
         supplier: supplier.trim() || "Supplier",
         receive_date: receiveDate,
         invoice_number: invoiceNumber.trim() || undefined,
@@ -838,7 +879,13 @@ export function WarehouseCreate({
         aju_date: ajuDate || undefined,
         no_pen: noPen.trim() || undefined,
         reg_date: regDate || undefined,
-        note: remark.trim() || (sourceType === "PO" ? "Direct PO physical receipt verified at warehouse" : "Inbound physical receipt verified at warehouse"),
+        note:
+          remark.trim() ||
+          (isServiceBpb
+            ? "Service realization verified without warehouse allocation"
+            : sourceType === "PO"
+              ? "Direct PO physical receipt verified at warehouse"
+              : "Inbound physical receipt verified at warehouse"),
         items: items.map((it) => ({
           po_has_items_id: it.po_has_items_id,
           po_has_rn_id: it.po_has_rn_id,
@@ -850,8 +897,8 @@ export function WarehouseCreate({
           deliveryNote: it.deliveryNote || "SJ-2026-001",
           receiveQty: parseFloat(String(it.receiveQty ?? "").replace(",", ".")) || 1,
           unit: it.unit || "PCE",
-          location: it.location || "Gudang Sparepart",
-          purpose: it.purpose || remark || "Warehouse Receipt",
+          location: isServiceBpb ? undefined : (it.location || "Gudang Sparepart"),
+          purpose: it.purpose || remark || (isServiceBpb ? "Service Realization" : "Warehouse Receipt"),
         })),
       };
 
@@ -1014,8 +1061,8 @@ export function WarehouseCreate({
               <CustomSelect
                 id="bpbSourceType"
                 required
-                disabled={items.length > 0 || Boolean(rnNumber || poNumberHeader)}
-                value={sourceType}
+                disabled={isServiceBpb || items.length > 0 || Boolean(rnNumber || poNumberHeader)}
+                value={isServiceBpb ? "PO" : sourceType}
                 onChange={(val) => {
                   const next = (val === "PO" ? "PO" : "RN") as BpbSourceType;
                   setSourceType(next);
@@ -1119,11 +1166,18 @@ export function WarehouseCreate({
                 id="bpbType"
                 required
                 value={bpbType}
-                onChange={(val) => setBpbType(val)}
+                onChange={(val) => {
+                  setBpbType(val);
+                  if (val === "Service (Jasa)") {
+                    setSourceType("PO");
+                    setRnNumber("");
+                  }
+                }}
                 options={[
                   { value: "Gudang", label: "Warehouse (Gudang)" },
                   { value: "Timbangan", label: "Scale (Timbangan)" },
                   { value: "Pembelian Langsung", label: "Direct Purchase" },
+                  { value: "Service (Jasa)", label: "Service (Jasa — Without Warehouse)" },
                 ]}
               />
             </div>
@@ -1330,7 +1384,13 @@ export function WarehouseCreate({
                       Receive Quantity <span className="required-mark">*</span>
                     </th>
                     <th style={{ minWidth: "180px" }}>
-                      Warehouse Location <span className="required-mark">*</span>
+                      {isServiceBpb ? (
+                        "Allocation Scope"
+                      ) : (
+                        <>
+                          Warehouse Location <span className="required-mark">*</span>
+                        </>
+                      )}
                     </th>
                     <th style={{ minWidth: "180px" }}>Remark</th>
                     <th style={{ width: "50px", minWidth: "50px", textAlign: "center" }}>Action</th>
@@ -1434,16 +1494,22 @@ export function WarehouseCreate({
                           </div>
                         </td>
 
-                        {/* Warehouse Location (Menentukan Gudang) */}
+                        {/* Warehouse Location (Hidden for Service BPB) */}
                         <td>
-                          <CustomSelect
-                            className="tx-custom-select-cell"
-                            searchable
-                            required
-                            value={it.location}
-                            onChange={(val) => handleUpdateItemField(it.id, "location", val)}
-                            options={warehouseOptions.map((loc) => ({ value: loc, label: loc }))}
-                          />
+                          {isServiceBpb ? (
+                            <span className="bpb-service-cell-pill">
+                              No Warehouse (Service)
+                            </span>
+                          ) : (
+                            <CustomSelect
+                              className="tx-custom-select-cell"
+                              searchable
+                              required
+                              value={it.location}
+                              onChange={(val) => handleUpdateItemField(it.id, "location", val)}
+                              options={warehouseOptions.map((loc) => ({ value: loc, label: loc }))}
+                            />
+                          )}
                         </td>
 
                         {/* Remark */}
