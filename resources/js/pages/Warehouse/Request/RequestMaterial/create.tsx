@@ -67,7 +67,6 @@ export function RequestMaterialCreate({
   const [requestDate, setRequestDate] = useState("");
   const [warehouseDestination, setWarehouseDestination] = useState("");
   const [warehousesId, setWarehousesId] = useState<number | undefined>();
-  const [isInternalWarehouse, setIsInternalWarehouse] = useState(false);
   const [destinationLocation, setDestinationLocation] = useState("");
   const [destinationLocationId, setDestinationLocationId] = useState<number | undefined>();
   const [requestNote, setRequestNote] = useState("");
@@ -706,20 +705,9 @@ export function RequestMaterialCreate({
                 {formErrors.warehouseDestination}
               </span>
             )}
-            <label
-              className="master-checkbox-label"
-              style={{ marginTop: "6px" }}
-            >
-              <input
-                type="checkbox"
-                checked={isInternalWarehouse}
-                onChange={(e) => setIsInternalWarehouse(e.target.checked)}
-              />
-              <span>Internal Warehouse Facility</span>
-            </label>
           </div>
 
-          {/* Destination Location with Checkbox */}
+          {/* Destination Location */}
           <div className="master-form-group">
             <label className="master-form-label">
               Destination Location <span className="required-asterisk">*</span>
